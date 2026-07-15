@@ -14,7 +14,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <javafx.version>21.0.2</javafx.version>
         <lecturestudio.stylus.version>0.3.0</lecturestudio.stylus.version>
-        <lecturestudio.stylus.native.jar>${project.build.directory}/native/stylus-${lecturestudio.stylus.version}-windows-x86_64.jar</lecturestudio.stylus.native.jar>
+        <lecturestudio.stylus.native.jar>target/native/stylus-${lecturestudio.stylus.version}-windows-x86_64.jar</lecturestudio.stylus.native.jar>
         <docupodcast.ink.inputDiagnostics>false</docupodcast.ink.inputDiagnostics>
         <docupodcast.ink.renderDiagnostics>false</docupodcast.ink.renderDiagnostics>
         <junit.version>5.10.2</junit.version>
