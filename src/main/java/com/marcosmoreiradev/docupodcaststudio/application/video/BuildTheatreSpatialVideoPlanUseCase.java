@@ -27,7 +27,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.text.Normalizer;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -40,6 +39,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+
+import static com.marcosmoreiradev.docupodcaststudio.application.video.TheatreSpatialVideoPlanData.*;
 
 /** Builds PNG frames for the theatre spatial-map video from the theatre MD layer. */
 public final class BuildTheatreSpatialVideoPlanUseCase {
@@ -56,6 +57,8 @@ public final class BuildTheatreSpatialVideoPlanUseCase {
     private static final double SELF_LOOP_MARKER_LEFT_SHIFT_FACTOR = 0.10;
     private static final Map<TheatreSpatialRoleIcon, BufferedImage> ROLE_ICONS =
             new EnumMap<>(TheatreSpatialRoleIcon.class);
+    private static final TheatreSpatialParticipantResolver PARTICIPANT_RESOLVER =
+            new TheatreSpatialParticipantResolver();
     private final TheatrePrimaryVisualResolver visualResolver = new TheatrePrimaryVisualResolver();
 
     public SimpleVideoPlan build(DocuPodcastProject project,
@@ -450,7 +453,8 @@ public final class BuildTheatreSpatialVideoPlanUseCase {
     }
 
     private static void drawCharacterCompanion(Graphics2D g, FrameSpec spec, int x, int y, int w, int h) throws IOException {
-        List<Participant> participants = participants(spec.project(), spec.placement(), spec.scene().id(), spec.characterNames());
+        List<TheatreSpatialParticipantResolver.Participant> participants = PARTICIPANT_RESOLVER.resolve(
+                spec.project(), spec.placement(), spec.scene().id(), spec.characterNames());
         if (participants.isEmpty()) {
             g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, Math.max(22, spec.width() / 74)));
             drawCenteredShadowed(g, "Sin personajes presentes", x, y + h / 2, w);
@@ -464,12 +468,13 @@ public final class BuildTheatreSpatialVideoPlanUseCase {
         int slotH = rows == 1 ? h : (h - gap) / 2;
         int startY = y + Math.max(0, (h - ((slotH * rows) + gap * (rows - 1))) / 2);
         for (int i = 0; i < slots; i++) {
-            Participant p = participants.get(i);
+            TheatreSpatialParticipantResolver.Participant p = participants.get(i);
             int row = i / cols;
             int col = i % cols;
             int sx = x + col * (slotW + gap);
             int sy = startY + row * (slotH + gap);
-            Optional<ProjectAssetReference> photo = characterImage(spec.project(), p.characterId(), spec.scene().id());
+            Optional<ProjectAssetReference> photo = PARTICIPANT_RESOLVER.characterImage(
+                    spec.project(), p.characterId(), spec.scene().id());
             if (photo.isPresent()) {
                 drawImageFit(g, assetPath(spec.projectDirectory(), photo.get()), sx, sy, slotW, Math.max(80, slotH - 44));
             } else {
@@ -501,7 +506,7 @@ public final class BuildTheatreSpatialVideoPlanUseCase {
     }
 
     private static void drawCaption(Graphics2D g, FrameSpec spec, int x, int y, int w, int h) {
-        String speaker = speakerName(spec.project(), spec.placement(), spec.characterNames());
+        String speaker = PARTICIPANT_RESOLVER.speakerName(spec.placement(), spec.characterNames());
         String text = stripSpeaker(spec.narrationText());
         g.setColor(CREAM_TEXT);
         String prefix = (speaker.isBlank() ? "PERSONAJE" : speaker) + ": ";
@@ -535,12 +540,14 @@ public final class BuildTheatreSpatialVideoPlanUseCase {
         double oy = mapY + origin.scaledY(mapH);
         int iconSize = Math.max(118, (int) Math.round((spec.width() / 12.0) * ROLE_ICON_SCALE_FACTOR));
         ArrayList<String> selfLoopLocations = new ArrayList<>();
-        for (String destination : destinationLocations(spec.project(), spec.placement())) {
+        for (String destination : PARTICIPANT_RESOLVER.destinationLocations(spec.project(), spec.placement())) {
             TheatreStageGeometry.StagePoint dest = TheatreStageGeometry.pointFor(destination);
             double dx = mapX + dest.scaledX(mapW);
             double dy = mapY + dest.scaledY(mapH);
             if (Math.abs(ox - dx) < 0.5 && Math.abs(oy - dy) < 0.5) {
-                addUnique(selfLoopLocations, spec.placement().origin());
+                if (!containsIgnoreCase(selfLoopLocations, spec.placement().origin())) {
+                    selfLoopLocations.add(spec.placement().origin());
+                }
                 drawSelfLoop(g, ox, oy, iconSize, spec, mapX, mapY, mapW, mapH);
             } else {
                 double trim = iconSize * ARROW_TRIM_FACTOR;
@@ -552,7 +559,8 @@ public final class BuildTheatreSpatialVideoPlanUseCase {
                         Math.max(14, spec.width() / 128), trim, trim);
             }
         }
-        drawParticipantGroups(g, participants(spec.project(), spec.placement(), spec.scene().id(), spec.characterNames()),
+        drawParticipantGroups(g, PARTICIPANT_RESOLVER.resolve(
+                        spec.project(), spec.placement(), spec.scene().id(), spec.characterNames()),
                 mapX, mapY, mapW, mapH, iconSize, selfLoopLocations);
     }
 
@@ -688,7 +696,7 @@ public final class BuildTheatreSpatialVideoPlanUseCase {
     }
 
     private static void drawParticipantGroups(Graphics2D g,
-                                              List<Participant> participants,
+                                              List<TheatreSpatialParticipantResolver.Participant> participants,
                                               int mapX,
                                               int mapY,
                                               int mapW,
@@ -696,7 +704,7 @@ public final class BuildTheatreSpatialVideoPlanUseCase {
                                               int iconSize,
                                               List<String> selfLoopLocations) {
         LinkedHashMap<String, MarkerGroup> byLocation = new LinkedHashMap<>();
-        for (Participant participant : participants) {
+        for (TheatreSpatialParticipantResolver.Participant participant : participants) {
             String location = participant.location() == null || participant.location().isBlank()
                     ? "centro" : participant.location();
             MarkerGroup group = byLocation.computeIfAbsent(location,
@@ -782,410 +790,6 @@ public final class BuildTheatreSpatialVideoPlanUseCase {
         return new DrawnImageBounds(drawX, drawY, drawW, drawH);
     }
 
-    private static Map<String, List<NarrationSegment>> segmentsByBlock(NarrationScriptDocument script) {
-        LinkedHashMap<String, List<NarrationSegment>> result = new LinkedHashMap<>();
-        if (script == null) {
-            return result;
-        }
-        for (NarrationSegment segment : script.segments()) {
-            if (segment == null) {
-                continue;
-            }
-            for (String blockId : segment.sourceBlockIds()) {
-                if (blockId != null && !blockId.isBlank()) {
-                    result.computeIfAbsent(blockId, ignored -> new ArrayList<>()).add(segment);
-                }
-            }
-            result.putIfAbsent(segment.id(), List.of(segment));
-        }
-        return result;
-    }
-
-    private static List<NarrationSegment> interventionSegments(NarrationScriptDocument script,
-                                                               TheatreProjectLayer.Intervencion intervention,
-                                                               Map<String, List<NarrationSegment>> segmentsByBlock,
-                                                               List<TheatreProjectLayer.Intervencion> interventions) {
-        if (script == null || intervention == null) {
-            return List.of();
-        }
-        List<NarrationSegment> exact = segmentsByBlock.getOrDefault(intervention.blockId(), List.of());
-        if (exact.isEmpty()) {
-            return List.of();
-        }
-        List<NarrationSegment> ordered = script.segments().stream()
-                .filter(segment -> segment != null && segment.narratable())
-                .toList();
-        int first = firstSegmentIndex(ordered, exact.get(0).id());
-        if (first < 0) {
-            return exact;
-        }
-        int start = first;
-        if (!hasTheatreCue(ordered.get(first).narrationText())) {
-            for (int i = first - 1; i >= 0; i--) {
-                start = i;
-                if (hasTheatreCue(ordered.get(i).narrationText())) {
-                    break;
-                }
-            }
-        }
-        int end = Math.max(first + 1, first + exact.size());
-        for (int i = Math.max(start + 1, end); i < ordered.size(); i++) {
-            NarrationSegment candidate = ordered.get(i);
-            if (hasTheatreCue(candidate.narrationText())) {
-                break;
-            }
-            if (sourcedFromDifferentIntervention(candidate, interventions, intervention)) {
-                break;
-            }
-            end = i + 1;
-        }
-        return List.copyOf(ordered.subList(start, Math.max(start + 1, Math.min(end, ordered.size()))));
-    }
-
-    private static int firstSegmentIndex(List<NarrationSegment> ordered, String segmentId) {
-        if (segmentId == null || segmentId.isBlank()) {
-            return -1;
-        }
-        for (int i = 0; i < ordered.size(); i++) {
-            if (segmentId.equals(ordered.get(i).id())) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    private static Optional<NarrationSegment> segmentForAudio(List<NarrationSegment> segments, String audioSegmentId) {
-        if (segments == null || audioSegmentId == null || audioSegmentId.isBlank()) {
-            return Optional.empty();
-        }
-        return segments.stream()
-                .filter(segment -> audioSegmentId.equals(segment.id()) || audioSegmentId.startsWith(segment.id() + "-"))
-                .findFirst();
-    }
-
-    private static boolean sourcedFromDifferentIntervention(NarrationSegment segment,
-                                                            List<TheatreProjectLayer.Intervencion> interventions,
-                                                            TheatreProjectLayer.Intervencion current) {
-        if (segment == null || interventions == null || current == null) {
-            return false;
-        }
-        for (String blockId : segment.sourceBlockIds()) {
-            if (blockId == null || blockId.isBlank() || blockId.equals(current.blockId())) {
-                continue;
-            }
-            for (TheatreProjectLayer.Intervencion intervention : interventions) {
-                if (!intervention.id().equals(current.id()) && blockId.equals(intervention.blockId())) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    private static boolean hasTheatreCue(String text) {
-        String value = text == null ? "" : text.strip();
-        if (value.isBlank()) {
-            return false;
-        }
-        if (value.startsWith("(") || value.startsWith("[")
-                || value.regionMatches(true, 0, "ACOTACION:", 0, "ACOTACION:".length())) {
-            return true;
-        }
-        int colon = value.indexOf(':');
-        if (colon < 2 || colon > 42) {
-            return false;
-        }
-        String cue = value.substring(0, colon).strip();
-        if (cue.equalsIgnoreCase("ESCENA") || cue.equalsIgnoreCase("ACTO")) {
-            return false;
-        }
-        return cue.chars().anyMatch(Character::isLetter);
-    }
-
-    private static Map<String, AudioSegmentSnapshot> completedAudioBySegment(List<AudioJobSnapshot> jobs, Path projectDirectory) {
-        LinkedHashMap<String, AudioSegmentSnapshot> result = new LinkedHashMap<>();
-        if (jobs == null || jobs.isEmpty()) {
-            return result;
-        }
-        jobs.stream()
-                .sorted(Comparator.comparing(AudioJobSnapshot::updatedAt).reversed())
-                .forEach(job -> {
-            for (AudioSegmentSnapshot segment : job.segments()) {
-                if (usableAudio(projectDirectory, segment)) {
-                    result.putIfAbsent(segment.segmentId(), segment);
-                }
-            }
-        });
-        return result;
-    }
-
-    private static boolean usableAudio(Path projectDirectory, AudioSegmentSnapshot segment) {
-        if (segment == null || !segment.completed() || segment.audioRelativePath().isBlank()) {
-            return false;
-        }
-        if (projectDirectory == null) {
-            return true;
-        }
-        Path root = projectDirectory.toAbsolutePath().normalize();
-        Path audio = root.resolve(segment.audioRelativePath()).toAbsolutePath().normalize();
-        return audio.startsWith(root) && Files.isRegularFile(audio);
-    }
-
-    private static List<AudioSegmentSnapshot> audioForSegment(Map<String, AudioSegmentSnapshot> audioBySegment,
-                                                              String segmentId) {
-        if (audioBySegment == null || audioBySegment.isEmpty() || segmentId == null || segmentId.isBlank()) {
-            return List.of();
-        }
-        String unitPrefix = segmentId + "-";
-        ArrayList<AudioSegmentSnapshot> units = new ArrayList<>();
-        for (AudioSegmentSnapshot audio : audioBySegment.values()) {
-            if (segmentId.equals(audio.segmentId())) {
-                return units.isEmpty() ? List.of(audio) : units;
-            }
-            if (audio.segmentId().startsWith(unitPrefix)) {
-                units.add(audio);
-            }
-        }
-        return units;
-    }
-
-    private static List<AudioSegmentSnapshot> audioForSegments(Map<String, AudioSegmentSnapshot> audioBySegment,
-                                                               List<NarrationSegment> segments) {
-        if (segments == null || segments.isEmpty()) {
-            return List.of();
-        }
-        ArrayList<AudioSegmentSnapshot> result = new ArrayList<>();
-        for (NarrationSegment segment : segments) {
-            if (segment == null) {
-                continue;
-            }
-            for (AudioSegmentSnapshot audio : audioForSegment(audioBySegment, segment.id())) {
-                if (result.stream().noneMatch(existing -> existing.segmentId().equals(audio.segmentId()))) {
-                    result.add(audio);
-                }
-            }
-        }
-        return List.copyOf(result);
-    }
-
-    private static String fullInterventionText(List<NarrationSegment> segments) {
-        if (segments == null || segments.isEmpty()) {
-            return "";
-        }
-        StringBuilder text = new StringBuilder();
-        for (int i = 0; i < segments.size(); i++) {
-            NarrationSegment segment = segments.get(i);
-            if (segment == null || segment.narrationText().isBlank()) {
-                continue;
-            }
-            String part = i == 0 ? segment.narrationText().strip() : stripSpeaker(segment.narrationText());
-            if (part.isBlank()) {
-                continue;
-            }
-            if (!text.isEmpty()) {
-                text.append(' ');
-            }
-            text.append(part);
-        }
-        return text.toString().replaceAll("\\s+", " ").strip();
-    }
-
-    private static Map<String, TheatreProjectLayer.TextActionPlacement> placementsByIntervention(TheatreProjectLayer theatre) {
-        LinkedHashMap<String, TheatreProjectLayer.TextActionPlacement> result = new LinkedHashMap<>();
-        for (TheatreProjectLayer.TextActionPlacement placement : theatre.textActionPlacements()) {
-            result.put(placement.intervencionId(), placement);
-        }
-        return result;
-    }
-
-    private static Map<String, TheatreProjectLayer.Scene> scenesById(TheatreProjectLayer theatre) {
-        LinkedHashMap<String, TheatreProjectLayer.Scene> result = new LinkedHashMap<>();
-        for (TheatreProjectLayer.Scene scene : theatre.scenes()) {
-            result.put(scene.id(), scene);
-        }
-        return result;
-    }
-
-    private static Map<String, String> characterNamesById(TheatreProjectLayer theatre) {
-        LinkedHashMap<String, String> result = new LinkedHashMap<>();
-        for (TheatreProjectLayer.CharacterProfile character : theatre.characters()) {
-            result.put(character.id(), character.displayName());
-        }
-        return result;
-    }
-
-    private static ProjectAssetReference requireImageAsset(ProjectAssetCatalog assets, String assetId, String label) throws IOException {
-        if (assetId == null || assetId.isBlank()) {
-            throw new IOException("Falta imagen en " + label + ".");
-        }
-        return optionalImageAsset(assets, assetId)
-                .orElseThrow(() -> new IOException("Imagen no encontrada para " + label + ": " + assetId));
-    }
-
-    private static Optional<ProjectAssetReference> optionalImageAsset(ProjectAssetCatalog assets, String assetId) {
-        if (assets == null || assetId == null || assetId.isBlank()) {
-            return Optional.empty();
-        }
-        return assets.byId(assetId).filter(ProjectAssetReference::isImage);
-    }
-
-    private static Path assetPath(Path projectDirectory, ProjectAssetReference asset) throws IOException {
-        Path root = projectDirectory.toAbsolutePath().normalize();
-        Path path = root.resolve(asset.relativePath()).toAbsolutePath().normalize();
-        if (!path.startsWith(root) || !Files.isRegularFile(path)) {
-            throw new IOException("No se encontro imagen para video mapa: " + asset.relativePath());
-        }
-        return path;
-    }
-
-    private static String relativeToProject(Path projectDirectory, Path file) throws IOException {
-        Path root = projectDirectory.toAbsolutePath().normalize();
-        Path normalized = file.toAbsolutePath().normalize();
-        if (!normalized.startsWith(root)) {
-            throw new IOException("El frame generado quedo fuera del proyecto: " + normalized);
-        }
-        return root.relativize(normalized).toString().replace('\\', '/');
-    }
-
-    private static List<Participant> participants(DocuPodcastProject project,
-                                                  TheatreProjectLayer.TextActionPlacement placement,
-                                                  String sceneId,
-                                                  Map<String, String> characterNames) {
-        if (placement == null) {
-            return List.of();
-        }
-        LinkedHashMap<String, Participant> result = new LinkedHashMap<>();
-        String speakerName = speakerName(project, placement, characterNames);
-        if (!speakerName.isBlank()) {
-            result.put(speakerName, new Participant(placement.characterId(), speakerName,
-                    locationFor(placement, speakerName, placement.origin()),
-                    TheatreSpatialRoleIcon.forSpeaker(speakerName), true));
-        }
-        for (String target : interactionTargets(placement.interactionTarget())) {
-            if (isSelfTarget(target)) {
-                continue;
-            }
-            if (TheatreSpatialRoleIcon.isAudience(target)) {
-                result.putIfAbsent("PUBLICO", new Participant("", "PUBLICO", audienceLocation(),
-                        TheatreSpatialRoleIcon.AUDIENCE, false));
-                continue;
-            }
-            if (isOffstageTarget(target)) {
-                continue;
-            }
-            String targetId = characterIdForName(project, target);
-            String targetName = displayNameForName(project, target);
-            TheatreSpatialRoleIcon role = TheatreSpatialRoleIcon.forSpeaker(targetName);
-            if (isCharacterAbsent(placement, targetName.isBlank() ? target : targetName)) {
-                continue;
-            }
-            if (!targetName.isBlank() && !targetName.equalsIgnoreCase(speakerName)) {
-                result.put(targetName, new Participant(targetId, targetName,
-                        locationFor(placement, targetName, placement.destination()), role, false));
-            }
-        }
-        if (TheatreSpatialRoleIcon.isAudience(placement.destination())) {
-            result.putIfAbsent("PUBLICO", new Participant("", "PUBLICO", audienceLocation(),
-                    TheatreSpatialRoleIcon.AUDIENCE, false));
-        }
-        if (placement.characterLocations() != null) {
-            for (Map.Entry<String, String> entry : placement.characterLocations().entrySet()) {
-                String name = entry.getKey();
-                if (name != null && !name.isBlank()
-                        && !TheatreStageGeometry.specialInteractionTarget(name)
-                        && !isAbsentLocation(entry.getValue())) {
-                    String displayName = displayNameForName(project, name);
-                    if (displayName.isBlank()) {
-                        displayName = name.strip();
-                    }
-                    result.putIfAbsent(displayName, new Participant(characterIdForName(project, displayName),
-                            displayName, entry.getValue(), TheatreSpatialRoleIcon.forSpeaker(displayName), false));
-                }
-            }
-        }
-        return List.copyOf(result.values());
-    }
-
-    private static List<String> destinationLocations(DocuPodcastProject project,
-                                                     TheatreProjectLayer.TextActionPlacement placement) {
-        if (placement == null) {
-            return List.of("centro");
-        }
-        ArrayList<String> result = new ArrayList<>();
-        for (String target : interactionTargets(placement.interactionTarget())) {
-            if (isSelfTarget(target)) {
-                addUnique(result, placement.origin());
-            } else if (TheatreSpatialRoleIcon.isAudience(target)) {
-                addUnique(result, audienceLocation());
-            } else if (isOffstageTarget(target)) {
-                addUnique(result, placement.destination());
-            } else {
-                String targetName = displayNameForName(project, target);
-                if (isCharacterAbsent(placement, targetName.isBlank() ? target : targetName)) {
-                    continue;
-                }
-                addUnique(result, locationFor(placement, targetName.isBlank() ? target : targetName, placement.destination()));
-            }
-        }
-        if (result.isEmpty()) {
-            addUnique(result, placement.destination());
-        }
-        return List.copyOf(result);
-    }
-
-    private static List<String> interactionTargets(String target) {
-        String normalized = target == null ? "" : target.strip();
-        if (normalized.isBlank()) {
-            return List.of();
-        }
-        if (TheatreStageGeometry.specialInteractionTarget(normalized)) {
-            return List.of(normalized);
-        }
-        String[] parts = normalized.split("\\s*(?:,|;|/|\\s+y\\s+)\\s*");
-        ArrayList<String> result = new ArrayList<>();
-        for (String part : parts) {
-            if (!part.isBlank()) {
-                result.add(part.strip());
-            }
-        }
-        return result.isEmpty() ? List.of(normalized) : List.copyOf(result);
-    }
-
-    private static boolean isSelfTarget(String target) {
-        return normalizeToken(target).equals("para si mismo");
-    }
-
-    private static boolean isOffstageTarget(String target) {
-        return normalizeToken(target).equals("entidad no presente en escenario");
-    }
-
-    private static String audienceLocation() {
-        return "hacia el publico";
-    }
-
-    private static void addUnique(List<String> values, String value) {
-        if (isAbsentLocation(value)) {
-            return;
-        }
-        String safe = value == null || value.isBlank() ? "centro" : value.strip();
-        if (!values.contains(safe)) {
-            values.add(safe);
-        }
-    }
-
-    private static boolean isCharacterAbsent(TheatreProjectLayer.TextActionPlacement placement, String character) {
-        if (placement == null || placement.characterLocations() == null || character == null || character.isBlank()) {
-            return false;
-        }
-        return placement.characterLocations().entrySet().stream()
-                .anyMatch(entry -> entry.getKey().equalsIgnoreCase(character) && isAbsentLocation(entry.getValue()));
-    }
-
-    private static boolean isAbsentLocation(String location) {
-        String normalized = location == null ? "" : normalizeToken(location);
-        return normalized.equals("no presente") || normalized.equals("no presente en esta intervencion");
-    }
-
     private static boolean containsIgnoreCase(List<String> values, String candidate) {
         if (values == null || candidate == null || candidate.isBlank()) {
             return false;
@@ -1195,90 +799,6 @@ public final class BuildTheatreSpatialVideoPlanUseCase {
 
     private static double clamp(double value, double min, double max) {
         return Math.max(min, Math.min(max, value));
-    }
-
-    private static String speakerName(DocuPodcastProject project,
-                                      TheatreProjectLayer.TextActionPlacement placement,
-                                      Map<String, String> characterNames) {
-        if (placement == null) {
-            return "";
-        }
-        String byId = characterNames == null ? "" : characterNames.getOrDefault(placement.characterId(), "");
-        if (!byId.isBlank()) {
-            return byId;
-        }
-        if (placement.characterLocations() != null && !placement.characterLocations().isEmpty()) {
-            return placement.characterLocations().keySet().stream()
-                    .filter(name -> !TheatreStageGeometry.specialInteractionTarget(name))
-                    .findFirst()
-                    .orElse("");
-        }
-        return "";
-    }
-
-    private static String locationFor(TheatreProjectLayer.TextActionPlacement placement, String characterName, String fallback) {
-        if (placement.characterLocations() != null) {
-            for (Map.Entry<String, String> entry : placement.characterLocations().entrySet()) {
-                if (entry.getKey().equalsIgnoreCase(characterName)
-                        && entry.getValue() != null
-                        && !entry.getValue().isBlank()
-                        && !isAbsentLocation(entry.getValue())) {
-                    return entry.getValue();
-                }
-            }
-        }
-        return fallback == null || fallback.isBlank() ? "centro" : fallback;
-    }
-
-    private static Optional<ProjectAssetReference> characterImage(DocuPodcastProject project, String characterId, String sceneId) {
-        if (project == null || characterId == null || characterId.isBlank()) {
-            return Optional.empty();
-        }
-        TheatreProjectLayer theatre = project.theatre();
-        ProjectAssetCatalog assets = project.assets();
-        Optional<TheatreProjectLayer.CharacterImage> sameScene = theatre.characterImages().stream()
-                .filter(image -> characterId.equals(image.characterId()))
-                .filter(image -> image.sceneId().isBlank() || image.sceneId().equals(sceneId))
-                .findFirst();
-        return sameScene.flatMap(image -> optionalImageAsset(assets, image.assetId()));
-    }
-
-    private static String characterIdForName(DocuPodcastProject project, String name) {
-        if (project == null || name == null || name.isBlank()) {
-            return "";
-        }
-        String normalized = normalizeName(name);
-        for (TheatreProjectLayer.CharacterProfile character : project.theatre().characters()) {
-            if (normalizeName(character.displayName()).equals(normalized)) {
-                return character.id();
-            }
-        }
-        return "";
-    }
-
-    private static String displayNameForName(DocuPodcastProject project, String name) {
-        if (project == null || name == null || name.isBlank()) {
-            return "";
-        }
-        String normalized = normalizeName(name);
-        for (TheatreProjectLayer.CharacterProfile character : project.theatre().characters()) {
-            if (normalizeName(character.displayName()).equals(normalized)) {
-                return character.displayName();
-            }
-        }
-        return name.strip();
-    }
-
-    private static String normalizeName(String value) {
-        return value == null ? "" : value.strip().toUpperCase(Locale.ROOT);
-    }
-
-    private static String normalizeToken(String value) {
-        if (value == null) {
-            return "";
-        }
-        return Normalizer.normalize(value.strip().toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
-                .replaceAll("\\p{M}+", "");
     }
 
     private static String stripSpeaker(String text) {
@@ -1420,18 +940,6 @@ public final class BuildTheatreSpatialVideoPlanUseCase {
         private MarkerGroup(TheatreSpatialRoleIcon role, List<String> names) {
             this.role = role == null ? TheatreSpatialRoleIcon.ACTOR : role;
             this.names = names == null ? new ArrayList<>() : names;
-        }
-    }
-
-    private record Participant(String characterId,
-                               String name,
-                               String location,
-                               TheatreSpatialRoleIcon role,
-                               boolean speaking) {
-        private Participant {
-            name = name == null ? "" : name.strip();
-            location = location == null || location.isBlank() ? "centro" : location.strip();
-            role = role == null ? TheatreSpatialRoleIcon.ACTOR : role;
         }
     }
 

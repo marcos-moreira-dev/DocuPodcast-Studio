@@ -228,30 +228,67 @@ public final class DocuPodcastShellViewModel {
         playbackTransport.setOnPlaybackFinished(this::handlePlaybackFinishedOnFxThread);
         selectedDocumentBlockId.addListener((obs, oldValue, newValue) -> actualizarFrameActivo());
     }
+
     public ApplicationServices applicationServices() { return applicationServices; }
+
     public ReadOnlyStringProperty windowTitleProperty() { return windowTitle.getReadOnlyProperty(); }
+
     public ObjectProperty<WorkspaceKind> activeWorkspaceProperty() { return activeWorkspace; }
+
     public ReadOnlyObjectProperty<ReadableDocument> currentDocumentProperty() { return currentDocument; }
+
     public ReadOnlyObjectProperty<NarrationScriptDocument> currentScriptProperty() { return currentScript; }
+
     public ReadOnlyObjectProperty<StoryboardDocument> currentStoryboardProperty() { return currentStoryboard; }
+
     public ReadOnlyStringProperty selectedScriptSegmentIdProperty() { return selectedScriptSegmentId; }
-    public ReadOnlyStringProperty selectedDocumentBlockIdProperty() { return selectedDocumentBlockId; } public ReadOnlyDoubleProperty pdfVisualDocumentProgressProperty() { return pdfVisualDocumentProgress; } public int pdfVisiblePageNumber() { return pdfVisiblePageNumber.get(); } public void updatePdfVisiblePageNumber(int page) { pdfVisiblePageNumber.set(Math.max(0, page)); }
+
+    public ReadOnlyStringProperty selectedDocumentBlockIdProperty() { return selectedDocumentBlockId; }
+
+    public ReadOnlyDoubleProperty pdfVisualDocumentProgressProperty() { return pdfVisualDocumentProgress; }
+
+    public int pdfVisiblePageNumber() { return pdfVisiblePageNumber.get(); }
+
+    public void updatePdfVisiblePageNumber(int page) { pdfVisiblePageNumber.set(Math.max(0, page)); }
+
     public ReadOnlyObjectProperty<DocumentTextRange> selectedDocumentTextRangeProperty() { return selectedDocumentTextRange; }
+
     public ReadOnlyStringProperty selectedDocumentRangeLabelProperty() { return selectedDocumentRangeLabel.getReadOnlyProperty(); }
+
     public ReadOnlyStringProperty selectedDocumentSourceLocationProperty() { return selectedDocumentSourceLocation.getReadOnlyProperty(); }
-    public ReadOnlyStringProperty selectedVisualFragmentSegmentIdProperty() { return selectedVisualFragmentSegmentId; } public ReadOnlyStringProperty selectedVisualFragmentImageUriProperty() { return selectedVisualFragmentImageUri; } public ReadOnlyObjectProperty<DocumentVisualFragmentKey> selectedVisualFragmentKeyProperty() { return selectedVisualFragmentKey; }
+
+    public ReadOnlyStringProperty selectedVisualFragmentSegmentIdProperty() { return selectedVisualFragmentSegmentId; }
+
+    public ReadOnlyStringProperty selectedVisualFragmentImageUriProperty() { return selectedVisualFragmentImageUri; }
+
+    public ReadOnlyObjectProperty<DocumentVisualFragmentKey> selectedVisualFragmentKeyProperty() { return selectedVisualFragmentKey; }
+
     public ReadOnlyIntegerProperty documentMediaRevisionProperty() { return documentMediaRevision; }
+
     public ReadOnlyStringProperty documentPrimaryActionLabelProperty() { return documentPrimaryActionLabel.getReadOnlyProperty(); }
+
     public ReadOnlyStringProperty documentPrimaryActionHintProperty() { return documentPrimaryActionHint.getReadOnlyProperty(); }
+
     public ReadOnlyStringProperty documentListenFlowTitleProperty() { return documentListenFlowTitle.getReadOnlyProperty(); }
+
     public ReadOnlyStringProperty documentListenFlowDetailProperty() { return documentListenFlowDetail.getReadOnlyProperty(); }
+
     public ReadOnlyStringProperty streamingBufferStatusProperty() { return streamingBufferStatus.getReadOnlyProperty(); }
+
     public ReadOnlyObjectProperty<PlaybackCursor> playbackCursorProperty() { return playbackCursor; }
-    public ReadOnlyObjectProperty<PlaybackManifest> currentPlaybackManifestProperty() { return currentPlaybackManifest; } public ReadOnlyObjectProperty<ProjectMode> currentProjectModeProperty() { return currentProjectMode; }
+
+    public ReadOnlyObjectProperty<PlaybackManifest> currentPlaybackManifestProperty() { return currentPlaybackManifest; }
+
+    public ReadOnlyObjectProperty<ProjectMode> currentProjectModeProperty() { return currentProjectMode; }
+
     public PlaybackBufferPolicy playbackBufferPolicy() { return playbackBufferPolicy; }
+
     public ReadOnlyBooleanProperty previousFragmentAvailableProperty() { return previousFragmentAvailable; }
+
     public ReadOnlyBooleanProperty nextFragmentAvailableProperty() { return nextFragmentAvailable; }
+
     public ReadOnlyDoubleProperty playbackRateProperty() { return playbackRate; }
+
     public String playbackBufferStatusLabel() {
         AudioJobStatusDto status = activeAudioJobStatus.get();
         if (status.totalSegments() <= 0) {
@@ -259,22 +296,71 @@ public final class DocuPodcastShellViewModel {
         }
         return streamingPlaybackWindow(status, currentPlaybackManifest.get()).readerStatusLabel();
     }
-    public ReadOnlyObjectProperty<AudioJobStatusDto> activeAudioJobStatusProperty() { return activeAudioJobStatus; } public ReadOnlyObjectProperty<ReadingProfile> activeReadingProfileProperty() { return activeReadingProfile; }
-    public ReadOnlyObjectProperty<VoiceLibrary> activeVoiceLibraryProperty() { return activeVoiceLibrary; } public ReadOnlyStringProperty statusMessageProperty() { return statusMessage.getReadOnlyProperty(); }
-    public void updateStatusMessage(String message) { statusMessage.set(message == null || message.isBlank() ? "Listo." : message.strip()); } public void replaceCurrentDocumentFromApplication(ReadableDocument document, String message) { if (document == null) { return; } sessions.activeSession().ifPresent(session -> session.setImportedDocument(document)); currentDocument.set(document); currentScript.set(null); statusMessage.set(message == null || message.isBlank() ? "Documento actualizado." : message); refreshProjectState(); }
-    public ReadOnlyBooleanProperty projectOpenProperty() { return projectOpen; } public ReadOnlyBooleanProperty dirtyProperty() { return dirty; }
-    public ReadOnlyBooleanProperty saveableProjectOpenProperty() { return saveableProjectOpen; } public ReadOnlyBooleanProperty audioJobRunningProperty() { return audioJobRunning; }
-    public ReadOnlyBooleanProperty choralVoiceRenderingProperty() { return theatreChoralVoiceRenderWorkflow.runningProperty(); } public ReadOnlyDoubleProperty choralVoiceRenderProgressProperty() { return theatreChoralVoiceRenderWorkflow.progressProperty(); } public ReadOnlyStringProperty choralVoiceRenderStatusProperty() { return theatreChoralVoiceRenderWorkflow.statusProperty(); }
-    public ReadOnlyBooleanProperty voiceRecordingRunningProperty() { return voiceRecordingRunning; } public ReadOnlyBooleanProperty manualAudioRecordingRunningProperty() { return manualAudioRecordingRunning; }
-    public ReadOnlyStringProperty focusedTheatreSceneIdProperty() { return focusedTheatreSceneId; } public void focusTheatreScene(String sceneId) { focusedTheatreSceneId.set(sceneId == null ? "" : sceneId.strip()); }
-    public ReadOnlyObjectProperty<Path> lastGeneratedVoiceTestPathProperty() { return lastGeneratedVoiceTestPath; } public ReadOnlyStringProperty generatedVoiceTestStatusProperty() { return generatedVoiceTestStatus.getReadOnlyProperty(); }
-    public ReadOnlyStringProperty documentVoiceToneStatusProperty() { return documentVoiceToneStatus.getReadOnlyProperty(); } public ReadOnlyStringProperty spatialFrameModeProperty() { return spatialFrameMode; }
-    public void setSpatialFrameMode(String mode) { spatialFrameMode.set(TheatreStageGeometry.normalizeFrameMode(mode)); } public ReadOnlyStringProperty activePlacementAliasProperty() { return activePlacementAlias; }
-    public ReadOnlyObjectProperty<TheatreProjectLayer.TextActionPlacement> activeTextActionPlacementProperty() { return activeTextActionPlacement; } public BooleanProperty documentRightRailVisibleProperty() { return documentRightRailVisible; } public BooleanProperty documentPlaybarDockedProperty() { return documentPlaybarDocked; } public BooleanProperty technicalProblemPreparationActiveProperty() { return technicalProblemPreparationActive; }
-    public BooleanProperty readAfterColonForNarrationProperty() { return readAfterColonForNarration; } public IntegerProperty readingFontSizeProperty() { return readingFontSize; }
+
+    public ReadOnlyObjectProperty<AudioJobStatusDto> activeAudioJobStatusProperty() { return activeAudioJobStatus; }
+
+    public ReadOnlyObjectProperty<ReadingProfile> activeReadingProfileProperty() { return activeReadingProfile; }
+
+    public ReadOnlyObjectProperty<VoiceLibrary> activeVoiceLibraryProperty() { return activeVoiceLibrary; }
+
+    public ReadOnlyStringProperty statusMessageProperty() { return statusMessage.getReadOnlyProperty(); }
+
+    public void updateStatusMessage(String message) { statusMessage.set(message == null || message.isBlank() ? "Listo." : message.strip()); }
+
+    public void replaceCurrentDocumentFromApplication(ReadableDocument document, String message) { if (document == null) { return; } sessions.activeSession().ifPresent(session -> session.setImportedDocument(document)); currentDocument.set(document); currentScript.set(null); statusMessage.set(message == null || message.isBlank() ? "Documento actualizado." : message); refreshProjectState(); }
+
+    public ReadOnlyBooleanProperty projectOpenProperty() { return projectOpen; }
+
+    public ReadOnlyBooleanProperty dirtyProperty() { return dirty; }
+
+    public ReadOnlyBooleanProperty saveableProjectOpenProperty() { return saveableProjectOpen; }
+
+    public ReadOnlyBooleanProperty audioJobRunningProperty() { return audioJobRunning; }
+
+    public ReadOnlyBooleanProperty choralVoiceRenderingProperty() { return theatreChoralVoiceRenderWorkflow.runningProperty(); }
+
+    public ReadOnlyDoubleProperty choralVoiceRenderProgressProperty() { return theatreChoralVoiceRenderWorkflow.progressProperty(); }
+
+    public ReadOnlyStringProperty choralVoiceRenderStatusProperty() { return theatreChoralVoiceRenderWorkflow.statusProperty(); }
+
+    public ReadOnlyBooleanProperty voiceRecordingRunningProperty() { return voiceRecordingRunning; }
+
+    public ReadOnlyBooleanProperty manualAudioRecordingRunningProperty() { return manualAudioRecordingRunning; }
+
+    public ReadOnlyStringProperty focusedTheatreSceneIdProperty() { return focusedTheatreSceneId; }
+
+    public void focusTheatreScene(String sceneId) { focusedTheatreSceneId.set(sceneId == null ? "" : sceneId.strip()); }
+
+    public ReadOnlyObjectProperty<Path> lastGeneratedVoiceTestPathProperty() { return lastGeneratedVoiceTestPath; }
+
+    public ReadOnlyStringProperty generatedVoiceTestStatusProperty() { return generatedVoiceTestStatus.getReadOnlyProperty(); }
+
+    public ReadOnlyStringProperty documentVoiceToneStatusProperty() { return documentVoiceToneStatus.getReadOnlyProperty(); }
+
+    public ReadOnlyStringProperty spatialFrameModeProperty() { return spatialFrameMode; }
+
+    public void setSpatialFrameMode(String mode) { spatialFrameMode.set(TheatreStageGeometry.normalizeFrameMode(mode)); }
+
+    public ReadOnlyStringProperty activePlacementAliasProperty() { return activePlacementAlias; }
+
+    public ReadOnlyObjectProperty<TheatreProjectLayer.TextActionPlacement> activeTextActionPlacementProperty() { return activeTextActionPlacement; }
+
+    public BooleanProperty documentRightRailVisibleProperty() { return documentRightRailVisible; }
+
+    public BooleanProperty documentPlaybarDockedProperty() { return documentPlaybarDocked; }
+
+    public BooleanProperty technicalProblemPreparationActiveProperty() { return technicalProblemPreparationActive; }
+
+    public BooleanProperty readAfterColonForNarrationProperty() { return readAfterColonForNarration; }
+
+    public IntegerProperty readingFontSizeProperty() { return readingFontSize; }
+
     public void decreaseReadingFontSize() { setReadingFontSize(readingComfortWorkflow.decrease(readingFontSize.get())); }
+
     public void increaseReadingFontSize() { setReadingFontSize(readingComfortWorkflow.increase(readingFontSize.get())); }
+
     public void resetReadingFontSize() { setReadingFontSize(DEFAULT_READING_FONT_SIZE); }
+
     public void setReadingFontSize(int requestedSize) {
         int next = readingComfortWorkflow.clampFontSize(requestedSize);
         if (readingFontSize.get() == next) { statusMessage.set("Tamaño de lectura: " + readingComfortWorkflow.zoomPercent(next) + "%."); return; }
@@ -287,100 +373,196 @@ public final class DocuPodcastShellViewModel {
         Runnable update = () -> { statusMessage.set(message == null || message.isBlank() ? "Listo." : message.strip()); if (mediaChanged) bumpDocumentMediaRevision(); refreshProjectState(); };
         if (Platform.isFxApplicationThread()) update.run(); else Platform.runLater(update);
     }
-    public int readingZoomPercent() { return readingComfortWorkflow.zoomPercent(readingFontSize.get()); } public void updatePdfVisualDocumentProgress(double progress) { pdfVisualDocumentProgress.set(Math.max(0.0, Math.min(1.0, progress))); }
-    public void toggleDocumentRightRail() { documentRightRailVisible.set(!documentRightRailVisible.get()); statusMessage.set(documentRightRailVisible.get() ? "Rail derecho visible." : "Rail derecho oculto."); } public void openTechnicalProblemPanel() { if (currentDocument.get() == null) { technicalProblemPreparationActive.set(false); statusMessage.set("Abre una fuente documental antes de preparar problemas tecnicos."); refreshProjectState(); return; } activeWorkspace.set(WorkspaceKind.DOCUMENT_READER); documentRightRailVisible.set(true); statusMessage.set("Panel de problema tecnico abierto. Usa el panel derecho para seleccionar fragmentos."); refreshProjectState(); } public void toggleDocumentPlaybarDocked() { documentPlaybarDocked.set(!documentPlaybarDocked.get()); statusMessage.set(documentPlaybarDocked.get() ? "Playbar desplazada al rail izquierdo." : "Playbar flotante sobre el documento."); }
+
+    public int readingZoomPercent() { return readingComfortWorkflow.zoomPercent(readingFontSize.get()); }
+
+    public void updatePdfVisualDocumentProgress(double progress) { pdfVisualDocumentProgress.set(Math.max(0.0, Math.min(1.0, progress))); }
+
+    public void toggleDocumentRightRail() { documentRightRailVisible.set(!documentRightRailVisible.get()); statusMessage.set(documentRightRailVisible.get() ? "Rail derecho visible." : "Rail derecho oculto."); }
+
+    public void openTechnicalProblemPanel() { if (currentDocument.get() == null) { technicalProblemPreparationActive.set(false); statusMessage.set("Abre una fuente documental antes de preparar problemas tecnicos."); refreshProjectState(); return; } activeWorkspace.set(WorkspaceKind.DOCUMENT_READER); documentRightRailVisible.set(true); statusMessage.set("Panel de problema tecnico abierto. Usa el panel derecho para seleccionar fragmentos."); refreshProjectState(); }
+
+    public void toggleDocumentPlaybarDocked() { documentPlaybarDocked.set(!documentPlaybarDocked.get()); statusMessage.set(documentPlaybarDocked.get() ? "Playbar desplazada al rail izquierdo." : "Playbar flotante sobre el documento."); }
+
     public void toggleTechnicalProblemPreparation() { if (currentDocument.get() == null) { technicalProblemPreparationActive.set(false); statusMessage.set("Abre una fuente documental antes de preparar problemas tecnicos."); refreshProjectState(); return; } technicalProblemPreparationActive.set(!technicalProblemPreparationActive.get()); activeWorkspace.set(WorkspaceKind.DOCUMENT_READER); documentRightRailVisible.set(true); statusMessage.set(technicalProblemPreparationActive.get() ? "Seleccion de fragmentos para problema tecnico activa." : "Seleccion de fragmentos para problema tecnico desactivada."); refreshProjectState(); }
     private void loadReadingComfortSettings() { readingFontSize.set(readingComfortWorkflow.loadInitialFontSize()); }
+
     public String voiceRecordingStatusLabel() {
         if (voiceRecordingRunning.get()) {
             return "Grabando muestra de voz humana" + (activeVoiceRecordingFile == null ? "" : ": " + activeVoiceRecordingFile.getFileName());
         }
         return "Sin grabación activa";
     }
-    public boolean hasUnsavedChanges() { return sessions.dirty(); } public boolean hasOpenProject() { return sessions.hasActiveSession(); }
+
+    public boolean hasUnsavedChanges() { return sessions.dirty(); }
+
+    public boolean hasOpenProject() { return sessions.hasActiveSession(); }
+
     public Optional<DocuPodcastProject> currentProject() { return sessions.activeSession().map(ProjectSession::project); }
+
     public Optional<Path> currentProjectFile() { return sessions.activeSession().flatMap(ProjectSession::projectFile); }
+
     public DocumentStudyVideoConfiguration documentaryVideoConfiguration() { return currentProject().map(project -> project.study().documentaryVideoConfiguration()).orElseGet(DocumentStudyVideoConfiguration::empty); }
+
     public boolean documentaryVideoConfigurationAvailable() { return currentProjectMode.get() == ProjectMode.DOCUMENTARY_STUDIO && currentDocument.get() != null && currentDocument.get().format() == com.marcosmoreiradev.docupodcaststudio.domain.document.SourceDocumentFormat.DOCX; }
+
     public void updateDocumentaryVideoConfiguration(DocumentStudyVideoConfiguration value) { documentaryVideoAssetWorkflow.update(requireSession(), value); documentaryVideoChanged("Configuracion de video documental actualizada."); }
+
     public ProjectAssetReference importDocumentaryVideoImage(Path source) throws IOException { ProjectAssetReference asset = documentaryVideoAssetWorkflow.importImage(applicationServices, requireSession(), source); documentaryVideoChanged("Imagen copiada dentro del proyecto: " + asset.displayName()); return asset; }
+
     public DocumentStudyVideoAssetWorkflow.DrawingAsset saveDocumentaryDrawing(String blockId, Path png, String state) throws IOException { var asset = documentaryVideoAssetWorkflow.saveDrawing(requireSession(), blockId, png, state); documentaryVideoChanged("Dibujo guardado dentro del proyecto."); return asset; }
+
     public DocumentStudyMusicTrack importDocumentaryMusic(Path source) throws IOException { var imported = documentaryVideoAssetWorkflow.importMusic(applicationServices, requireSession(), source); documentaryVideoChanged("Musica copiada dentro del proyecto: " + imported.displayName()); return imported.track(); }
+
     public Optional<Path> resolveCurrentProjectAsset(String assetId) { return documentaryVideoAssetWorkflow.resolveAsset(currentProject(), currentProjectFile(), assetId); }
+
     public Optional<Path> resolveCurrentProjectRelativePath(String path) { return documentaryVideoAssetWorkflow.resolveRelative(currentProjectFile(), path); }
     private void documentaryVideoChanged(String message) { bumpDocumentMediaRevision(); statusMessage.set(message); refreshProjectState(); }
+
     public List<TheatreProjectLayer.CharacterProfile> theatreCharacterProfiles() { return theatreCharacterProfileWorkflow.profiles(sessions.activeSession()); }
+
     public List<TheatreProjectLayer.VoiceRoleAlias> theatreVoiceRoleAliases() { return sessions.activeSession().map(session -> session.project().theatre().voiceRoleAliases()).orElseGet(List::of); }
+
     public Optional<TheatreProjectLayer.VoiceRoleAlias> theatreVoiceRoleAliasForCharacter(String characterId) { String target = characterId == null ? "" : characterId.strip(); return target.isBlank() ? Optional.empty() : theatreVoiceRoleAliases().stream().filter(alias -> alias.characterId().equals(target)).findFirst(); }
+
     public void assignTheatreCharacterVoice(String characterId, String displayName, String voiceProfileId) { var result = theatreCharacterProfileWorkflow.assignVoice(requireSession(), characterId, displayName, voiceProfileId, activeVoiceLibrary.get()); statusMessage.set(result.message()); refreshProjectState(); }
+
     public void saveTheatreCharacterDescription(String characterId, String displayName, String description) { statusMessage.set(theatreCharacterProfileWorkflow.save(sessions.activeSession(), characterId, displayName, description).message()); refreshProjectState(); }
+
     public List<TheatreProjectLayer.TheatreAct> theatreActs() { return theatreSceneWorkflow.acts(sessions.activeSession()); }
+
     public void addTheatreAct(String displayName, String description) { statusMessage.set(theatreSceneWorkflow.addAct(sessions.activeSession(), displayName, description).message()); refreshProjectState(); }
+
     public void updateTheatreAct(String actId, String displayName, String description) { statusMessage.set(theatreSceneWorkflow.updateAct(sessions.activeSession(), actId, displayName, description).message()); refreshProjectState(); }
+
     public List<TheatreProjectLayer.Scene> theatreScenes() { return theatreSceneWorkflow.scenes(sessions.activeSession()); }
+
     public void addTheatreScene(String actId, String displayName, String description) { statusMessage.set(theatreSceneWorkflow.addScene(sessions.activeSession(), actId, displayName, description).message()); refreshProjectState(); }
+
     public void updateTheatreScene(String sceneId, String displayName, String description) { statusMessage.set(theatreSceneWorkflow.updateScene(sessions.activeSession(), sceneId, displayName, description).message()); refreshProjectState(); }
+
     public void deleteTheatreScene(String sceneId) { statusMessage.set(theatreSceneWorkflow.deleteScene(sessions.activeSession(), sceneId).message()); refreshProjectState(); }
+
     public List<TheatreProjectLayer.CharacterImage> theatreCharacterSceneImages(String characterId, String sceneId) { return theatreCharacterImageWorkflow.images(sessions.activeSession(), characterId, sceneId); }
+
     public Optional<String> projectImageAssetUri(String assetId) { Optional<ProjectSession> session = sessions.activeSession(); if (session.isEmpty() || assetId == null || assetId.isBlank()) return Optional.empty(); return session.get().project().assets().byId(assetId).filter(ProjectAssetReference::isImage).flatMap(asset -> assetUri(currentProjectDirectory(), asset)); }
+
     public Optional<Path> projectImageAssetPath(String assetId) { Optional<ProjectSession> session = sessions.activeSession(); Optional<Path> root = currentProjectDirectory(); if (session.isEmpty() || root.isEmpty() || assetId == null || assetId.isBlank()) return Optional.empty(); Path projectRoot = root.get().toAbsolutePath().normalize(); return session.get().project().assets().byId(assetId).filter(ProjectAssetReference::isImage).map(asset -> projectRoot.resolve(asset.relativePath()).toAbsolutePath().normalize()).filter(path -> path.startsWith(projectRoot) && Files.isRegularFile(path)); }
+
     public Optional<TheatrePrimaryVisualReference> theatrePrimaryVisualReference(String interventionId) { Optional<ProjectSession> session = sessions.activeSession(); Optional<Path> root = currentProjectDirectory(); if (session.isEmpty() || root.isEmpty()) return Optional.empty(); return new TheatrePrimaryVisualResolver().resolve(session.get().project(), currentStoryboard.get(), currentScript.get(), interventionId, root.get()); }
+
     public List<TheatreProjectLayer.CameraReference> theatreCameraReferences() { return theatreVisualSetupWorkflow.cameraReferences(sessions.activeSession()); }
+
     public String selectedTheatreEffectiveCameraId() { Optional<ProjectSession> session = sessions.activeSession(); String id = session.flatMap(this::selectedTheatreInterventionId).orElse(""); return theatreVisualSetupWorkflow.effectiveCameraId(session, id); }
+
     public Optional<String> theatreCameraImageUri(String cameraId) { return theatreVisualSetupWorkflow.cameraImageUri(sessions.activeSession(), currentProjectDirectory(), cameraId); }
+
     public boolean selectedTheatreApplyCameraPlane() { return new TheatreCameraApplicationPolicy().applies(currentStoryboard.get(), selectedTheatreVisualSegment().map(NarrationSegment::id).orElse("")); }
+
     public void setSelectedTheatreApplyCameraPlane(boolean applyCamera) { StoryboardDocument storyboard = currentStoryboard.get(); String segmentId = selectedTheatreVisualSegment().map(NarrationSegment::id).orElse(""); if (storyboard == null || segmentId.isBlank()) { statusMessage.set("Asocia una imagen al fragmento antes de cambiar Aplicar plano."); refreshProjectState(); return; } StoryboardBinding binding = storyboard.bindingForSegment(segmentId).orElse(null); if (binding == null) { statusMessage.set("Asocia una imagen al fragmento antes de cambiar Aplicar plano."); refreshProjectState(); return; } Map<String, String> metadata = new TheatreCameraApplicationPolicy().metadataWithApplyCamera(binding.metadata(), applyCamera); StoryboardDocument updated = storyboard.withBinding(binding.withMetadata(metadata)); currentStoryboard.set(updated); sessions.activeSession().ifPresent(session -> session.setStoryboard(updated)); selectedScriptSegmentId.set(segmentId); statusMessage.set(applyCamera ? "Plano aplicado al fragmento." : "Plano omitido para este fragmento."); bumpDocumentMediaRevision(); refreshProjectState(); }
+
     public void setTheatreCameraCueForSelectedSegment(String cameraId) throws IOException { ProjectSession session = requireSession(); String id = selectedTheatreInterventionId(session).orElse(""); statusMessage.set(theatreVisualSetupWorkflow.setCameraCue(session, id, cameraId).message()); bumpDocumentMediaRevision(); refreshProjectState(); }
+
     public TheatreVisualSetupCoordinator.StageBackdropPreview selectedTheatreStageBackdropPreview() { ProjectSession session = requireSession(); String id = selectedTheatreInterventionId(session).orElse(""); String sceneId = new TheatreFragmentLinkPolicy().sceneIdForIntervention(session.project().theatre(), id).orElse(""); return theatreVisualSetupWorkflow.stageBackdropPreview(sessions.activeSession(), currentProjectDirectory(), id, sceneId); }
+
     public void assignStageBackdropForSelectedSegment(Path imageFile, boolean fragmentOverride) throws IOException { ProjectSession session = requireSession(); String id = selectedTheatreInterventionId(session).orElse(""); String sceneId = new TheatreFragmentLinkPolicy().sceneIdForIntervention(session.project().theatre(), id).orElse(""); statusMessage.set(theatreVisualSetupWorkflow.assignStageBackdrop(applicationServices, session, id, sceneId, imageFile, fragmentOverride).message()); bumpDocumentMediaRevision(); refreshProjectState(); }
+
     public void clearStageBackdropFromSelectedSegment() { ProjectSession session = requireSession(); String id = selectedTheatreInterventionId(session).orElse(""); statusMessage.set(theatreVisualSetupWorkflow.clearStageBackdropFromIntervention(session, id).message()); bumpDocumentMediaRevision(); refreshProjectState(); }
+
     public String theatreContextTextOverride(String segmentId) { return new TheatreContextTextPolicy().text(currentProject().orElse(null), segmentId).orElse(""); }
+
     public void saveTheatreContextText(String segmentId, String text) { ProjectSession session = requireSession(); session.replaceProject(new TheatreContextTextPolicy().save(session.project(), segmentId, text), true); statusMessage.set("Contexto textual guardado para " + segmentId + "."); refreshProjectState(); }
+
     public void addTheatreCharacterSceneImage(String characterId, String sceneId, Path imageFile) throws IOException { statusMessage.set(theatreImageAssetWorkflow.addCharacterImage(requireSession(), characterId, sceneId, imageFile).message()); refreshProjectState(); }
+
     public void replaceTheatreCharacterSceneImage(String imageId, Path imageFile) throws IOException { statusMessage.set(theatreImageAssetWorkflow.replaceCharacterImage(requireSession(), currentStoryboard.get(), imageId, imageFile).message()); refreshProjectState(); }
+
     public void updateTheatreCharacterSceneImageNote(String imageId, String note) { statusMessage.set(theatreImageAssetWorkflow.updateCharacterImageNote(requireSession(), imageId, note).message()); refreshProjectState(); }
+
     public void deleteTheatreCharacterSceneImage(String imageId) { statusMessage.set(theatreImageAssetWorkflow.deleteCharacterImage(requireSession(), currentStoryboard.get(), imageId).message()); refreshProjectState(); }
+
     public List<TheatreProjectLayer.TextActionPlacement> theatreTextActionPlacements() { return sessions.activeSession().map(session -> session.project().theatre().textActionPlacements()).orElseGet(List::of); }
+
     public void saveTheatreTextActionPlacement(TheatreProjectLayer.TextActionPlacement placement) { Objects.requireNonNull(placement, "placement"); ProjectSession session = requireSession(); theatreTextActionPlacementSaveWorkflow.save(session, placement); activePlacementAlias.set(placement.intervencionId()); activeTextActionPlacement.set(placement); statusMessage.set(placement.intervencionId() + " actualizado en mapa espacial."); refreshProjectState(); }
-    public TechnicalProblem saveTechnicalProblem(List<DocumentBlock> sourceBlocks, String requestedTitle, String solutionText, WritableImage solutionImage, java.util.Map<String, Path> sourceCropPaths) throws IOException { return saveTechnicalProblem(sourceBlocks, requestedTitle, solutionText, solutionImage, sourceCropPaths, null); } public TechnicalProblem saveTechnicalProblem(List<DocumentBlock> sourceBlocks, String requestedTitle, String solutionText, WritableImage solutionImage, java.util.Map<String, Path> sourceCropPaths, String canvasStateJson) throws IOException { TechnicalProblem problem = studyProblemWorkflow.save(requireSession(), currentProjectDirectory(), sourceBlocks, requestedTitle, solutionText, solutionImage, sourceCropPaths, canvasStateJson); statusMessage.set("Problema tecnico guardado: " + problem.id() + (problem.solutionImageAssetId().isBlank() ? "." : ". Lienzo exportado como PNG.")); bumpDocumentMediaRevision(); refreshProjectState(); return problem; } public TechnicalProblem saveTechnicalProblemFromSources(java.util.List<com.marcosmoreiradev.docupodcaststudio.application.documentstudy.StudyProblemSourceDraft> sourceDrafts, String requestedTitle, String solutionText, WritableImage solutionImage) throws IOException { return saveTechnicalProblemFromSources(sourceDrafts, requestedTitle, solutionText, solutionImage, null); } public TechnicalProblem saveTechnicalProblemFromSources(java.util.List<com.marcosmoreiradev.docupodcaststudio.application.documentstudy.StudyProblemSourceDraft> sourceDrafts, String requestedTitle, String solutionText, WritableImage solutionImage, String canvasStateJson) throws IOException { TechnicalProblem problem = studyProblemWorkflow.saveFromSources(requireSession(), currentProjectDirectory(), sourceDrafts, requestedTitle, solutionText, solutionImage, canvasStateJson); statusMessage.set("Problema tecnico guardado: " + problem.id() + (problem.solutionImageAssetId().isBlank() ? "." : ". Lienzo exportado como PNG.")); bumpDocumentMediaRevision(); refreshProjectState(); return problem; } public com.marcosmoreiradev.docupodcaststudio.application.documentstudy.StudyProblemsProjection studyProblemsProjection() { return applicationServices.documentStudy().buildStudyProblemsProjection().build(currentProject().orElse(null), currentProjectDirectory().orElse(null)); } public TechnicalProblem updateTechnicalProblemSolution(String problemId, String solutionText, WritableImage solutionImage, String notes) throws IOException { return updateTechnicalProblemSolution(problemId, solutionText, solutionImage, notes, null); } public TechnicalProblem updateTechnicalProblemSolution(String problemId, String solutionText, WritableImage solutionImage, String notes, String canvasStateJson) throws IOException { TechnicalProblem problem = studyProblemWorkflow.updateSolution(requireSession(), currentProjectDirectory(), problemId, solutionText, solutionImage, notes, canvasStateJson); statusMessage.set("Problema tecnico actualizado: " + problem.id() + "."); bumpDocumentMediaRevision(); refreshProjectState(); return problem; }
-    public void deleteTechnicalProblem(String problemId) throws IOException { studyProblemWorkflow.delete(requireSession(), currentProjectDirectory(), problemId); statusMessage.set("Problema tecnico eliminado: " + problemId + "."); bumpDocumentMediaRevision(); refreshProjectState(); } public void exportTechnicalProblemImage(String problemId, Path target) throws IOException { Path output = studyProblemWorkflow.exportSolutionImage(requireSession(), currentProjectDirectory(), problemId, target); statusMessage.set("Solucion PNG exportada: " + output.getFileName() + "."); } public Path exportTechnicalProblemImage(WritableImage image, Path target) throws IOException { Path output = studyProblemWorkflow.exportSolutionImage(image, target); statusMessage.set("Solucion PNG exportada: " + output.getFileName() + "."); return output; } public void exportTechnicalProblemText(String problemId, Path target) throws IOException { Path output = studyProblemWorkflow.exportSolutionText(requireSession(), problemId, target); statusMessage.set("Solucion textual exportada: " + output.getFileName() + "."); } public void exportAllTechnicalProblemImages(Path targetDirectory) throws IOException { var report = studyProblemWorkflow.exportAllSolutionImages(requireSession(), currentProjectDirectory(), targetDirectory); statusMessage.set("Problemas exportados: " + report.exported() + " PNG, omitidos: " + report.skipped() + ", errores: " + report.failed() + ". Manifest: " + report.manifestPath().getFileName() + "."); } public void exportAllTechnicalProblemImagesPdf(Path targetPdf) throws IOException { var report = studyProblemWorkflow.exportAllSolutionImagesAsPdf(requireSession(), currentProjectDirectory(), targetPdf); statusMessage.set("PDF de ejercicios exportado: " + report.pdfPath().getFileName() + ". Paginas: " + report.exported() + ", omitidos: " + report.skipped() + ", errores: " + report.failed() + "."); }
+
+    public TechnicalProblem saveTechnicalProblem(List<DocumentBlock> sourceBlocks, String requestedTitle, String solutionText, WritableImage solutionImage, java.util.Map<String, Path> sourceCropPaths) throws IOException { return saveTechnicalProblem(sourceBlocks, requestedTitle, solutionText, solutionImage, sourceCropPaths, null); }
+
+    public TechnicalProblem saveTechnicalProblem(List<DocumentBlock> sourceBlocks, String requestedTitle, String solutionText, WritableImage solutionImage, java.util.Map<String, Path> sourceCropPaths, String canvasStateJson) throws IOException { TechnicalProblem problem = studyProblemWorkflow.save(requireSession(), currentProjectDirectory(), sourceBlocks, requestedTitle, solutionText, solutionImage, sourceCropPaths, canvasStateJson); statusMessage.set("Problema tecnico guardado: " + problem.id() + (problem.solutionImageAssetId().isBlank() ? "." : ". Lienzo exportado como PNG.")); bumpDocumentMediaRevision(); refreshProjectState(); return problem; }
+
+    public TechnicalProblem saveTechnicalProblemFromSources(java.util.List<com.marcosmoreiradev.docupodcaststudio.application.documentstudy.StudyProblemSourceDraft> sourceDrafts, String requestedTitle, String solutionText, WritableImage solutionImage) throws IOException { return saveTechnicalProblemFromSources(sourceDrafts, requestedTitle, solutionText, solutionImage, null); }
+
+    public TechnicalProblem saveTechnicalProblemFromSources(java.util.List<com.marcosmoreiradev.docupodcaststudio.application.documentstudy.StudyProblemSourceDraft> sourceDrafts, String requestedTitle, String solutionText, WritableImage solutionImage, String canvasStateJson) throws IOException { TechnicalProblem problem = studyProblemWorkflow.saveFromSources(requireSession(), currentProjectDirectory(), sourceDrafts, requestedTitle, solutionText, solutionImage, canvasStateJson); statusMessage.set("Problema tecnico guardado: " + problem.id() + (problem.solutionImageAssetId().isBlank() ? "." : ". Lienzo exportado como PNG.")); bumpDocumentMediaRevision(); refreshProjectState(); return problem; }
+
+    public com.marcosmoreiradev.docupodcaststudio.application.documentstudy.StudyProblemsProjection studyProblemsProjection() { return applicationServices.documentStudy().buildStudyProblemsProjection().build(currentProject().orElse(null), currentProjectDirectory().orElse(null)); }
+
+    public TechnicalProblem updateTechnicalProblemSolution(String problemId, String solutionText, WritableImage solutionImage, String notes) throws IOException { return updateTechnicalProblemSolution(problemId, solutionText, solutionImage, notes, null); }
+
+    public TechnicalProblem updateTechnicalProblemSolution(String problemId, String solutionText, WritableImage solutionImage, String notes, String canvasStateJson) throws IOException { TechnicalProblem problem = studyProblemWorkflow.updateSolution(requireSession(), currentProjectDirectory(), problemId, solutionText, solutionImage, notes, canvasStateJson); statusMessage.set("Problema tecnico actualizado: " + problem.id() + "."); bumpDocumentMediaRevision(); refreshProjectState(); return problem; }
+
+    public void deleteTechnicalProblem(String problemId) throws IOException { studyProblemWorkflow.delete(requireSession(), currentProjectDirectory(), problemId); statusMessage.set("Problema tecnico eliminado: " + problemId + "."); bumpDocumentMediaRevision(); refreshProjectState(); }
+
+    public void exportTechnicalProblemImage(String problemId, Path target) throws IOException { Path output = studyProblemWorkflow.exportSolutionImage(requireSession(), currentProjectDirectory(), problemId, target); statusMessage.set("Solucion PNG exportada: " + output.getFileName() + "."); }
+
+    public Path exportTechnicalProblemImage(WritableImage image, Path target) throws IOException { Path output = studyProblemWorkflow.exportSolutionImage(image, target); statusMessage.set("Solucion PNG exportada: " + output.getFileName() + "."); return output; }
+
+    public void exportTechnicalProblemText(String problemId, Path target) throws IOException { Path output = studyProblemWorkflow.exportSolutionText(requireSession(), problemId, target); statusMessage.set("Solucion textual exportada: " + output.getFileName() + "."); }
+
+    public void exportAllTechnicalProblemImages(Path targetDirectory) throws IOException { var report = studyProblemWorkflow.exportAllSolutionImages(requireSession(), currentProjectDirectory(), targetDirectory); statusMessage.set("Problemas exportados: " + report.exported() + " PNG, omitidos: " + report.skipped() + ", errores: " + report.failed() + ". Manifest: " + report.manifestPath().getFileName() + "."); }
+
+    public void exportAllTechnicalProblemImagesPdf(Path targetPdf) throws IOException { var report = studyProblemWorkflow.exportAllSolutionImagesAsPdf(requireSession(), currentProjectDirectory(), targetPdf); statusMessage.set("PDF de ejercicios exportado: " + report.pdfPath().getFileName() + ". Paginas: " + report.exported() + ", omitidos: " + report.skipped() + ", errores: " + report.failed() + "."); }
+
     public Path exportTheatreInterventionContext(String sceneId, String intervencionId, Path targetDirectory) throws IOException {
         TheatreInterventionContextExportWorkflow.Result result = theatreInterventionContextExportWorkflow.export(requireSession(), currentScript.get(), sceneId, intervencionId, targetDirectory);
         statusMessage.set("Paquete IA creado para " + intervencionId + ": " + result.copiedImages() + " imagenes copiadas en " + result.folder() + ".");
         return result.folder();
     }
+
     public TheatreContextExportEstimate estimateTheatreContextPackages(TheatreContextExportScope scope) { return theatreBulkContextExportWorkflow.estimate(requireSession(), currentScript.get(), scope); }
+
     public TheatreBulkInterventionContextExportWorkflow.Result exportTheatreContextPackages(TheatreContextExportScope scope, Path targetDirectory) throws IOException { var result = theatreBulkContextExportWorkflow.export(requireSession(), currentScript.get(), scope, targetDirectory); statusMessage.set("Paquetes IA teatrales exportados: " + result.packages() + " paquetes en " + result.root() + "."); return result; }
+
     public List<TheatreImageGenerationUnit> theatreImageGenerationQueue(TheatreContextExportScope scope) { return theatreImageGenerationWorkflow.queue(requireSession(), currentScript.get(), scope); }
+
     public List<TheatreImageContextAsset> theatreImageGenerationContextAssets(TheatreImageGenerationUnit unit) { return theatreImageGenerationWorkflow.contextAssets(requireSession(), unit); }
+
     public ComfyUiVisualEngineClient.ConnectionResult testComfyUi(ComfyUiConnectionSettings settings) { return theatreImageGenerationWorkflow.testConnection(settings); }
+
     public TheatreGeneratedImageCandidate generateTheatreImageCandidate(TheatreImageGenerationUnit unit, ComfyUiConnectionSettings settings, TheatreImageGenerationPreset preset, boolean assign) throws IOException { return generateTheatreImageCandidate(unit, settings, preset, ImageEnhancementOutputProfile.FHD_1080, assign); }
+
     public TheatreGeneratedImageCandidate generateTheatreImageCandidate(TheatreImageGenerationUnit unit, ComfyUiConnectionSettings settings, TheatreImageGenerationPreset preset, ImageEnhancementOutputProfile outputProfile, boolean assign) throws IOException {
         return generateTheatreImageCandidate(unit, settings, preset, outputProfile, TheatreImageAspectRatio.WIDE_16_9, assign, null);
     }
+
     public TheatreGeneratedImageCandidate generateTheatreImageCandidate(TheatreImageGenerationUnit unit, ComfyUiConnectionSettings settings, TheatreImageGenerationPreset preset, ImageEnhancementOutputProfile outputProfile, TheatreImageAspectRatio aspectRatio, boolean assign, Consumer<String> progress) throws IOException {
         var candidate = theatreImageGenerationWorkflow.generate(requireSession(), unit, settings, preset, outputProfile, aspectRatio, assign, progress);
         updateProjectStatusOnFxThread((candidate.approved() ? "Imagen generada y asignada a " : "Candidato IA generado para ") + candidate.interventionId() + ".", true);
         return candidate;
     }
+
     public TheatreGeneratedImageCandidate generateTheatreTransitionImageCandidate(TheatreImageGenerationUnit unit, String previousAssetId, Path previousFrame, String nextAssetId, Path nextFrame, ComfyUiConnectionSettings settings, TheatreImageGenerationPreset preset, ImageEnhancementOutputProfile outputProfile, TheatreImageAspectRatio aspectRatio, Consumer<String> progress) throws IOException { var candidate = theatreImageGenerationWorkflow.generateTransition(requireSession(), unit, previousAssetId, previousFrame, nextAssetId, nextFrame, settings, preset, outputProfile, aspectRatio, progress); updateProjectStatusOnFxThread("Candidato IA intermedio generado para " + unit.interventionId() + ".", true); return candidate; }
+
     public TheatreGeneratedFrameCandidate generateTheatreRifeIntermediateFrameCandidate(TheatreIntermediateFrameBatchPlanner.Item item, ComfyUiConnectionSettings settings, Consumer<String> progress) throws IOException { var candidate = theatreImageGenerationWorkflow.generateRifeTransition(requireSession(), item.current(), item.next(), item.previousReference(), item.nextReference(), settings, progress); updateProjectStatusOnFxThread("Frame RIFE intermedio generado para " + candidate.interventionId() + " -> " + candidate.nextInterventionId() + ".", true); return candidate; }
+
     public TheatreGeneratedImageCandidate approveTheatreGeneratedImageCandidate(TheatreGeneratedImageCandidate candidate) {
         var approved = theatreImageGenerationWorkflow.approve(requireSession(), candidate);
         updateProjectStatusOnFxThread("Candidato IA aprobado para " + approved.interventionId() + ".", true);
         return approved;
     }
+
     public TheatreGeneratedImageCandidate enhanceTheatreImageCandidate(TheatreGeneratedImageCandidate c, ImageEnhancementOutputProfile p, ImageAspectStrategy s) throws IOException {
         var e = new ImageEnhancementWorkflow(applicationServices).enhanceCandidate(requireSession(), c, p, s);
         updateProjectStatusOnFxThread("Imagen mejorada para " + e.interventionId() + " a " + p.displayName() + ".", true);
         return e;
     }
+
     public TheatreFrameGenerationWorkflow.Estimate estimateTheatreFrames(TheatreFrameGenerationRequest request) { return theatreFrameGenerationWorkflow.estimate(requireSession(), currentScript.get(), request); }
+
     public TheatreFrameGenerationResult generateTheatreFrames(TheatreFrameGenerationRequest request, Consumer<String> progress, BooleanSupplier cancelled) throws IOException {
         var result = theatreFrameGenerationWorkflow.generate(requireSession(), currentScript.get(), request, progress, cancelled);
         updateProjectStatusOnFxThread("Frames teatrales generados: " + result.generatedFrames() + " en " + result.root() + ".", true);
         return result;
     }
+
     public TheatreGeneratedFrameCandidate approveTheatreGeneratedFrameCandidate(TheatreGeneratedFrameCandidate candidate) {
         Objects.requireNonNull(candidate, "candidate");
         if (candidate.transitionFrame()) {
@@ -396,37 +578,65 @@ public final class DocuPodcastShellViewModel {
         updateProjectStatusOnFxThread("Frame aprobado para " + frame.interventionId() + ".", true);
         return frame;
     }
-    public List<TheatreProjectLayer.IntervencionVisual> theatreIntervencionesVisuales() { return sessions.activeSession().map(session -> session.project().theatre().intervencionesVisuales()).orElseGet(List::of); } public TheatreAudioTrackTimeline theatreAudioTrackTimeline() { return theatreAudioTrackWorkflow.timeline(applicationServices, sessions.activeSession(), currentScript.get(), currentPlaybackManifest.get()); } public Optional<String> selectedTheatreAudioInterventionId() { return theatreAudioTrackWorkflow.interventionForSelection(sessions.activeSession(), currentScript.get(), selectedScriptSegmentId.get(), selectedDocumentBlockId.get()); } public void selectTheatreAudioIntervention(String id) { theatreAudioTrackWorkflow.blockForIntervention(sessions.activeSession(), id).ifPresent(this::selectDocumentBlock); } public void selectTheatreAudioSegment(String id) { theatreAudioTrackWorkflow.blockForSegment(currentScript.get(), id).ifPresent(this::selectDocumentBlock); }
-    public List<TheatreChoralVoiceWorkflow.Option> selectedTheatreChoralVoiceOptions() { return new TheatreChoralVoiceWorkflow().options(sessions.activeSession(), selectedTheatreAudioInterventionId(), audioEngineDescriptor()); } public TheatreChoralVoiceWorkflow.State selectedTheatreChoralVoiceState() { Optional<String> interventionId = selectedTheatreAudioInterventionId(); return new TheatreChoralVoiceWorkflow().state(sessions.activeSession(), interventionId, interventionId.flatMap(this::narrationSegmentForIntervention)); }
+
+    public List<TheatreProjectLayer.IntervencionVisual> theatreIntervencionesVisuales() { return sessions.activeSession().map(session -> session.project().theatre().intervencionesVisuales()).orElseGet(List::of); }
+
+    public TheatreAudioTrackTimeline theatreAudioTrackTimeline() { return theatreAudioTrackWorkflow.timeline(applicationServices, sessions.activeSession(), currentScript.get(), currentPlaybackManifest.get()); }
+
+    public Optional<String> selectedTheatreAudioInterventionId() { return theatreAudioTrackWorkflow.interventionForSelection(sessions.activeSession(), currentScript.get(), selectedScriptSegmentId.get(), selectedDocumentBlockId.get()); }
+
+    public void selectTheatreAudioIntervention(String id) { theatreAudioTrackWorkflow.blockForIntervention(sessions.activeSession(), id).ifPresent(this::selectDocumentBlock); }
+
+    public void selectTheatreAudioSegment(String id) { theatreAudioTrackWorkflow.blockForSegment(currentScript.get(), id).ifPresent(this::selectDocumentBlock); }
+
+    public List<TheatreChoralVoiceWorkflow.Option> selectedTheatreChoralVoiceOptions() { return new TheatreChoralVoiceWorkflow().options(sessions.activeSession(), selectedTheatreAudioInterventionId(), audioEngineDescriptor()); }
+
+    public TheatreChoralVoiceWorkflow.State selectedTheatreChoralVoiceState() { Optional<String> interventionId = selectedTheatreAudioInterventionId(); return new TheatreChoralVoiceWorkflow().state(sessions.activeSession(), interventionId, interventionId.flatMap(this::narrationSegmentForIntervention)); }
+
     public boolean canRenderSelectedTheatreChoralVoices(List<String> ids) { return theatreChoralVoiceRenderWorkflow.canRender(selectedTheatreChoralVoiceOptions(), ids, currentProjectMode.get() == ProjectMode.THEATRE_PRODUCTION, selectedTheatreAudioInterventionId().isPresent(), audioJobRunning.get() || choralVoiceRenderingProperty().get()); }
+
     public void renderSelectedTheatreChoralVoices(List<String> characterIds) { try { if (currentProjectMode.get() != ProjectMode.THEATRE_PRODUCTION) throw new IOException("Las voces simultaneas solo estan disponibles en modo Teatro."); if (audioJobRunning.get() || choralVoiceRenderingProperty().get()) throw new IOException("Espera a que termine el trabajo de audio actual."); if (currentScript.get() == null || currentScript.get().empty()) buildNarrationScriptFromDocument(); ProjectSession session = requireSession(); Path projectFile = session.projectFile().orElseThrow(() -> new IOException("Guarda el proyecto antes de renderizar voces simultaneas.")); String interventionId = selectedTheatreAudioInterventionId().orElseThrow(() -> new IOException("Selecciona una intervencion teatral narrable.")); List<String> participants = TheatreChoralVoiceRenderCoordinator.normalize(characterIds); if (!canRenderSelectedTheatreChoralVoices(participants)) throw new IOException("Selecciona al menos dos personajes con voz local disponible."); RenderTheatreChoralVoiceUseCase useCase = applicationServices.theatre().renderChoralVoice(); if (useCase == null) throw new IOException("El render multipersona no esta disponible en esta configuracion de la aplicacion."); saveCurrentProjectAs(projectFile); var request = new TheatreChoralVoiceRenderRequest(session.project(), projectFile, currentScript.get(), interventionId, participants, audioEngineDescriptor()); theatreChoralVoiceRenderWorkflow.start(useCase, request, result -> applyTheatreChoralVoiceResult(session, projectFile, result), statusMessage::set); } catch (Exception ex) { theatreChoralVoiceRenderWorkflow.fail("No se pudo iniciar la voz multipersona: " + rootCauseMessage(ex), statusMessage::set); refreshProjectState(); } }
-    private void applyTheatreChoralVoiceResult(ProjectSession session, Path projectFile, TheatreChoralVoiceRenderResult result) { try { session.replaceProject(result.project(), true); activeVoiceLibrary.set(result.project().voiceLibrary()); saveCurrentProjectAs(projectFile); rebuildPlaybackManifestFromLatestJob(); bumpDocumentMediaRevision(); theatreChoralVoiceRenderWorkflow.complete(result.message(), statusMessage::set); } catch (Exception ex) { theatreChoralVoiceRenderWorkflow.fail("La mezcla se genero, pero no se pudo guardar el proyecto: " + rootCauseMessage(ex), statusMessage::set); } finally { refreshProjectState(); } } public void clearSelectedTheatreChoralVoices() { try { var result = new TheatreChoralVoiceWorkflow().clear(requireSession(), selectedTheatreAudioInterventionId().orElse("")); if (result.saved() && currentProjectFile().isPresent()) saveCurrentProjectAs(currentProjectFile().get()); theatreChoralVoiceRenderWorkflow.complete(result.message(), statusMessage::set); rebuildPlaybackManifestFromLatestJob(); bumpDocumentMediaRevision(); refreshProjectState(); } catch (IOException ex) { theatreChoralVoiceRenderWorkflow.fail("No se pudo restaurar la voz simple: " + rootCauseMessage(ex), statusMessage::set); refreshProjectState(); } }
+    private void applyTheatreChoralVoiceResult(ProjectSession session, Path projectFile, TheatreChoralVoiceRenderResult result) { try { session.replaceProject(result.project(), true); activeVoiceLibrary.set(result.project().voiceLibrary()); saveCurrentProjectAs(projectFile); rebuildPlaybackManifestFromLatestJob(); bumpDocumentMediaRevision(); theatreChoralVoiceRenderWorkflow.complete(result.message(), statusMessage::set); } catch (Exception ex) { theatreChoralVoiceRenderWorkflow.fail("La mezcla se genero, pero no se pudo guardar el proyecto: " + rootCauseMessage(ex), statusMessage::set); } finally { refreshProjectState(); } }
+
+    public void clearSelectedTheatreChoralVoices() { try { var result = new TheatreChoralVoiceWorkflow().clear(requireSession(), selectedTheatreAudioInterventionId().orElse("")); if (result.saved() && currentProjectFile().isPresent()) saveCurrentProjectAs(currentProjectFile().get()); theatreChoralVoiceRenderWorkflow.complete(result.message(), statusMessage::set); rebuildPlaybackManifestFromLatestJob(); bumpDocumentMediaRevision(); refreshProjectState(); } catch (IOException ex) { theatreChoralVoiceRenderWorkflow.fail("No se pudo restaurar la voz simple: " + rootCauseMessage(ex), statusMessage::set); refreshProjectState(); } }
+
     public List<TheatreProjectLayer.TheatreObject> theatreObjects() { return theatreObjectProfileWorkflow.objects(sessions.activeSession()); }
+
     public void saveTheatreObjectDescription(String objectId, String displayName, String description) { statusMessage.set(theatreObjectProfileWorkflow.save(sessions.activeSession(), objectId, displayName, description).message()); refreshProjectState(); }
+
     public List<TheatreProjectLayer.ObjectImage> theatreObjectSceneImages(String objectId, String sceneId) { return theatreObjectImageWorkflow.images(sessions.activeSession(), objectId, sceneId); }
+
     public void addTheatreObjectSceneImage(String objectId, String sceneId, Path imageFile) throws IOException { statusMessage.set(theatreImageAssetWorkflow.addObjectImage(requireSession(), objectId, sceneId, imageFile).message()); refreshProjectState(); }
+
     public void replaceTheatreObjectSceneImage(String imageId, Path imageFile) throws IOException {
         statusMessage.set(theatreImageAssetWorkflow.replaceObjectImage(
                 requireSession(), currentStoryboard.get(), imageId, imageFile).message());
         refreshProjectState();
     }
+
     public void updateTheatreObjectSceneImageNote(String imageId, String note) {
         statusMessage.set(theatreImageAssetWorkflow.updateObjectImageNote(
                 requireSession(), imageId, note).message());
         refreshProjectState();
     }
+
     public void deleteTheatreObjectSceneImage(String imageId) {
         statusMessage.set(theatreImageAssetWorkflow.deleteObjectImage(
                 requireSession(), currentStoryboard.get(), imageId).message());
         refreshProjectState();
     }
+
     public Optional<Path> currentSourceDocumentPath() {
         ReadableDocument document = currentDocument.get();
         return document == null ? Optional.empty() : Optional.of(document.sourcePath());
     }
+
     public Optional<Path> currentProjectDirectory() { return currentProjectFile().map(Path::toAbsolutePath).map(Path::normalize).map(Path::getParent); }
+
     public Optional<Path> currentExportsDirectory() { return currentProjectDirectory().map(directory -> directory.resolve("exports")); }
+
     public void createNewProject(String title) { createNewProject(title, ProjectMode.defaultMode()); }
+
     public void createNewProject(String title, ProjectMode mode) {
         ProjectSession session = projectWorkflow.createNewProject(title, mode);
         DocuPodcastProject project = session.project();
@@ -442,6 +652,7 @@ public final class DocuPodcastShellViewModel {
         statusMessage.set("Proyecto nuevo creado: " + project.metadata().title() + " (" + project.metadata().mode().displayName() + "). Guarda el proyecto para crear el archivo .docupodcast.json.");
         refreshProjectState();
     }
+
     public void openProject(Path sourceFile) throws IOException {
         OpenedProjectContext opened = projectWorkflow.openProject(sourceFile);
         boolean repairedAviadores = theatreDemoManifestWorkflow.repairAviadoresLegacyAssets(opened.session());
@@ -474,11 +685,13 @@ public final class DocuPodcastShellViewModel {
         }
         refreshProjectState();
     }
+
     public void saveCurrentProject() throws IOException {
         ProjectSession session = requireSession();
         Path target = session.projectFile().orElseThrow(() -> new IOException("El proyecto todavía no tiene ruta. Usa Guardar como."));
         saveCurrentProjectAs(target);
     }
+
     public void saveCurrentProjectAs(Path targetFile) throws IOException {
         ProjectSession session = requireSession();
         theatreBoundaryWorkflow.persist(session, intervencionBoundaryStore);
@@ -493,6 +706,7 @@ public final class DocuPodcastShellViewModel {
                 .map(path -> ". Fuente canónica: " + path.getFileName() + " dentro de la carpeta source del proyecto")
                 .orElse("");
     }
+
     public void closeCurrentProject() {
         projectWorkflow.closeProject();
         currentDocument.set(null); currentScript.set(null); currentStoryboard.set(null); lastStoryboardImageAssetId.set("");
@@ -508,9 +722,11 @@ public final class DocuPodcastShellViewModel {
         statusMessage.set("Proyecto cerrado.");
         refreshProjectState();
     }
+
     public ReadableDocument importAndClassifySourceDocument(Path sourceFile) throws IOException {
         return documentIntake.importAndClassify(sourceFile, activeReadingProfile.get());
     }
+
     public void attachImportedDocument(ReadableDocument classified) throws IOException {
         ReadingProfile profile = activeReadingProfile.get();
         if (!sessions.hasActiveSession()) { createNewProject(classified.title()); }
@@ -523,11 +739,14 @@ public final class DocuPodcastShellViewModel {
                 classified.blocks().size(), classified.narratableBlockCount(), classified.imageNoticeCount(), classified.tableNoticeCount(), classified.ignoredCount()));
         refreshProjectState();
     }
+
     public Path createPdfSourceFromImageFolder(Path sourceFolder) throws IOException { Path projectDirectory = currentProjectDirectory().orElseThrow(() -> new IOException("Guarda el proyecto antes de crear una fuente PDF desde carpeta.")); String folderName = sourceFolder == null || sourceFolder.getFileName() == null ? "imagenes" : sourceFolder.getFileName().toString(); Path outputDirectory = projectDirectory.resolve("source").resolve("generated-pdf-from-images"); Files.createDirectories(outputDirectory); Path createdPdf = applicationServices.document().createPdfFromImageFolder().create(sourceFolder, uniqueGeneratedPdfPath(outputDirectory, safeGeneratedPdfStem(folderName))); attachImportedDocument(importAndClassifySourceDocument(createdPdf)); statusMessage.set("Fuente PDF creada desde carpeta de imagenes: " + createdPdf.getFileName() + "."); refreshProjectState(); return createdPdf; }
     private void resetDocumentSideDocksForProjectStart() { documentRightRailVisible.set(false); documentPlaybarDocked.set(false); }
     private static String safeGeneratedPdfStem(String value) { String safe = value == null ? "" : value.replaceAll("[^A-Za-z0-9._-]+", "-").replaceAll("-{2,}", "-").replaceAll("^[-.]+|[-.]+$", ""); return safe.isBlank() ? "imagenes" : safe; }
     private static Path uniqueGeneratedPdfPath(Path directory, String stem) { Path candidate = directory.resolve(stem + ".pdf"); for (int index = 2; Files.exists(candidate); index++) { candidate = directory.resolve(stem + "-" + index + ".pdf"); } return candidate; }
+
     public void importWordDocument(Path sourceFile) throws IOException { attachImportedDocument(importAndClassifySourceDocument(sourceFile)); }
+
     public Optional<UserVisibleDecision> refreshSourceDocumentDecision() {
         if (audioJobRunning.get()) {
             cancelActiveAudioJobSilently();
@@ -568,9 +787,11 @@ public final class DocuPodcastShellViewModel {
             return Optional.of(decision);
         }
     }
+
     public void refreshSourceDocument() {
         refreshSourceDocumentDecision().ifPresent(value -> statusMessage.set(value.headline() + ": " + value.message()));
     }
+
     public void updateDocumentBlockType(String blockId, DocumentBlockType type) {
         ReadableDocument document = currentDocument.get();
         if (document == null) {
@@ -583,6 +804,7 @@ public final class DocuPodcastShellViewModel {
         statusMessage.set("Bloque " + blockId + " marcado como " + type.displayName() + ".");
         refreshProjectState();
     }
+
     public void updateReadingProfile(ReadingProfile profile) {
         Objects.requireNonNull(profile, "profile");
         activeReadingProfile.set(profile);
@@ -590,6 +812,7 @@ public final class DocuPodcastShellViewModel {
         statusMessage.set("Perfil de lectura actualizado: " + profile.name() + ". Aplica el perfil para reclasificar el documento activo.");
         refreshProjectState();
     }
+
     public void applyReadingProfile(ReadingProfile profile) {
         updateReadingProfile(profile);
         ReadableDocument document = currentDocument.get();
@@ -604,9 +827,13 @@ public final class DocuPodcastShellViewModel {
         statusMessage.set("Perfil aplicado: " + profile.name() + ". Estructura: " + updated.structuralBlockCount() + " bloques; ignorados: " + updated.ignoredCount() + ".");
         refreshProjectState();
     }
+
     public void applyDefaultReadingProfile() { applyReadingProfile(activeReadingProfile.get()); }
+
     public boolean readTablesAndTextBoxesForNarration() { ReadingProfile profile = activeReadingProfile.get(); return profile != null && profile.tablePolicy() == TableNarrationPolicy.READ_STRUCTURED; }
+
     public void setReadTablesAndTextBoxesForNarration(boolean enabled) { ReadingProfile base = activeReadingProfile.get() == null ? ReadingProfile.academicDefaults() : activeReadingProfile.get(); TableNarrationPolicy next = enabled ? TableNarrationPolicy.READ_STRUCTURED : TableNarrationPolicy.IGNORE_TABLES; if (base.tablePolicy() == next) { return; } ReadingProfile updated = new ReadingProfile(base.id(), base.name(), base.description(), base.headingRules(), base.imagePolicy(), next); activeReadingProfile.set(updated); sessions.activeSession().ifPresent(session -> session.replaceProject(session.project().withReadingProfile(updated), true)); if (audioJobRunning.get()) { cancelActiveAudioJobSilently(); } invalidatePersistedAudioForNarrationChange(); if (currentDocument.get() != null) { buildNarrationScriptFromDocument(); } statusMessage.set((enabled ? "Lectura estructurada de cuadros y tablas activada." : "Lectura de cuadros y tablas desactivada.") + " Reconstruye fragmentos de audio para aplicar el cambio."); refreshProjectState(); }
+
     public void setReadAfterColonForNarration(boolean enabled) {
         if (readAfterColonForNarration.get() == enabled) { return; }
         readAfterColonForNarration.set(enabled);
@@ -617,6 +844,7 @@ public final class DocuPodcastShellViewModel {
         statusMessage.set((enabled ? "Se leerá desde después de ':' cuando parezca diálogo." : "Se leerá el texto completo antes y después de ':'.") + " Reconstruir fragmentos de audio aplicará el cambio.");
         refreshProjectState();
     }
+
     public void setReadAfterColonForNarration(boolean enabled, boolean renderFromSelection) {
         setReadAfterColonForNarration(enabled);
         if (currentDocument.get() != null && renderFromSelection) {
@@ -630,6 +858,7 @@ public final class DocuPodcastShellViewModel {
             generateAudioChunksWithoutPlayback();
         }
     }
+
     public ReadingProfilePreview previewReadingProfile(ReadingProfile profile) {
         ReadableDocument document = currentDocument.get();
         if (document == null) {
@@ -637,6 +866,7 @@ public final class DocuPodcastShellViewModel {
         }
         return applicationServices.readingProfile().previewReadingProfile().preview(document, profile);
     }
+
     public void buildNarrationScriptFromDocument() {
         ReadableDocument document = currentDocument.get();
         Optional<String> readinessProblem = documentNarration.readinessProblem(document, activeReadingProfile.get());
@@ -679,6 +909,7 @@ public final class DocuPodcastShellViewModel {
         }
         return "";
     }
+
     public void selectDocumentBlock(String blockId) {
         String normalized = documentSelectionWorkflow.normalizeBlockId(blockId);
         selectedDocumentBlockId.set(normalized);
@@ -699,6 +930,7 @@ public final class DocuPodcastShellViewModel {
         actualizarFrameActivo();
         refreshProjectState();
     }
+
     public void selectDocumentTextRange(DocumentTextRange range, String selectedText) {
         if (range == null || range.collapsed()) { clearDocumentTextRange(); refreshProjectState(); return; }
         selectedDocumentBlockId.set(range.blockId());
@@ -714,6 +946,7 @@ public final class DocuPodcastShellViewModel {
                 + " → " + target + ". Las capas se guardarán en el proyecto, no dentro del Word.");
         refreshProjectState();
     }
+
     public void selectDocumentFragmentRailItem(DocumentFragmentRailPresentation fragment) {
         if (fragment == null) {
             clearDocumentTextRange();
@@ -742,17 +975,20 @@ public final class DocuPodcastShellViewModel {
         if (manifest == null || manifest.emptyManifest()) { return; }
         playbackSelectionResolver.cueForSelection(manifest, segment, range, selectedText).ifPresent(cue -> playbackCursor.set(new PlaybackCursor(cue.segmentId(), cue.startSeconds(), true)));
     }
+
     public void prepareDocumentLayerAssignment(NarrativeLayerKind kind) {
         NarrativeLayerKind normalizedKind = kind == null ? NarrativeLayerKind.NOTE : kind;
         assignDocumentLayerTarget(normalizedKind, preferredLayerTargetId(normalizedKind))
                 .ifPresent(outcome -> statusMessage.set(outcome.message()));
         refreshProjectState();
     }
+
     public void assignVoiceToSelectedDocumentRange(String voiceProfileId) {
         assignDocumentLayerTarget(NarrativeLayerKind.VOICE, voiceProfileId)
                 .ifPresent(outcome -> statusMessage.set(outcome.message()));
         refreshProjectState();
     }
+
     public void assignVoiceToneToSelectedDocumentRange(String voiceProfileId, VoiceReferenceTone requestedTone) {
         String voiceId = voiceProfileId == null ? "" : voiceProfileId.strip();
         VoiceReferenceTone requested = requestedTone == null ? VoiceReferenceTone.NEUTRAL : requestedTone;
@@ -768,11 +1004,13 @@ public final class DocuPodcastShellViewModel {
         statusMessage.set(voiceOutcome.get().message() + " " + toneStatus(resolution));
         refreshProjectState();
     }
+
     public void assignEmotionStyleToSelectedDocumentRange(String performanceStyleId) {
         assignDocumentLayerTarget(NarrativeLayerKind.EMOTION, performanceStyleId)
                 .ifPresent(outcome -> statusMessage.set(outcome.message()));
         refreshProjectState();
     }
+
     public void assignEmotionStyleToDocumentBlock(String blockId, String performanceStyleId) {
         String normalizedBlockId = documentSelectionWorkflow.normalizeBlockId(blockId);
         String styleId = performanceStyleId == null ? "" : performanceStyleId.strip();
@@ -787,6 +1025,7 @@ public final class DocuPodcastShellViewModel {
                 .ifPresent(outcome -> statusMessage.set(outcome.message()));
         refreshProjectState();
     }
+
     public void importImageForSelectedDocumentRange(Path imageFile, NarrativeLayerKind imageKind) throws IOException {
         Objects.requireNonNull(imageFile, "imageFile"); NarrativeLayerKind normalizedKind = imageKind == NarrativeLayerKind.BRIDGE_IMAGE ? NarrativeLayerKind.BRIDGE_IMAGE : NarrativeLayerKind.IMAGE;
         Optional<ProjectSession> maybeSession = sessions.activeSession();
@@ -814,10 +1053,15 @@ public final class DocuPodcastShellViewModel {
         bumpDocumentMediaRevision();
         refreshProjectState();
     }
+
     public void importImageForSegment(String segmentId, Path imageFile, NarrativeLayerKind imageKind) throws IOException { selectNarrativeVisualFragment(segmentId); importImageForSelectedDocumentRange(imageFile, imageKind); activeWorkspace.set(WorkspaceKind.NARRATIVE_VISUAL_PRODUCTION); refreshProjectState(); }
+
     public void generateNarrativeImageForSegment(String segmentId) throws IOException { ProjectSession session = requireSession(); NarrationSegment segment = findSegment(segmentId).orElseThrow(() -> new IOException("No se encontro el fragmento narrativo solicitado.")); var generated = new NarrativeImageGenerationWorkflow(applicationServices).generate(session, segment, applicationServices.settings().loadOperationalSettings().load(), message -> statusMessage.set(message == null || message.isBlank() ? "Generando imagen narrativa." : message)); selectNarrativeVisualFragment(segment.id()); lastStoryboardImageAssetId.set(generated.importResult().imageAsset().id()); removeExistingLayerOfKindSilently(NarrativeLayerKind.IMAGE); Optional<NarrativeLayerCoordinator.AssignmentOutcome> assignment = assignDocumentLayerTarget(NarrativeLayerKind.IMAGE, generated.importResult().imageAsset().id()); assignment.ifPresent(outcome -> { refreshStoryboardFromImageLayers(session); statusMessage.set(generated.message() + " " + outcome.message()); }); activeWorkspace.set(WorkspaceKind.NARRATIVE_VISUAL_PRODUCTION); bumpDocumentMediaRevision(); refreshProjectState(); }
+
     public void removeImageAssignmentForSegment(String segmentId, NarrativeLayerKind imageKind) { selectNarrativeVisualFragment(segmentId); if (imageKind == NarrativeLayerKind.BRIDGE_IMAGE) removeAssignmentOfKindForSelectedDocumentRange(NarrativeLayerKind.BRIDGE_IMAGE); else removeImageAssignmentForSelectedDocumentRange(); activeWorkspace.set(WorkspaceKind.NARRATIVE_VISUAL_PRODUCTION); refreshProjectState(); }
+
     public void selectNarrativeVisualFragment(String segmentId) { selectDocumentBlockForStoryboardSegment(segmentId); activeWorkspace.set(WorkspaceKind.NARRATIVE_VISUAL_PRODUCTION); }
+
     public void copyFragmentImageToAdjacentFragment(DocumentFragmentRailPresentation source, DocumentFragmentRailPresentation target) {
         if (source == null || target == null) { statusMessage.set("No hay un fragmento anterior o posterior disponible para copiar la imagen."); refreshProjectState(); return; }
         if (!source.imageReady()) { statusMessage.set("Ese fragmento no tiene imagen asociada para copiar."); refreshProjectState(); return; }
@@ -836,12 +1080,15 @@ public final class DocuPodcastShellViewModel {
         statusMessage.set("Imagen copiada al fragmento “" + target.title() + "”. El panel Imagen se actualizó con la misma miniatura.");
         refreshProjectState();
     }
+
     public void importUserAudioForSelectedDocumentRange(Path audioFile) throws IOException {
         importUserMediaAndAssignToSelectedDocumentRange(audioFile, "Audio del computador");
     }
+
     public void extractVideoAudioForSelectedDocumentRange(Path videoFile) throws IOException {
         importUserMediaAndAssignToSelectedDocumentRange(videoFile, "Audio extraído de video");
     }
+
     public void reportUserVisibleError(String message) {
         statusMessage.set(message == null || message.isBlank() ? "No se pudo completar la acción." : message.strip());
         refreshProjectState();
@@ -884,6 +1131,7 @@ public final class DocuPodcastShellViewModel {
         return Optional.of(narrativeLayerWorkflow.assign(active, normalizedKind, scriptRange.get(), selectedDocumentTextRange.get(), currentDocument.get(), blockId, selectedDocumentTextPreview, preferredTargetId == null ? "" : preferredTargetId));
     }
     private String preferredLayerTargetId(NarrativeLayerKind kind) { return kind == NarrativeLayerKind.IMAGE ? lastStoryboardImageAssetId.get() : ""; }
+
     public void removePrimaryAssignmentForSelectedDocumentRange() {
         Optional<ProjectSession> session = sessions.activeSession();
         if (session.isEmpty()) { statusMessage.set("No hay proyecto activo para quitar capas."); return; }
@@ -892,6 +1140,7 @@ public final class DocuPodcastShellViewModel {
         statusMessage.set(narrativeLayerWorkflow.removePrimaryAssignment(session.get(), range.get()).message());
         refreshProjectState();
     }
+
     public void removeAllSpecificVoicesFromDocument() {
         Optional<ProjectSession> session = sessions.activeSession();
         if (session.isEmpty()) { statusMessage.set("No hay proyecto activo para eliminar voces específicas."); return; }
@@ -900,6 +1149,7 @@ public final class DocuPodcastShellViewModel {
         statusMessage.set(invalidatePersistedAudioAfterVoiceSelection() ? "Voces específicas eliminadas: " + removed + ". Fragmentos de audio anteriores eliminados para usar la voz predeterminada." : "Voces específicas eliminadas: " + removed + ".");
         refreshProjectState();
     }
+
     public void removeImageAssignmentForSelectedDocumentRange() {
         Optional<ProjectSession> session = sessions.activeSession();
         if (session.isEmpty()) { statusMessage.set("No hay proyecto activo para quitar la imagen."); return; }
@@ -916,6 +1166,7 @@ public final class DocuPodcastShellViewModel {
         statusMessage.set(result.message());
         refreshProjectState();
     }
+
     public void removeAllDocumentImages() {
         Optional<ProjectSession> session = sessions.activeSession();
         if (session.isEmpty()) { statusMessage.set("No hay proyecto activo para borrar imágenes."); return; }
@@ -938,6 +1189,7 @@ public final class DocuPodcastShellViewModel {
         session.setStoryboard(refreshed);
         currentStoryboard.set(refreshed);
     }
+
     public void removeEmotionAssignmentForSelectedDocumentRange() { removeAssignmentOfKindForSelectedDocumentRange(NarrativeLayerKind.EMOTION); }
     private void removeAssignmentOfKindForSelectedDocumentRange(NarrativeLayerKind kind) {
         Optional<ProjectSession> session = sessions.activeSession();
@@ -947,6 +1199,7 @@ public final class DocuPodcastShellViewModel {
         statusMessage.set(narrativeLayerWorkflow.removeFirstAssignmentOfKind(session.get(), range.get(), kind).message());
         refreshProjectState();
     }
+
     public void selectNarrativeLayerAssignment(String assignmentId) {
         Optional<ProjectSession> session = sessions.activeSession();
         if (session.isEmpty() || assignmentId == null || assignmentId.isBlank()) {
@@ -964,11 +1217,13 @@ public final class DocuPodcastShellViewModel {
                     refreshProjectState();
                 });
     }
+
     public java.util.List<com.marcosmoreiradev.docupodcaststudio.presentation.document.DocumentLayerAssignmentPresentation> documentLayerAssignmentPresentations() {
         return sessions.activeSession()
                 .map(session -> narrativeLayerWorkflow.presentations(session))
                 .orElseGet(java.util.List::of);
     }
+
     public void runDocumentPrimaryAction() {
         Optional<NarrationSegment> linked = selectedDocumentSegmentOrSelected();
         PlaybackManifest manifest = rebuildPlaybackManifestFromLatestJob();
@@ -991,6 +1246,7 @@ public final class DocuPodcastShellViewModel {
         }
         listenToDocument();
     }
+
     public void listenToDocument() {
         ReadableDocument document = currentDocument.get();
         DocumentListenPlan plan = documentNarration.listeningPlan(
@@ -1085,18 +1341,22 @@ public final class DocuPodcastShellViewModel {
         audioJobRunning.set(false);
         activeWorkspace.set(WorkspaceKind.DOCUMENT_READER);
     }
+
     public void showDocumentWorkspace(String message) {
         showWorkspace(WorkspaceKind.DOCUMENT_READER, message, "Documento activo.");
     }
+
     public void showTheatreScriptWorkspace(String message) {
         showWorkspace(WorkspaceKind.THEATRE_SCRIPT, message, "Guión teatral activo.");
     }
+
     public void showTheatreImageGenerationWorkspace() { showWorkspace(WorkspaceKind.THEATRE_IMAGE_GENERATION, "Gestion de frames teatrales activa.", "Gestion de frames teatrales activa."); }
     private void showWorkspace(WorkspaceKind workspace, String message, String fallback) {
         navigateToWorkspace(workspace);
         statusMessage.set(message == null || message.isBlank() ? fallback : message.strip());
         refreshProjectState();
     }
+
     public void selectScriptSegment(String segmentId) {
         Optional<NarrationSegment> segment = findSegment(segmentId);
         if (segment.isEmpty()) {
@@ -1111,12 +1371,14 @@ public final class DocuPodcastShellViewModel {
         statusMessage.set("Segmento seleccionado: " + segment.get().id() + ". Playback preparado desde esta línea/segmento.");
         refreshProjectState();
     }
+
     public void playFromSelectedSegment() {
         Optional<NarrationSegment> segment = selectedDocumentSegmentOrSelected();
         if (segment.isEmpty() && currentDocument.get() != null) { buildNarrationScriptFromDocument(); segment = selectedDocumentSegmentOrSelected(); }
         if (segment.isEmpty()) { statusMessage.set("Prepara la lectura del documento antes de iniciar reproducción."); activeWorkspace.set(WorkspaceKind.DOCUMENT_READER); return; }
         playFromSegment(segment.get().id());
     }
+
     public void playFromSegment(String segmentId) { startPlaybackFromSegment(segmentId, false); }
     private boolean startPlaybackFromSegment(String segmentId, boolean bufferedStart) {
         Optional<NarrationSegment> segment = findSegment(segmentId);
@@ -1152,6 +1414,7 @@ public final class DocuPodcastShellViewModel {
         startSequentialPlayback(manifest, requestedCue.get(), bufferedStart);
         return true;
     }
+
     public void playSelectedFragmentOnly() {
         Optional<NarrationSegment> segment = selectedDocumentSegmentOrSelected();
         if (segment.isEmpty()) {
@@ -1180,6 +1443,7 @@ public final class DocuPodcastShellViewModel {
         statusMessage.set("Reproduciendo solo este fragmento: " + segment.get().id() + ".");
         refreshProjectState();
     }
+
     public void pausePlayback() {
         recordPlaybackEvent("pause-requested", null, "user-pause");
         playbackTransport.pause(); theatreAudioPlayback.pause();
@@ -1188,6 +1452,7 @@ public final class DocuPodcastShellViewModel {
         statusMessage.set("Playback pausado; pausa segura solicitada solo al reproductor. La generación de audio sigue separada en la barra de estado."); // cancelación segura solicitada
         refreshProjectState();
     }
+
     public void resumePlayback() {
         PlaybackCursor current = playbackCursor.get();
         PlaybackManifest manifest = ensurePlaybackManifestLoaded();
@@ -1221,6 +1486,7 @@ public final class DocuPodcastShellViewModel {
         statusMessage.set("Playback reanudado desde " + current.segmentId() + ".");
         refreshProjectState();
     }
+
     public void setPlaybackRate(double rate) {
         double normalized = rate >= 1.74 ? 1.75 : rate >= 1.49 ? 1.5 : 1.0;
         PlaybackCursor current = playbackCursor.get();
@@ -1246,6 +1512,7 @@ public final class DocuPodcastShellViewModel {
         else { statusMessage.set("No se pudo reiniciar el fragmento al cambiar a " + rateLabel(normalizedRate) + ". Revisa el WAV o regenera los fragmentos de audio."); }
     }
     private static String rateLabel(double rate) { return rate >= 1.74 ? "1.75x" : rate >= 1.49 ? "1.5x" : "1x"; }
+
     public void stopPlayback() {
         recordPlaybackEvent("stop-requested", null, "user-stop");
         documentPlaybackRequested = false;
@@ -1258,13 +1525,16 @@ public final class DocuPodcastShellViewModel {
         statusMessage.set("Playback detenido. La generación de audio se controla desde la barra de estado.");
         refreshProjectState();
     }
+
     public void playDocumentFromBeginning() {
         PlaybackManifest manifest = rebuildPlaybackManifestFromLatestJob();
         Optional<PlaybackCue> first = manifest == null || manifest.emptyManifest() ? Optional.empty() : manifest.firstCue();
         if (first.isEmpty()) { statusMessage.set("Primero genera audio para poder reproducir desde el inicio."); activeWorkspace.set(WorkspaceKind.DOCUMENT_READER); refreshProjectState(); return; }
         if (startPlaybackFromCue(first.get(), false)) { statusMessage.set("Reproduciendo desde el inicio del documento."); }
     }
+
     public void playNextFragment() { playRelativeFragment(1); }
+
     public void playPreviousFragment() { playRelativeFragment(-1); }
     private void playRelativeFragment(int direction) {
         var result = playbackNavigator.target(ensurePlaybackManifestLoaded(), playbackCursor.get(), selectedDocumentSegmentOrSelected(), direction);
@@ -1286,27 +1556,40 @@ public final class DocuPodcastShellViewModel {
         }
         activeWorkspace.set(WorkspaceKind.DOCUMENT_READER); refreshProjectState(); return true;
     }
+
     public void prepareAiVoiceForSelectedText() {
         Optional<ScriptTextRange> range = selectedRangeForWholeSegment();
         if (range.isEmpty()) { statusMessage.set("Selecciona un fragmento u oración del documento antes de asignar voz IA/TTS."); activeWorkspace.set(WorkspaceKind.DOCUMENT_READER); return; }
         statusMessage.set("Preparado para asignar voz IA/TTS al rango " + label(range.get()) + ". La elección real de voz llega con Voice Library."); refreshProjectState();
     }
+
     public void prepareHumanVoiceForSelectedText() {
         Optional<ScriptTextRange> range = selectedRangeForWholeSegment();
         if (range.isEmpty()) { statusMessage.set("Selecciona un fragmento u oración del documento antes de asociar voz humana."); activeWorkspace.set(WorkspaceKind.DOCUMENT_READER); return; }
         RecordingActionPlan plan = applicationServices.recording().prepareRecordingAction().prepare(RecordingPurpose.HUMAN_VOICE_FOR_TEXT, range.get());
         statusMessage.set(plan.userMessage() + " Archivo sugerido: " + plan.suggestedFileName() + "."); refreshProjectState();
     }
+
     public java.util.List<AudioInputDevice> audioInputDevices() { return manualInterventionAudioWorkflow.inputDevices(applicationServices); }
+
     public void startManualInterventionRecording(String blockId, String displayName, String preview, String inputDeviceId) throws IOException { if (voiceRecordingRunning.get() || manualAudioRecordingRunning.get() || applicationServices.recording().stopAudioRecording().recording()) { statusMessage.set("Ya hay una grabacion activa. Detenla o cancelala antes de iniciar otra."); return; } NarrationSegment segment = manualRecordingSegment(blockId).orElseThrow(() -> new IOException("No se encontro un segmento narrable para esa intervencion.")); Path output = manualInterventionAudioWorkflow.startRecording(applicationServices, requireSession(), segment, inputDeviceId); activeManualAudioSegmentId = segment.id(); manualAudioRecordingRunning.set(true); selectedScriptSegmentId.set(segment.id()); if (blockId != null && !blockId.isBlank()) selectedDocumentBlockId.set(blockId.strip()); statusMessage.set("Grabando audio manual para " + ManualInterventionAudioWorkflow.displayName(displayName, segment) + ": " + output.getFileName() + "."); refreshProjectState(); }
+
     public Path stopManualInterventionRecordingDraft(String blockId, String displayName) throws IOException { if (!manualAudioRecordingRunning.get() && !applicationServices.recording().stopAudioRecording().recording()) { statusMessage.set("No hay una grabacion manual activa."); throw new IOException("No hay una grabacion manual activa."); } NarrationSegment segment = manualRecordingSegment(blockId).or(() -> findSegment(activeManualAudioSegmentId)).orElseThrow(() -> new IOException("No se encontro el segmento de la grabacion manual.")); Path recorded; try { recorded = applicationServices.recording().stopAudioRecording().stop(); } finally { manualAudioRecordingRunning.set(false); activeManualAudioSegmentId = ""; } statusMessage.set("Borrador grabado para " + ManualInterventionAudioWorkflow.displayName(displayName, segment) + ": " + recorded.getFileName() + "."); refreshProjectState(); return recorded; }
+
     public void assignManualInterventionRecording(String blockId, String displayName, Path recorded) throws IOException { if (recorded == null || !java.nio.file.Files.isRegularFile(recorded)) { throw new IOException("No hay borrador WAV valido para asignar."); } NarrationSegment segment = manualRecordingSegment(blockId).or(() -> findSegment(activeManualAudioSegmentId)).orElseThrow(() -> new IOException("No se encontro el segmento para asignar audio manual.")); applyManualAudioSnapshot(manualInterventionAudioWorkflow.applyRecording(applicationServices, audioWorkflow, playableAudioJobSelector, requireSession(), currentScript.get(), activeAudioJobStatus.get().jobId(), segment, displayName, recorded), "Audio manual aplicado a " + segment.id() + ". Playback y exportacion usaran " + segment.id() + "-manual.wav."); }
+
     public void stopManualInterventionRecording(String blockId, String displayName, String preview) throws IOException { Path recorded = stopManualInterventionRecordingDraft(blockId, displayName); assignManualInterventionRecording(blockId, displayName, recorded); }
+
     public void cancelManualInterventionRecording() throws IOException { if (!manualAudioRecordingRunning.get() && !applicationServices.recording().stopAudioRecording().recording()) { statusMessage.set("No hay grabacion manual para cancelar."); return; } applicationServices.recording().cancelAudioRecording().cancel(); manualAudioRecordingRunning.set(false); activeManualAudioSegmentId = ""; statusMessage.set("Grabacion manual cancelada. No se reemplazo ningun fragmento de audio."); refreshProjectState(); }
+
     public void playManualInterventionAudio(String blockId) throws IOException { NarrationSegment segment = manualRecordingSegment(blockId).orElseThrow(() -> new IOException("No se encontro un segmento narrable para esa intervencion.")); Path projectDirectory = currentProjectDirectory().orElseThrow(() -> new IOException("Guarda el proyecto antes de escuchar audio manual.")); Path audio = manualInterventionAudioWorkflow.playableAudioForSegment(audioWorkflow, playableAudioJobSelector, projectDirectory, currentScript.get(), activeAudioJobStatus.get().jobId(), segment.id()); playbackTransport.playStandalone(audio, 0.0); statusMessage.set("Reproduciendo audio de " + segment.id() + ": " + audio.getFileName() + "."); }
+
     public void playStandaloneAudio(Path audio) throws IOException { if (audio == null || !java.nio.file.Files.isRegularFile(audio)) { throw new IOException("No existe el audio para reproducir."); } playbackTransport.playStandalone(audio, 0.0); statusMessage.set("Reproduciendo " + audio.getFileName() + "."); }
+
     public void deleteManualInterventionAudio(String blockId, String displayName) throws IOException { NarrationSegment segment = manualRecordingSegment(blockId).orElseThrow(() -> new IOException("No se encontro un segmento narrable para esa intervencion.")); applyManualAudioSnapshot(manualInterventionAudioWorkflow.deleteManualAudio(applicationServices, audioWorkflow, playableAudioJobSelector, requireSession(), currentScript.get(), activeAudioJobStatus.get().jobId(), segment, displayName), "Audio manual eliminado de " + segment.id() + ". Se restauro el WAV generado si existia; si no, quedo pendiente."); }
+
     public boolean canRegenerateSelectedTheatreInterventionAudio() { return currentProjectMode.get() == ProjectMode.THEATRE_PRODUCTION && !audioJobRunning.get() && !choralVoiceRenderingProperty().get() && !selectedDocumentBlockId.get().isBlank() && currentDocument.get() != null; }
+
     public void regenerateSelectedTheatreInterventionAudio() {
         try { if (currentScript.get() == null || currentScript.get().empty()) buildNarrationScriptFromDocument(); NarrationSegment segment = manualRecordingSegment(selectedDocumentBlockId.get()).orElseThrow(() -> new IOException("Selecciona una intervencion narrable antes de regenerar su audio.")); ProjectSession session = requireSession(); Path file = session.projectFile().orElseThrow(() -> new IOException("Guarda el proyecto antes de regenerar audio.")); if (audioEngineUnavailableForGeneration()) throw new IOException(audioEngineUnavailableMessage()); saveCurrentProjectAs(file); audioJobRunning.set(true); statusMessage.set("Renderizando de nuevo el audio de " + segment.id() + "...");
             theatreInterventionAudioRegenerationWorkflow.start(applicationServices, audioWorkflow, playableAudioJobSelector, session, currentScript.get(), activeAudioJobStatus.get().jobId(), segment,
@@ -1372,6 +1655,7 @@ public final class DocuPodcastShellViewModel {
         return script.segmentById(segmentId);
     }
     private static String label(ScriptTextRange range) { return range.segmentId() + "[" + range.startOffset() + ".." + range.endOffset() + "]"; }
+
     public VoiceProfile saveAdvancedVoiceProfile(String voiceId, String displayName) throws IOException {
         ProjectSession session = requireSession();
         var result = voiceProfileAdministration.save(session, activeVoiceLibrary.get(), voiceId, displayName);
@@ -1380,6 +1664,7 @@ public final class DocuPodcastShellViewModel {
         statusMessage.set("Voz guardada: " + result.voice().displayName() + ". Neutral es necesaria para usarla en Documento.");
         refreshProjectState(); return result.voice();
     }
+
     public void deleteVoiceProfile(VoiceProfile voice) throws IOException {
         ProjectSession session = requireSession();
         var result = voiceProfileAdministration.delete(session, activeVoiceLibrary.get(), voice, voiceSampleWorkflow);
@@ -1388,11 +1673,17 @@ public final class DocuPodcastShellViewModel {
         statusMessage.set("Voz eliminada: " + voice.displayName() + ". También se retiraron " + result.removedSamples() + " muestra(s) y emociones asociadas del proyecto.");
         refreshProjectState();
     }
+
     public String deleteVoiceProfileImpactLabel(VoiceProfile voice) { return voiceProfileAdministration.impactLabel(activeVoiceLibrary.get(), voice); }
+
     public VoiceRegistrationWizardPlan voiceRegistrationWizardPlan(VoiceProfile voice) { return voiceSampleWorkflow.registrationPlan(activeVoiceLibrary.get(), voice); }
+
     public VoiceToneRecordingPlan voiceToneRecordingPlan(VoiceProfile voice, VoiceReferenceTone tone) { return voiceSampleWorkflow.toneRecordingPlan(activeVoiceLibrary.get(), voice, tone); }
+
     public void importOwnVoiceSample(Path sourceAudioFile) throws IOException { importOwnVoiceSample(sourceAudioFile, VoiceReferenceTone.NEUTRAL); }
+
     public void importOwnVoiceSample(Path sourceAudioFile, VoiceReferenceTone tone) throws IOException { importVoiceSample(activeVoiceLibrary.get().voiceById("VOC-OWN-PLACEHOLDER").orElse(null), sourceAudioFile, tone == null ? VoiceReferenceTone.NEUTRAL : tone); }
+
     public void importVoiceSample(VoiceProfile voice, Path sourceAudioFile, VoiceReferenceTone tone) throws IOException {
         VoiceReferenceTone targetTone = tone == null ? VoiceReferenceTone.NEUTRAL : tone;
         VoiceProfile targetVoice = voice == null ? activeVoiceLibrary.get().voiceById("VOC-OWN-PLACEHOLDER").orElse(null) : voice;
@@ -1415,9 +1706,13 @@ public final class DocuPodcastShellViewModel {
         activeVoiceLibrary.set(result.voiceLibrary()); activeWorkspace.set(WorkspaceKind.VOICE_LIBRARY);
         statusMessage.set("Muestra de voz registrada para " + result.updatedVoiceProfile().displayName() + " · tono " + targetTone.displayName() + ": " + result.referenceSample().fileUri() + ". Documento ya puede usar los tonos registrados de esa voz."); refreshProjectState();
     }
+
     public void startOwnVoiceRecording() throws IOException { startOwnVoiceRecording(VoiceReferenceTone.NEUTRAL); }
+
     public void startOwnVoiceRecording(VoiceReferenceTone tone) throws IOException { startVoiceRecording(activeVoiceLibrary.get().voiceById("VOC-OWN-PLACEHOLDER").orElse(null), tone); }
+
     public void startVoiceRecording(VoiceProfile voice, VoiceReferenceTone tone) throws IOException { startVoiceRecording(voice, tone, ""); }
+
     public void startVoiceRecording(VoiceProfile voice, VoiceReferenceTone tone, String inputDeviceId) throws IOException {
         if (voiceRecordingRunning.get() || manualAudioRecordingRunning.get() || applicationServices.recording().stopAudioRecording().recording()) { statusMessage.set("Ya hay una grabacion activa. Detenla antes de iniciar otra."); return; }
         VoiceReferenceTone targetTone = tone == null ? VoiceReferenceTone.NEUTRAL : tone;
@@ -1427,6 +1722,7 @@ public final class DocuPodcastShellViewModel {
         activeVoiceRecordingFile = output; activeVoiceRecordingVoiceId = targetVoice == null ? "" : targetVoice.id(); activeVoiceRecordingTone = targetTone; voiceRecordingRunning.set(true); activeWorkspace.set(WorkspaceKind.VOICE_LIBRARY);
         statusMessage.set("Grabando muestra para " + (targetVoice == null ? "la voz seleccionada" : targetVoice.displayName()) + " · emoción " + targetTone.displayName() + ": " + output.getFileName() + ". Lee la frase guía y pulsa Detener y guardar."); refreshProjectState();
     }
+
     public void stopOwnVoiceRecording() throws IOException {
         if (!voiceRecordingRunning.get() && !applicationServices.recording().stopAudioRecording().recording()) { statusMessage.set("No hay una grabación de voz activa."); return; }
         VoiceReferenceTone completedTone = activeVoiceRecordingTone == null ? VoiceReferenceTone.NEUTRAL : activeVoiceRecordingTone;
@@ -1436,27 +1732,34 @@ public final class DocuPodcastShellViewModel {
         importVoiceSampleInternal(recorded, (recordedVoice == null ? "Voz avanzada" : recordedVoice.displayName()) + " — muestra " + completedTone.displayName().toLowerCase(java.util.Locale.ROOT), voiceToneRecordingPlan(recordedVoice, completedTone), true);
         statusMessage.set("Grabación detenida y registrada como muestra de voz · tono " + completedTone.displayName() + ": " + recorded.getFileName() + "."); refreshProjectState();
     }
+
     public void cancelOwnVoiceRecording() throws IOException {
         if (!voiceRecordingRunning.get() && !applicationServices.recording().stopAudioRecording().recording()) { statusMessage.set("No hay una grabación de voz activa para cancelar."); return; }
         applicationServices.recording().cancelAudioRecording().cancel();
         voiceRecordingRunning.set(false); activeVoiceRecordingFile = null; activeVoiceRecordingVoiceId = ""; activeVoiceRecordingTone = VoiceReferenceTone.NEUTRAL; activeWorkspace.set(WorkspaceKind.VOICE_LIBRARY);
         statusMessage.set("Grabación cancelada. La muestra anterior se conserva."); refreshProjectState();
     }
+
     public Callable<VoiceGeneratedTestResult> prepareVoiceTestGeneration(VoiceProfile voice, VoiceReferenceTone tone, String phrase) throws IOException {
         Path projectFile = requireSession().projectFile().orElseThrow(() -> new IOException("Guarda el proyecto antes de generar una prueba de voz."));
         VoiceLibrary library = activeVoiceLibrary.get(); VoiceProfile target = voice == null ? library.voiceById("VOC-OWN-PLACEHOLDER").orElse(null) : voice; AudioEngineDescriptor engine = audioEngineDescriptor();
         return () -> voiceSampleWorkflow.generateTest(projectFile, library, target, tone, phrase, engine);
     }
+
     public void completeVoiceTestGeneration(VoiceGeneratedTestResult result) {
         lastGeneratedVoiceTestPath.set(result.audioFile().orElse(null));
         setGeneratedVoiceTestStatus(result.audioFile().map(path -> "Voz de prueba lista: " + path.getFileName() + ".").orElse("Prueba de voz terminada: " + result.userMessage()));
         activeWorkspace.set(WorkspaceKind.VOICE_LIBRARY);
         refreshProjectState();
     }
+
     public void markVoiceTestGenerationStarted() { setGeneratedVoiceTestStatus("Renderizando voz de prueba con el motor y dispositivo seleccionados."); }
+
     public void markVoiceTestGenerationFailed(String detail) { setGeneratedVoiceTestStatus("No se pudo generar la voz de prueba" + (detail == null || detail.isBlank() ? "" : ": " + detail) + "."); }
+
     public void resetGeneratedVoiceTestForSelection(String message) { lastGeneratedVoiceTestPath.set(null); setGeneratedVoiceTestStatus(message == null || message.isBlank() ? "Sin voz de prueba generada." : message); }
     private void setGeneratedVoiceTestStatus(String message) { generatedVoiceTestStatus.set(message); statusMessage.set(message); }
+
     public void playLastGeneratedVoiceTest() throws IOException {
         Path audio = lastGeneratedVoiceTestPath.get();
         if (audio == null || !Files.isRegularFile(audio)) {
@@ -1466,6 +1769,7 @@ public final class DocuPodcastShellViewModel {
         playbackTransport.playStandalone(audio, 0.0);
         setGeneratedVoiceTestStatus("Reproduciendo voz de prueba: " + audio.getFileName() + ".");
     }
+
     public void playVoiceReferenceSample(VoiceProfile voice, VoiceReferenceTone tone) throws IOException {
         Path projectFile = voiceLibraryProjectFileOrNull();
         VoiceReferenceSample sample = voiceSampleWorkflow.requireExactSample(activeVoiceLibrary.get(), voice, tone);
@@ -1473,6 +1777,7 @@ public final class DocuPodcastShellViewModel {
         playbackTransport.playStandalone(audio, 0.0);
         statusMessage.set("Reproduciendo muestra " + sample.tone().displayName() + " de " + voiceSampleWorkflow.displayNameForVoice(voice) + ": " + audio.getFileName() + ".");
     }
+
     public void downloadVoiceReferenceSample(VoiceProfile voice, VoiceReferenceTone tone, Path targetDirectory) throws IOException {
         Optional<ProjectSession> maybeSession = sessions.activeSession();
         Path projectFile = voiceLibraryProjectFileOrNull();
@@ -1482,6 +1787,7 @@ public final class DocuPodcastShellViewModel {
         VoiceSampleDownloadResult result = voiceSampleWorkflow.downloadToneSample(baseProject, projectFile, sample, targetDirectory);
         statusMessage.set(result.message() + " Archivo: " + result.copiedFile().getFileName() + ".");
     }
+
     public void deleteVoiceReferenceSample(VoiceProfile voice, VoiceReferenceTone tone) throws IOException {
         Optional<ProjectSession> maybeSession = sessions.activeSession();
         Path projectFile = voiceLibraryProjectFileOrNull();
@@ -1498,12 +1804,14 @@ public final class DocuPodcastShellViewModel {
         statusMessage.set(result.message() + " Referencia retirada de la biblioteca para tono " + sample.tone().displayName() + ".");
         refreshProjectState();
     }
+
     public void showVoiceLibraryWorkspace() {
         navigateToWorkspace(WorkspaceKind.VOICE_LIBRARY);
         VoiceLibrary library = activeVoiceLibrary.get();
         statusMessage.set("Biblioteca de voces activa: " + library.voices().size() + " voces, " + library.characters().size() + " personajes, " + library.styles().size() + " estilos.");
         refreshProjectState();
     }
+
     public void assignVoiceToSelectedSegment(String characterId, String voiceProfileId, String performanceStyleId) {
         NarrationScriptDocument script = currentScript.get();
         if (script == null) {
@@ -1529,11 +1837,14 @@ public final class DocuPodcastShellViewModel {
             statusMessage.set("No se pudo asignar voz: " + ex.getMessage());
         }
     }
+
     public VoiceLibraryCapabilityReport voiceCapabilityReport() {
         return applicationServices.voice().voiceCapabilityPolicy()
                 .evaluate(activeVoiceLibrary.get(), audioEngineDescriptor());
     }
+
     public java.util.List<String> voiceCapabilityLabels() { return voiceCapabilityReport().summaryLines(); }
+
     public java.util.List<String> voiceLibraryLabels() {
         VoiceLibrary library = activeVoiceLibrary.get();
         java.util.ArrayList<String> lines = new java.util.ArrayList<>();
@@ -1551,6 +1862,7 @@ public final class DocuPodcastShellViewModel {
         }
         return java.util.List.copyOf(lines);
     }
+
     public java.util.List<String> voiceLibraryValidationLabels() {
         java.util.List<String> issues = applicationServices.voice().validateVoiceLibrary().validate(activeVoiceLibrary.get());
         if (issues.isEmpty()) {
@@ -1558,6 +1870,7 @@ public final class DocuPodcastShellViewModel {
         }
         return issues;
     }
+
     public void buildStoryboardFromScript() {
         NarrationScriptDocument script = currentScript.get();
         if (script == null || script.empty()) {
@@ -1580,6 +1893,7 @@ public final class DocuPodcastShellViewModel {
         statusMessage.set("Secuencia visual creada: " + script.segmentCount() + " fragmentos listos para asociar imágenes.");
         refreshProjectState();
     }
+
     public void importStoryboardImage(Path imageFile) throws IOException {
         ProjectSession session = requireSession();
         Path projectFile = session.projectFile().orElseThrow(() ->
@@ -1592,6 +1906,7 @@ public final class DocuPodcastShellViewModel {
                 + ". Selecciona un fragmento y pulsa Asociar imagen.");
         refreshProjectState();
     }
+
     public ExampleVisualBindingWorkflow.Result importAndBindExampleVisuals(List<Path> visualAssets, List<ExampleVisualBindingDescriptor> bindings) throws IOException {
         if (bindings == null || bindings.isEmpty()) { int imported = 0; for (Path asset : visualAssets == null ? List.<Path>of() : visualAssets) { importStoryboardImage(asset); imported++; } return new ExampleVisualBindingWorkflow.Result(imported, 0, 0); }
         if (currentScript.get() == null || currentScript.get().empty()) { buildNarrationScriptFromDocument(); }
@@ -1599,12 +1914,15 @@ public final class DocuPodcastShellViewModel {
         ExampleVisualBindingWorkflow.Result result = exampleVisualBindingWorkflow.bind(applicationServices, session, projectFile, currentDocument.get(), currentScript.get(), visualAssets, bindings);
         refreshStoryboardFromImageLayers(session); bumpDocumentMediaRevision(); activeWorkspace.set(WorkspaceKind.DOCUMENT_READER); statusMessage.set(result.message()); refreshProjectState(); return result;
     }
+
     public IntervencionBoundaryStore intervencionBoundaryStore() {
         return intervencionBoundaryStore;
     }
+
     public void configureAviadoresTheatreDemo(String exampleId, List<Path> visualAssets, Path theatreMarkdownFile) throws IOException {
         configureAviadoresTheatreDemo(exampleId, visualAssets, theatreMarkdownFile, null);
     }
+
     public void configureAviadoresTheatreDemo(String exampleId, List<Path> visualAssets, Path theatreMarkdownFile, Path targetProjectFile) throws IOException {
         if (currentScript.get() == null || currentScript.get().empty()) buildNarrationScriptFromDocument();
         ProjectSession session = requireSession();
@@ -1618,9 +1936,11 @@ public final class DocuPodcastShellViewModel {
         bumpDocumentMediaRevision();
         refreshProjectState();
     }
+
     public void configureAviadoresTheatreDemo(String exampleId, List<Path> visualAssets) throws IOException {
         configureAviadoresTheatreDemo(exampleId, visualAssets, null, null);
     }
+
     public void bindLastStoryboardImageToSelectedSegment() {
         NarrationScriptDocument script = currentScript.get();
         if (script == null || script.empty()) { statusMessage.set("Prepara la lectura del documento antes de asociar imágenes."); activeWorkspace.set(WorkspaceKind.DOCUMENT_READER); return; }
@@ -1651,6 +1971,7 @@ public final class DocuPodcastShellViewModel {
             statusMessage.set("No se pudo asociar imagen: " + ex.getMessage());
         }
     }
+
     public void selectDocumentBlockForStoryboardSegment(String segmentId) {
         Optional<NarrationSegment> segment = findSegment(segmentId);
         if (segment.isEmpty()) {
@@ -1702,6 +2023,7 @@ public final class DocuPodcastShellViewModel {
             clearDocumentTextRange();
         }
     }
+
     public void selectLooseStoryboardImage(String imageAssetId) {
         String normalized = imageAssetId == null ? "" : imageAssetId.strip();
         lastStoryboardImageAssetId.set(normalized);
@@ -1710,6 +2032,7 @@ public final class DocuPodcastShellViewModel {
                 : "Imagen " + normalized + " sin texto asignado. Selecciona una oración o bloque y pulsa Asociar imagen / visual.");
         refreshProjectState();
     }
+
     public java.util.List<StoryboardScenePresentation> storyboardScenePresentations() {
         NarrationScriptDocument script = currentScript.get();
         if (script == null || script.empty()) {
@@ -1744,6 +2067,7 @@ public final class DocuPodcastShellViewModel {
                         issues))
                 .toList();
     }
+
     public java.util.List<String> storyboardSceneLabels() {
         NarrationScriptDocument script = currentScript.get();
         if (script == null || script.empty()) return java.util.List.of("Prepara la lectura del documento para ver la secuencia visual.");
@@ -1751,6 +2075,7 @@ public final class DocuPodcastShellViewModel {
         if (storyboard == null) storyboard = StoryboardDocument.createForScript(script);
         return storyboard.scenesFor(script).stream().map(scene -> scene.segmentId() + " · " + scene.title() + " · " + scene.statusLabel()).toList();
     }
+
     public java.util.List<String> storyboardImageAssetLabels() {
         Optional<ProjectSession> active = sessions.activeSession();
         if (active.isEmpty()) return java.util.List.of("Guarda o abre un proyecto para importar imágenes.");
@@ -1758,11 +2083,15 @@ public final class DocuPodcastShellViewModel {
         if (images.isEmpty()) return java.util.List.of("No hay imágenes importadas. Usa Importar imagen para visuales.");
         return images.stream().map(asset -> asset.id() + " · " + asset.displayName() + " · " + asset.relativePath()).toList();
     }
+
     public java.util.List<DocumentFragmentRailPresentation> documentFragmentRailPresentations() {
         return DocumentRailProjectionFactory.fragments(currentDocument.get(), currentScript.get(), sessions.activeSession().map(ProjectSession::project).orElse(null), currentStoryboard.get(), currentProjectFile().map(file -> file.toAbsolutePath().normalize().getParent()));
     }
+
     public Optional<String> theatreIntermediateFrameUri(String segmentId, String nextSegmentId) { Optional<ProjectSession> session = sessions.activeSession(); if (session.isEmpty() || segmentId == null || nextSegmentId == null || segmentId.isBlank() || nextSegmentId.isBlank()) return Optional.empty(); TheatreProjectLayer theatre = session.get().project().theatre(); Optional<String> from = interventionIdForSegment(theatre, findSegment(segmentId).orElse(null)); Optional<String> to = interventionIdForSegment(theatre, findSegment(nextSegmentId).orElse(null)); if (from.isEmpty() || to.isEmpty() || from.get().equals(to.get()) || !new TheatreVisualContinuityResolver().canInterpolate(theatre, from.get(), to.get())) return Optional.empty(); return theatre.intermediateFrames().stream().filter(frame -> frame.fromIntervencionId().equals(from.get()) && frame.toIntervencionId().equals(to.get())).findFirst().flatMap(frame -> projectImageAssetPath(frame.assetId())).map(path -> path.toUri().toString()); }
+
     public java.util.List<DocumentRailImagePresentation> documentRailImagePresentations() { return DocumentRailProjectionFactory.images(sessions.activeSession().map(ProjectSession::project).orElse(null), currentStoryboard.get(), currentProjectFile().map(file -> file.toAbsolutePath().normalize().getParent()), this::findSegment, this::firstSourceBlockId); }
+
     public String selectedDocumentImageUri() {
         String explicitSelectedImage = selectedVisualFragmentImageUri.get();
         if (explicitSelectedImage != null && !explicitSelectedImage.isBlank()) return explicitSelectedImage;
@@ -1778,10 +2107,21 @@ public final class DocuPodcastShellViewModel {
                 .or(() -> fragments.stream().filter(fragment -> sameDocumentRange(fragment, selectedRange)).map(DocumentFragmentRailPresentation::imageFileUri).filter(uri -> uri != null && !uri.isBlank()).findFirst())
                 .orElseGet(() -> selectedDocumentImageUriFromLayer(selectedRange));
     }
+
     public boolean canEditTheatreStoryboardFrame() { return theatreStoryboardFrameWorkflow.canEdit(currentProjectMode.get(), sessions.activeSession(), currentScript.get(), selectedScriptSegmentId.get()); }
+
     public Optional<TheatreFrameSketchContext> selectedTheatreStoryboardFrameContext() { return sessions.activeSession().flatMap(session -> theatreStoryboardFrameWorkflow.context(session, currentStoryboard.get(), currentScript.get(), selectedScriptSegmentId.get(), currentProjectDirectory())); }
+
     public void saveTheatreStoryboardFrame(String segmentId, Path framePng, String inkStateJson, boolean activateDrawn) throws IOException { applyTheatreFrameResult(theatreStoryboardFrameWorkflow.save(applicationServices, requireSession(), currentStoryboard.get(), currentScript.get(), segmentId, framePng, inkStateJson, activateDrawn, currentProjectDirectory())); }
-    public void toggleTheatreStoryboardFrameVariant(String segmentId) { try { applyTheatreFrameResult(theatreStoryboardFrameWorkflow.toggle(applicationServices, requireSession(), currentStoryboard.get(), currentScript.get(), segmentId, currentProjectDirectory())); } catch (IOException | RuntimeException ex) { statusMessage.set("No se pudo alternar variante visual: " + ex.getMessage()); } } public TheatreAudioTrackWorkflow.Result saveTheatreAudioTrack(String trackId, String segmentId, String interventionId, PreparedAudioAsset source, double from, TheatreProjectLayer.AudioTrackEndMode endMode, double to, double volume, boolean fade, boolean replace) throws IOException { var result = theatreAudioTrackWorkflow.save(applicationServices, requireSession(), currentScript.get(), currentPlaybackManifest.get(), trackId, segmentId, interventionId, source, from, endMode, to, volume, fade, replace); if (result.saved()) saveCurrentProjectAs(currentProjectFile().orElseThrow()); statusMessage.set(result.message()); bumpDocumentMediaRevision(); refreshProjectState(); return result; } public TheatreAudioTrackWorkflow.Result confirmTheatreAudioTrackReplacement(TheatreProjectLayer.TheatreAudioTrack track) { var result = theatreAudioTrackWorkflow.saveCandidate(applicationServices, requireSession(), currentScript.get(), currentPlaybackManifest.get(), track, true); statusMessage.set(result.message()); bumpDocumentMediaRevision(); refreshProjectState(); return result; } public void removeTheatreAudioTrack(String trackId) { try { statusMessage.set(theatreAudioTrackWorkflow.remove(applicationServices, requireSession(), trackId).message()); saveCurrentProjectAs(currentProjectFile().orElseThrow()); } catch (IOException ex) { throw new IllegalStateException(ex.getMessage(), ex); } bumpDocumentMediaRevision(); refreshProjectState(); }
+
+    public void toggleTheatreStoryboardFrameVariant(String segmentId) { try { applyTheatreFrameResult(theatreStoryboardFrameWorkflow.toggle(applicationServices, requireSession(), currentStoryboard.get(), currentScript.get(), segmentId, currentProjectDirectory())); } catch (IOException | RuntimeException ex) { statusMessage.set("No se pudo alternar variante visual: " + ex.getMessage()); } }
+
+    public TheatreAudioTrackWorkflow.Result saveTheatreAudioTrack(String trackId, String segmentId, String interventionId, PreparedAudioAsset source, double from, TheatreProjectLayer.AudioTrackEndMode endMode, double to, double volume, boolean fade, boolean replace) throws IOException { var result = theatreAudioTrackWorkflow.save(applicationServices, requireSession(), currentScript.get(), currentPlaybackManifest.get(), trackId, segmentId, interventionId, source, from, endMode, to, volume, fade, replace); if (result.saved()) saveCurrentProjectAs(currentProjectFile().orElseThrow()); statusMessage.set(result.message()); bumpDocumentMediaRevision(); refreshProjectState(); return result; }
+
+    public TheatreAudioTrackWorkflow.Result confirmTheatreAudioTrackReplacement(TheatreProjectLayer.TheatreAudioTrack track) { var result = theatreAudioTrackWorkflow.saveCandidate(applicationServices, requireSession(), currentScript.get(), currentPlaybackManifest.get(), track, true); statusMessage.set(result.message()); bumpDocumentMediaRevision(); refreshProjectState(); return result; }
+
+    public void removeTheatreAudioTrack(String trackId) { try { statusMessage.set(theatreAudioTrackWorkflow.remove(applicationServices, requireSession(), trackId).message()); saveCurrentProjectAs(currentProjectFile().orElseThrow()); } catch (IOException ex) { throw new IllegalStateException(ex.getMessage(), ex); } bumpDocumentMediaRevision(); refreshProjectState(); }
+
     public void activateTheatreStoryboardVisualVariant(String segmentId, String variant) { try { applyTheatreFrameResult(theatreStoryboardFrameWorkflow.activate(applicationServices, requireSession(), currentStoryboard.get(), currentScript.get(), segmentId, variant, currentProjectDirectory())); } catch (IOException | RuntimeException ex) { statusMessage.set("No se pudo activar la variante visual: " + ex.getMessage()); } }
     private void applyTheatreFrameResult(TheatreStoryboardFrameWorkflow.FrameResult result) { currentStoryboard.set(result.storyboard()); lastStoryboardImageAssetId.set(result.activeAsset().id()); pinVisualFragment(result.segmentId(), result.activeUri()); bumpDocumentMediaRevision(); statusMessage.set(result.message()); refreshProjectState(); }
     private void pinVisualFragment(DocumentFragmentRailPresentation fragment) { if (fragment == null) { clearVisualFragmentSelection(); return; } selectedVisualFragmentSegmentId.set(fragment.segmentId()); selectedVisualFragmentImageUri.set(fragment.imageFileUri()); selectedVisualFragmentKey.set(DocumentVisualFragmentKey.from(fragment)); }
@@ -1810,6 +2150,7 @@ public final class DocuPodcastShellViewModel {
                 .flatMap(image -> assetUri(projectDirectory, image))
                 .orElse("");
     }
+
     public java.util.List<String> storyboardValidationLabels() {
         NarrationScriptDocument script = currentScript.get();
         StoryboardDocument storyboard = currentStoryboard.get();
@@ -1826,6 +2167,7 @@ public final class DocuPodcastShellViewModel {
                 .map(issue -> issue.level() + " · " + issue.referenceId() + " · " + issue.message())
                 .toList();
     }
+
     public java.util.List<AudioEngineAvailability> documentAudioSourceAvailability() {
         try {
             return audioWorkflow.engineAvailability();
@@ -1833,19 +2175,23 @@ public final class DocuPodcastShellViewModel {
             return java.util.List.of(AudioEngineAvailability.testMode(), AudioEngineAvailability.computerAudio());
         }
     }
+
     public java.util.List<String> audioEngineReadinessLines() { try { return audioWorkflow.engineReadinessLines(); } catch (RuntimeException ex) { return java.util.List.of("Motores y dependencias: no se pudo inspeccionar readiness. Usa Configuración para revisar motores."); } }
+
     public void selectDocumentAudioSource(String sourceLabel) {
         try {
             refreshChunksAfterDocumentVoiceChange(audioWorkflow.selectDocumentAudioSource(sourceLabel));
         }
         catch (IOException | RuntimeException ex) { reportUserVisibleError("No se pudo cambiar el origen de voz: " + ex.getMessage()); }
     }
+
     public void useVoiceForDocument(VoiceProfile voice) {
         try {
             refreshChunksAfterDocumentVoiceChange(audioWorkflow.useVoiceForDocument(voice));
         }
         catch (IOException | RuntimeException ex) { reportUserVisibleError("No se pudo usar la voz seleccionada: " + ex.getMessage()); }
     }
+
     public void useVoiceForDocumentFrom(VoiceProfile voice, String blockId) {
         try {
             audioWorkflow.useVoiceForDocument(voice);
@@ -1861,6 +2207,7 @@ public final class DocuPodcastShellViewModel {
         }
         catch (IOException | RuntimeException ex) { reportUserVisibleError("No se pudo usar la voz seleccionada: " + ex.getMessage()); }
     }
+
     public String configuredVoiceProfileId() { return audioWorkflow.configuredVoiceProfileId(); }
     private void refreshChunksAfterDocumentVoiceChange(String result) {
         boolean invalidated = invalidatePersistedAudioAfterVoiceSelection();
@@ -1878,17 +2225,23 @@ public final class DocuPodcastShellViewModel {
         else resetPlaybackState();
         return true;
     }
+
     public AudioEngineDescriptor audioEngineDescriptor() { return audioWorkflow.engineDescriptor(); }
+
     public boolean audioEngineUnavailableForDocumentPrimaryAction() {
         AudioEngineDescriptor descriptor = audioEngineDescriptor(); if (descriptor.configured()) { return false; }
         PlaybackManifest manifest = currentPlaybackManifest.get(); if (manifest == null || manifest.emptyManifest()) { manifest = ensurePlaybackManifestLoaded(); }
         return manifest == null || manifest.emptyManifest();
     }
+
     public boolean audioEngineUnavailableForGeneration() { return !audioEngineDescriptor().configured(); }
+
     public String audioEngineUnavailableMessage() { return audioWorkflow.audioEngineUnavailableMessage(); }
+
     public AudioQueueState audioQueueState() {
         return audioWorkflow.buildAudioQueueState(activeAudioJobStatus.get(), currentProjectFile(), playbackCueLabels());
     }
+
     public void generateAudioChunksWithoutPlayback() {
         ReadableDocument document = currentDocument.get();
         if (document == null) { statusMessage.set("Abre una fuente documental antes de generar fragmentos de audio."); activeWorkspace.set(WorkspaceKind.DOCUMENT_READER); refreshProjectState(); return; }
@@ -1904,16 +2257,19 @@ public final class DocuPodcastShellViewModel {
         if (audioJobRunning.get()) { statusMessage.set("Generando fragmentos de audio sin iniciar reproducción. Puedes ocultar el panel y continuar trabajando."); }
         activeWorkspace.set(WorkspaceKind.DOCUMENT_READER); refreshProjectState();
     }
+
     public void submitAudioGenerationWithPendingExport(Runnable exportTask) {
         pendingExportTask = exportTask;
         submitAudioGeneration();
     }
+
     public void generateAudioChunksFromSelectedFragment() {
         if (currentScript.get() == null || currentScript.get().empty()) { buildNarrationScriptFromDocument(); }
         Optional<NarrationSegment> segment = selectedDocumentSegmentOrSelected();
         if (segment.isEmpty()) { statusMessage.set("Selecciona una oración o bloque antes de renderizar audio desde ese fragmento."); activeWorkspace.set(WorkspaceKind.DOCUMENT_READER); refreshProjectState(); return; }
         documentPlaybackRequested = false; waitingForBufferedSegmentAfter = ""; playSingleCueOnly = false; submitAudioGenerationFromSegment(segment.get(), false);
     }
+
     public void submitAudioGeneration() {
         NarrationScriptDocument script = currentScript.get();
         if (script == null || script.empty()) { statusMessage.set("Prepara la lectura del documento antes de generar audio."); activeWorkspace.set(WorkspaceKind.DOCUMENT_READER); return; }
@@ -1930,6 +2286,7 @@ public final class DocuPodcastShellViewModel {
         submitFreshAudioRequestAsync(projectDirectory, request, "Generación enviada", engine.statusLabel());
         refreshProjectState();
     }
+
     public void submitMockAudioGeneration() { submitAudioGeneration(); }
     private AudioGenerationRequest audioGenerationRequestFor(ProjectSession session, NarrationScriptDocument script, Path projectDirectory, String jobName) {
         return audioWorkflow.buildGenerationRequest(session, script, projectDirectory, jobName);
@@ -1974,6 +2331,7 @@ public final class DocuPodcastShellViewModel {
                                                                       String jobName, String startSegmentId) {
         return audioWorkflow.buildGenerationRequestForSelection(session, fullScript, suffixScript, projectDirectory, jobName, startSegmentId);
     }
+
     public void resumeMostRecentRecoverableAudioJob() {
         NarrationScriptDocument script = currentScript.get();
         if (script == null || script.empty()) { statusMessage.set("Prepara la lectura del documento antes de reanudar audio."); activeWorkspace.set(WorkspaceKind.DOCUMENT_READER); return; }
@@ -1993,6 +2351,7 @@ public final class DocuPodcastShellViewModel {
             refreshProjectState();
         } catch (IOException ex) { statusMessage.set("No se pudo reanudar el job de audio: " + ex.getMessage()); activeWorkspace.set(WorkspaceKind.DOCUMENT_READER); }
     }
+
     public void cancelActiveAudioJob() {
         statusMessage.set(audioWorkflow.cancelActiveAudioJob(activeAudioJobStatus.get(), updated -> {
             waitingForBufferedSegmentAfter = "";
@@ -2098,6 +2457,7 @@ public final class DocuPodcastShellViewModel {
         sessions.activeSession().ifPresent(session ->
                 audioWorkflow.registerCompletedAudioAssets(session, status, this::bumpDocumentMediaRevision));
     }
+
     public java.util.List<String> persistedAudioJobLabels() {
         return audioWorkflow.persistedAudioJobLabels(currentProjectFile());
     }
@@ -2110,9 +2470,11 @@ public final class DocuPodcastShellViewModel {
             return java.util.List.of("No se pudieron leer diagnósticos de proceso: " + ex.getMessage());
         }
     }
+
     public java.util.List<String> persistedAudioJobDetailLabels() {
         return audioWorkflow.persistedAudioJobDetailLabels(currentProjectFile());
     }
+
     public java.util.List<String> audioProcessDiagnosticLabels() {
         return audioWorkflow.audioProcessDiagnosticLabels(currentProjectFile());
     }
@@ -2122,6 +2484,7 @@ public final class DocuPodcastShellViewModel {
         activeAudioJobStatus.set(restored);
         audioJobRunning.set(false);
     }
+
     public PlaybackManifest ensurePlaybackManifestLoaded() {
         PlaybackManifest current = currentPlaybackManifest.get();
         AudioJobStatusDto status = activeAudioJobStatus.get();
@@ -2132,6 +2495,7 @@ public final class DocuPodcastShellViewModel {
         }
         return current;
     }
+
     public PlaybackManifest rebuildPlaybackManifestFromLatestJob() {
         NarrationScriptDocument script = currentScript.get();
         if (script == null || script.empty()) {
@@ -2169,9 +2533,13 @@ public final class DocuPodcastShellViewModel {
             return currentPlaybackManifest.get();
         }
     }
+
     public PlaybackSyncState playbackSyncState() { return PlaybackSyncState.from(currentScript.get(), currentStoryboard.get(), currentPlaybackManifest.get(), playbackCursor.get()); }
+
     public java.util.List<String> playbackCueLabels() { return playbackSyncState().cueLabels(); }
+
     public java.util.List<String> playbackSynchronizedSegmentLabels() { return playbackSyncState().segmentLabels(); }
+
     public String playbackManifestSummary() {
         PlaybackSyncState state = playbackSyncState();
         return state.summaryLabel() + " · " + state.readinessLabel()
@@ -2380,6 +2748,7 @@ public final class DocuPodcastShellViewModel {
         statusMessage.set(result.message());
         return false;
     }
+
     public void deleteAllPersistedAudioChunks() {
         Optional<Path> projectDirectory = currentProjectDirectory();
         if (projectDirectory.isEmpty()) { statusMessage.set("Guarda el proyecto antes de eliminar chunks de audio."); refreshProjectState(); return; }
@@ -2390,38 +2759,53 @@ public final class DocuPodcastShellViewModel {
     private void deletePersistedAudioAsync(Path directory, String successMessage) { resetPlaybackState(); statusMessage.set("Cancelando y esperando el trabajo de audio activo..."); audioWorkflow.prepareFreshWorkspaceAsync(directory, activeAudioJobStatus.get(), updated -> Platform.runLater(() -> activeAudioJobStatus.set(updated))).whenComplete((ignored, failure) -> Platform.runLater(() -> { audioJobRunning.set(false); activeAudioJobStatus.set(AudioJobStatusDto.idle()); if (failure == null) { bumpDocumentMediaRevision(); refreshStreamingBufferStatus(); statusMessage.set(successMessage); } else statusMessage.set("No se pudieron eliminar los chunks de audio: " + rootCauseMessage(failure)); refreshProjectState(); })); }
     private static String rootCauseMessage(Throwable failure) { Throwable current = failure; while (current.getCause() != null) current = current.getCause(); return current.getMessage() == null ? current.getClass().getSimpleName() : current.getMessage(); }
     private void resetPlaybackState() { documentPlaybackRequested = false; playSingleCueOnly = false; waitingForBufferedSegmentAfter = ""; lastSequentialCueUnitId = ""; resetPlaybackTransportOnly(); playbackTransport.resetRuntimeQueue(); currentPlaybackManifest.set(PlaybackManifest.empty()); }
+
     public boolean playbackActiveForFullscreenPause() { PlaybackCursor current = playbackCursor.get(); return current != null && current.playing() || playbackTransport.playerPlaying() || playbackTransport.continuationActive() || playbackTransport.sequentialActive(); }
     private boolean playbackPausedOrInactive() { PlaybackCursor current = playbackCursor.get(); return current == null || current.paused(); }
     private void resetPlaybackTransportOnly() { playSingleCueOnly = false; playbackTransport.stopTransport(); theatreAudioPlayback.stop(); playbackTimer.stop(); playbackCursor.set(PlaybackCursor.stopped()); } private void syncTheatreAudioPlayback(double position) { theatreAudioPlayback.sync(currentProjectDirectory().orElse(null), theatreAudioTrackTimeline(), position, playbackRate.get()); }
+
     public void exportPodcastWav(Path targetFile) throws IOException {
         Path projectDirectory = requireProjectDirectory();
         PlaybackManifest manifest = ensurePlaybackManifestLoaded();
         statusMessage.set(exportWorkflow.exportPodcastWav(projectDirectory, manifest, targetFile, playbackRate.get()));
     }
+
     public void exportDiagnosticReport(Path targetFile) throws IOException {
         statusMessage.set(exportWorkflow.exportDiagnosticReport(requireSession(), currentScript.get(), currentStoryboard.get(), listPersistedJobsSafely(), targetFile));
     }
+
     public void exportProjectBundle(Path targetDirectory) throws IOException {
         ProjectSession session = requireSession();
         Path projectFile = session.projectFile().orElseThrow(() -> new IOException("Guarda el proyecto antes de exportar un paquete portable."));
         statusMessage.set(exportWorkflow.exportProjectBundle(session, projectFile, currentScript.get(), currentStoryboard.get(), listPersistedJobsSafely(), targetDirectory, this::saveCurrentProjectAs));
     }
+
     public void exportSimpleVideoPackage(Path targetDirectory) throws IOException {
         ProjectSession session = requireSession();
         Path projectFile = session.projectFile().orElseThrow(() -> new IOException("Guarda el proyecto antes de exportar video simple."));
         statusMessage.set(exportWorkflow.exportSimpleVideoPackage(session, projectFile, currentScript.get(), currentStoryboard.get(), listPersistedJobsSafely(), targetDirectory, loadOperationalSettingsSafely().video().silentVisualBlockSeconds(), this::saveCurrentProjectAs));
     }
+
     public void exportFinalVideo(Path targetFile, SimpleVideoResolutionPreset resolution) throws IOException { exportFinalVideo(targetFile, resolution, 30, com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy.AUTO, ignored -> { }, () -> false); }
+
     public void exportFinalVideo(Path targetFile, SimpleVideoResolutionPreset resolution, int framesPerSecond, com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy encoderPolicy, Consumer<VideoRenderProgress> progress, BooleanSupplier cancellationRequested) throws IOException {
         exportFinalVideo(targetFile, resolution, framesPerSecond, encoderPolicy, TheatreExportScope.all(), progress, cancellationRequested);
     }
+
     public void exportDocumentStudyTextAudioVideo(Path targetFile, SimpleVideoResolutionPreset resolution, int framesPerSecond, com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy encoderPolicy, Consumer<VideoRenderProgress> progress, BooleanSupplier cancellationRequested) throws IOException { exportDocumentStudyTextAudioVideo(targetFile, resolution, framesPerSecond, encoderPolicy, DocumentTextVideoOptions.defaults().withResolution(resolution), progress, cancellationRequested); }
+
     public void exportDocumentStudyTextAudioVideo(Path targetFile, SimpleVideoResolutionPreset resolution, int framesPerSecond, com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy encoderPolicy, DocumentTextVideoOptions textOptions, Consumer<VideoRenderProgress> progress, BooleanSupplier cancellationRequested) throws IOException { ProjectSession session = requireSession(); Path projectFile = session.projectFile().orElseThrow(() -> new IOException("Guarda el proyecto antes de exportar video documental texto+audio.")); String result = exportWorkflow.exportDocumentStudyTextAudioVideo(session, projectFile, currentDocument.get(), currentScript.get(), listPersistedJobsSafely(), targetFile, resolution, framesPerSecond, encoderPolicy, textOptions, this::saveCurrentProjectAs, progress, cancellationRequested); Platform.runLater(() -> statusMessage.set(result)); }
+
     public void exportTheatreWorkVideo(Path targetFile, SimpleVideoResolutionPreset resolution, int framesPerSecond, com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy encoderPolicy, Consumer<VideoRenderProgress> progress, BooleanSupplier cancellationRequested) throws IOException { exportTheatreWorkVideo(targetFile, resolution, framesPerSecond, encoderPolicy, TheatreExportScope.all(), false, progress, cancellationRequested); }
+
     public void exportTheatreWorkVideo(Path targetFile, SimpleVideoResolutionPreset resolution, int framesPerSecond, com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy encoderPolicy, TheatreExportScope scope, Consumer<VideoRenderProgress> progress, BooleanSupplier cancellationRequested) throws IOException { exportTheatreWorkVideo(targetFile, resolution, framesPerSecond, encoderPolicy, scope, false, progress, cancellationRequested); }
+
     public void exportTheatreWorkVideo(Path targetFile, SimpleVideoResolutionPreset resolution, int framesPerSecond, com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy encoderPolicy, TheatreExportScope scope, boolean renderUnassignedVisuals, Consumer<VideoRenderProgress> progress, BooleanSupplier cancellationRequested) throws IOException { exportTheatreWorkVideo(targetFile, resolution, framesPerSecond, encoderPolicy, scope, renderUnassignedVisuals, false, progress, cancellationRequested); }
+
     public void exportTheatreWorkVideo(Path targetFile, SimpleVideoResolutionPreset resolution, int framesPerSecond, com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy encoderPolicy, TheatreExportScope scope, boolean renderUnassignedVisuals, boolean includeInferredFrames, Consumer<VideoRenderProgress> progress, BooleanSupplier cancellationRequested) throws IOException { ProjectSession session = requireSession(); Path projectFile = session.projectFile().orElseThrow(() -> new IOException("Guarda el proyecto antes de exportar video teatral limpio.")); NarrationScriptDocument scopedScript = theatreExportScopeScriptFilter.filter(session, currentScript.get(), scope); String result = exportWorkflow.exportTheatreWork(session, projectFile, scopedScript, listPersistedJobsSafely(), targetFile, resolution, framesPerSecond, encoderPolicy, loadOperationalSettingsSafely().video().silentVisualBlockSeconds(), currentStoryboard.get(), renderUnassignedVisuals, includeInferredFrames, ignored -> { }, progress, cancellationRequested); Platform.runLater(() -> statusMessage.set(result)); }
+
     public List<String> missingTheatreCleanVisualSegmentIds(TheatreExportScope scope) { ProjectSession session = requireSession(); NarrationScriptDocument script = theatreExportScopeScriptFilter.filter(session, currentScript.get(), scope); return new com.marcosmoreiradev.docupodcaststudio.application.video.BuildTheatreCleanVideoPlanUseCase().missingVisualSegmentIds(session.project(), script, currentStoryboard.get(), session.projectFile().map(Path::getParent).orElse(null)); }
+
     public void exportFinalVideo(Path targetFile, SimpleVideoResolutionPreset resolution, int framesPerSecond, com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy encoderPolicy, TheatreExportScope scope, Consumer<VideoRenderProgress> progress, BooleanSupplier cancellationRequested) throws IOException {
         ProjectSession session = requireSession();
         Path projectFile = session.projectFile().orElseThrow(() -> new IOException("Guarda el proyecto antes de exportar video."));
@@ -2429,9 +2813,13 @@ public final class DocuPodcastShellViewModel {
         String exportResult = exportWorkflow.exportFinalVideo(session, projectFile, scopedScript, currentStoryboard.get(), listPersistedJobsSafely(), targetFile, resolution, framesPerSecond, encoderPolicy, loadOperationalSettingsSafely().video().silentVisualBlockSeconds(), ignored -> { }, progress, cancellationRequested);
         Platform.runLater(() -> statusMessage.set(exportResult));
     }
+
     public void exportTheatreSpatialVideo(Path targetFile, SimpleVideoResolutionPreset resolution, int framesPerSecond, com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy encoderPolicy, com.marcosmoreiradev.docupodcaststudio.application.video.TheatreMapCompanionMode companionMode, Consumer<VideoRenderProgress> progress, BooleanSupplier cancellationRequested) throws IOException { exportTheatreSpatialVideo(targetFile, resolution, framesPerSecond, encoderPolicy, TheatreExportScope.all(), companionMode, progress, cancellationRequested); }
+
     public void exportTheatreSpatialVideo(Path targetFile, SimpleVideoResolutionPreset resolution, int framesPerSecond, com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy encoderPolicy, TheatreExportScope scope, com.marcosmoreiradev.docupodcaststudio.application.video.TheatreMapCompanionMode companionMode, Consumer<VideoRenderProgress> progress, BooleanSupplier cancellationRequested) throws IOException { exportTheatreSpatialVideo(targetFile, resolution, framesPerSecond, encoderPolicy, scope, companionMode, false, progress, cancellationRequested); }
+
     public void exportTheatreSpatialVideo(Path targetFile, SimpleVideoResolutionPreset resolution, int framesPerSecond, com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy encoderPolicy, com.marcosmoreiradev.docupodcaststudio.application.video.TheatreMapCompanionMode companionMode, boolean includeInferredFrames, Consumer<VideoRenderProgress> progress, BooleanSupplier cancellationRequested) throws IOException { exportTheatreSpatialVideo(targetFile, resolution, framesPerSecond, encoderPolicy, TheatreExportScope.all(), companionMode, includeInferredFrames, progress, cancellationRequested); }
+
     public void exportTheatreSpatialVideo(Path targetFile, SimpleVideoResolutionPreset resolution, int framesPerSecond, com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy encoderPolicy, TheatreExportScope scope, com.marcosmoreiradev.docupodcaststudio.application.video.TheatreMapCompanionMode companionMode, boolean includeInferredFrames, Consumer<VideoRenderProgress> progress, BooleanSupplier cancellationRequested) throws IOException {
         ProjectSession session = requireSession();
         Path projectFile = session.projectFile().orElseThrow(() -> new IOException("Guarda el proyecto antes de exportar video mapa."));
@@ -2455,19 +2843,23 @@ public final class DocuPodcastShellViewModel {
         try { return file.isEmpty() ? java.util.List.of() : applicationServices.audio().listPersistedAudioJobs().list(file.get().toAbsolutePath().normalize().getParent()); }
         catch (IOException ex) { return java.util.List.of(); }
     }
+
     public boolean hasAllChunksRendered() {
         Path projectDirectory = currentProjectFile().map(path -> path.toAbsolutePath().normalize().getParent()).orElse(null);
         return AudioRenderCoverage.hasAllChunksRendered(currentScript.get(), listPersistedJobsSafely(), projectDirectory);
     }
+
     public boolean hasChunksRenderedForTheatreScope(TheatreExportScope scope) {
         Path projectDirectory = currentProjectFile().map(path -> path.toAbsolutePath().normalize().getParent()).orElse(null);
         ProjectSession session = sessions.activeSession().orElse(null);
         return AudioRenderCoverage.hasAllChunksRendered(theatreExportScopeScriptFilter.filter(session, currentScript.get(), scope), listPersistedJobsSafely(), projectDirectory);
     }
+
     public void clearSelectedDocumentBlock() {
         selectedDocumentBlockId.set(""); selectedScriptSegmentId.set(""); clearVisualFragmentSelection(); clearDocumentTextRange();
         statusMessage.set("Selección de fragmento limpia."); refreshProjectState();
     }
+
     public Optional<UserVisibleDecision> inspectProjectIntegrityDecision() {
         try {
             Optional<ProjectSession> session = sessions.activeSession(); Optional<Path> file = currentProjectFile();
@@ -2480,9 +2872,11 @@ public final class DocuPodcastShellViewModel {
             return Optional.of(UserVisibleDecision.error("No se pudo validar la integridad del proyecto", ex.getMessage(), ex.toString()));
         }
     }
+
     public void inspectProjectIntegrityForStatus() {
         inspectProjectIntegrityDecision().ifPresent(value -> statusMessage.set(value.headline() + ": " + value.message()));
     }
+
     public Optional<UserVisibleDecision> inspectExportReadinessDecision() {
         Optional<ProjectSession> session = sessions.activeSession();
         if (session.isEmpty()) { UserVisibleDecision decision = UserVisibleDecision.warning("No se puede revisar exportación", "Abre o crea un proyecto antes de revisar exportaciones."); statusMessage.set(decision.headline() + ": " + decision.message()); return Optional.of(decision); }
@@ -2495,6 +2889,7 @@ public final class DocuPodcastShellViewModel {
             return Optional.of(UserVisibleDecision.warning("Exportación con bloqueos", "Hay salidas bloqueadas. Revisa los faltantes antes de exportar. " + detail.toString().strip()));
         } catch (RuntimeException ex) { UserVisibleDecision decision = UserVisibleDecision.error("No se pudo revisar el estado de exportación", ex.getMessage(), ex.toString()); statusMessage.set(decision.headline() + ": " + decision.message()); return Optional.of(decision); }
     }
+
     public void inspectExportReadinessForStatus() {
         inspectExportReadinessDecision().ifPresent(value -> statusMessage.set(value.headline() + ": " + value.message()));
     }
@@ -2504,7 +2899,9 @@ public final class DocuPodcastShellViewModel {
         if (parent == null) throw new IOException("No se pudo resolver la carpeta del proyecto.");
         return parent;
     }
+
     public void showWelcome() { navigateToWorkspace(WorkspaceKind.WELCOME_HOME); statusMessage.set("Pantalla de inicio activa."); refreshProjectState(); }
+
     public void showPlaceholder(WorkspaceKind kind) {
         WorkspaceKind workspace = kind == null ? WorkspaceKind.WELCOME_HOME : kind;
         WorkspaceKind resolved = navigateToWorkspace(workspace);
@@ -2514,6 +2911,7 @@ public final class DocuPodcastShellViewModel {
         WorkspaceKind resolved = workspaceNavigation.rememberWorkspace(workspace); activeWorkspace.set(resolved);
         return resolved;
     }
+
     public void requestClose(WindowEvent event) {}
     private ProjectSession requireSession() { return sessions.activeSession().orElseThrow(() -> new IllegalStateException("No hay proyecto activo")); }
     private void clearDocumentTextRange() {
