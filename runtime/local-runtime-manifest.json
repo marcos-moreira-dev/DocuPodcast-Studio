@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "description": "Ignored local engines and model weights expected by this DocuPodcast Studio installation.",
+  "assets": [
+    { "id": "ffmpeg", "path": "tools/ffmpeg/bin/ffmpeg.exe", "required": true },
+    { "id": "ffprobe", "path": "tools/ffmpeg/bin/ffprobe.exe", "required": true },
+    { "id": "piper", "path": "tools/piper/piper.exe", "required": true },
+    { "id": "tesseract", "path": "tools/tesseract/bin/tesseract.exe", "required": false },
+    { "id": "xtts-python", "path": "tools/xtts-wrapper/.venv/Scripts/python.exe", "required": true },
+    { "id": "comfyui", "path": "tools/image/ComfyUI/main.py", "required": true },
+    { "id": "flux-dev", "path": "models/image/flux1-dev.safetensors", "required": false },
+    { "id": "sd15", "path": "models/image/v1-5-pruned-emaonly-fp16.safetensors", "required": false },
+    { "id": "flux-t5", "path": "models/image/text_encoders/t5xxl_bf16.safetensors", "required": false },
+    { "id": "xtts-model", "path": "models/tts/xtts/model.pth", "required": true },
+    { "id": "piper-voice", "path": "models/tts/piper/voices/es_ES-default-medium.onnx", "required": true }
+  ],
+  "hardLinkSets": [
+    [
+      "models/image/flux1-dev.safetensors",
+      "tools/image/ComfyUI/models/diffusion_models/flux1-dev.safetensors",
+      "tools/image/ComfyUI/models/unet/flux1-dev.safetensors"
+    ],
+    [
+      "models/image/v1-5-pruned-emaonly-fp16.safetensors",
+      "tools/image/ComfyUI/models/checkpoints/v1-5-pruned-emaonly-fp16.safetensors"
+    ],
+    [
+      "models/image/vae/ae.safetensors",
+      "tools/image/ComfyUI/models/vae/ae.safetensors"
+    ]
+  ]
+}

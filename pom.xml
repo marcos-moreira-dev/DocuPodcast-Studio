@@ -14,7 +14,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <javafx.version>21.0.2</javafx.version>
         <lecturestudio.stylus.version>0.3.0</lecturestudio.stylus.version>
-        <lecturestudio.stylus.native.jar>C:/Users/MARCOS~1/.m2/repository/org/lecturestudio/stylus/stylus/${lecturestudio.stylus.version}/stylus-${lecturestudio.stylus.version}-windows-x86_64.jar</lecturestudio.stylus.native.jar>
+        <lecturestudio.stylus.native.jar>${project.build.directory}/native/stylus-${lecturestudio.stylus.version}-windows-x86_64.jar</lecturestudio.stylus.native.jar>
         <docupodcast.ink.inputDiagnostics>false</docupodcast.ink.inputDiagnostics>
         <docupodcast.ink.renderDiagnostics>false</docupodcast.ink.renderDiagnostics>
         <junit.version>5.10.2</junit.version>
@@ -41,6 +41,13 @@
                     <artifactId>javafx-controls</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.lecturestudio.stylus</groupId>
+            <artifactId>stylus</artifactId>
+            <version>${lecturestudio.stylus.version}</version>
+            <classifier>windows-x86_64</classifier>
+            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.pdfbox</groupId>
@@ -104,6 +111,33 @@
                         <vendor>temurin</vendor>
                     </jdkToolchain>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.8.1</version>
+                <executions>
+                    <execution>
+                        <id>copy-stylus-native</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>org.lecturestudio.stylus</groupId>
+                                    <artifactId>stylus</artifactId>
+                                    <version>${lecturestudio.stylus.version}</version>
+                                    <classifier>windows-x86_64</classifier>
+                                    <type>jar</type>
+                                    <outputDirectory>${project.build.directory}/native</outputDirectory>
+                                    <destFileName>stylus-${lecturestudio.stylus.version}-windows-x86_64.jar</destFileName>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.openjfx</groupId>
