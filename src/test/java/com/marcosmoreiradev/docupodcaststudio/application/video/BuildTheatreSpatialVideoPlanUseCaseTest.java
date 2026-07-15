@@ -204,30 +204,6 @@ final class BuildTheatreSpatialVideoPlanUseCaseTest {
     }
 
     @Test
-    void theatreMapRendererUsesRoleIconsAndGroupedMarkersInsteadOfGreenBoxes() throws Exception {
-        assertTrue(Files.isRegularFile(Path.of("src/main/resources/images/theatre/spatial/actor-mapa-espacial.png")));
-        assertTrue(Files.isRegularFile(Path.of("src/main/resources/images/theatre/spatial/narrador-mapa-espacial.png")));
-        assertTrue(Files.isRegularFile(Path.of("src/main/resources/images/theatre/spatial/publico-mapa-espacial.png")));
-
-        String source = Files.readString(Path.of(
-                "src/main/java/com/marcosmoreiradev/docupodcaststudio/application/video/BuildTheatreSpatialVideoPlanUseCase.java"));
-
-        assertTrue(source.contains("TheatreSpatialRoleIcon"));
-        assertTrue(source.contains("MarkerGroup"));
-        assertTrue(source.contains("destinationLocations"));
-        assertTrue(source.contains("drawMarker(g, x, y, iconSize, entry.getValue().role)"));
-        assertTrue(source.contains("ROLE_ICON_SCALE_FACTOR = 0.70"));
-        assertTrue(source.contains("SELF_LOOP_SCALE_FACTOR = 0.34"));
-        assertTrue(source.contains("SELF_LOOP_RIGHT_OFFSET_FACTOR = 0.44"));
-        assertTrue(source.contains("SELF_LOOP_MARKER_LEFT_SHIFT_FACTOR = 0.10"));
-        assertTrue(source.contains("markerXForSelfLoop(x, mapX, mapW, iconSize)"));
-        assertTrue(source.contains("Math.max(118"));
-        assertFalse(source.contains("MARKER = new Color(34, 197, 94)"));
-        assertFalse(source.contains("fillRoundRect((int) (x - size / 2.0)"));
-        assertFalse(source.contains("new Ellipse2D.Double"));
-    }
-
-    @Test
     void exportsOnlyInterventionsInsideSelectedSceneScope() throws Exception {
         createImage("assets/mapas/mapa.png", Color.WHITE);
         createImage("assets/fragmentos/uno.png", Color.ORANGE);

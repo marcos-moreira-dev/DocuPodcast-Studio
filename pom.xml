@@ -18,6 +18,7 @@
         <docupodcast.ink.inputDiagnostics>false</docupodcast.ink.inputDiagnostics>
         <docupodcast.ink.renderDiagnostics>false</docupodcast.ink.renderDiagnostics>
         <junit.version>5.10.2</junit.version>
+        <archunit.version>1.4.2</archunit.version>
     </properties>
 
     <dependencies>
@@ -73,6 +74,12 @@
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit-junit5</artifactId>
+            <version>${archunit.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

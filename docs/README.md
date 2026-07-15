@@ -1,42 +1,25 @@
-## T99A — Deshuesadero GUI y roadmap completo
+# Documentation
 
-T99A agrega la documentación detallada de implementación GUI futura desde T99B hasta T112 y limpia la navegación vieja de producto. La fuente principal para continuar es:
+This directory is the only current documentation source for DocuPodcast Studio. Historical implementation logs were removed after the Git tag `pre-repository-cleanup-2026-07-15`; they remain recoverable from that tag.
 
-```text
-docs/productizacion/T99_GUI_ROADMAP_IMPLEMENTACION_DETALLADO.md
-```
+## Architecture
 
-## T98 — Contrato GUI completo
+- [Overview](architecture/overview.md)
+- [Runtime layout](architecture/runtime-layout.md)
+- [Local-first runtime decision](adr/0001-local-first-runtimes.md)
 
-El contrato GUI completo vive en `docs/productizacion/T98_CONTRATO_GUI_GLOBAL.md` y documentos T98A–T98G. Debe consultarse antes de implementar MenuBar, Ribbon, Workspace Documento, Sidebar, Rail derecho, Playbar, Configuración o guía.
+## Development
 
-# docs
+- [Build and test](development/build-test.md)
 
-La documentación extensa de traspaso está en la carpeta raíz:
+## Operations
 
-```text
-DOCUMENTACION/
-```
+- [Local engines](operations/local-engines.md)
+- [Smoke tests and release](operations/smoke-and-release.md)
 
-`docs/` queda como carpeta convencional para documentación futura de arquitectura/productización/testeo, pero el handoff completo está en `DOCUMENTACION/`.
+## Product
 
+- [Current status](product/current-status.md)
 
-## Tanda 82 — continuidad y referencias visuales
-
-Para continuar el proyecto en otra ventana o sesión, leer primero:
-
-```text
-docs/productizacion/HANDOFF_CONTINUIDAD_T82.md
-docs/productizacion/PLAN_EXACTO_IA_TTS_STT_REAL.md
-docs/productizacion/NOTAS_CONVERSACION_T81_T82.md
-docs/referencias/capturas-chat/INDICE_REFERENCIAS_VISUALES.md
-docs/productizacion/ROADMAP_POST_T82_IA_REAL_Y_RC.md
-```
-
-Las capturas que guiaron el rediseño están versionadas en `docs/referencias/capturas-chat/`.
-
-## T99B — Deshuesadero de acciones duplicadas
-
-- `productizacion/T99B_DESHUESADERO_ACCIONES_DUPLICADAS.md`
-- `145_TANDA_99B_DESHUESADERO_ACCIONES_DUPLICADAS.md`
+Documentation describes current behavior. Commit history and tags provide implementation chronology.
 
