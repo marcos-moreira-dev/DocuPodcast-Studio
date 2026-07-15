@@ -1,0 +1,99 @@
+/* Tanda 50B — chrome controls: scrollbars, tabs and menu popups polished without heavy nesting. */
+.scroll-bar:vertical,
+.scroll-bar:horizontal {
+    -fx-background-color: transparent;
+    -fx-padding: 2;
+}
+
+.scroll-bar:vertical .track,
+.scroll-bar:horizontal .track {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.scroll-bar:vertical .thumb,
+.scroll-bar:horizontal .thumb {
+    -fx-background-color: #B8C2D6;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-background-insets: 2;
+}
+
+.scroll-bar:vertical .thumb:hover,
+.scroll-bar:horizontal .thumb:hover {
+    -fx-background-color: #8996B2;
+}
+
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 2;
+}
+
+.scroll-bar .increment-arrow,
+.scroll-bar .decrement-arrow {
+    -fx-background-color: #73809A;
+    -fx-padding: 2;
+}
+
+.corner {
+    -fx-background-color: transparent;
+}
+
+.tab-pane {
+    -fx-tab-min-height: 34px;
+    -fx-background-color: transparent;
+}
+
+.tab-pane > .tab-header-area {
+    -fx-background-color: -docu-bg-chrome;
+    -fx-padding: 0 8 0 8;
+}
+
+.tab-pane > .tab-header-area > .headers-region > .tab {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 7 14 7 14;
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+}
+
+.tab-pane > .tab-header-area > .headers-region > .tab:selected {
+    -fx-background-color: -docu-accent-soft;
+    -fx-border-color: -docu-accent;
+    -fx-border-width: 0 0 2 0;
+}
+
+.tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-weight: 600;
+}
+
+.tab-pane > .tab-header-area > .headers-region > .tab:selected > .tab-container > .tab-label {
+    -fx-text-fill: -docu-accent-ink;
+}
+
+.tab-pane > .tab-content-area {
+    -fx-background-color: transparent;
+}
+
+.context-menu {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-border-soft;
+    -fx-effect: -docu-shadow-panel;
+    -fx-padding: 4;
+}
+
+.menu-item {
+    -fx-background-radius: 4;
+    -fx-padding: 6 12 6 12;
+}
+
+.menu-item:focused,
+.menu-item:hover {
+    -fx-background-color: -docu-bg-hover;
+}
+
+.menu-item .label {
+    -fx-text-fill: -docu-text;
+}

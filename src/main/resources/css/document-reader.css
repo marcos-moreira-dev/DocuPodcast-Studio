@@ -1,0 +1,629 @@
+/* Documento base: estructura, side dock y compatibilidad histórica.
+   Las reglas modernas de página/lectura viven en document/document-page.css. */
+.document-workspace {
+    -fx-background-color: -docu-bg-workspace;
+}
+
+.document-scroll {
+    -fx-background: transparent;
+    -fx-background-color: transparent;
+    -fx-border-color: -docu-border;
+}
+
+.document-title {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -docu-text;
+}
+
+.document-summary {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 12px;
+}
+
+.document-empty-state,
+.document-block {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border;
+    -fx-padding: 12;
+}
+
+
+.document-block-text {
+    -fx-font-size: 14px;
+    -fx-text-fill: -docu-text;
+    -fx-line-spacing: 4px;
+}
+
+.document-block-title,
+.document-block-heading {
+    -fx-border-color: -docu-accent-border;
+    -fx-background-color: #F6FAFF;
+}
+
+.document-block-subheading {
+    -fx-background-color: #FAFCFF;
+}
+
+.document-block-image_notice {
+    -fx-background-color: #FFF7ED;
+    -fx-border-color: #E6B980;
+}
+
+.document-block-table_notice {
+    -fx-background-color: #F6F8FB;
+    -fx-border-color: -docu-border-dark;
+}
+
+.document-split-pane {
+    -fx-background-color: transparent;
+}
+
+.document-side-dock {
+    -fx-background-color: -docu-bg-panel;
+    -fx-border-color: -docu-border;
+    -fx-border-width: 1;
+}
+
+.document-side-rail {
+    -fx-background-color: #E7EEF7;
+    -fx-padding: 8 4 8 4;
+    -fx-border-color: -docu-border;
+    -fx-border-width: 0 1 0 0;
+}
+
+.document-side-rail-button {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: -docu-text;
+    -fx-font-size: 11px;
+    -fx-padding: 6 5 6 5;
+}
+
+.document-side-rail-button:selected {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-accent-border;
+    -fx-text-fill: -docu-accent;
+    -fx-font-weight: bold;
+}
+
+.document-side-module {
+    -fx-background-color: -docu-bg-panel;
+}
+
+.document-side-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -docu-text;
+}
+
+.document-side-subtitle {
+    -fx-font-size: 11px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.document-side-section-title {
+    -fx-font-weight: bold;
+    -fx-text-fill: -docu-text;
+    -fx-padding: 8 0 0 0;
+}
+
+.document-side-scroll {
+    -fx-background: transparent;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.document-structure-list {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-border;
+}
+
+.document-property-row {
+    -fx-padding: 2 0 2 0;
+}
+
+.document-property-key {
+    -fx-font-weight: bold;
+    -fx-text-fill: -docu-text-muted;
+    -fx-min-width: 86;
+}
+
+.document-property-value {
+    -fx-text-fill: -docu-text;
+}
+
+.document-block-selected {
+    -fx-border-color: -docu-accent;
+    -fx-border-width: 2;
+    -fx-background-color: #EFF6FF;
+}
+
+.document-diagnostic-card {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-border;
+    -fx-padding: 8;
+}
+
+.document-diagnostic-header {
+    -fx-font-weight: bold;
+    -fx-text-fill: -docu-text;
+}
+
+.document-diagnostic-warning {
+    -fx-border-color: #E6B980;
+    -fx-background-color: #FFF7ED;
+}
+
+.document-diagnostic-error {
+    -fx-border-color: #D88A8A;
+    -fx-background-color: #FEF2F2;
+}
+
+.document-diagnostic-info {
+    -fx-border-color: -docu-accent-border;
+    -fx-background-color: #F6FAFF;
+}
+
+.document-diagnostic-ok {
+    -fx-text-fill: -docu-success;
+    -fx-font-weight: bold;
+}
+
+.document-help-text {
+    -fx-text-fill: -docu-text;
+    -fx-font-size: 12px;
+}
+
+.side-dock-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -docu-text;
+}
+
+.side-dock-subtitle {
+    -fx-font-size: 11px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.side-dock-section-title {
+    -fx-font-weight: bold;
+    -fx-text-fill: -docu-text;
+    -fx-padding: 8 0 0 0;
+}
+
+.document-metrics {
+    -fx-padding: 4 0 4 0;
+}
+
+.document-metric-card,
+.document-selected-panel {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border;
+    -fx-padding: 8;
+}
+
+.document-metric-number {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -docu-accent;
+}
+
+.document-metric-label,
+.document-selected-detail {
+    -fx-font-size: 11px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.document-selected-title {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -docu-text;
+}
+
+.document-diagnostic-list {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-border;
+}
+
+.diagnostic-info {
+    -fx-text-fill: -docu-text;
+}
+
+.diagnostic-warning {
+    -fx-text-fill: -docu-warning;
+}
+
+.diagnostic-error {
+    -fx-text-fill: -docu-danger;
+}
+
+.document-structure-heading {
+    -fx-font-weight: bold;
+}
+
+.document-structure-warning {
+    -fx-background-color: #FFF7ED;
+}
+
+.document-split {
+    -fx-background-color: transparent;
+}
+
+.document-side-tabs {
+    -fx-background-color: -docu-bg-panel;
+    -fx-border-color: -docu-border;
+}
+
+.document-side-scroll {
+    -fx-background: -docu-bg-panel;
+    -fx-background-color: -docu-bg-panel;
+    -fx-border-color: transparent;
+}
+
+.document-side-content {
+    -fx-padding: 10;
+    -fx-background-color: -docu-bg-panel;
+}
+
+.document-side-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -docu-text;
+}
+
+.document-side-subtitle {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -docu-text;
+    -fx-padding: 8 0 0 0;
+}
+
+.document-side-muted {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 12px;
+}
+
+.document-structure-item {
+    -fx-alignment: center-left;
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-text-fill: -docu-text;
+    -fx-padding: 6 8 6 8;
+    -fx-font-size: 11px;
+}
+
+.document-structure-item:hover {
+    -fx-background-color: -docu-accent-soft;
+    -fx-border-color: -docu-accent-border;
+}
+
+.document-structure-heading,
+.document-structure-title {
+    -fx-font-weight: bold;
+}
+
+.document-structure-image_notice {
+    -fx-background-color: #FFF7ED;
+}
+
+.document-structure-table_notice {
+    -fx-background-color: #F6F8FB;
+}
+
+.document-metric {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-padding: 7;
+}
+
+.document-metric-label {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 11px;
+}
+
+.document-metric-value {
+    -fx-text-fill: -docu-text;
+    -fx-font-weight: bold;
+}
+
+.document-issue-info,
+.document-issue-warning,
+.document-issue-error {
+    -fx-padding: 8;
+    -fx-background-color: -docu-bg-card;
+    -fx-border-width: 1;
+}
+
+.document-issue-info {
+    -fx-border-color: -docu-accent-border;
+}
+
+.document-issue-warning {
+    -fx-border-color: #D89A35;
+    -fx-background-color: #FFF7ED;
+}
+
+.document-issue-error {
+    -fx-border-color: -docu-danger;
+    -fx-background-color: #FEE2E2;
+}
+
+.document-block-selected {
+    -fx-border-color: -docu-accent;
+    -fx-border-width: 2;
+    -fx-background-color: #EEF6FF;
+}
+
+.document-block-metadata {
+    -fx-font-size: 11px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+/* Tanda 35A — Documento narrado como pantalla principal */
+
+/* Tanda 81D — inspector izquierdo contextual por fragmento. */
+.document-context-module {
+    -fx-background-color: -docu-bg-panel;
+}
+
+.document-context-scroll {
+    -fx-background: transparent;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.document-context-body,
+.document-context-option-box {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-padding: 10;
+}
+
+.document-context-selected {
+    -fx-background-color: #F8FBFF;
+    -fx-border-color: -docu-accent-border;
+    -fx-border-width: 1;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-padding: 8;
+    -fx-text-fill: -docu-text-strong;
+    -fx-font-weight: 700;
+}
+
+.document-context-copy,
+.document-context-note {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 12px;
+}
+
+.document-context-note {
+    -fx-background-color: #F6F8FB;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-padding: 8;
+}
+
+.document-context-field-label {
+    -fx-text-fill: -docu-text-strong;
+    -fx-font-weight: 700;
+    -fx-font-size: 12px;
+}
+
+.document-context-combo {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
+}
+
+.document-context-badge {
+    -fx-background-color: #EEF2FF;
+    -fx-text-fill: -docu-accent-dark;
+}
+
+
+/* T105A — sidebars deshuesados: compacto, legible y sin cabina tecnica. */
+.workspace-side-dock {
+    -fx-background-color: rgba(248, 251, 255, 0.96);
+}
+
+.side-dock-rail {
+    -fx-background-color: #EAF1FA;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 0 1 0 0;
+}
+
+.workspace-side-dock-right .side-dock-rail {
+    -fx-border-width: 0 0 0 1;
+}
+
+.side-dock-rail-button,
+.ui-side-dock-rail-button {
+    -fx-font-size: 11px;
+    -fx-font-weight: 800;
+    -fx-padding: 8 5 8 5;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+}
+
+.side-dock-rail-button-active {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-accent-border;
+    -fx-text-fill: -docu-accent-dark;
+}
+
+.side-dock-module-frame {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 0 1 0 0;
+}
+
+.side-dock-module-header {
+    -fx-padding: 10 10 8 12;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 0 0 1 0;
+}
+
+.side-dock-module-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -docu-text-strong;
+}
+
+.document-context-module {
+    -fx-background-color: #FFFFFF;
+}
+
+.document-context-body,
+.document-context-option-box {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-effect: none;
+    -fx-padding: 8;
+}
+
+.document-context-selected {
+    -fx-background-color: #F7F9FF;
+    -fx-border-color: -docu-accent-border;
+}
+
+.document-context-note {
+    -fx-background-color: #F7FAFD;
+}
+
+/* T106 — sidebar izquierdo contextual final: fragmento primero, menos cabina tecnica. */
+.workspace-side-dock-expanded {
+    -fx-pref-width: 328px;
+}
+
+.side-dock-rail {
+    -fx-background-color: #E7EEF8;
+}
+
+.side-dock-rail-button,
+.ui-side-dock-rail-button {
+    -fx-font-size: 11px;
+    -fx-font-weight: 800;
+    -fx-padding: 9 5 9 5;
+}
+
+.document-fragment-inspector .ui-rail-action-row {
+    -fx-spacing: 7;
+}
+
+.document-context-selected {
+    -fx-background-color: #F5F7FF;
+    -fx-border-color: -docu-accent-border;
+    -fx-text-fill: -docu-text-strong;
+}
+
+.document-context-option-box {
+    -fx-background-color: #F8FAFE;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+}
+
+.document-audio-flow {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-effect: none;
+    -fx-padding: 0;
+}
+
+/* T106A — sidebars full-height and less redundant controls. */
+.document-context-module {
+    -fx-min-height: 0;
+}
+
+.document-context-scroll {
+    -fx-fit-to-width: true;
+}
+
+.document-image-preview-box {
+    -fx-min-height: 134px;
+    -fx-pref-height: 148px;
+    -fx-max-width: 240px;
+    -fx-background-color: #F6F8FC;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-padding: 8;
+}
+
+.document-image-preview {
+    -fx-effect: -docu-shadow-soft;
+}
+
+.document-image-preview-empty {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 12px;
+}
+
+/* DOC-INDEX-HF13 — índice navegable plegable del lector. */
+.document-index-panel {
+    -fx-background-color: #FFFFFF;
+}
+
+.document-index-header {
+    -fx-padding: 10 10 8 10;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 0 0 1 0;
+}
+
+.document-index-tree {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: transparent;
+    -fx-padding: 6;
+}
+
+.document-index-tree .tree-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: -docu-text;
+    -fx-font-size: 12px;
+    -fx-padding: 6 6 6 6;
+}
+
+.document-index-tree .tree-cell:hover {
+    -fx-background-color: #F4F6FF;
+}
+
+.document-index-tree .tree-cell:selected,
+.document-index-cell-selected {
+    -fx-background-color: #EEF0FF;
+    -fx-text-fill: -docu-accent-dark;
+    -fx-font-weight: 800;
+}
+
+.document-index-cell-title,
+.document-index-cell-heading,
+.document-index-cell-subheading {
+    -fx-font-weight: 800;
+}
+
+.document-index-cell-image_notice,
+.document-index-cell-table_notice,
+.document-index-cell-math_notice {
+    -fx-text-fill: -docu-text-muted;
+}
+
+/* THEATER-COLON-READ1: option to omit speaker labels before ':' in generated audio. */
+.document-context-checkbox {
+    -fx-text-fill: -dp-ink;
+    -fx-font-weight: 700;
+    -fx-wrap-text: true;
+}
+.document-context-checkbox .box {
+    -fx-background-color: -dp-surface;
+    -fx-border-color: -dp-border;
+    -fx-border-radius: 4px;
+}

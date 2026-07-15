@@ -1,0 +1,44 @@
+/* Tanda 50 — modern shell chrome: formal desktop, subtle Teams-like contrast. */
+.app-root {
+    -fx-background-color: -docu-bg-app;
+}
+
+.app-menu-bar {
+    -fx-background-color: -docu-bg-chrome-dark;
+    -fx-border-color: #1F2333;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 2 8 2 8;
+}
+
+.app-menu-bar > .container > .menu-button > .label {
+    -fx-text-fill: -docu-text-on-dark;
+    -fx-font-size: 12px;
+}
+
+.app-menu-bar .context-menu .label,
+.app-menu-bar .menu-item .label {
+    -fx-text-fill: -docu-text;
+}
+
+.app-menu-bar .menu:hover,
+.app-menu-bar .menu:showing {
+    -fx-background-color: rgba(255, 255, 255, 0.10);
+    -fx-background-radius: 4;
+}
+
+.product-dialog > *.header-panel {
+    -fx-background-color: -docu-bg-card-soft;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 0 0 1 0;
+}
+
+.product-dialog .content.label {
+    -fx-text-fill: -docu-text;
+}
+
+.product-dialog .text-area {
+    -fx-font-family: "Cascadia Mono", "Consolas", "Monospaced";
+    -fx-font-size: 12px;
+    -fx-background-color: #FBFCFE;
+    -fx-border-color: -docu-border-soft;
+}

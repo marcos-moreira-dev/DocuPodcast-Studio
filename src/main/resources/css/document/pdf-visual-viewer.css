@@ -1,0 +1,101 @@
+/* T102 - visor PDF visual central. */
+.pdf-visual-workspace,
+.pdf-visual-scroll,
+.pdf-visual-scroll > .viewport,
+.pdf-visual-scroll > .corner {
+    -fx-background: -docu-bg-document-edge;
+    -fx-background-color: -docu-bg-document-edge;
+}
+
+.pdf-visual-pages-host,
+.pdf-visual-pages {
+    -fx-background-color: -docu-bg-document-edge;
+}
+
+.pdf-visual-page-slot {
+    -fx-alignment: top-center;
+}
+
+.pdf-visual-page-number {
+    -fx-font-size: 12px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #475569;
+    -fx-background-color: rgba(255, 255, 255, 0.78);
+    -fx-background-radius: 999px;
+    -fx-padding: 5px 11px;
+}
+
+.pdf-visual-page-frame {
+    -fx-background-color: white;
+    -fx-border-color: -docu-border-document;
+    -fx-border-width: 1px;
+    -fx-background-radius: 2px;
+    -fx-border-radius: 2px;
+    -fx-padding: 0;
+    -fx-effect: -docu-shadow-document;
+}
+
+.pdf-visual-page-image {
+    -fx-smooth: true;
+}
+
+.pdf-visual-global-region-overlay {
+    -fx-background-color: rgba(0, 0, 0, 0.01);
+}
+
+.pdf-visual-region-selection {
+    -fx-fill: rgba(99, 102, 241, 0.16);
+    -fx-stroke: #5b5bd6;
+    -fx-stroke-width: 2px;
+    -fx-stroke-dash-array: 8 6;
+}
+
+.pdf-visual-text-highlight {
+    -fx-fill: rgba(125, 211, 252, 0.18);
+    -fx-stroke: transparent;
+    -fx-stroke-width: 0;
+    -fx-arc-width: 3px;
+    -fx-arc-height: 3px;
+}
+
+.pdf-visual-text-highlight-underline {
+    -fx-fill: rgba(14, 165, 233, 0.72);
+    -fx-stroke: transparent;
+}
+
+.pdf-visual-text-hover {
+    -fx-fill: rgba(124, 58, 237, 0.12);
+    -fx-stroke: transparent;
+    -fx-stroke-width: 0;
+}
+
+.pdf-visual-text-hover-underline {
+    -fx-fill: rgba(124, 58, 237, 0.72);
+    -fx-stroke: transparent;
+}
+
+.pdf-visual-text-selected {
+    -fx-fill: rgba(109, 40, 217, 0.18);
+    -fx-stroke: transparent;
+    -fx-stroke-width: 0;
+}
+
+.pdf-visual-text-selected-underline {
+    -fx-fill: rgba(109, 40, 217, 0.86);
+    -fx-stroke: transparent;
+}
+
+.pdf-visual-message,
+.pdf-visual-page-placeholder {
+    -fx-text-fill: #64748b;
+    -fx-font-size: 13px;
+}
+
+.pdf-visual-error,
+.pdf-visual-page-error {
+    -fx-text-fill: #9f1239;
+    -fx-font-size: 13px;
+    -fx-background-color: rgba(254, 226, 226, 0.72);
+    -fx-background-radius: 8px;
+    -fx-padding: 12px;
+}

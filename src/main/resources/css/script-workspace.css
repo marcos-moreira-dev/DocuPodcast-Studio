@@ -1,0 +1,231 @@
+.script-workspace {
+    -fx-background-color: -docu-bg-workspace;
+}
+
+.script-scroll {
+    -fx-background: transparent;
+    -fx-background-color: transparent;
+    -fx-border-color: -docu-border;
+}
+
+.script-side-panel {
+    -fx-background-color: -docu-bg-panel;
+    -fx-border-color: -docu-border;
+    -fx-border-width: 1;
+}
+
+.script-title {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -docu-text;
+}
+
+.script-summary {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 12px;
+}
+
+.script-segment-list {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+}
+
+.script-empty-state,
+.script-editor-header,
+.script-segment-card {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border;
+    -fx-border-width: 1;
+    -fx-padding: 12;
+}
+
+.script-empty-steps {
+    -fx-background-color: #F8FBFF;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-padding: 10;
+}
+
+.script-empty-step {
+    -fx-text-fill: -docu-text;
+    -fx-font-size: 12px;
+}
+
+.script-readiness-row {
+    -fx-padding: 2 0 0 0;
+}
+
+.script-readiness-card {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-padding: 8;
+    -fx-pref-width: 150;
+}
+
+.script-readiness-ok {
+    -fx-border-color: -docu-success;
+}
+
+.script-readiness-warning {
+    -fx-border-color: -docu-warning;
+}
+
+.script-readiness-pending {
+    -fx-border-color: -docu-border;
+}
+
+.script-readiness-title {
+    -fx-font-size: 11px;
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-weight: bold;
+}
+
+.script-readiness-value {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -docu-text;
+}
+
+.script-readiness-caption {
+    -fx-font-size: 10px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.script-validation-list {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-padding: 8;
+}
+
+.script-side-ok {
+    -fx-text-fill: -docu-success;
+}
+
+.script-side-warning {
+    -fx-text-fill: -docu-warning;
+}
+
+.script-side-error {
+    -fx-text-fill: -docu-danger;
+}
+
+.script-segment-card:hover {
+    -fx-background-color: #F8FBFF;
+    -fx-border-color: -docu-accent-border;
+}
+
+.script-segment-selected {
+    -fx-border-color: -docu-accent;
+    -fx-border-width: 2;
+    -fx-background-color: #F5F9FF;
+}
+
+.script-segment-playing {
+    -fx-border-color: -docu-success;
+    -fx-border-width: 2;
+    -fx-background-color: #F0FFF4;
+}
+
+.script-segment-paused {
+    -fx-border-color: -docu-warning;
+    -fx-border-width: 2;
+    -fx-background-color: #FFF9EE;
+}
+
+.script-segment-header-row {
+    -fx-alignment: center-left;
+}
+
+.script-segment-header {
+    -fx-font-weight: bold;
+    -fx-text-fill: -docu-text;
+}
+
+.script-segment-counts {
+    -fx-font-size: 11px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.script-segment-status-row {
+    -fx-padding: 2 0 2 0;
+}
+
+.script-status-chip {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-padding: 4 7 4 7;
+    -fx-background-color: #F6F8FB;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.script-status-ok {
+    -fx-background-color: #F0FFF4;
+    -fx-border-color: -docu-success;
+    -fx-text-fill: -docu-success;
+}
+
+.script-status-warning {
+    -fx-background-color: #FFF9EE;
+    -fx-border-color: -docu-warning;
+    -fx-text-fill: -docu-warning;
+}
+
+.script-status-error {
+    -fx-background-color: #FFF1F1;
+    -fx-border-color: -docu-danger;
+    -fx-text-fill: -docu-danger;
+}
+
+.script-status-pending {
+    -fx-background-color: #F6F8FB;
+    -fx-border-color: -docu-border-soft;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.script-segment-chips {
+    -fx-font-size: 11px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.script-segment-text {
+    -fx-font-size: 14px;
+    -fx-text-fill: -docu-text;
+    -fx-line-spacing: 4px;
+}
+
+.script-status-playing {
+    -fx-background-color: #ECFDF5;
+    -fx-border-color: -docu-success;
+    -fx-text-fill: -docu-success;
+}
+
+.script-status-paused {
+    -fx-background-color: #FFF7ED;
+    -fx-border-color: -docu-warning;
+    -fx-text-fill: -docu-warning;
+}
+
+.playback-sync-ready {
+    -fx-border-color: -docu-border-soft;
+}
+
+.playback-sync-playing {
+    -fx-border-color: -docu-success;
+}
+
+.playback-sync-paused {
+    -fx-border-color: -docu-warning;
+}
+
+.playback-sync-selected {
+    -fx-border-color: -docu-accent;
+}
+
+.playback-sync-pending {
+    -fx-border-color: -docu-border-soft;
+}

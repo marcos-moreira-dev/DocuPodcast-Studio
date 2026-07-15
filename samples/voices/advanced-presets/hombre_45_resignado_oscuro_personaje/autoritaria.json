@@ -1,0 +1,52 @@
+{
+  "profile_key": "hombre_45_resignado_oscuro_personaje",
+  "prompt_key": "autoritaria",
+  "emotion": "autoritaria",
+  "voice_id": "k1fCGnhRbXzd6bzwlD2B",
+  "nombre_original": "Parasyte - Dweller in the Deep-Dark",
+  "descripcion": "Voz seleccionada manualmente para teatro/personaje. Alias local: hombre_45_resignado_oscuro_personaje. Nombre original ElevenLabs: Parasyte - Dweller in the Deep-Dark. Personaje sugerido: Florindo resignado. Acento objetivo: aceptado_por_oido. Nota: Parasyte. Voz oscura y hundida. Usar para resignación, cansancio y derrota emocional.",
+  "categoria_local": "personaje_dialogo",
+  "modo": "personaje",
+  "acento_objetivo": "aceptado_por_oido",
+  "uso_sugerido": [
+    "teatro",
+    "personaje",
+    "dialogo"
+  ],
+  "model_id": "eleven_v3",
+  "language_code": "es",
+  "output_format": "mp3_44100_128",
+  "voice_settings": {
+    "stability": 0.22,
+    "similarity_boost": 0.7,
+    "style": 0.92,
+    "use_speaker_boost": true
+  },
+  "text_sha256": "9cb6acfd62f277c3ded54182601e5426378f5bc2cfc2e0b2a2ca709331147bf3",
+  "config_sha256": "0fee186a0ac8850a350156a1e7a753d7ab7f29107a949d83dedb17aa0d6f2595",
+  "characters": 277,
+  "text_reference": "[authoritative, commanding, firm, conversational] Atención, compañero. Coloca el güiro, la guitarra, las quince llaves viejas y el pequeño xilófono junto a la caja. Reparte el queso, el chocolate, el jugo de guayaba y el café. Nadie cruza el zaguán bajo la lluvia sin mi orden.",
+  "audio_file": "voice-bank-dialogo\\hombre_45_resignado_oscuro_personaje\\autoritaria.mp3",
+  "origen_scaffold": {
+    "created_at": "2026-06-28T01:43:22",
+    "source_template_profile": "hombre_20_idealista_ecuador_dialogo",
+    "source_template_json": "autoritaria.json",
+    "api_voice_name": "Parasyte - Dweller in the Deep-Dark",
+    "api_labels": {
+      "language": "es",
+      "accent": "aceptado_por_oido"
+    },
+    "nota": "Perfil nuevo creado para ampliar banco general; no genera audio hasta correr generate --run."
+  },
+  "seleccion_manual_v4": {
+    "profile_key": "hombre_45_resignado_oscuro_personaje",
+    "voice_id": "k1fCGnhRbXzd6bzwlD2B",
+    "public_user_id": "",
+    "new_name": "hombre_45_resignado_oscuro_personaje",
+    "voice_library_name": "Parasyte - Dweller in the Deep-Dark",
+    "personaje_sugerido": "Florindo resignado",
+    "tipo": "personaje_dialogo",
+    "acento_objetivo": "aceptado_por_oido",
+    "nota": "Parasyte. Voz oscura y hundida. Usar para resignación, cansancio y derrota emocional."
+  }
+}

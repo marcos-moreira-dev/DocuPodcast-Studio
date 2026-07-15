@@ -1,0 +1,7 @@
+docupodcast_studio:
+  base_path: "C:/Users/MARCOS MOREIRA/Downloads/g/models/image"
+  checkpoints: .
+  diffusion_models: .
+  vae: vae
+  text_encoders: text_encoders
+  loras: loras

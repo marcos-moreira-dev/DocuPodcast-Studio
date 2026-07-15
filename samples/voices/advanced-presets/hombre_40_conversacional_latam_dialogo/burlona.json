@@ -1,0 +1,52 @@
+{
+  "profile_key": "hombre_40_conversacional_latam_dialogo",
+  "prompt_key": "burlona",
+  "emotion": "burlona",
+  "voice_id": "DfE5EkknFF950NR6OMui",
+  "nombre_original": "Bob",
+  "descripcion": "Voz seleccionada manualmente para teatro/personaje. Alias local: hombre_40_conversacional_latam_dialogo. Nombre original ElevenLabs: Bob. Personaje sugerido: Florindo cómodo / ciudadano común. Acento objetivo: aceptado_por_oido. Nota: Voz conversacional para ciudadano común. No renombrar en ElevenLabs; solo usar nombre local.",
+  "categoria_local": "personaje_dialogo",
+  "modo": "personaje",
+  "acento_objetivo": "aceptado_por_oido",
+  "uso_sugerido": [
+    "teatro",
+    "personaje",
+    "dialogo"
+  ],
+  "model_id": "eleven_v3",
+  "language_code": "es",
+  "output_format": "mp3_44100_128",
+  "voice_settings": {
+    "stability": 0.22,
+    "similarity_boost": 0.7,
+    "style": 0.92,
+    "use_speaker_boost": true
+  },
+  "text_sha256": "7152eb833e93128aee65fe90fbbb6e1803e5599b9916de0685155e296cb58522",
+  "config_sha256": "1bccd9a5d37a2f698d120a3e1577e1bf2d369479bd6e875784aecedf02529d32",
+  "characters": 284,
+  "text_reference": "[mocking, playful, amused, conversational] Ay, compañero, qué gran estratega eres. Perdiste el güiro, desafinaste la guitarra, confundiste quince llaves viejas y llamaste tesoro al pequeño xilófono. Sirve queso, chocolate y café; la niña del zaguán ya resolvió la lluvia antes que tú.",
+  "audio_file": "voice-bank-dialogo\\hombre_40_conversacional_latam_dialogo\\burlona.mp3",
+  "origen_scaffold": {
+    "created_at": "2026-06-28T00:55:55",
+    "source_template_profile": "hombre_20_idealista_ecuador_dialogo",
+    "source_template_json": "burlona.json",
+    "api_voice_name": "Bob",
+    "api_labels": {
+      "language": "es",
+      "accent": "aceptado_por_oido"
+    },
+    "nota": "Perfil nuevo creado para ampliar banco general; no genera audio hasta correr generate --run."
+  },
+  "seleccion_manual_v4": {
+    "profile_key": "hombre_40_conversacional_latam_dialogo",
+    "voice_id": "DfE5EkknFF950NR6OMui",
+    "public_user_id": "",
+    "new_name": "hombre_40_conversacional_latam_dialogo",
+    "voice_library_name": "Bob",
+    "personaje_sugerido": "Florindo cómodo / ciudadano común",
+    "tipo": "personaje_dialogo",
+    "acento_objetivo": "aceptado_por_oido",
+    "nota": "Voz conversacional para ciudadano común. No renombrar en ElevenLabs; solo usar nombre local."
+  }
+}

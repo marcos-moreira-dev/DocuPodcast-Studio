@@ -1,0 +1,80 @@
+.placeholder-workspace {
+    -fx-background-color: -docu-bg-workspace;
+}
+
+.workspace-title {
+    -fx-text-fill: -docu-text-strong;
+    -fx-font-size: 24px;
+    -fx-font-weight: 700;
+}
+
+.workspace-subtitle {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 14px;
+}
+
+.workspace-section-title {
+    -fx-text-fill: -docu-text-strong;
+    -fx-font-size: 15px;
+    -fx-font-weight: 700;
+}
+
+.narrative-visual-production-workspace {
+    -fx-background-color: -docu-bg-workspace;
+}
+
+.narrative-visual-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+
+.narrative-visual-summary,
+.document-visual-card {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-effect: -docu-shadow-soft;
+}
+
+.narrative-visual-summary {
+    -fx-padding: 12;
+}
+
+.document-visual-card-title {
+    -fx-text-fill: -docu-text-strong;
+    -fx-font-size: 16px;
+    -fx-font-weight: 700;
+}
+
+.narrative-fragment-copy {
+    -fx-text-fill: -docu-text;
+    -fx-font-size: 13px;
+}
+
+.narrative-metric-chip {
+    -fx-background-color: -docu-bg-card-soft;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
+    -fx-padding: 5 8 5 8;
+    -fx-text-fill: -docu-text-strong;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+}
+
+.narrative-fragment-actions {
+    -fx-padding: 2 0 0 0;
+}
+
+.status-error {
+    -fx-text-fill: -docu-danger;
+    -fx-font-weight: 700;
+}
+
+.status-warning {
+    -fx-text-fill: -docu-warning;
+    -fx-font-weight: 700;
+}

@@ -1,0 +1,82 @@
+/* Tanda 50 — modern visual tokens inspired by current desktop products (Teams-like, formal, no circus). */
+.root {
+    -docu-bg-app: #F4F6FB;
+    -docu-bg-workspace: #EEF2F8;
+    -docu-bg-chrome: #FFFFFF;
+    -docu-bg-chrome-dark: #292D3E;
+    -docu-bg-panel: #FFFFFF;
+    -docu-bg-card: #FFFFFF;
+    -docu-bg-card-soft: #F8FAFE;
+    -docu-bg-document: #FFFFFF;
+    -docu-bg-document-edge: #30415D;
+    -docu-bg-hover: #F1F4FF;
+    -docu-status-hover-pastel: #F5F1FF;
+    -docu-bg-selected: #EEF2FF;
+
+    -docu-border-dark: #A7B0C0;
+    -docu-border: #D2D8E5;
+    -docu-border-soft: #E6EAF2;
+    -docu-border-strong: #B9C1D2;
+    -docu-border-document: #B8B5AE;
+
+    -docu-text: #202431;
+    -docu-text-strong: #111827;
+    -docu-text-muted: #626B7C;
+    -docu-text-disabled: #98A2B3;
+    -docu-text-on-dark: #F8FAFC;
+
+    -docu-accent: #5B5FC7;
+    -docu-accent-hover: #464AA8;
+    -docu-accent-soft: #EEEFFF;
+    -docu-accent-border: #C7C9F4;
+    -docu-accent-ink: #373A8D;
+
+    -docu-success: #168A4A;
+    -docu-success-soft: #EAF7EF;
+    -docu-success-dark: #0F6A39;
+    -docu-warning: #B76A00;
+    -docu-danger: #B7352C;
+    -docu-danger-soft: #FFF1F0;
+    -docu-help: #6A4FB3;
+
+    -docu-shadow-card: dropshadow(gaussian, rgba(21, 31, 55, 0.10), 14, 0.18, 0, 3);
+    -docu-shadow-panel: dropshadow(gaussian, rgba(21, 31, 55, 0.08), 10, 0.14, 0, 2);
+    -docu-shadow-soft: dropshadow(gaussian, rgba(21, 31, 55, 0.06), 8, 0.12, 0, 1);
+    -docu-shadow-document: dropshadow(gaussian, rgba(5, 12, 24, 0.36), 24, 0.18, 0, 7);
+    -docu-scroll-document-track: #3A4D69;
+    -docu-scroll-document-thumb: #AFC3DA;
+    -docu-scroll-document-thumb-hover: #C7D6E6;
+    -docu-scroll-document-thumb-active: #91ABC7;
+
+
+
+    /* Tanda 59 — aliases de compatibilidad CSS para evitar tokens huérfanos detectados en smoke UI. */
+    -docu-bg-shell: -docu-bg-chrome;
+    -docu-bg-subtle: -docu-bg-card-soft;
+    -docu-bg-soft: -docu-bg-card-soft;
+    -docu-accent-dark: -docu-accent-ink;
+    -docu-surface: -docu-bg-panel;
+    -docu-surface-muted: -docu-bg-card-soft;
+    -docu-ink: -docu-text-strong;
+    -docu-muted: -docu-text-muted;
+    -docu-soft: -docu-accent-soft;
+    -docu-shadow: rgba(21, 31, 55, 0.16);
+
+    /* T120D-HF1 — aliases CSS usados por módulos heredados/auxiliares para evitar warnings JavaFX. */
+    -dp-surface: -docu-bg-panel;
+    -dp-border: -docu-border-soft;
+    -dp-primary: -docu-accent;
+    -dp-primary-soft: -docu-accent-soft;
+    -dp-text: -docu-text;
+    -dp-text-secondary: -docu-text-muted;
+    -dp-ink: -docu-text-strong;
+    -dp-muted: -docu-text-muted;
+    -dp-muted-text: -docu-text-muted;
+    -docu-chip-background: -docu-accent-soft;
+
+    -fx-font-family: "Segoe UI", "Inter", Arial, sans-serif;
+    -fx-font-size: 13px;
+    -fx-accent: -docu-accent;
+    -fx-focus-color: -docu-accent;
+    -fx-faint-focus-color: transparent;
+}

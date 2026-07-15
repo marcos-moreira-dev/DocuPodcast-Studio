@@ -1,0 +1,52 @@
+{
+  "profile_key": "mujer_60_sabia_memoria_latam_personaje",
+  "prompt_key": "melancolica",
+  "emotion": "melancolica",
+  "voice_id": "aYQAm4rWuigkeuRA5i92",
+  "nombre_original": "Grandma Aurora - Warm, Deep & Loving",
+  "descripcion": "Voz seleccionada manualmente para teatro/personaje. Alias local: mujer_60_sabia_memoria_latam_personaje. Nombre original ElevenLabs: Grandma Aurora - Warm, Deep & Loving. Personaje sugerido: Oveja anciana de la memoria. Acento objetivo: latam_neutral_por_oido. Nota: Grandma Aurora. Voz anciana, cálida y sabia. No renombrar en ElevenLabs; solo usar nombre local.",
+  "categoria_local": "personaje_dialogo",
+  "modo": "personaje",
+  "acento_objetivo": "latam_neutral_por_oido",
+  "uso_sugerido": [
+    "teatro",
+    "personaje",
+    "dialogo"
+  ],
+  "model_id": "eleven_v3",
+  "language_code": "es",
+  "output_format": "mp3_44100_128",
+  "voice_settings": {
+    "stability": 0.22,
+    "similarity_boost": 0.7,
+    "style": 0.92,
+    "use_speaker_boost": true
+  },
+  "text_sha256": "89eb57395d94c26ee912f0bdbebfa4d27bf00ca66b27b933b25b5e4f74a47927",
+  "config_sha256": "e092dd06f1a60747098d17dceb5aee5a5a7f275c915cf0e6b0f3047f88709c84",
+  "characters": 281,
+  "text_reference": "[melancholic, nostalgic, soft, conversational] ¿Te acuerdas, compañero? Antes bastaban un güiro, una guitarra, quince llaves viejas y un pequeño xilófono para llenar el zaguán de risa. Había queso, chocolate, jugo de guayaba y café. Ahora la lluvia cae, y la niña mira en silencio.",
+  "audio_file": "voice-bank-dialogo\\mujer_60_sabia_memoria_latam_personaje\\melancolica.mp3",
+  "origen_scaffold": {
+    "created_at": "2026-06-28T02:17:32",
+    "source_template_profile": "hombre_20_idealista_ecuador_dialogo",
+    "source_template_json": "melancolica.json",
+    "api_voice_name": "Grandma Aurora - Warm, Deep & Loving",
+    "api_labels": {
+      "language": "es",
+      "accent": "latam_neutral_por_oido"
+    },
+    "nota": "Perfil nuevo creado para ampliar banco general; no genera audio hasta correr generate --run."
+  },
+  "seleccion_manual_v4": {
+    "profile_key": "mujer_60_sabia_memoria_latam_personaje",
+    "voice_id": "aYQAm4rWuigkeuRA5i92",
+    "public_user_id": "",
+    "new_name": "mujer_60_sabia_memoria_latam_personaje",
+    "voice_library_name": "Grandma Aurora - Warm, Deep & Loving",
+    "personaje_sugerido": "Oveja anciana de la memoria",
+    "tipo": "personaje_dialogo",
+    "acento_objetivo": "latam_neutral_por_oido",
+    "nota": "Grandma Aurora. Voz anciana, cálida y sabia. No renombrar en ElevenLabs; solo usar nombre local."
+  }
+}

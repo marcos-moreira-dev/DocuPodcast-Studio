@@ -1,0 +1,455 @@
+.theatre-act-list {
+    -fx-padding: 2 0 0 0;
+}
+
+.theatre-act-card {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #B7D1EE;
+    -fx-border-width: 1;
+    -fx-background-radius: 7;
+    -fx-border-radius: 7;
+}
+
+.theatre-act-header {
+    -fx-background-color: #F1F7FF;
+    -fx-background-radius: 7 7 0 0;
+    -fx-padding: 8 9 8 9;
+    -fx-cursor: hand;
+}
+
+.theatre-act-body {
+    -fx-padding: 8;
+    -fx-spacing: 8;
+}
+
+.theatre-act-chevron {
+    -fx-font-size: 11px;
+    -fx-text-fill: -docu-text-muted;
+    -fx-min-width: 14px;
+}
+
+.theatre-act-name {
+    -fx-font-size: 12.5px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -docu-text-strong;
+}
+
+.theatre-act-summary {
+    -fx-font-size: 10.5px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.theatre-title-edit-button {
+    -fx-font-size: 11px;
+    -fx-font-weight: 800;
+    -fx-padding: 0;
+}
+
+.theatre-title-delete-button {
+    -fx-text-fill: #B91C1C;
+}
+
+.theatre-scene-fold-create-button {
+    -fx-font-weight: 900;
+}
+
+.theatre-scene-header {
+    -fx-padding: 0;
+    -fx-cursor: hand;
+}
+
+.theatre-scene-body {
+    -fx-padding: 7 0 0 21;
+}
+
+.theatre-map-body {
+    -fx-spacing: 10;
+}
+
+.theatre-map-feedback,
+.theatre-map-microcopy {
+    -fx-font-size: 11px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.theatre-manual-script-text {
+    -fx-font-size: 34px;
+    -fx-text-fill: -docu-text-strong;
+    -fx-background-color: #F8FAFE;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+}
+
+.theatre-text-alias-strip {
+    -fx-padding: 2 0 6 0;
+    -fx-spacing: 6;
+}
+
+.theatre-text-alias-chip {
+    -fx-background-color: #EEF6FF;
+    -fx-border-color: #8FB2EA;
+    -fx-border-width: 1;
+    -fx-background-radius: 999;
+    -fx-border-radius: 999;
+    -fx-padding: 4 8 4 8;
+    -fx-text-fill: #1E3A8A;
+    -fx-font-size: 11px;
+    -fx-font-weight: 900;
+}
+
+.theatre-textual-scene-start {
+    -fx-padding: 2 0 0 0;
+}
+
+.theatre-scene-boundary-actions {
+    -fx-spacing: 6;
+}
+
+.theatre-scene-boundary-button {
+    -fx-font-size: 11px;
+    -fx-font-weight: 800;
+}
+
+.theatre-scene-boundary-button-active {
+    -fx-background-color: #DCFCE7;
+    -fx-border-color: #16A34A;
+    -fx-text-fill: #166534;
+}
+
+.theatre-text-start-picker-active {
+    -fx-background-color: #DCFCE7;
+    -fx-border-color: #16A34A;
+    -fx-text-fill: #166534;
+}
+
+.theatre-spatial-reference-section {
+    -fx-spacing: 8;
+}
+
+.theatre-spatial-controls {
+    -fx-padding: 2 0 4 0;
+}
+
+.theatre-spatial-mode-box {
+    -fx-spacing: 6;
+}
+
+.theatre-spatial-mode-radios {
+    -fx-padding: 2 0 2 0;
+    -fx-hgap: 14;
+    -fx-vgap: 8;
+}
+
+.theatre-spatial-radio-button {
+    -fx-padding: 3 8 3 0;
+    -fx-text-fill: -docu-text;
+}
+
+.theatre-fullscreen-root {
+    -fx-background-color: #030712;
+}
+
+.theatre-fullscreen-playbar {
+    -fx-background-color: rgba(15, 23, 42, 0.58);
+    -fx-border-color: rgba(255, 255, 255, 0.10);
+    -fx-border-width: 0 0 1 0;
+}
+
+.theatre-fullscreen-playbar-title {
+    -fx-text-fill: white;
+    -fx-font-family: "Georgia", "Cambria", serif;
+    -fx-font-style: italic;
+    -fx-font-size: 16px;
+}
+
+.theatre-fullscreen-companion {
+    -fx-background-color: transparent;
+}
+
+.theatre-fullscreen-center-host,
+.theatre-fullscreen-fragments-layout,
+.theatre-fullscreen-characters-layout {
+    -fx-background-color: transparent;
+}
+
+.theatre-fullscreen-map-pane {
+    -fx-background-color: transparent;
+}
+
+.theatre-fullscreen-map-only {
+    -fx-alignment: center;
+}
+
+.theatre-fullscreen-companion-image-slot {
+    -fx-background-color: transparent;
+    -fx-alignment: center;
+}
+
+.theatre-fullscreen-bottom-text {
+    -fx-background-color: transparent;
+    -fx-text-fill: #FDECC8;
+    -fx-font-family: "Georgia", "Cambria", serif;
+    -fx-font-style: italic;
+    -fx-font-weight: 900;
+    -fx-font-size: 24px;
+    -fx-effect: dropshadow(one-pass-box, rgba(0, 0, 0, 0.90), 3, 0, 1, 1);
+}
+
+.theatre-fullscreen-companion-title {
+    -fx-text-fill: white;
+    -fx-font-family: "Georgia", "Cambria", serif;
+    -fx-font-weight: 900;
+    -fx-font-size: 24px;
+    -fx-effect: dropshadow(one-pass-box, rgba(0, 0, 0, 0.86), 3, 0, 1, 1);
+}
+
+.theatre-fullscreen-character-grid {
+    -fx-background-color: transparent;
+}
+
+.theatre-fullscreen-character-name {
+    -fx-text-fill: white;
+    -fx-font-family: "Georgia", "Cambria", serif;
+    -fx-font-weight: 900;
+    -fx-effect: dropshadow(one-pass-box, rgba(0, 0, 0, 0.86), 3, 0, 1, 1);
+}
+
+.theatre-fullscreen-companion-muted {
+    -fx-text-fill: white;
+    -fx-font-family: "Georgia", "Cambria", serif;
+    -fx-effect: dropshadow(one-pass-box, rgba(0, 0, 0, 0.86), 3, 0, 1, 1);
+}
+
+.theatre-fullscreen-companion-text {
+    -fx-text-fill: white;
+    -fx-font-size: 12;
+}
+
+.theatre-fullscreen-close-msg {
+    -fx-text-fill: #FCD34D;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+
+.theatre-fullscreen-overlay {
+    -fx-background-color: rgba(0, 0, 0, 0.8);
+}
+
+.theatre-mode-label {
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+}
+
+.theatre-spatial-reference-frame {
+    -fx-background-color: #F8FAFE;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-padding: 12;
+    -fx-alignment: center;
+}
+
+.theatre-spatial-overlay-canvas {
+    -fx-cursor: crosshair;
+}
+
+.theatre-spatial-dialog-root {
+    -fx-background-color: #F8FAFC;
+}
+
+.theatre-spatial-dialog-subtitle {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 12.5px;
+}
+
+.theatre-spatial-dialog-group {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #C7D2FE;
+    -fx-border-width: 1;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-padding: 18 16 14 16;
+}
+
+.theatre-spatial-dialog-group-title {
+    -fx-background-color: transparent;
+    -fx-text-fill: -docu-accent-dark;
+    -fx-font-size: 12px;
+    -fx-font-weight: 900;
+    -fx-padding: 0;
+}
+
+.theatre-spatial-dialog-field-list {
+    -fx-spacing: 8;
+}
+
+.theatre-spatial-dialog-field-row {
+    -fx-spacing: 12;
+}
+
+.theatre-spatial-dialog-field-label {
+    -fx-text-fill: -docu-text;
+    -fx-font-size: 12.5px;
+    -fx-font-weight: 700;
+}
+
+.theatre-spatial-dialog-combo {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #CBD5E1;
+    -fx-border-width: 1;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+}
+
+.theatre-spatial-dialog-targets {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #CBD5E1;
+    -fx-border-width: 1;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-padding: 8;
+}
+
+.theatre-spatial-dialog-target-check {
+    -fx-padding: 4 8 4 4;
+    -fx-text-fill: -docu-text;
+    -fx-font-size: 12.5px;
+}
+
+.theatre-spatial-dialog-actions {
+    -fx-padding: 2 0 0 0;
+}
+
+.theatre-action-canvas-shell {
+    -fx-padding: 2 0 0 0;
+}
+
+.theatre-action-canvas-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-border-color: #D8E0EA;
+    -fx-border-width: 1;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-padding: 0;
+    -fx-min-height: 300px;
+}
+
+.theatre-action-canvas {
+    -fx-cursor: default;
+}
+
+.theatre-scene-character-image-card {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #C7D2FE;
+    -fx-border-width: 1;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-padding: 8;
+}
+
+.theatre-scene-character-image-note {
+    -fx-text-fill: #172033;
+    -fx-font-size: 12.5px;
+    -fx-font-weight: 700;
+    -fx-background-color: #F8FAFC;
+    -fx-border-color: #D8E3F5;
+    -fx-border-width: 1;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-padding: 6 8;
+}
+
+.theatre-ai-context-title {
+    -fx-font-weight: 700;
+}
+
+.theatre-ai-missing-thumb {
+    -fx-background-color: #eef3fb;
+    -fx-border-color: #c7d4e8;
+}
+
+.theatre-ai-generated-preview-title {
+    -fx-font-weight: 700;
+    -fx-text-fill: #172033;
+}
+
+.theatre-ai-generated-preview-frame {
+    -fx-background-color: #f8fafc;
+    -fx-border-color: #d8e3f5;
+    -fx-border-width: 1;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-padding: 12;
+}
+
+.theatre-ai-generated-preview-placeholder {
+    -fx-text-fill: #66748d;
+    -fx-font-weight: 700;
+}
+
+.theatre-ai-frame-carousel-scroll {
+    -fx-background-color: transparent;
+    -fx-border-color: #D8E3F5;
+    -fx-border-width: 1;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-padding: 0;
+}
+
+.theatre-ai-frame-carousel-scroll > .viewport {
+    -fx-background-color: #F8FAFC;
+}
+
+.theatre-ai-frame-carousel {
+    -fx-alignment: center-left;
+    -fx-padding: 10;
+}
+
+.theatre-ai-frame-carousel-card {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #D8E3F5;
+    -fx-border-width: 1;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-padding: 8;
+    -fx-min-width: 270;
+    -fx-pref-width: 270;
+    -fx-max-width: 270;
+}
+
+.theatre-ai-frame-carousel-title {
+    -fx-font-weight: 700;
+    -fx-text-fill: #172033;
+}
+
+.theatre-ai-frame-carousel-subtitle {
+    -fx-text-fill: #66748D;
+    -fx-font-size: 12px;
+    -fx-min-height: 30;
+}
+
+.theatre-ai-frame-carousel-preview {
+    -fx-background-color: #F8FAFC;
+    -fx-border-color: #D8E3F5;
+    -fx-border-width: 1;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-padding: 8;
+    -fx-min-width: 250;
+    -fx-pref-width: 250;
+    -fx-max-width: 250;
+    -fx-min-height: 150;
+    -fx-pref-height: 150;
+    -fx-max-height: 150;
+}
+
+.theatre-ai-frame-carousel-placeholder {
+    -fx-text-fill: #66748D;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-alignment: center;
+}

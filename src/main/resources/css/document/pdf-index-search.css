@@ -1,0 +1,25 @@
+.document-index-search {
+    -fx-padding: 6 0 0 0;
+}
+
+.document-index-search-field {
+    -fx-background-radius: 7px;
+    -fx-border-radius: 7px;
+    -fx-border-color: -docu-border-soft;
+    -fx-background-color: #FFFFFF;
+    -fx-font-size: 12px;
+}
+
+.document-index-search-actions {
+    -fx-alignment: center-left;
+}
+
+.document-index-search-button {
+    -fx-background-radius: 7px;
+    -fx-border-radius: 7px;
+    -fx-border-color: -docu-border-soft;
+    -fx-background-color: #FFFFFF;
+    -fx-font-size: 11px;
+    -fx-font-weight: 800;
+    -fx-padding: 5 8;
+}

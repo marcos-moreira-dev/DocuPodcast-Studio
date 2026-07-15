@@ -1,0 +1,14 @@
+{
+  "format": "docupodcast-comfy-api-reference",
+  "preset": "HIGH_QUALITY_FLUX",
+  "builtIn": true,
+  "nodes": [
+    "UNETLoader",
+    "DualCLIPLoader",
+    "VAELoader",
+    "CLIPTextEncodeFlux",
+    "ModelSamplingFlux",
+    "SamplerCustomAdvanced",
+    "SaveImage"
+  ]
+}

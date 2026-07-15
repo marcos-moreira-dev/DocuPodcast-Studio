@@ -1,0 +1,52 @@
+{
+  "profile_key": "hombre_45_moralista_comico_personaje",
+  "prompt_key": "apurada",
+  "emotion": "apurada",
+  "voice_id": "oQL5kq26ctJzupM0mJot",
+  "nombre_original": "Noel Natal - Animated Santa Claus",
+  "descripcion": "Voz seleccionada manualmente para teatro/personaje. Alias local: hombre_45_moralista_comico_personaje. Nombre original ElevenLabs: Noel Natal - Animated Santa Claus. Personaje sugerido: Florindo moralista. Acento objetivo: aceptado_por_oido. Nota: Noel Natal. Voz cálida/cómica. Usar como moralista hipócrita o santurrón teatral.",
+  "categoria_local": "personaje_dialogo",
+  "modo": "personaje",
+  "acento_objetivo": "aceptado_por_oido",
+  "uso_sugerido": [
+    "teatro",
+    "personaje",
+    "dialogo"
+  ],
+  "model_id": "eleven_v3",
+  "language_code": "es",
+  "output_format": "mp3_44100_128",
+  "voice_settings": {
+    "stability": 0.22,
+    "similarity_boost": 0.7,
+    "style": 0.92,
+    "use_speaker_boost": true
+  },
+  "text_sha256": "b3d75ae9aac8f29f467da7d3045ba68ceca9ca9f04537782f194087d6ddfe1f0",
+  "config_sha256": "3cf59d0d1f69b8d36a7b52605c14b276209e6acf9a7f520046f0864a6dc8ecf9",
+  "characters": 247,
+  "text_reference": "[rushed, urgent, fast, conversational] ¡Rápido, compañero! Agarra el güiro, la guitarra, las quince llaves viejas y el pequeño xilófono. Mete queso, chocolate, jugo de guayaba y café en la caja. La niña ya cruzó el zaguán y la lluvia viene fuerte.",
+  "audio_file": "voice-bank-dialogo\\hombre_45_moralista_comico_personaje\\apurada.mp3",
+  "origen_scaffold": {
+    "created_at": "2026-06-28T01:43:22",
+    "source_template_profile": "hombre_20_idealista_ecuador_dialogo",
+    "source_template_json": "apurada.json",
+    "api_voice_name": "Noel Natal - Animated Santa Claus",
+    "api_labels": {
+      "language": "es",
+      "accent": "aceptado_por_oido"
+    },
+    "nota": "Perfil nuevo creado para ampliar banco general; no genera audio hasta correr generate --run."
+  },
+  "seleccion_manual_v4": {
+    "profile_key": "hombre_45_moralista_comico_personaje",
+    "voice_id": "oQL5kq26ctJzupM0mJot",
+    "public_user_id": "",
+    "new_name": "hombre_45_moralista_comico_personaje",
+    "voice_library_name": "Noel Natal - Animated Santa Claus",
+    "personaje_sugerido": "Florindo moralista",
+    "tipo": "personaje_dialogo",
+    "acento_objetivo": "aceptado_por_oido",
+    "nota": "Noel Natal. Voz cálida/cómica. Usar como moralista hipócrita o santurrón teatral."
+  }
+}

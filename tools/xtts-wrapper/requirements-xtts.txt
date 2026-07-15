@@ -1,0 +1,7 @@
+# Runtime Python local para Coqui/XTTS usado por DocuPodcast Studio.
+# Mantener este archivo pequeño y explícito: Java sigue siendo la app principal.
+# TTS 0.22.x es la línea Coqui TTS usada para XTTS v2 en este proyecto.
+# Transformers debe quedar fijado: versiones recientes dejaron de exportar BeamSearchScorer
+# desde transformers.__init__, lo que rompe el import interno de Coqui TTS/XTTS.
+TTS==0.22.0
+transformers==4.44.2

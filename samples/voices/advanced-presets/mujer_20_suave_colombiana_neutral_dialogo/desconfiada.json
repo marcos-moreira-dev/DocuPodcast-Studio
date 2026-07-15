@@ -1,0 +1,52 @@
+{
+  "profile_key": "mujer_20_suave_colombiana_neutral_dialogo",
+  "prompt_key": "desconfiada",
+  "emotion": "desconfiada",
+  "voice_id": "gXNPKp01Qauo3Uoh4uUG",
+  "nombre_original": "Marcela - Soft & Intimate",
+  "descripcion": "Voz seleccionada manualmente para teatro/personaje. Alias local: mujer_20_suave_colombiana_neutral_dialogo. Nombre original ElevenLabs: Marcela - Soft & Intimate. Personaje sugerido: Oveja asustada pero digna / personaje sensible. Acento objetivo: colombiano_suave_aceptado_por_oido. Nota: Voz suave y sensible. No renombrar en ElevenLabs; solo usar nombre local.",
+  "categoria_local": "personaje_dialogo",
+  "modo": "personaje",
+  "acento_objetivo": "colombiano_suave_aceptado_por_oido",
+  "uso_sugerido": [
+    "teatro",
+    "personaje",
+    "dialogo"
+  ],
+  "model_id": "eleven_v3",
+  "language_code": "es",
+  "output_format": "mp3_44100_128",
+  "voice_settings": {
+    "stability": 0.22,
+    "similarity_boost": 0.7,
+    "style": 0.92,
+    "use_speaker_boost": true
+  },
+  "text_sha256": "d5e2a1242df7b12b0e269e4177257a7d9b36925662f107982edc6653b39153fd",
+  "config_sha256": "818f2ca4835bd43ca68f1e78659a9cd0d08ac148604377faee922f6bb7208321",
+  "characters": 288,
+  "text_reference": "[suspicious, cautious, low, conversational] No me convence, compañero. Dices que el güiro, la guitarra, quince llaves viejas y el pequeño xilófono estaban en el zaguán, pero la caja huele a queso, chocolate, jugo de guayaba y café. La niña vio algo bajo la lluvia, y tú sonríes demasiado.",
+  "audio_file": "voice-bank-dialogo\\mujer_20_suave_colombiana_neutral_dialogo\\desconfiada.mp3",
+  "origen_scaffold": {
+    "created_at": "2026-06-28T00:55:56",
+    "source_template_profile": "hombre_20_idealista_ecuador_dialogo",
+    "source_template_json": "desconfiada.json",
+    "api_voice_name": "Marcela - Soft & Intimate",
+    "api_labels": {
+      "language": "es",
+      "accent": "colombiano_suave_aceptado_por_oido"
+    },
+    "nota": "Perfil nuevo creado para ampliar banco general; no genera audio hasta correr generate --run."
+  },
+  "seleccion_manual_v4": {
+    "profile_key": "mujer_20_suave_colombiana_neutral_dialogo",
+    "voice_id": "gXNPKp01Qauo3Uoh4uUG",
+    "public_user_id": "",
+    "new_name": "mujer_20_suave_colombiana_neutral_dialogo",
+    "voice_library_name": "Marcela - Soft & Intimate",
+    "personaje_sugerido": "Oveja asustada pero digna / personaje sensible",
+    "tipo": "personaje_dialogo",
+    "acento_objetivo": "colombiano_suave_aceptado_por_oido",
+    "nota": "Voz suave y sensible. No renombrar en ElevenLabs; solo usar nombre local."
+  }
+}

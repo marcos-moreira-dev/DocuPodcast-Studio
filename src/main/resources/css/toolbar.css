@@ -1,0 +1,101 @@
+/* Tanda 50 — flat, modern toolbar: no XP gradients, no button circus. */
+/* T99C — toolbar con marcadores sobrios, grupos y acciones principales respiradas. */
+.main-toolbar-stack {
+    -fx-background-color: -docu-bg-chrome;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 0 0 1 0;
+    -fx-effect: -docu-shadow-soft;
+}
+
+.main-toolbar-scroll,
+.workspace-toolbar-scroll {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+    -fx-fit-to-height: true;
+}
+
+.main-toolbar-scroll > .viewport,
+.workspace-toolbar-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+.main-toolbar {
+    -fx-background-color: -docu-bg-chrome;
+    -fx-padding: 8 12 8 12;
+    -fx-alignment: center-left;
+}
+
+.workspace-toolbar-area {
+    -fx-background-color: rgba(248, 250, 254, 0.92);
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 4 8 4 8;
+    -fx-alignment: center-left;
+}
+
+.toolbar-button,
+.ui-toolbar-action {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-border-width: 1;
+    -fx-background-radius: 9;
+    -fx-border-radius: 9;
+    -fx-padding: 7 12 7 12;
+    -fx-text-fill: -docu-text;
+    -fx-wrap-text: false;
+    -fx-cursor: hand;
+    -fx-min-height: 34px;
+}
+
+.toolbar-button:hover,
+.ui-toolbar-action:hover {
+    -fx-background-color: -docu-bg-hover;
+    -fx-border-color: -docu-accent-border;
+}
+
+.toolbar-button-primary,
+.ui-toolbar-action-primary {
+    -fx-background-color: -docu-accent;
+    -fx-border-color: -docu-accent;
+    -fx-text-fill: white;
+    -fx-font-weight: 700;
+}
+
+.toolbar-button-primary:hover,
+.ui-toolbar-action-primary:hover {
+    -fx-background-color: -docu-accent-hover;
+    -fx-border-color: -docu-accent-hover;
+}
+
+.ui-toolbar-action-primary .ui-toolbar-action-icon,
+.ui-toolbar-action-primary .ui-toolbar-action-text {
+    -fx-text-fill: white;
+}
+
+.ui-toolbar-action-icon {
+    -fx-text-fill: -docu-text;
+    -fx-font-size: 15px;
+    -fx-font-weight: 700;
+}
+
+.ui-toolbar-action-text {
+    -fx-text-fill: -docu-text;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+}
+
+.toolbar-group-label {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 10px;
+    -fx-font-weight: 800;
+    -fx-padding: 10 3 0 2;
+    -fx-text-transform: uppercase;
+}
+
+.toolbar-separator {
+    -fx-background-color: -docu-border-soft;
+    -fx-min-height: 30px;
+    -fx-pref-height: 30px;
+    -fx-max-height: 30px;
+}

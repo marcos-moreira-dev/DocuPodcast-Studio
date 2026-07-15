@@ -1,0 +1,177 @@
+/* Tanda 50 — understated status bar. */
+.status-bar {
+    -fx-background-color: -docu-bg-chrome;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 5 10 5 10;
+}
+
+.status-bar-label {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 12px;
+}
+
+.status-bar-prefix {
+    -fx-background-color: -docu-accent-soft;
+    -fx-border-color: -docu-accent-border;
+    -fx-border-width: 1;
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+    -fx-padding: 2 7 2 7;
+    -fx-text-fill: -docu-accent-ink;
+    -fx-font-weight: 700;
+}
+
+/* T102 — control compacto de tamaño de lectura. */
+.reading-zoom-control {
+    -fx-alignment: center-right;
+    -fx-spacing: 6;
+}
+
+.reading-zoom-caption {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+
+.reading-zoom-button {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+    -fx-padding: 2 7 2 7;
+    -fx-text-fill: -docu-text;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+    -fx-cursor: hand;
+}
+
+.reading-zoom-button:hover {
+    -fx-background-color: -docu-status-hover-pastel;
+    -fx-text-fill: -docu-accent-ink;
+}
+
+.reading-zoom-slider {
+    -fx-pref-width: 112px;
+    -fx-max-width: 112px;
+}
+
+.reading-zoom-percent {
+    -fx-min-width: 40px;
+    -fx-text-fill: -docu-accent-ink;
+    -fx-font-size: 11px;
+    -fx-font-weight: 800;
+}
+
+/* T111-HF4 — compact process access when the floating overlay is hidden. */
+.status-process-button {
+    -fx-background-color: -docu-accent-soft;
+    -fx-border-color: -docu-accent-border;
+    -fx-border-width: 1;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-padding: 3 9 3 9;
+    -fx-font-size: 11px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -docu-accent-ink;
+}
+
+.status-process-button:hover {
+    -fx-background-color: -docu-status-hover-pastel;
+    -fx-text-fill: -docu-accent-ink;
+}
+
+.status-generation-button:hover {
+    -fx-background-color: -docu-status-hover-pastel;
+    -fx-text-fill: -docu-accent-ink;
+}
+
+/* DOC-UX-HF9E — generation controls separated from playback. */
+.status-generation-button,
+.status-generation-danger-button {
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-padding: 3 9 3 9;
+    -fx-font-size: 11px;
+    -fx-font-weight: 800;
+}
+
+.status-generation-button {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-accent-border;
+    -fx-border-width: 1;
+    -fx-text-fill: -docu-accent-ink;
+}
+
+.status-generation-danger-button {
+    -fx-background-color: -docu-danger-soft;
+    -fx-border-color: -docu-danger;
+    -fx-border-width: 1;
+    -fx-text-fill: -docu-danger;
+}
+
+/* PLAYBACK-SPEED9 / STATUS-SCROLL1 — long operational messages remain readable. */
+.status-bar-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+    -fx-min-height: 24px;
+    -fx-pref-height: 24px;
+    -fx-max-height: 28px;
+}
+
+.status-bar-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+.status-bar-scroll .scroll-bar:horizontal {
+    -fx-pref-height: 11px;
+    -fx-opacity: 0.92;
+}
+
+/* PLAYBACK-CORE2 / STATUS-SCROLL2 — scroll with wheel/pan, no visible scrollbar track. */
+.status-bar-scroll-hidden .scroll-bar:horizontal,
+.status-bar-scroll-hidden .scroll-bar:vertical {
+    -fx-pref-height: 0px;
+    -fx-max-height: 0px;
+    -fx-opacity: 0;
+    -fx-padding: 0;
+}
+
+.status-bar-scroll-hidden .corner {
+    -fx-background-color: transparent;
+}
+
+/* VOICE-CHUNKS-HF1 — document progress based on current selected block/fragment. */
+.status-document-progress {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
+    -fx-padding: 2 8 2 8;
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+
+/* VOICE-CHUNKS-HF2 — compact status buttons stay readable and do not turn dark when pressed. */
+.status-process-button:pressed,
+.status-process-button:armed,
+.status-generation-button:pressed,
+.status-generation-button:armed,
+.reading-zoom-button:pressed,
+.reading-zoom-button:armed {
+    -fx-background-color: -docu-accent-soft;
+    -fx-border-color: -docu-accent-border;
+    -fx-text-fill: -docu-accent-ink;
+}
+
+.status-generation-danger-button:pressed,
+.status-generation-danger-button:armed {
+    -fx-background-color: -docu-danger-soft;
+    -fx-border-color: -docu-danger;
+    -fx-text-fill: -docu-danger;
+}

@@ -1,0 +1,80 @@
+.theatre-multimedia-layers {
+    -fx-background-color: #F9FBFF;
+}
+
+.theatre-multimedia-mode-rail {
+    -fx-background-color: #EDF3FC;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 0 1 0 0;
+    -fx-min-width: 76px;
+    -fx-pref-width: 76px;
+}
+
+.theatre-multimedia-mode-button {
+    -fx-min-width: 62px;
+    -fx-pref-width: 62px;
+    -fx-max-width: 62px;
+    -fx-content-display: top;
+    -fx-font-size: 10px;
+    -fx-wrap-text: true;
+}
+
+.theatre-multimedia-mode-button:selected {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-accent;
+}
+
+.theatre-audio-track-panel {
+    -fx-background-color: #F9FBFF;
+    -fx-min-width: 0;
+    -fx-pref-width: 330px;
+}
+
+.theatre-audio-track-scroll,
+.theatre-audio-track-scroll > .viewport {
+    -fx-background-color: #F9FBFF;
+}
+
+.theatre-audio-track-rail {
+    -fx-background-color: #FFFFFF;
+    -fx-min-width: 0;
+    -fx-pref-width: 300px;
+}
+
+.theatre-audio-track-split {
+    -fx-background-color: #F9FBFF;
+}
+
+.theatre-audio-track-selection {
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text;
+}
+
+.theatre-audio-track-card {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+.theatre-audio-track-rail .list-view,
+.theatre-audio-track-rail .list-cell {
+    -fx-min-width: 0;
+    -fx-padding: 0;
+}
+
+.theatre-audio-track-rail .list-cell {
+    -fx-background-color: transparent;
+}
+
+.theatre-audio-track-rail .list-cell:hover .theatre-audio-track-card {
+    -fx-background-color: #F4F7FF;
+    -fx-border-color: #AAB7F5;
+}
+
+.theatre-audio-track-rail .list-cell:selected .theatre-audio-track-card,
+.theatre-audio-track-rail .list-cell:focused:selected .theatre-audio-track-card {
+    -fx-background-color: #E8ECFF;
+    -fx-border-color: -docu-accent;
+    -fx-border-width: 2;
+}

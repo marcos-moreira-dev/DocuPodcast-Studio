@@ -1,0 +1,52 @@
+{
+  "profile_key": "hombre_35_intenso_explosivo_personaje",
+  "prompt_key": "tensa",
+  "emotion": "tensa",
+  "voice_id": "LG95yZDEHg6fCZdQjLqj",
+  "nombre_original": "Phil - Explosive, Passionate Announcer",
+  "descripcion": "Voz seleccionada manualmente para teatro/personaje. Alias local: hombre_35_intenso_explosivo_personaje. Nombre original ElevenLabs: Phil - Explosive, Passionate Announcer. Personaje sugerido: Florindo negador. Acento objetivo: aceptado_por_oido. Nota: Phil. Voz explosiva y apasionada. Usar para negación intensa, reacción fuerte y terquedad.",
+  "categoria_local": "personaje_dialogo",
+  "modo": "personaje",
+  "acento_objetivo": "aceptado_por_oido",
+  "uso_sugerido": [
+    "teatro",
+    "personaje",
+    "dialogo"
+  ],
+  "model_id": "eleven_v3",
+  "language_code": "es",
+  "output_format": "mp3_44100_128",
+  "voice_settings": {
+    "stability": 0.22,
+    "similarity_boost": 0.7,
+    "style": 0.92,
+    "use_speaker_boost": true
+  },
+  "text_sha256": "eb45f27bb0252e8a6e06788cdb707ea1fb3298c0eaf52f3a1c2c3c8f47499cbe",
+  "config_sha256": "a8bff674706e6d81f542748423a1cae6b5dcfcd31f7345089d0c188d7bf2ff05",
+  "characters": 260,
+  "text_reference": "[tense, restrained, alert, conversational] Baja la voz, compañero. No toques el güiro ni la guitarra. Las quince llaves viejas y el pequeño xilófono siguen junto a la caja. El queso, el chocolate y el café están ahí. La niña está en el zaguán, y afuera llueve.",
+  "audio_file": "voice-bank-dialogo\\hombre_35_intenso_explosivo_personaje\\tensa.mp3",
+  "origen_scaffold": {
+    "created_at": "2026-06-28T01:43:21",
+    "source_template_profile": "hombre_20_idealista_ecuador_dialogo",
+    "source_template_json": "tensa.json",
+    "api_voice_name": "Phil - Explosive, Passionate Announcer",
+    "api_labels": {
+      "language": "es",
+      "accent": "aceptado_por_oido"
+    },
+    "nota": "Perfil nuevo creado para ampliar banco general; no genera audio hasta correr generate --run."
+  },
+  "seleccion_manual_v4": {
+    "profile_key": "hombre_35_intenso_explosivo_personaje",
+    "voice_id": "LG95yZDEHg6fCZdQjLqj",
+    "public_user_id": "",
+    "new_name": "hombre_35_intenso_explosivo_personaje",
+    "voice_library_name": "Phil - Explosive, Passionate Announcer",
+    "personaje_sugerido": "Florindo negador",
+    "tipo": "personaje_dialogo",
+    "acento_objetivo": "aceptado_por_oido",
+    "nota": "Phil. Voz explosiva y apasionada. Usar para negación intensa, reacción fuerte y terquedad."
+  }
+}

@@ -1,0 +1,51 @@
+/* DOC-PERF-HF10 — bounded/virtual document window for very large sources. */
+.document-large-preview-notice {
+    -fx-background-color: #fff8e6;
+    -fx-border-color: #f3c977;
+    -fx-border-radius: 12;
+    -fx-background-radius: 12;
+    -fx-padding: 14 16 14 16;
+}
+
+.document-large-preview-title {
+    -fx-font-weight: 700;
+    -fx-text-fill: #6f4b00;
+}
+
+.document-large-preview-detail {
+    -fx-text-fill: #6b5b38;
+}
+
+/* HF10 — bounded document window for very large sources. */
+.document-large-preview-actions {
+    -fx-alignment: center-left;
+    -fx-spacing: 8;
+}
+
+.document-large-preview-button,
+.document-large-preview-button-secondary {
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-padding: 6 10 6 10;
+    -fx-font-size: 12px;
+    -fx-cursor: hand;
+}
+
+.document-large-preview-button {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #c7d2fe;
+    -fx-text-fill: #3730a3;
+    -fx-font-weight: 700;
+}
+
+.document-large-preview-button-secondary {
+    -fx-background-color: rgba(255, 255, 255, 0.68);
+    -fx-border-color: #e2e8f0;
+    -fx-text-fill: #475569;
+}
+
+.document-large-preview-button:disabled,
+.document-large-preview-button-secondary:disabled {
+    -fx-opacity: 0.46;
+    -fx-cursor: default;
+}

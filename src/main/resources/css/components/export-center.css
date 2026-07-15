@@ -1,0 +1,188 @@
+/* Export Center: modal presentation over the transversal export/readiness contract. */
+.export-center-dialog {
+    -fx-background-color: -docu-bg-card;
+}
+
+.export-center-dialog > *.header-panel {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: transparent transparent -docu-border-soft transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 20 24 18 24;
+}
+
+.export-center-dialog > *.header-panel .label {
+    -fx-text-fill: -docu-text-strong;
+    -fx-font-size: 22px;
+    -fx-font-weight: 500;
+}
+
+.export-center-content {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: transparent;
+}
+
+.export-center-target-list {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+}
+
+.export-center-target-list .list-cell {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: transparent transparent -docu-border-soft transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 0;
+}
+
+.export-center-target-list .list-cell:empty {
+    -fx-border-color: transparent;
+}
+
+.export-center-target-list .scroll-bar:horizontal {
+    -fx-pref-height: 0;
+    -fx-max-height: 0;
+    -fx-opacity: 0;
+}
+
+.export-center-target-list .list-cell:selected {
+    -fx-background-color: -docu-accent-soft;
+    -fx-border-color: transparent transparent -docu-border-soft -docu-accent;
+    -fx-border-width: 0 0 1 4;
+}
+
+.export-center-target-card {
+    -fx-padding: 14 18 14 18;
+}
+
+.export-center-target-title {
+    -fx-text-fill: -docu-text-strong;
+    -fx-font-size: 18px;
+    -fx-font-weight: 500;
+}
+
+.export-center-target-status {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 14px;
+}
+
+.export-center-detail-pane {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: transparent transparent transparent -docu-border-soft;
+    -fx-border-width: 0 0 0 1;
+    -fx-padding: 12 0 4 28;
+}
+
+.export-center-detail-scroll {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: transparent;
+}
+
+.export-center-detail-scroll > .viewport {
+    -fx-background-color: -docu-bg-card;
+}
+
+.export-center-summary-grid {
+    -fx-padding: 0 0 12 0;
+    -fx-border-color: transparent transparent -docu-border-soft transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.export-center-field-label {
+    -fx-text-fill: -docu-text-strong;
+    -fx-font-size: 15px;
+    -fx-font-weight: 500;
+}
+
+.export-center-value {
+    -fx-text-fill: -docu-text;
+    -fx-font-size: 15px;
+}
+
+.export-center-section-title {
+    -fx-text-fill: -docu-text-strong;
+    -fx-font-size: 17px;
+    -fx-font-weight: 800;
+    -fx-padding: 2 0 4 0;
+}
+
+.export-center-detail-heading {
+    -fx-text-fill: -docu-text-strong;
+    -fx-font-size: 15px;
+    -fx-font-weight: 800;
+}
+
+.export-center-note {
+    -fx-padding: 14 0 0 0;
+    -fx-border-color: -docu-border-soft transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+    -fx-alignment: center-left;
+}
+
+.export-center-note-icon {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-accent;
+    -fx-border-width: 2;
+    -fx-background-radius: 999;
+    -fx-border-radius: 999;
+    -fx-text-fill: -docu-accent;
+    -fx-font-size: 18px;
+    -fx-font-weight: 700;
+    -fx-alignment: center;
+    -fx-min-width: 28px;
+    -fx-pref-width: 28px;
+    -fx-max-width: 28px;
+    -fx-min-height: 28px;
+    -fx-pref-height: 28px;
+    -fx-max-height: 28px;
+}
+
+.export-center-note-text {
+    -fx-text-fill: -docu-text;
+    -fx-font-size: 14px;
+}
+
+.export-center-frame-preview {
+    -fx-min-height: 170px;
+    -fx-pref-height: 190px;
+    -fx-padding: 18;
+    -fx-effect: dropshadow(gaussian, rgba(15, 23, 42, 0.12), 14, 0.18, 0, 4);
+}
+
+.export-center-frame-preview-copy {
+    -fx-alignment: center-left;
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-max-width: 520px;
+}
+
+.export-center-frame-preview-title {
+    -fx-font-weight: 800;
+}
+
+.export-center-frame-preview-body {
+    -fx-opacity: 0.86;
+}
+
+.export-options-section {
+    -fx-spacing: 8;
+    -fx-padding: 12 0 4 0;
+    -fx-border-color: -docu-border-soft transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+}
+
+.export-options-section .check-box {
+    -fx-text-fill: -docu-text;
+    -fx-font-size: 14px;
+}
+
+.video-encoding-options .combo-box,
+.text-overlay-options .combo-box,
+.text-overlay-options .spinner,
+.text-overlay-options .color-picker,
+.theatre-work-export-options .combo-box,
+.theatre-work-export-options .color-picker,
+.theatre-portion-export-options .combo-box {
+    -fx-max-width: infinity;
+}

@@ -1,0 +1,455 @@
+/* Tanda 50 — shared action components: modern, restrained, reusable. */
+.ui-primary-action-strip {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-accent-border;
+    -fx-border-width: 1;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-padding: 12 14 12 14;
+    -fx-effect: -docu-shadow-soft;
+}
+
+.ui-primary-action-button {
+    -fx-background-color: -docu-accent;
+    -fx-border-color: -docu-accent;
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
+    -fx-text-fill: white;
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+    -fx-padding: 8 14 8 14;
+    -fx-cursor: hand;
+}
+
+.ui-primary-action-button:hover {
+    -fx-background-color: -docu-accent-hover;
+    -fx-border-color: -docu-accent-hover;
+}
+
+.ui-action-hint {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 12px;
+}
+
+/* Tanda 59A — shared action catalog. */
+.ui-action-bar,
+.ui-transport-controls,
+.ui-rail-action-row {
+    -fx-alignment: center-left;
+}
+
+.ui-action-button,
+.ui-transport-button,
+.ui-rail-action-button {
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-padding: 7 11 7 11;
+    -fx-cursor: hand;
+    -fx-wrap-text: true;
+    -fx-text-alignment: center;
+}
+
+.ui-action-button-primary {
+    -fx-background-color: -docu-accent;
+    -fx-border-color: -docu-accent;
+    -fx-text-fill: white;
+}
+
+.ui-action-button-primary:hover {
+    -fx-background-color: -docu-accent-hover;
+    -fx-border-color: -docu-accent-hover;
+}
+
+.ui-action-button-secondary,
+.ui-transport-button,
+.ui-rail-action-button {
+    -fx-background-color: -docu-bg-card-soft;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-text-fill: -docu-text-strong;
+}
+
+.ui-action-button-secondary:hover,
+.ui-transport-button:hover,
+.ui-rail-action-button:hover {
+    -fx-background-color: -docu-bg-hover;
+    -fx-border-color: -docu-accent-border;
+    -fx-text-fill: -docu-accent-dark;
+}
+
+.ui-action-button-danger {
+    -fx-background-color: -docu-danger-soft;
+    -fx-border-color: -docu-danger;
+    -fx-border-width: 1;
+    -fx-text-fill: -docu-danger;
+}
+
+.ui-action-button-warning {
+    -fx-background-color: #FFF7E8;
+    -fx-border-color: -docu-warning;
+    -fx-border-width: 1;
+    -fx-text-fill: -docu-warning;
+}
+
+.ui-action-button-warning:hover {
+    -fx-background-color: #FFECCF;
+    -fx-border-color: -docu-warning;
+    -fx-text-fill: -docu-warning;
+}
+
+.ui-lucide-icon-shape {
+    -fx-stroke: #111827;
+}
+
+.button:disabled .ui-lucide-icon-shape,
+.toggle-button:disabled .ui-lucide-icon-shape {
+    -fx-stroke: #9aa3b2;
+}
+
+.ui-form-control {
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-color: -docu-bg-card;
+    -fx-text-fill: -docu-text-strong;
+    -fx-font-size: 12px;
+}
+
+.ui-form-toggle {
+    -fx-padding: 7 11 7 11;
+    -fx-font-weight: 800;
+    -fx-cursor: hand;
+}
+
+.ui-form-toggle:selected {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-accent;
+    -fx-text-fill: -docu-text-strong;
+}
+
+.ui-form-toggle:selected .box {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-accent;
+}
+
+.ui-form-toggle:selected .mark {
+    -fx-background-color: -docu-accent;
+}
+
+.ui-form-combo,
+.ui-form-color-picker,
+.ui-form-spinner {
+    -fx-min-height: 32px;
+}
+
+.ui-form-combo .list-cell,
+.ui-form-color-picker .label,
+.ui-form-spinner .text-field {
+    -fx-text-fill: -docu-text-strong;
+    -fx-font-size: 12px;
+}
+
+.ui-form-spinner .text-field {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: transparent;
+}
+
+.ui-side-dock-rail-button {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-weight: 700;
+    -fx-padding: 8 9 8 9;
+    -fx-cursor: hand;
+}
+
+.ui-side-dock-hide-button {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 12px;
+    -fx-padding: 5 8 5 8;
+    -fx-cursor: hand;
+}
+
+/* T105A — glass playbar: compact, top-pinned and translucent over the reader. */
+.ui-floating-reading-control {
+    -fx-background-color: rgba(31, 41, 55, 0.42);
+    -fx-border-color: rgba(255, 255, 255, 0.24);
+    -fx-border-width: 1;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+    -fx-padding: 8 10 8 10;
+    -fx-spacing: 10;
+    -fx-alignment: center-left;
+    -fx-effect: dropshadow(gaussian, rgba(15, 23, 42, 0.28), 20, 0.22, 0, 5);
+}
+
+.ui-floating-reading-control .ui-primary-action-strip {
+    -fx-effect: none;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+
+.ui-floating-reading-transport {
+    -fx-padding: 0 2 0 2;
+}
+
+.ui-floating-reading-control.document-reading-glass-bar-vertical {
+    -fx-padding: 10 8 10 8;
+    -fx-pref-width: 132px;
+    -fx-max-width: 144px;
+}
+
+.document-reading-control-horizontal-content,
+.document-reading-control-vertical-content {
+    -fx-alignment: center-left;
+}
+
+.document-reading-glass-bar-vertical .document-reading-control-vertical-content {
+    -fx-spacing: 7;
+    -fx-alignment: top-center;
+}
+
+.document-reading-glass-bar-vertical .ui-primary-action-strip {
+    -fx-max-width: 126px;
+}
+
+.document-reading-glass-bar-vertical .ui-primary-action-button {
+    -fx-min-width: 112px;
+    -fx-pref-width: 118px;
+    -fx-max-width: 126px;
+    -fx-min-height: 56px;
+    -fx-pref-height: 58px;
+    -fx-wrap-text: true;
+    -fx-text-alignment: center;
+    -fx-alignment: center;
+}
+
+.document-reading-glass-bar-vertical .ui-floating-reading-transport,
+.document-reading-glass-bar-vertical .ui-playback-speed-controls,
+.document-reading-glass-bar-vertical .document-reading-control-nav {
+    -fx-alignment: center;
+    -fx-spacing: 4;
+}
+
+.document-reading-glass-bar-vertical .ui-transport-icon-button,
+.document-reading-glass-bar-vertical .ui-playback-speed-button {
+    -fx-min-width: 48px;
+    -fx-pref-width: 52px;
+    -fx-max-width: 56px;
+}
+
+/* T104 — breathable ribbon primitives: modern command strip, not oversized cards. */
+.ui-ribbon-group {
+    -fx-background-color: rgba(255, 255, 255, 0.74);
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 0 1 0 0;
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+    -fx-padding: 7 10 6 10;
+    -fx-min-height: 104px;
+    -fx-pref-height: 110px;
+    -fx-max-height: 118px;
+}
+
+.ui-ribbon-group-actions {
+    -fx-alignment: center;
+}
+
+.ui-ribbon-group-title {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 9px;
+    -fx-font-weight: 800;
+}
+
+.ui-ribbon-button {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-padding: 5 7 5 7;
+    -fx-cursor: hand;
+    -fx-min-width: 216px;
+    -fx-pref-width: 232px;
+    -fx-max-width: 328px;
+    -fx-min-height: 66px;
+    -fx-pref-height: 72px;
+    -fx-max-height: 84px;
+}
+
+.ui-ribbon-button:hover {
+    -fx-background-color: -docu-bg-hover;
+    -fx-border-color: -docu-accent-border;
+}
+
+.ui-ribbon-button-primary {
+    -fx-background-color: -docu-accent-soft;
+    -fx-border-color: -docu-accent-border;
+    -fx-border-width: 1;
+}
+
+.ui-ribbon-button-content {
+    -fx-alignment: center;
+}
+
+.ui-ribbon-button-icon {
+    -fx-text-fill: -docu-accent-dark;
+    -fx-font-size: 10px;
+    -fx-font-weight: 900;
+}
+
+.ui-ribbon-button-text {
+    -fx-text-fill: -docu-text-strong;
+    -fx-font-size: 12px;
+    -fx-font-weight: 800;
+    -fx-text-alignment: center;
+    -fx-wrap-text: true;
+}
+
+.ui-sidebar-icon-tab {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 14px;
+    -fx-font-weight: 800;
+    -fx-padding: 8 10 8 10;
+    -fx-cursor: hand;
+}
+
+.ui-sidebar-icon-tab:hover,
+.ui-sidebar-icon-tab:selected {
+    -fx-background-color: -docu-bg-hover;
+    -fx-border-color: -docu-accent-border;
+    -fx-text-fill: -docu-accent-dark;
+}
+
+.ui-rail-toggle-button {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 999;
+    -fx-border-radius: 999;
+    -fx-text-fill: -docu-text-strong;
+    -fx-font-size: 12px;
+    -fx-font-weight: 800;
+    -fx-padding: 7 12 7 12;
+    -fx-cursor: hand;
+}
+
+.ui-rail-toggle-button:hover {
+    -fx-border-color: -docu-accent-border;
+    -fx-text-fill: -docu-accent-dark;
+}
+
+/* T106 — playbar glass oscuro para contrastar con botones blancos. */
+.document-reading-stage .ui-floating-reading-control,
+.ui-floating-reading-control.document-reading-glass-bar {
+    -fx-background-color: rgba(31, 41, 55, 0.42);
+    -fx-border-color: rgba(255, 255, 255, 0.24);
+    -fx-effect: dropshadow(gaussian, rgba(15, 23, 42, 0.28), 22, 0.24, 0, 6);
+}
+
+/* T111-HF4 — larger PNG icon polish for contextual rails. */
+.ui-icon-side-dock {
+    -fx-min-width: 34px;
+    -fx-pref-width: 34px;
+    -fx-max-width: 34px;
+    -fx-min-height: 34px;
+    -fx-pref-height: 34px;
+    -fx-max-height: 34px;
+}
+
+.ui-icon-rail {
+    -fx-min-width: 26px;
+    -fx-pref-width: 26px;
+    -fx-max-width: 26px;
+    -fx-min-height: 26px;
+    -fx-pref-height: 26px;
+    -fx-max-height: 26px;
+}
+
+.ui-icon-fallback {
+    -fx-font-size: 15px;
+    -fx-font-weight: 900;
+    -fx-text-fill: -docu-accent;
+}
+
+.ui-transport-icon-button {
+    -fx-min-width: 44px;
+    -fx-pref-width: 44px;
+    -fx-max-width: 44px;
+    -fx-min-height: 38px;
+    -fx-pref-height: 38px;
+    -fx-padding: 6 8 6 8;
+    -fx-content-display: graphic-only;
+}
+
+.ui-transport-icon-button .ui-icon-rail {
+    -fx-opacity: 0.94;
+}
+
+/* DOC-UX-HF9E — stronger contrast for the purple read action over glass. */
+.document-reading-glass-bar .ui-primary-action-button {
+    -fx-border-color: white;
+    -fx-border-width: 4;
+    -fx-background-insets: 0;
+    -fx-border-insets: 0;
+}
+
+/* PLAYBACK-SPEED1 — document playbar speed controls for generated WAV chunks. */
+/* Theatre script: compact playbar buttons embedded in the left rail. */
+.side-dock-rail-with-footer {
+    -fx-pref-width: 92px;
+    -fx-min-width: 88px;
+}
+
+.document-rail-playback-controls {
+    -fx-background-color: transparent;
+    -fx-padding: 8 0 4 0;
+    -fx-spacing: 5;
+    -fx-alignment: center;
+}
+
+.document-rail-playback-button {
+    -fx-min-width: 54px;
+    -fx-pref-width: 58px;
+    -fx-max-width: 62px;
+    -fx-min-height: 36px;
+    -fx-pref-height: 38px;
+    -fx-padding: 5 6 5 6;
+}
+
+.document-rail-playback-primary {
+    -fx-background-color: -docu-accent-soft;
+    -fx-border-color: -docu-accent-border;
+}
+
+.document-rail-playback-speed {
+    -fx-font-size: 10px;
+    -fx-font-weight: 900;
+}
+
+.ui-playback-speed-controls {
+    -fx-alignment: center-left;
+    -fx-spacing: 4;
+}
+
+.ui-playback-speed-button {
+    -fx-padding: 6 7 6 7;
+    -fx-font-size: 11px;
+    -fx-font-weight: 900;
+}
+
+.ui-playback-speed-button.ui-playback-speed-active {
+    -fx-background-color: -docu-success-soft;
+    -fx-border-color: -docu-success;
+    -fx-text-fill: -docu-success-dark;
+}

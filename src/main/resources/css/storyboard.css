@@ -1,0 +1,200 @@
+/* Tanda 28 — Storyboard visual maduro */
+.storyboard-workspace {
+    -fx-background-color: -docu-bg-app;
+}
+
+.storyboard-action-row {
+    -fx-alignment: center-left;
+}
+
+.storyboard-scroll,
+.storyboard-scene-board {
+    -fx-background-color: transparent;
+}
+
+.storyboard-summary-row {
+    -fx-padding: 0 0 4 0;
+}
+
+.storyboard-summary-card,
+.storyboard-empty-card {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-padding: 10;
+}
+
+.storyboard-summary-title {
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.storyboard-summary-value {
+    -fx-font-size: 20px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -docu-text;
+}
+
+.storyboard-summary-caption {
+    -fx-font-size: 11px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.storyboard-scene-card {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-padding: 12;
+}
+
+.storyboard-scene-card:hover {
+    -fx-border-color: -docu-accent-border;
+    -fx-background-color: #F8FBFF;
+}
+
+.storyboard-scene-ready {
+    -fx-border-color: #BBF7D0;
+}
+
+.storyboard-scene-incomplete {
+    -fx-background-color: #FFF7ED;
+    -fx-border-color: #FED7AA;
+}
+
+.storyboard-scene-selected {
+    -fx-border-color: -docu-accent;
+    -fx-border-width: 2;
+    -fx-background-color: #F5F9FF;
+}
+
+.storyboard-scene-active {
+    -fx-border-color: -docu-success;
+    -fx-border-width: 2;
+    -fx-background-color: #F0FFF4;
+}
+
+.storyboard-scene-paused {
+    -fx-border-color: -docu-warning;
+    -fx-border-width: 2;
+    -fx-background-color: #FFFBEB;
+}
+
+.storyboard-thumbnail,
+.storyboard-thumbnail-empty {
+    -fx-background-color: #EFF6FF;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-alignment: center;
+}
+
+.storyboard-thumbnail-empty {
+    -fx-background-color: #F8FAFC;
+    -fx-border-color: #CBD5E1;
+}
+
+.storyboard-thumbnail-icon {
+    -fx-font-size: 24px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.storyboard-thumbnail-text {
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.storyboard-scene-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -docu-text;
+}
+
+.storyboard-caption {
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text;
+}
+
+.storyboard-asset-path {
+    -fx-font-size: 11px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.storyboard-narration-preview {
+    -fx-font-size: 12px;
+    -fx-text-fill: -docu-text;
+}
+
+.storyboard-chip-row {
+    -fx-padding: 1 0 1 0;
+}
+
+.storyboard-status-chip,
+.storyboard-image-chip,
+.storyboard-warning-chip {
+    -fx-padding: 3 8 3 8;
+    -fx-font-size: 11px;
+    -fx-font-weight: 800;
+    -fx-border-width: 1;
+}
+
+.storyboard-chip-ok,
+.storyboard-image-chip {
+    -fx-background-color: #ECFDF5;
+    -fx-border-color: #BBF7D0;
+    -fx-text-fill: -docu-success;
+}
+
+.storyboard-chip-warning,
+.storyboard-warning-chip {
+    -fx-background-color: #FFF7ED;
+    -fx-border-color: #FED7AA;
+    -fx-text-fill: -docu-warning;
+}
+
+.storyboard-chip-pending {
+    -fx-background-color: #F1F5F9;
+    -fx-border-color: #CBD5E1;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.storyboard-chip-neutral {
+    -fx-background-color: #EEF2FF;
+    -fx-border-color: #C7D2FE;
+    -fx-text-fill: -docu-accent;
+}
+
+.storyboard-playback-active,
+.storyboard-playback-paused,
+.storyboard-playback-selected,
+.storyboard-playback-idle {
+    -fx-padding: 3 8 3 8;
+    -fx-font-size: 11px;
+    -fx-font-weight: 800;
+}
+
+.storyboard-playback-active {
+    -fx-text-fill: -docu-success;
+}
+
+.storyboard-playback-paused {
+    -fx-text-fill: -docu-warning;
+}
+
+.storyboard-playback-selected {
+    -fx-text-fill: -docu-accent;
+}
+
+.storyboard-playback-idle {
+    -fx-text-fill: -docu-text-muted;
+}
+
+.storyboard-sync-summary {
+    -fx-background-color: #F8FAFC;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-padding: 7 9;
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-weight: 700;
+}

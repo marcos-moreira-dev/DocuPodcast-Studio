@@ -1,0 +1,7 @@
+{
+  "package": "docupodcast-theatre-image-test_4gb_sd15",
+  "profile": "TEST_4GB_SD15",
+  "provider": "https://huggingface.co/Comfy-Org/stable-diffusion-v1-5-archive",
+  "download": "https://huggingface.co/Comfy-Org/stable-diffusion-v1-5-archive/resolve/main/v1-5-pruned-emaonly-fp16.safetensors",
+  "model": "v1-5-pruned-emaonly-fp16.safetensors"
+}

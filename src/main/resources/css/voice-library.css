@@ -1,0 +1,569 @@
+.voice-library-workspace {
+    -fx-background-color: #FFFFFF;
+}
+
+.voice-library-scroll {
+    -fx-background-color: #FFFFFF;
+    -fx-background: #FFFFFF;
+}
+
+.voice-library-combo {
+    -fx-background-color: -docu-bg-card;
+}
+
+.voice-capability-summary-card,
+.voice-profile-card {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-padding: 10;
+}
+
+.voice-capability-chip {
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+    -fx-padding: 3 7 3 7;
+    -fx-background-color: #E2E8F0;
+    -fx-text-fill: -docu-text;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+}
+
+.voice-capability-ready {
+    -fx-background-color: #DCFCE7;
+    -fx-border-color: #86EFAC;
+    -fx-text-fill: #166534;
+}
+
+.voice-capability-reference {
+    -fx-background-color: #E0F2FE;
+    -fx-border-color: #7DD3FC;
+    -fx-text-fill: #075985;
+}
+
+.voice-capability-roadmap {
+    -fx-background-color: #FEF3C7;
+    -fx-border-color: #FDE68A;
+    -fx-text-fill: #92400E;
+}
+
+.voice-capability-blocked {
+    -fx-background-color: #FEE2E2;
+    -fx-border-color: #FCA5A5;
+    -fx-text-fill: #991B1B;
+}
+
+.voice-recording-state {
+    -fx-padding: 6 8 6 8;
+    -fx-background-color: -docu-bg-panel;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.voice-library-side-panel {
+    -fx-background-color: -docu-bg-panel;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+}
+
+.voice-browser-list {
+    -fx-background-color: transparent;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+}
+
+.voice-browser-name {
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text;
+}
+
+.voice-browser-meta {
+    -fx-font-size: 11px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.voice-selected-detail {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 16 0 14 0;
+}
+
+.voice-selected-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -docu-text;
+}
+
+.voice-selected-subtitle {
+    -fx-text-fill: -docu-text-muted;
+}
+
+.voice-reference-phrase {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1 0 1 0;
+    -fx-padding: 16 18 16 18;
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+    -fx-text-fill: -docu-text;
+}
+
+.voice-interpretation-phrase {
+    -fx-font-size: 25px;
+    -fx-font-weight: 800;
+    -fx-line-spacing: 4px;
+}
+
+.voice-library-title {
+    -fx-font-size: 22px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -docu-text;
+}
+
+.voice-library-summary,
+.voice-library-body {
+    -fx-font-size: 13px;
+    -fx-text-fill: -docu-text-muted;
+    -fx-line-spacing: 3px;
+    -fx-padding: 3 0 5 0;
+}
+
+.voice-card-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -docu-text;
+}
+
+.voice-card-subtitle {
+    -fx-font-size: 12px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.voice-generated-test-text {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-font-size: 13px;
+    -fx-text-fill: -docu-text;
+}
+
+.voice-generated-test-status {
+    -fx-padding: 7 9 7 9;
+    -fx-background-color: -docu-bg-panel;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.voice-library-hero {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 12 0 16 0;
+}
+
+.voice-library-eyebrow {
+    -fx-font-size: 11px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -docu-accent;
+}
+
+.voice-mode-overview {
+    -fx-padding: 2 0 2 0;
+}
+
+
+.voice-engine-mode-card {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-padding: 10;
+}
+
+.voice-engine-mode-card-active {
+    -fx-border-color: -docu-accent;
+    -fx-border-width: 1.5;
+}
+
+.voice-engine-test-card {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-padding: 12;
+}
+
+.voice-generated-test-panel {
+    -fx-background-color: transparent;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 14 0 14 0;
+}
+
+.voice-profile-sample-editor {
+    -fx-background-color: #FFFFFF;
+}
+
+.voice-profile-sample-editor .voice-master-pane,
+.voice-profile-sample-editor .voice-detail-pane {
+    -fx-background-color: #FFFFFF;
+}
+
+.voice-editor-back {
+    -fx-min-width: 190px;
+}
+
+.voice-tone-badge-optional {
+    -fx-background-color: #E0F2FE;
+    -fx-border-color: #7DD3FC;
+    -fx-text-fill: #075985;
+}
+
+.voice-engine-card-title {
+    -fx-font-size: 13px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -docu-text;
+}
+
+.voice-engine-card-body {
+    -fx-font-size: 12px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.voice-sample-grid {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 12 0 8 0;
+}
+
+.voice-sample-grid-title {
+    -fx-font-size: 12px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -docu-text;
+}
+
+.voice-sample-row {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-padding: 8 10 8 10;
+    -fx-alignment: top-left;
+}
+
+.voice-tone-badge {
+    -fx-font-size: 11px;
+    -fx-font-weight: 800;
+    -fx-padding: 3 7 3 7;
+    -fx-background-color: #E0F2FE;
+    -fx-border-color: #7DD3FC;
+    -fx-border-width: 1;
+    -fx-text-fill: #075985;
+}
+
+.voice-tone-sample-detail {
+    -fx-padding: 0 0 0 2;
+}
+
+.voice-tone-sample-title {
+    -fx-font-size: 12px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -docu-text;
+}
+
+.voice-tone-badge-required {
+    -fx-background-color: #DCFCE7;
+    -fx-border-color: #86EFAC;
+    -fx-text-fill: #166534;
+}
+
+.voice-tone-sample-meta,
+.voice-sample-empty {
+    -fx-font-size: 12px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.voice-ready-tone-card {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 8 0 8 0;
+}
+
+.voice-ready-tone-list {
+    -fx-padding: 2 0 2 0;
+}
+
+.voice-ready-tone-chip {
+    -fx-min-width: 96;
+    -fx-max-width: 180;
+}
+
+.voice-ready-tone-chip-selected {
+    -fx-background-color: #EEF2FF;
+    -fx-border-color: -docu-accent-border;
+    -fx-text-fill: -docu-accent;
+}
+
+.voice-sample-action-row {
+    -fx-padding: 4 0 4 0;
+}
+
+.voice-sample-action-row .button {
+    -fx-min-width: 132;
+}
+
+/* VOZ-UX4R-1 — lista sobria de voces creadas, sin aspecto de tabla/CRUD. */
+.voice-list-item {
+    -fx-background-color: transparent;
+    -fx-padding: 6 4 6 4;
+}
+
+.voice-list-heading {
+    -fx-alignment: center-left;
+}
+
+.voice-list-status {
+    -fx-font-size: 10px;
+    -fx-font-weight: 800;
+    -fx-padding: 2 6 2 6;
+    -fx-border-width: 1;
+}
+
+.voice-list-status-ready {
+    -fx-background-color: #DCFCE7;
+    -fx-border-color: #86EFAC;
+    -fx-text-fill: #166534;
+}
+
+.voice-list-status-pending {
+    -fx-background-color: #FEF3C7;
+    -fx-border-color: #FDE68A;
+    -fx-text-fill: #92400E;
+}
+
+.voice-list-status-neutral {
+    -fx-background-color: #E2E8F0;
+    -fx-border-color: #CBD5E1;
+    -fx-text-fill: #334155;
+}
+
+.voice-browser-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 3 4 3 4;
+}
+
+.voice-browser-list .list-cell:selected .voice-list-item {
+    -fx-background-color: #EEF2FF;
+    -fx-border-color: -docu-accent-border;
+    -fx-border-width: 1;
+}
+
+/* VOZ-UX4R-2A/3C — shell modular sobrio de Voces, inspirado en Teams por paleta/formalidad. */
+.voice-workspace-shell {
+    -fx-background-color: #FFFFFF;
+}
+
+.voice-module-navigation {
+    -fx-background-color: #252A44;
+    -fx-border-color: #3C4163;
+    -fx-border-width: 0 1 0 0;
+    -fx-min-width: 220;
+    -fx-pref-width: 230;
+    -fx-max-width: 250;
+}
+
+.voice-module-navigation-spacer {
+    -fx-background-color: transparent;
+}
+
+.voice-module-group-label {
+    -fx-font-size: 10px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #B8BAD8;
+    -fx-padding: 12 2 2 2;
+}
+
+.voice-module-row {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-border-width: 1;
+    -fx-padding: 12 12 12 12;
+    -fx-alignment: center-left;
+    -fx-text-alignment: left;
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #F3F4FF;
+}
+
+.voice-module-row:hover {
+    -fx-background-color: #303654;
+    -fx-border-color: #464D73;
+}
+
+.voice-module-row:selected {
+    -fx-background-color: #383F66;
+    -fx-border-color: #8B8CFF;
+    -fx-border-width: 1 1 1 4;
+    -fx-font-weight: 800;
+    -fx-text-fill: #FFFFFF;
+}
+
+.voice-module-content {
+    -fx-padding: 18 24 18 24;
+    -fx-background-color: #FFFFFF;
+}
+
+.voice-module-root {
+    -fx-background-color: transparent;
+}
+
+.voice-master-detail {
+    -fx-alignment: top-left;
+}
+
+.voice-master-detail-balanced {
+    -fx-spacing: 18;
+}
+
+.voice-master-pane {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 0 1 0 0;
+    -fx-padding: 10 18 10 0;
+}
+
+.voice-detail-pane {
+    -fx-background-color: transparent;
+}
+
+.voice-selection-panel {
+    -fx-min-height: 420;
+}
+
+.voice-home-selection-panel {
+    -fx-min-height: 0;
+}
+
+.voice-home-status-list,
+.voice-engine-mode-list {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 8 0 4 0;
+}
+
+.voice-home-status-row,
+.voice-engine-mode-row {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 8 6 8 6;
+    -fx-alignment: center-left;
+}
+
+.voice-home-status-title,
+.voice-engine-mode-title {
+    -fx-font-size: 12px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -docu-text;
+    -fx-min-width: 150;
+}
+
+.voice-home-status-detail,
+.voice-engine-mode-detail {
+    -fx-font-size: 12px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.voice-home-status-badge {
+    -fx-background-color: #EEF2FF;
+    -fx-border-color: #C7D2FE;
+    -fx-text-fill: #3730A3;
+}
+
+.voice-engine-mode-row-active {
+    -fx-background-color: #F7F7FF;
+    -fx-border-color: -docu-accent-border;
+    -fx-border-width: 0 0 0 3;
+}
+
+
+.voice-module-actions,
+.voice-manage-selector-row {
+    -fx-padding: 4 0 4 0;
+}
+
+.voice-action-strip {
+    -fx-padding: 6 0 6 0;
+}
+
+.voice-action-strip .button {
+    -fx-min-height: 34;
+    -fx-min-width: 138;
+}
+
+.voice-module-actions .button {
+    -fx-min-width: 142;
+}
+
+.voice-field-label {
+    -fx-font-size: 12px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -docu-text;
+    -fx-padding: 8 0 0 0;
+}
+
+.voice-module-root .document-side-text {
+    -fx-line-spacing: 3px;
+    -fx-padding: 4 0 7 0;
+}
+
+.voice-manage-selector-row .voice-browser-list {
+    -fx-pref-width: 520;
+}
+
+/* VOZ-UX4R-3 — gestión sobria de voces y emociones. */
+.voice-name-field {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-font-size: 13px;
+    -fx-text-fill: -docu-text;
+}
+
+/* VOICE-UX-POLISH1A — estados operativos visibles sin aspecto de botón/dashboard. */
+.voice-engine-status {
+    -fx-font-size: 12px;
+    -fx-text-fill: -docu-text-muted;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 2 0 2 0;
+}
+
+.voice-generated-test-status {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 3 0 3 0;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.voice-list-tone-tags {
+    -fx-padding: 6 0 0 0;
+    -fx-hgap: 6;
+    -fx-vgap: 6;
+}
+
+.voice-list-tone-tag {
+    -fx-font-size: 10px;
+    -fx-font-weight: 800;
+    -fx-padding: 2 6 2 6;
+    -fx-min-width: 58;
+    -fx-alignment: center;
+    -fx-background-color: #EEF2FF;
+    -fx-border-color: #C7D2FE;
+    -fx-border-width: 1;
+    -fx-text-fill: #3730A3;
+}

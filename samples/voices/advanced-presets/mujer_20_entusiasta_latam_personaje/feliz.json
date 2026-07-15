@@ -1,0 +1,52 @@
+{
+  "profile_key": "mujer_20_entusiasta_latam_personaje",
+  "prompt_key": "feliz",
+  "emotion": "feliz",
+  "voice_id": "iFhPOZcajR7W3sDL39qJ",
+  "nombre_original": "Blackie - Girlish, Cute, and Cheerful",
+  "descripcion": "Voz seleccionada manualmente para teatro/personaje. Alias local: mujer_20_entusiasta_latam_personaje. Nombre original ElevenLabs: Blackie - Girlish, Cute, and Cheerful. Personaje sugerido: Oveja joven entusiasta. Acento objetivo: latam_neutral_por_oido. Nota: Voz joven, alegre y animada. No renombrar en ElevenLabs; solo usar nombre local.",
+  "categoria_local": "personaje_dialogo",
+  "modo": "personaje",
+  "acento_objetivo": "latam_neutral_por_oido",
+  "uso_sugerido": [
+    "teatro",
+    "personaje",
+    "dialogo"
+  ],
+  "model_id": "eleven_v3",
+  "language_code": "es",
+  "output_format": "mp3_44100_128",
+  "voice_settings": {
+    "stability": 0.22,
+    "similarity_boost": 0.7,
+    "style": 0.92,
+    "use_speaker_boost": true
+  },
+  "text_sha256": "50699c7b4014d0cefc0622e7eb76c83fdf85b5d0a5cdc214e29d6470d0fdd12c",
+  "config_sha256": "cb8b8258e970e1ac912d579a6cb81bf78d5001ba72c3eeac24ce62cca7962096",
+  "characters": 261,
+  "text_reference": "[happy, smiling, conversational] ¡Qué alegría verte, compañero! Traje un güiro, una guitarra, quince llaves viejas y un pequeño xilófono. Hay queso, chocolate, jugo de guayaba y café. ¡Hasta la lluvia parece limpia, y la niña dice que hoy todo puede salir bien!",
+  "audio_file": "voice-bank-dialogo\\mujer_20_entusiasta_latam_personaje\\feliz.mp3",
+  "origen_scaffold": {
+    "created_at": "2026-06-28T00:55:56",
+    "source_template_profile": "hombre_20_idealista_ecuador_dialogo",
+    "source_template_json": "feliz.json",
+    "api_voice_name": "Blackie - Girlish, Cute, and Cheerful",
+    "api_labels": {
+      "language": "es",
+      "accent": "latam_neutral_por_oido"
+    },
+    "nota": "Perfil nuevo creado para ampliar banco general; no genera audio hasta correr generate --run."
+  },
+  "seleccion_manual_v4": {
+    "profile_key": "mujer_20_entusiasta_latam_personaje",
+    "voice_id": "iFhPOZcajR7W3sDL39qJ",
+    "public_user_id": "",
+    "new_name": "mujer_20_entusiasta_latam_personaje",
+    "voice_library_name": "Blackie - Girlish, Cute, and Cheerful",
+    "personaje_sugerido": "Oveja joven entusiasta",
+    "tipo": "personaje_dialogo",
+    "acento_objetivo": "latam_neutral_por_oido",
+    "nota": "Voz joven, alegre y animada. No renombrar en ElevenLabs; solo usar nombre local."
+  }
+}

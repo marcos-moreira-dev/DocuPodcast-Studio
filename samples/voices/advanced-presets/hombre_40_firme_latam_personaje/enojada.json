@@ -1,0 +1,52 @@
+{
+  "profile_key": "hombre_40_firme_latam_personaje",
+  "prompt_key": "enojada",
+  "emotion": "enojada",
+  "voice_id": "7cOBG34AiHrAzs842Rdi",
+  "nombre_original": "Tarquin - Posh & English RP",
+  "descripcion": "Voz seleccionada manualmente para teatro/personaje. Alias local: hombre_40_firme_latam_personaje. Nombre original ElevenLabs: Tarquin - Posh & English RP. Personaje sugerido: Guardia Verde 2 / autoridad firme. Acento objetivo: aceptado_por_oido. Nota: Voz etiquetada como británica, pero aceptada por oído en español. No renombrar en ElevenLabs; solo usar nombre local.",
+  "categoria_local": "personaje_dialogo",
+  "modo": "personaje",
+  "acento_objetivo": "aceptado_por_oido",
+  "uso_sugerido": [
+    "teatro",
+    "personaje",
+    "dialogo"
+  ],
+  "model_id": "eleven_v3",
+  "language_code": "es",
+  "output_format": "mp3_44100_128",
+  "voice_settings": {
+    "stability": 0.22,
+    "similarity_boost": 0.7,
+    "style": 0.92,
+    "use_speaker_boost": true
+  },
+  "text_sha256": "948f174fc72ff36890265ab03cda0837bf595f9139efe196957a26a538f5d4b2",
+  "config_sha256": "aa551ec2bf5b8a69406bfbb33d6024d601ce56a8ac1a88df503ed647e44c4702",
+  "characters": 257,
+  "text_reference": "[angry, firm, direct] No me vengas con excusas, compañero. Yo traje el güiro, la guitarra, quince llaves viejas y el pequeño xilófono; también había queso, chocolate, jugo de guayaba y café. Si alguien movió la caja del zaguán, quiero la verdad ahora mismo.",
+  "audio_file": "voice-bank-dialogo\\hombre_40_firme_latam_personaje\\enojada.mp3",
+  "origen_scaffold": {
+    "created_at": "2026-06-28T00:55:55",
+    "source_template_profile": "hombre_20_idealista_ecuador_dialogo",
+    "source_template_json": "enojada.json",
+    "api_voice_name": "Tarquin - Posh & English RP",
+    "api_labels": {
+      "language": "es",
+      "accent": "aceptado_por_oido"
+    },
+    "nota": "Perfil nuevo creado para ampliar banco general; no genera audio hasta correr generate --run."
+  },
+  "seleccion_manual_v4": {
+    "profile_key": "hombre_40_firme_latam_personaje",
+    "voice_id": "7cOBG34AiHrAzs842Rdi",
+    "public_user_id": "",
+    "new_name": "hombre_40_firme_latam_personaje",
+    "voice_library_name": "Tarquin - Posh & English RP",
+    "personaje_sugerido": "Guardia Verde 2 / autoridad firme",
+    "tipo": "personaje_dialogo",
+    "acento_objetivo": "aceptado_por_oido",
+    "nota": "Voz etiquetada como británica, pero aceptada por oído en español. No renombrar en ElevenLabs; solo usar nombre local."
+  }
+}

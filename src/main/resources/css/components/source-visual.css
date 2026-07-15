@@ -1,0 +1,146 @@
+/* T111 — reusable source visual component for read-only document media. */
+.ui-source-visual-block {
+    -fx-background-color: rgba(255, 255, 255, 0.94);
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 14;
+    -fx-border-radius: 14;
+    -fx-padding: 12;
+    -fx-spacing: 8;
+}
+
+.ui-source-visual-header {
+    -fx-spacing: 2;
+}
+
+.ui-source-visual-title {
+    -fx-text-fill: -docu-text-strong;
+    -fx-font-size: 12px;
+    -fx-font-weight: 900;
+}
+
+.ui-source-visual-detail {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 11px;
+    -fx-font-weight: 600;
+}
+
+.document-embedded-image-preview {
+    -fx-background-color: transparent;
+}
+
+.document-embedded-image-responsive-host {
+    -fx-background-color: transparent;
+}
+
+.ui-source-visual-plain-image {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 0;
+    -fx-spacing: 0;
+}
+
+.document-embedded-image-preview.document-embedded-image-plain {
+    -fx-effect: null;
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+}
+
+.document-embedded-image-fullscreen-action {
+    -fx-alignment: center-left;
+    -fx-spacing: 6;
+}
+
+.document-embedded-image-fullscreen-label {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 11px;
+    -fx-font-weight: 800;
+}
+
+/* TI4 — placeholder renderer for source tables and math blocks without heavy layout engines. */
+.ui-source-visual-placeholder {
+    -fx-text-fill: -docu-text-strong;
+    -fx-font-size: 18px;
+    -fx-font-weight: 900;
+    -fx-padding: 18 24 18 24;
+    -fx-alignment: center;
+}
+
+/* TI4 — compact notices for source tables/formulas and missing image payloads. */
+.ui-source-visual-notice {
+    -fx-background-color: #F8FAFC;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+    -fx-padding: 12;
+    -fx-alignment: center-left;
+}
+
+.ui-source-visual-notice-mark {
+    -fx-text-fill: -docu-accent;
+    -fx-font-size: 24px;
+    -fx-font-weight: 900;
+}
+
+.ui-source-visual-notice-text {
+    -fx-text-fill: -docu-text;
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+}
+
+/* DOC-TABLE-HF11B / DOC-TABLE-HF11C / DOC-UX-HF10G — transversal full-width styled table renderer for read-only DOCX tables. */
+.ui-source-table-block {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-spacing: 0;
+}
+
+.ui-source-table-preview {
+    -fx-spacing: 4;
+    -fx-alignment: center-left;
+}
+
+.ui-source-table-grid-host {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.ui-source-table-grid {
+    -fx-hgap: 0;
+    -fx-vgap: 0;
+    -fx-background-color: rgba(79, 70, 229, 0.22);
+    -fx-padding: 1;
+    -fx-background-radius: 8;
+}
+
+.ui-source-table-cell {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: rgba(79, 70, 229, 0.14);
+    -fx-border-width: 0 1 1 0;
+    -fx-padding: 10 12 10 12;
+    -fx-text-fill: -docu-text;
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+    -fx-wrap-text: true;
+}
+
+.ui-source-table-header-cell {
+    -fx-background-color: #4F46E5;
+    -fx-text-fill: white;
+    -fx-font-weight: 900;
+}
+
+.ui-source-table-more {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+    -fx-padding: 4 0 0 2;
+}
+
+.ui-source-table-empty {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+}

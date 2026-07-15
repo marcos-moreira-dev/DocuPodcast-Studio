@@ -1,0 +1,52 @@
+{
+  "profile_key": "mujer_40_dramatica_indignada_personaje",
+  "prompt_key": "heroica",
+  "emotion": "heroica",
+  "voice_id": "eRS3faIyd3KSRjzmhPxE",
+  "nombre_original": "Ophelia - Tearful, Wailing and Nuanced",
+  "descripcion": "Voz seleccionada manualmente para teatro/personaje. Alias local: mujer_40_dramatica_indignada_personaje. Nombre original ElevenLabs: Ophelia - Tearful, Wailing and Nuanced. Personaje sugerido: Mujer indignada / Señora dramática 2. Acento objetivo: peninsular_aceptado_por_oido. Nota: Ophelia. Voz llorosa y dramática. Suena algo española, pero queda aceptada por falta de mejores opciones y utilidad dramática.",
+  "categoria_local": "personaje_dialogo",
+  "modo": "personaje",
+  "acento_objetivo": "peninsular_aceptado_por_oido",
+  "uso_sugerido": [
+    "teatro",
+    "personaje",
+    "dialogo"
+  ],
+  "model_id": "eleven_v3",
+  "language_code": "es",
+  "output_format": "mp3_44100_128",
+  "voice_settings": {
+    "stability": 0.22,
+    "similarity_boost": 0.7,
+    "style": 0.92,
+    "use_speaker_boost": true
+  },
+  "text_sha256": "d81322be71f23c55d2eb85376fc0559984e4ec65469317e7b6363cda26efd4b0",
+  "config_sha256": "58075bd1d0d5f5681c798b3bb942e66dd0e3d88c1966d9daf7f1855e2ebfe127",
+  "characters": 262,
+  "text_reference": "[heroic, bold, inspiring, conversational] Levanta la mirada, compañero. Aunque falte el güiro, aunque tiemble la guitarra, aunque quince llaves viejas no abran la caja, cruzaremos el zaguán bajo la lluvia. La niña tendrá queso, chocolate, jugo de guayaba y café.",
+  "audio_file": "voice-bank-dialogo\\mujer_40_dramatica_indignada_personaje\\heroica.mp3",
+  "origen_scaffold": {
+    "created_at": "2026-06-28T01:43:22",
+    "source_template_profile": "hombre_20_idealista_ecuador_dialogo",
+    "source_template_json": "heroica.json",
+    "api_voice_name": "Ophelia - Tearful, Wailing and Nuanced",
+    "api_labels": {
+      "language": "es",
+      "accent": "peninsular_aceptado_por_oido"
+    },
+    "nota": "Perfil nuevo creado para ampliar banco general; no genera audio hasta correr generate --run."
+  },
+  "seleccion_manual_v4": {
+    "profile_key": "mujer_40_dramatica_indignada_personaje",
+    "voice_id": "eRS3faIyd3KSRjzmhPxE",
+    "public_user_id": "",
+    "new_name": "mujer_40_dramatica_indignada_personaje",
+    "voice_library_name": "Ophelia - Tearful, Wailing and Nuanced",
+    "personaje_sugerido": "Mujer indignada / Señora dramática 2",
+    "tipo": "personaje_dialogo",
+    "acento_objetivo": "peninsular_aceptado_por_oido",
+    "nota": "Ophelia. Voz llorosa y dramática. Suena algo española, pero queda aceptada por falta de mejores opciones y utilidad dramática."
+  }
+}

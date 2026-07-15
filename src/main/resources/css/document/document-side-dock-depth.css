@@ -1,0 +1,37 @@
+/* Blends reader dock gutters into the dark document surface without changing dock geometry. */
+.document-workspace .document-split > .split-pane-divider {
+    -fx-padding: 0;
+    -fx-background-color: -docu-bg-document-edge;
+    -fx-border-color: -docu-bg-document-edge;
+}
+
+.document-workspace .document-split > .split-pane-divider > .vertical-grabber,
+.document-workspace .document-split > .split-pane-divider > .horizontal-grabber {
+    -fx-padding: 0;
+    -fx-background-color: transparent;
+}
+
+.document-workspace .workspace-side-dock,
+.document-workspace .workspace-side-dock-collapsed,
+.document-workspace .workspace-side-dock-expanded,
+.document-workspace .theatre-side-dock,
+.document-workspace .document-study-side-dock {
+    -fx-background-color: -docu-bg-document-edge;
+    -fx-border-color: -docu-bg-document-edge;
+    -fx-effect: none;
+}
+
+.document-workspace .side-dock-rail,
+.document-workspace .workspace-side-dock-right .side-dock-rail {
+    -fx-border-color: -docu-bg-document-edge;
+}
+
+.document-workspace .side-dock-module-frame {
+    -fx-border-color: transparent -docu-bg-document-edge transparent transparent;
+    -fx-border-width: 0 1 0 0;
+}
+
+.document-workspace .workspace-side-dock-right .side-dock-module-frame {
+    -fx-border-color: transparent transparent transparent -docu-bg-document-edge;
+    -fx-border-width: 0 0 0 1;
+}

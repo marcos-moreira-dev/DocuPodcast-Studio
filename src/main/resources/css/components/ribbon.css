@@ -1,0 +1,171 @@
+/* T105A — docupodcast ribbon: breathable desktop ribbon with room for future icons. */
+/* T105 — desktop ribbon: mas respirable, ancho suficiente y listo para iconografia. */
+.ui-ribbon-surface {
+    -fx-background-color: -docu-bg-chrome;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 0 0 1 0;
+    -fx-effect: -docu-shadow-soft;
+    -fx-min-height: 148px;
+    -fx-pref-height: 154px;
+    -fx-max-height: 164px;
+}
+
+.ui-ribbon-tab-strip {
+    -fx-background-color: -docu-bg-chrome;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 3 10 0 10;
+    -fx-alignment: center-left;
+    -fx-min-height: 30px;
+    -fx-pref-height: 32px;
+    -fx-max-height: 34px;
+}
+
+.ui-ribbon-tab {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-border-width: 0 0 3 0;
+    -fx-background-radius: 6 6 0 0;
+    -fx-border-radius: 6 6 0 0;
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 12px;
+    -fx-font-weight: 800;
+    -fx-padding: 7 14 6 14;
+    -fx-cursor: hand;
+}
+
+.ui-ribbon-tab:hover {
+    -fx-background-color: -docu-bg-hover;
+    -fx-text-fill: -docu-accent-dark;
+}
+
+.ui-ribbon-tab:selected {
+    -fx-background-color: -docu-accent-soft;
+    -fx-border-color: transparent transparent -docu-accent transparent;
+    -fx-text-fill: -docu-accent-dark;
+}
+
+.ui-ribbon-collapse-toggle {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 11px;
+    -fx-font-weight: 900;
+    -fx-min-width: 22px;
+    -fx-pref-width: 22px;
+    -fx-max-width: 22px;
+    -fx-min-height: 24px;
+    -fx-pref-height: 24px;
+    -fx-max-height: 24px;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+}
+
+.ui-ribbon-collapse-toggle:hover {
+    -fx-background-color: -docu-bg-hover;
+    -fx-text-fill: -docu-accent-dark;
+}
+
+.ui-ribbon-content-scroll {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+    -fx-min-height: 112px;
+    -fx-pref-height: 118px;
+    -fx-max-height: 126px;
+}
+
+.ui-ribbon-content-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+.ui-ribbon-content {
+    -fx-background-color: rgba(248, 250, 254, 0.96);
+    -fx-alignment: center-left;
+    -fx-min-height: 110px;
+    -fx-pref-height: 116px;
+    -fx-max-height: 124px;
+}
+
+/* T105 — ajuste visual: mas respiracion vertical y botoneria sin elipsis. */
+.ui-ribbon-surface {
+    -fx-min-height: 148px;
+    -fx-pref-height: 154px;
+    -fx-max-height: 164px;
+}
+
+.ui-ribbon-content-scroll {
+    -fx-min-height: 112px;
+    -fx-pref-height: 118px;
+    -fx-max-height: 126px;
+}
+
+.ui-ribbon-content {
+    -fx-min-height: 110px;
+    -fx-pref-height: 116px;
+    -fx-max-height: 124px;
+}
+
+/* T111 — iconography polish: semantic glyph badge instead of temporary text markers. */
+.ui-ribbon-button-icon {
+    -fx-background-color: rgba(99, 102, 241, 0.10);
+    -fx-border-color: -docu-accent-border;
+    -fx-border-width: 1;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-alignment: center;
+    -fx-text-fill: -docu-accent-dark;
+    -fx-font-size: 17px;
+    -fx-font-weight: 900;
+    -fx-min-height: 34px;
+    -fx-pref-height: 34px;
+    -fx-max-height: 34px;
+}
+
+.ui-ribbon-button-primary .ui-ribbon-button-icon {
+    -fx-background-color: rgba(79, 70, 229, 0.16);
+}
+
+/* T111-HF2 — PNG icon polish: semantic PNG icons replace temporary text markers. */
+/* T111-HF4 — larger PNG icon polish for ribbon buttons. */
+.ui-icon-view {
+    -fx-alignment: center;
+}
+
+.ui-icon-ribbon {
+    -fx-min-width: 38px;
+    -fx-pref-width: 38px;
+    -fx-max-width: 38px;
+    -fx-min-height: 38px;
+    -fx-pref-height: 38px;
+    -fx-max-height: 38px;
+}
+
+.ui-ribbon-button-icon {
+    -fx-background-color: rgba(255, 255, 255, 0.72);
+    -fx-background-radius: 12;
+    -fx-border-color: rgba(99, 102, 241, 0.22);
+    -fx-border-radius: 12;
+    -fx-padding: 5;
+}
+
+/* Ribbon collapse is session-only and must not reserve the full command band. */
+.ui-ribbon-surface.ui-ribbon-expanded {
+    -fx-min-height: 148px;
+    -fx-pref-height: 154px;
+    -fx-max-height: 164px;
+}
+
+.ui-ribbon-surface.ui-ribbon-collapsed {
+    -fx-min-height: 34px;
+    -fx-pref-height: 34px;
+    -fx-max-height: 38px;
+}
+
+.ui-ribbon-surface.ui-ribbon-collapsed .ui-ribbon-content-scroll {
+    -fx-min-height: 0;
+    -fx-pref-height: 0;
+    -fx-max-height: 0;
+}

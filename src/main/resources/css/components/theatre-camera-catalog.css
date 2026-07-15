@@ -1,0 +1,28 @@
+.theatre-camera-catalog-dialog,
+.theatre-camera-catalog-dialog > .content,
+.theatre-camera-catalog-scroll,
+.theatre-camera-catalog-scroll > .viewport,
+.theatre-camera-catalog-grid {
+    -fx-background-color: #050505;
+}
+
+.theatre-camera-catalog-card {
+    -fx-background-color: #090909;
+    -fx-border-color: #2f2511;
+    -fx-border-width: 1;
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+    -fx-cursor: hand;
+}
+
+.theatre-camera-catalog-card:hover {
+    -fx-border-color: #d7b45b;
+    -fx-background-color: #11100c;
+}
+
+.theatre-camera-catalog-title {
+    -fx-text-fill: #f3d57a;
+    -fx-font-family: "Georgia", "Cambria", serif;
+    -fx-font-size: 18px;
+    -fx-font-weight: 700;
+}

@@ -1,0 +1,94 @@
+/* Tanda 50 — shared surfaces and cards. Avoid nested panels without purpose. */
+.ui-empty-state {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-padding: 20;
+    -fx-effect: -docu-shadow-soft;
+}
+
+.ui-eyebrow {
+    -fx-text-fill: -docu-accent;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+
+.ui-title {
+    -fx-font-size: 23px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text-strong;
+}
+
+.ui-summary {
+    -fx-font-size: 13px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.ui-section-header {
+    -fx-padding: 0 0 4 0;
+}
+
+.ui-section-title {
+    -fx-font-size: 20px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text-strong;
+}
+
+.ui-section-summary {
+    -fx-font-size: 13px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.ui-note {
+    -fx-background-color: -docu-bg-card-soft;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+    -fx-text-fill: -docu-text-muted;
+    -fx-padding: 8;
+}
+
+/* Tanda 59A — shared badge/card primitives. */
+.ui-info-badge {
+    -fx-background-color: -docu-bg-card-soft;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-padding: 4 8 4 8;
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+
+.ui-metric-badge,
+.ui-diagnostic-card {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-padding: 10;
+    -fx-effect: -docu-shadow-soft;
+}
+
+.ui-metric-title,
+.ui-diagnostic-title {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+
+.ui-metric-value {
+    -fx-text-fill: -docu-text-strong;
+    -fx-font-size: 18px;
+    -fx-font-weight: 800;
+}
+
+.ui-metric-caption {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 11px;
+}

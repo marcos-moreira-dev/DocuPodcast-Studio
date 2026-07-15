@@ -1,0 +1,8 @@
+%PDF-1.4
+1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
+2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
+3 0 obj << /Type /Page /Parent 2 0 R /Contents 4 0 R >> endobj
+4 0 obj << /Length 220 >> stream
+BT /F1 12 Tf 72 720 Td (Documento PDF con texto nativo para DocuPodcast Studio.) Tj 0 -16 Td (Esta muestra permite validar que la importacion PDF funciona sin OCR.) Tj 0 -16 Td (Si el PDF fuera escaneado, la app debe mostrar un aviso de PDF no compatible.) Tj ET
+endstream endobj
+%%EOF

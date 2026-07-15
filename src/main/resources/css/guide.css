@@ -1,0 +1,77 @@
+/* Tanda 14 — Integrated guide and AI resources */
+.guide-dialog {
+    -fx-background-color: -docu-bg-panel;
+}
+
+.guide-tabs {
+    -fx-background-color: -docu-bg-panel;
+}
+
+.guide-topic-list,
+.guide-search-results {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border;
+    -fx-border-width: 1;
+}
+
+.guide-body {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-text-fill: -docu-text;
+    -fx-font-family: "Segoe UI";
+    -fx-font-size: 13px;
+}
+
+/* T110R — rendered guide body, no raw Markdown editor surface. */
+.guide-body-scroll {
+    -fx-background-color: transparent;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+}
+
+.guide-body-rendered {
+    -fx-background-color: -docu-bg-card;
+    -fx-padding: 20 24 24 24;
+}
+
+.guide-topic-title-rendered {
+    -fx-text-fill: -docu-text;
+    -fx-font-family: "Segoe UI Semibold", "Segoe UI";
+    -fx-font-size: 24px;
+}
+
+.guide-topic-summary {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 14px;
+}
+
+.guide-topic-heading {
+    -fx-text-fill: -docu-text;
+    -fx-font-family: "Segoe UI Semibold", "Segoe UI";
+    -fx-font-size: 17px;
+    -fx-padding: 14 0 2 0;
+}
+
+.guide-topic-subheading {
+    -fx-text-fill: -docu-text;
+    -fx-font-family: "Segoe UI Semibold", "Segoe UI";
+    -fx-font-size: 15px;
+    -fx-padding: 8 0 0 0;
+}
+
+.guide-topic-paragraph,
+.guide-topic-bullet {
+    -fx-text-fill: -docu-text;
+    -fx-font-size: 13.5px;
+    -fx-line-spacing: 2;
+}
+
+.guide-topic-code {
+    -fx-text-fill: -docu-text;
+    -fx-font-family: "Consolas", "Cascadia Mono", monospace;
+    -fx-font-size: 12.5px;
+    -fx-background-color: -docu-bg-muted;
+    -fx-background-radius: 10;
+    -fx-padding: 10;
+}

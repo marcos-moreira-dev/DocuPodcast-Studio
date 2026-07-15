@@ -1,0 +1,52 @@
+{
+  "profile_key": "hombre_40_indignado_testigo_personaje",
+  "prompt_key": "desconfiada",
+  "emotion": "desconfiada",
+  "voice_id": "MYiFAKeVwcvm4z9VsFAR",
+  "nombre_original": "Brad - Eyewitness Bystander ",
+  "descripcion": "Voz seleccionada manualmente para teatro/personaje. Alias local: hombre_40_indignado_testigo_personaje. Nombre original ElevenLabs: Brad - Eyewitness Bystander . Personaje sugerido: Indignado confundido. Acento objetivo: aceptado_por_oido. Nota: Brad - Eyewitness Bystander. Usar para indignado que protesta, testigo confundido o ciudadano alterado.",
+  "categoria_local": "personaje_dialogo",
+  "modo": "personaje",
+  "acento_objetivo": "aceptado_por_oido",
+  "uso_sugerido": [
+    "teatro",
+    "personaje",
+    "dialogo"
+  ],
+  "model_id": "eleven_v3",
+  "language_code": "es",
+  "output_format": "mp3_44100_128",
+  "voice_settings": {
+    "stability": 0.22,
+    "similarity_boost": 0.7,
+    "style": 0.92,
+    "use_speaker_boost": true
+  },
+  "text_sha256": "d5e2a1242df7b12b0e269e4177257a7d9b36925662f107982edc6653b39153fd",
+  "config_sha256": "08605a2c30df49a666e170ff8c51d94a982d84d7d4f4d141da8d31c83480c834",
+  "characters": 288,
+  "text_reference": "[suspicious, cautious, low, conversational] No me convence, compañero. Dices que el güiro, la guitarra, quince llaves viejas y el pequeño xilófono estaban en el zaguán, pero la caja huele a queso, chocolate, jugo de guayaba y café. La niña vio algo bajo la lluvia, y tú sonríes demasiado.",
+  "audio_file": "voice-bank-dialogo\\hombre_40_indignado_testigo_personaje\\desconfiada.mp3",
+  "origen_scaffold": {
+    "created_at": "2026-06-28T01:43:22",
+    "source_template_profile": "hombre_20_idealista_ecuador_dialogo",
+    "source_template_json": "desconfiada.json",
+    "api_voice_name": "Brad - Eyewitness Bystander ",
+    "api_labels": {
+      "language": "es",
+      "accent": "aceptado_por_oido"
+    },
+    "nota": "Perfil nuevo creado para ampliar banco general; no genera audio hasta correr generate --run."
+  },
+  "seleccion_manual_v4": {
+    "profile_key": "hombre_40_indignado_testigo_personaje",
+    "voice_id": "MYiFAKeVwcvm4z9VsFAR",
+    "public_user_id": "",
+    "new_name": "hombre_40_indignado_testigo_personaje",
+    "voice_library_name": "Brad - Eyewitness Bystander ",
+    "personaje_sugerido": "Indignado confundido",
+    "tipo": "personaje_dialogo",
+    "acento_objetivo": "aceptado_por_oido",
+    "nota": "Brad - Eyewitness Bystander. Usar para indignado que protesta, testigo confundido o ciudadano alterado."
+  }
+}

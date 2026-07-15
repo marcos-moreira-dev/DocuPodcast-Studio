@@ -1,0 +1,49 @@
+.process-overlay {
+    -fx-background-color: rgba(31, 41, 55, 0.82);
+    -fx-background-radius: 18;
+    -fx-border-color: rgba(255, 255, 255, 0.34);
+    -fx-border-radius: 18;
+    -fx-border-width: 1;
+    -fx-padding: 14 16 14 16;
+    -fx-effect: dropshadow(gaussian, rgba(15, 23, 42, 0.30), 22, 0.24, 0, 6);
+}
+
+.process-overlay-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: 800;
+    -fx-text-fill: white;
+}
+
+.process-overlay-detail {
+    -fx-font-size: 12px;
+    -fx-text-fill: rgba(255, 255, 255, 0.92);
+}
+
+.process-overlay-eta {
+    -fx-font-size: 12px;
+    -fx-text-fill: rgba(255, 255, 255, 0.72);
+}
+
+.process-overlay-progress {
+    -fx-pref-height: 13px;
+    -fx-min-height: 13px;
+    -fx-max-height: 13px;
+}
+
+.process-overlay-progress > .track {
+    -fx-background-color: rgba(255, 255, 255, 0.22);
+    -fx-background-radius: 999;
+    -fx-background-insets: 0;
+}
+
+.process-overlay-progress > .bar {
+    -fx-background-color: #22C55E;
+    -fx-background-radius: 999;
+    -fx-background-insets: 0;
+    -fx-padding: 0.42em;
+}
+
+.process-overlay-hide-button {
+    -fx-font-size: 11px;
+    -fx-padding: 6 10 6 10;
+}

@@ -1,0 +1,39 @@
+/* Document reader scrollbar only: dark track against the reading surface. */
+.document-workspace .document-scroll .scroll-bar:vertical {
+    -fx-background-color: -docu-scroll-document-track;
+    -fx-pref-width: 9px;
+    -fx-padding: 1;
+}
+
+.document-workspace .document-scroll .scroll-bar:vertical .track {
+    -fx-background-color: -docu-scroll-document-track;
+    -fx-background-radius: 9;
+    -fx-border-color: transparent;
+}
+
+.document-workspace .document-scroll .scroll-bar:vertical .thumb {
+    -fx-background-color: -docu-scroll-document-thumb;
+    -fx-background-insets: 1;
+    -fx-background-radius: 9;
+    -fx-border-radius: 9;
+}
+
+.document-workspace .document-scroll .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: -docu-scroll-document-thumb-hover;
+}
+
+.document-workspace .document-scroll .scroll-bar:vertical .thumb:pressed {
+    -fx-background-color: -docu-scroll-document-thumb-active;
+}
+
+.document-workspace .document-scroll .scroll-bar:vertical .increment-button,
+.document-workspace .document-scroll .scroll-bar:vertical .decrement-button {
+    -fx-background-color: -docu-scroll-document-track;
+    -fx-padding: 0;
+}
+
+.document-workspace .document-scroll .scroll-bar:vertical .increment-arrow,
+.document-workspace .document-scroll .scroll-bar:vertical .decrement-arrow {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}

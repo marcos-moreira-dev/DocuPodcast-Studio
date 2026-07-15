@@ -1,0 +1,52 @@
+{
+  "profile_key": "hombre_40_conversacional_latam_dialogo",
+  "prompt_key": "sutil",
+  "emotion": "sutil",
+  "voice_id": "DfE5EkknFF950NR6OMui",
+  "nombre_original": "Bob",
+  "descripcion": "Voz seleccionada manualmente para teatro/personaje. Alias local: hombre_40_conversacional_latam_dialogo. Nombre original ElevenLabs: Bob. Personaje sugerido: Florindo cómodo / ciudadano común. Acento objetivo: aceptado_por_oido. Nota: Voz conversacional para ciudadano común. No renombrar en ElevenLabs; solo usar nombre local.",
+  "categoria_local": "personaje_dialogo",
+  "modo": "personaje",
+  "acento_objetivo": "aceptado_por_oido",
+  "uso_sugerido": [
+    "teatro",
+    "personaje",
+    "dialogo"
+  ],
+  "model_id": "eleven_v3",
+  "language_code": "es",
+  "output_format": "mp3_44100_128",
+  "voice_settings": {
+    "stability": 0.22,
+    "similarity_boost": 0.7,
+    "style": 0.92,
+    "use_speaker_boost": true
+  },
+  "text_sha256": "c0ff6b34bdade153a464650c0118d5c472710a1206ab05d2f44090975515080d",
+  "config_sha256": "046d69fa0981447351629738d3f19a381dfe4da3199d9f0aa5b9b5376ebb4a27",
+  "characters": 272,
+  "text_reference": "[subtle, restrained, quiet, conversational] Compañero, no lo digas tan alto. El güiro, la guitarra, las quince llaves viejas y el pequeño xilófono no están donde crees. La caja guarda queso, chocolate, jugo de guayaba y café. La niña ya entendió la lluvia desde el zaguán.",
+  "audio_file": "voice-bank-dialogo\\hombre_40_conversacional_latam_dialogo\\sutil.mp3",
+  "origen_scaffold": {
+    "created_at": "2026-06-28T00:55:55",
+    "source_template_profile": "hombre_20_idealista_ecuador_dialogo",
+    "source_template_json": "sutil.json",
+    "api_voice_name": "Bob",
+    "api_labels": {
+      "language": "es",
+      "accent": "aceptado_por_oido"
+    },
+    "nota": "Perfil nuevo creado para ampliar banco general; no genera audio hasta correr generate --run."
+  },
+  "seleccion_manual_v4": {
+    "profile_key": "hombre_40_conversacional_latam_dialogo",
+    "voice_id": "DfE5EkknFF950NR6OMui",
+    "public_user_id": "",
+    "new_name": "hombre_40_conversacional_latam_dialogo",
+    "voice_library_name": "Bob",
+    "personaje_sugerido": "Florindo cómodo / ciudadano común",
+    "tipo": "personaje_dialogo",
+    "acento_objetivo": "aceptado_por_oido",
+    "nota": "Voz conversacional para ciudadano común. No renombrar en ElevenLabs; solo usar nombre local."
+  }
+}

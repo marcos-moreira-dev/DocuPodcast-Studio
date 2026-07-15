@@ -1,0 +1,209 @@
+package com.marcosmoreiradev.docupodcaststudio.presentation.components;
+
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * Official reusable GUI component inventory frozen before the strong UI redesign.
+ */
+public final class GuiComponentCatalog {
+    private final List<GuiComponentContract> components;
+
+    private GuiComponentCatalog(List<GuiComponentContract> components) {
+        this.components = List.copyOf(components).stream()
+                .sorted(Comparator.comparing(GuiComponentContract::componentName))
+                .toList();
+    }
+
+    public static GuiComponentCatalog official() {
+        return new GuiComponentCatalog(List.of(
+                frozen("ActionButtonFactory", "ActionButtonFactory", GuiComponentSurface.WORKSPACE,
+                        List.of(GuiComponentSurface.WORKSPACE, GuiComponentSurface.LEFT_SIDEBAR, GuiComponentSurface.RIGHT_MEDIA_RAIL, GuiComponentSurface.SETTINGS, GuiComponentSurface.DIALOG),
+                        "Crear botones de acción primarios, secundarios, peligrosos, rail y transporte.",
+                        "No usar new Button(...) en workspaces, paneles contextuales ni railes para acciones repetidas."),
+                frozen("ActionBar", "ActionBar", GuiComponentSurface.WORKSPACE,
+                        List.of(GuiComponentSurface.WORKSPACE, GuiComponentSurface.LEFT_SIDEBAR, GuiComponentSurface.SETTINGS, GuiComponentSurface.DIALOG),
+                        "Agrupar acciones horizontales de tarjetas, paneles y vistas secundarias.",
+                        "No recrear HBox de botones repetitivos sin este componente o un sucesor explícito."),
+                frozen("SectionHeader", "SectionHeader", GuiComponentSurface.WORKSPACE,
+                        List.of(GuiComponentSurface.WORKSPACE, GuiComponentSurface.LEFT_SIDEBAR, GuiComponentSurface.RIGHT_MEDIA_RAIL, GuiComponentSurface.SETTINGS),
+                        "Encabezar secciones con título y resumen breve.",
+                        "No llenar paneles con títulos/labels ad-hoc ni textos de relleno."),
+                frozen("InfoBadge", "InfoBadge", GuiComponentSurface.LEFT_SIDEBAR,
+                        List.of(GuiComponentSurface.LEFT_SIDEBAR, GuiComponentSurface.WORKSPACE, GuiComponentSurface.RIGHT_MEDIA_RAIL, GuiComponentSurface.SETTINGS),
+                        "Mostrar estado corto, chip o etiqueta de readiness.",
+                        "No usarlo para prometer funciones no implementadas."),
+                frozen("MetricBadge", "MetricBadge", GuiComponentSurface.WORKSPACE,
+                        List.of(GuiComponentSurface.WORKSPACE, GuiComponentSurface.SETTINGS, GuiComponentSurface.RIGHT_MEDIA_RAIL),
+                        "Mostrar métrica breve o contador de estado.",
+                        "No convertirlo en panel operativo con botones ocultos."),
+                frozen("DiagnosticCard", "DiagnosticCard", GuiComponentSurface.SETTINGS,
+                        List.of(GuiComponentSurface.SETTINGS, GuiComponentSurface.DIALOG, GuiComponentSurface.WORKSPACE),
+                        "Presentar diagnóstico humano con detalle técnico acotado.",
+                        "No llevar jerga técnica al workspace de lectura."),
+                frozen("EmptyStateView", "EmptyStateView", GuiComponentSurface.WORKSPACE,
+                        List.of(GuiComponentSurface.WORKSPACE, GuiComponentSurface.SETTINGS),
+                        "Explicar estados vacíos con una acción clara.",
+                        "No usar como excusa para placeholders visibles."),
+                frozen("PrimaryActionStrip", "PrimaryActionStrip", GuiComponentSurface.WORKSPACE,
+                        List.of(GuiComponentSurface.WORKSPACE, GuiComponentSurface.FLOATING_PLAYBAR),
+                        "Contener la acción principal del flujo activo.",
+                        "No duplicar comandos cuyo dueño real sea sidebar o menú."),
+                frozen("FloatingReadingControlBar", "FloatingReadingControlBar", GuiComponentSurface.FLOATING_PLAYBAR,
+                        List.of(GuiComponentSurface.FLOATING_PLAYBAR, GuiComponentSurface.WORKSPACE),
+                        "Playbar flotante para escuchar, pausar, reanudar y detener lectura.",
+                        "No mover la acción primaria de lectura al menú/ribbon como protagonista visual."),
+                frozen("TransportControls", "TransportControls", GuiComponentSurface.FLOATING_PLAYBAR,
+                        List.of(GuiComponentSurface.FLOATING_PLAYBAR, GuiComponentSurface.WORKSPACE),
+                        "Controles de reproducción compartidos.",
+                        "No crear controles de reproducción diferentes por workspace."),
+                frozen("RailActionRow", "RailActionRow", GuiComponentSurface.RIGHT_MEDIA_RAIL,
+                        List.of(GuiComponentSurface.RIGHT_MEDIA_RAIL, GuiComponentSurface.LEFT_SIDEBAR),
+                        "Fila compacta de acción/navegación para railes.",
+                        "No poner formularios pesados ni edición primaria en el rail derecho."),
+                frozen("MediaThumbnailCard", "MediaThumbnailCard", GuiComponentSurface.RIGHT_MEDIA_RAIL,
+                        List.of(GuiComponentSurface.RIGHT_MEDIA_RAIL),
+                        "Miniaturas de imagen/medio para navegación visual.",
+                        "No usar como panel de asignación o configuración."),
+                frozen("CollapsibleMediaRail", "CollapsibleMediaRail", GuiComponentSurface.RIGHT_MEDIA_RAIL,
+                        List.of(GuiComponentSurface.RIGHT_MEDIA_RAIL),
+                        "Contenedor retráctil para miniaturas/medios.",
+                        "No incrustar el rail como si fuera parte de la hoja."),
+                frozen("SettingsPageView", "SettingsPageView", GuiComponentSurface.SETTINGS,
+                        List.of(GuiComponentSurface.SETTINGS),
+                        "Estructurar páginas de configuración con secciones legibles.",
+                        "No duplicar configuración en workspaces principales."),
+                ready("SourceVisualBlockView", "SourceVisualBlockView", GuiComponentSurface.WORKSPACE,
+                        List.of(GuiComponentSurface.WORKSPACE, GuiComponentSurface.RIGHT_MEDIA_RAIL),
+                        "Renderizar imágenes/visuales fuente detectados sin convertirlos en secuencia visual automática.",
+                        "No incrustar ImageView estilizado directamente en DocumentWorkspaceView."),
+                ready("SourceTableGridView", "SourceTableGridView", GuiComponentSurface.WORKSPACE,
+                        List.of(GuiComponentSurface.WORKSPACE),
+                        "Renderizar tablas fuente como grilla sobria reutilizable sin convertirlas en editor.",
+                        "No recrear grillas de tabla ad-hoc dentro de workspaces."),
+                ready("ImageFullscreenViewer", "ImageFullscreenViewer", GuiComponentSurface.DIALOG,
+                        List.of(GuiComponentSurface.DIALOG, GuiComponentSurface.WORKSPACE, GuiComponentSurface.RIGHT_MEDIA_RAIL),
+                        "Mostrar imagenes ampliadas con control de reproduccion seguro y cierre claro.",
+                        "No crear visores fullscreen ad-hoc que ignoren pausa/reanudacion de playback."),
+                ready("OperationalStatusStrip", "OperationalStatusStrip", GuiComponentSurface.SETTINGS,
+                        List.of(GuiComponentSurface.SETTINGS, GuiComponentSurface.WORKSPACE, GuiComponentSurface.STATUS_BAR),
+                        "Mostrar readiness operativo breve para motores, jobs, exportacion y soporte.",
+                        "No usarlo como consola tecnica ni como sustituto de diagnostico detallado."),
+                ready("ExportCenterDialog", "ExportCenterDialog", GuiComponentSurface.DIALOG,
+                        List.of(GuiComponentSurface.DIALOG, GuiComponentSurface.RIBBON, GuiComponentSurface.MENU_BAR),
+                        "Centralizar salidas creativas y mostrar readiness, destino, formato y procesos relacionados.",
+                        "No volver a dispersar exportaciones creativas como botones principales independientes."),
+                ready("NarrativeVisualProductionWorkspaceView", "NarrativeVisualProductionWorkspaceView", GuiComponentSurface.WORKSPACE,
+                        List.of(GuiComponentSurface.WORKSPACE),
+                        "Superficie narrativa para revisar imagen principal, puente, prompts y estado visual por fragmento.",
+                        "No importar actos, escenas, personajes ni canvas teatrales al flujo narrativo simple."),
+                legacy("ToolbarActionButton", "ToolbarActionButton", GuiComponentSurface.LEGACY_TOOLBAR,
+                        List.of(GuiComponentSurface.LEGACY_TOOLBAR, GuiComponentSurface.RIBBON),
+                        "Puente heredado de toolbar que queda fuera de la superficie principal T101.",
+                        "No usar para crear nuevas superficies primarias fuera del toolbar/ribbon."),
+                ready("RibbonView", "RibbonView", GuiComponentSurface.RIBBON,
+                        List.of(GuiComponentSurface.RIBBON),
+                        "Superficie ribbon por pestañas que reemplaza la toolbar legacy en el shell.",
+                        "No convertirlo en menú duplicado ni en playbar principal."),
+                ready("RibbonButton", "RibbonButton", GuiComponentSurface.RIBBON,
+                        List.of(GuiComponentSurface.RIBBON),
+                        "Botón estándar para el futuro ribbon por pestañas.",
+                        "No usar botones ad-hoc dentro del ribbon."),
+                ready("RibbonGroup", "RibbonGroup", GuiComponentSurface.RIBBON,
+                        List.of(GuiComponentSurface.RIBBON),
+                        "Agrupar comandos relacionados dentro de una pestaña ribbon.",
+                        "No crear HBox/VBox de grupos ribbon sin este componente."),
+                ready("SidebarIconTab", "SidebarIconTab", GuiComponentSurface.LEFT_SIDEBAR,
+                        List.of(GuiComponentSurface.LEFT_SIDEBAR),
+                        "Pestaña vertical con icono/tooltip para el inspector contextual.",
+                        "No volver a etiquetas truncadas tipo Det/Aud/Img."),
+                ready("RailToggleButton", "RailToggleButton", GuiComponentSurface.RIGHT_MEDIA_RAIL,
+                        List.of(GuiComponentSurface.RIGHT_MEDIA_RAIL, GuiComponentSurface.RIBBON),
+                        "Mostrar/ocultar rail derecho de manera clara.",
+                        "No esconder el rail mediante botones crípticos o rústicos."),
+                ready("SidePanelToggleButton", "SidePanelToggleButton", GuiComponentSurface.WORKSPACE,
+                        List.of(GuiComponentSurface.WORKSPACE, GuiComponentSurface.LEFT_SIDEBAR, GuiComponentSurface.RIGHT_MEDIA_RAIL),
+                        "Mostrar u ocultar paneles laterales de Documento con icono, tooltip y texto accesible.",
+                        "No volver a botones textuales X/< para plegar sidebars."),
+                ready("DocumentSidePanelChrome", "DocumentSidePanelChrome", GuiComponentSurface.WORKSPACE,
+                        List.of(GuiComponentSurface.WORKSPACE, GuiComponentSurface.LEFT_SIDEBAR, GuiComponentSurface.RIGHT_MEDIA_RAIL),
+                        "Compartir cabecera, título, subtítulo y toggle de los sidebars de Documento.",
+                        "No recrear cabeceras laterales con HBox/Label ad-hoc."),
+                ready("CollapsibleModuleSplitPane", "CollapsibleModuleSplitPane", GuiComponentSurface.WORKSPACE,
+                        List.of(GuiComponentSurface.WORKSPACE, GuiComponentSurface.RIGHT_MEDIA_RAIL),
+                        "Dividir un módulo operativo en una zona primaria plegable y una zona principal con más ancho.",
+                        "No duplicar SplitPane plegables ad-hoc dentro de módulos teatrales o laterales."),
+                ready("LongProcessOverlayView", "LongProcessOverlayView", GuiComponentSurface.PROCESS_OVERLAY,
+                        List.of(GuiComponentSurface.PROCESS_OVERLAY, GuiComponentSurface.WORKSPACE),
+                        "Mostrar progreso esencial de procesos largos sin sacar al usuario del Documento.",
+                        "No reabrir Audio Jobs como workspace tecnico ni mostrar logs crudos."),
+                ready("StatusBarView", "StatusBarView", GuiComponentSurface.STATUS_BAR,
+                        List.of(GuiComponentSurface.STATUS_BAR),
+                        "Mostrar estado no bloqueante y alojar controles de lectura discretos.",
+                        "No convertirlo en consola técnica ni en barra de comandos principales."),
+                ready("ExampleProjectDialog", "ExampleProjectDialog", GuiComponentSurface.DIALOG,
+                        List.of(GuiComponentSurface.DIALOG, GuiComponentSurface.WELCOME),
+                        "Elegir un ejemplo incluido y crear un proyecto demo sin convertirlo en workspace.",
+                        "No usar ejemplos como galeria pesada ni como sustituto del flujo de proyecto."),
+                ready("VoiceProfileCard", "VoiceProfileCard", GuiComponentSurface.WORKSPACE,
+                        List.of(GuiComponentSurface.WORKSPACE),
+                        "Presentar resumen de voz, modo o readiness dentro de la biblioteca Voces.",
+                        "No volver a tarjetas ad-hoc de labels para estados de voz."),
+                ready("VoiceEngineModeCard", "VoiceEngineModeCard", GuiComponentSurface.WORKSPACE,
+                        List.of(GuiComponentSurface.WORKSPACE, GuiComponentSurface.LEFT_SIDEBAR),
+                        "Mostrar modos de voz con nombres amigables y estado activo.",
+                        "No exponer nombres técnicos de motores en la interfaz normal."),
+                ready("VoiceToneBadge", "VoiceToneBadge", GuiComponentSurface.WORKSPACE,
+                        List.of(GuiComponentSurface.WORKSPACE, GuiComponentSurface.LEFT_SIDEBAR),
+                        "Identificar tonos de referencia y tono neutral obligatorio.",
+                        "No sustituirlo por chips improvisados ni etiquetas sueltas."),
+                ready("VoiceSampleRow", "VoiceSampleRow", GuiComponentSurface.WORKSPACE,
+                        List.of(GuiComponentSurface.WORKSPACE),
+                        "Mostrar una muestra registrada por tono con metadata humana.",
+                        "No mostrar rutas o muestras mediante filas sin estructura común."),
+                ready("VoiceGeneratedTestPanel", "VoiceGeneratedTestPanel", GuiComponentSurface.WORKSPACE,
+                        List.of(GuiComponentSurface.WORKSPACE),
+                        "Agrupar frase editable, acciones y estado de prueba generada.",
+                        "No duplicar formularios de prueba generada por modo de voz."),
+                ready("VoiceProfileSampleEditorPanel", "VoiceProfileSampleEditorPanel", GuiComponentSurface.WORKSPACE,
+                        List.of(GuiComponentSurface.WORKSPACE),
+                        "Editar nombre y muestras por emoción de una voz avanzada en un único workspace.",
+                        "No mezclar diagnóstico técnico, catálogo ni progreso wizard dentro del editor."),
+                ready("AudioInputDeviceSelector", "AudioInputDeviceSelector", GuiComponentSurface.SETTINGS,
+                        List.of(GuiComponentSurface.SETTINGS, GuiComponentSurface.WORKSPACE, GuiComponentSurface.LEFT_SIDEBAR),
+                        "Elegir microfono o dispositivo de entrada cuando el flujo requiera captura de audio.",
+                        "No esconder seleccion de hardware de captura dentro de texto o campos libres."),
+                ready("ReadingZoomControl", "ReadingZoomControl", GuiComponentSurface.STATUS_BAR,
+                        List.of(GuiComponentSurface.STATUS_BAR),
+                        "Cambiar tamaño de lectura con reflujo de texto, no zoom de lienzo.",
+                        "No usarlo para escalar canvas, imágenes, railes o la aplicación completa.")));
+    }
+
+    public List<GuiComponentContract> components() {
+        return components;
+    }
+
+    public List<GuiComponentContract> bySurface(GuiComponentSurface surface) {
+        return components.stream().filter(component -> component.canBeUsedOn(surface)).toList();
+    }
+
+    public Optional<GuiComponentContract> findByClassName(String className) {
+        return components.stream().filter(component -> component.className().equals(className)).findFirst();
+    }
+
+    private static GuiComponentContract frozen(String name, String className, GuiComponentSurface primarySurface,
+                                               List<GuiComponentSurface> surfaces, String use, String forbidden) {
+        return new GuiComponentContract(name, className, GuiComponentStatus.FROZEN, primarySurface, surfaces, use, forbidden);
+    }
+
+    private static GuiComponentContract ready(String name, String className, GuiComponentSurface primarySurface,
+                                              List<GuiComponentSurface> surfaces, String use, String forbidden) {
+        return new GuiComponentContract(name, className, GuiComponentStatus.READY, primarySurface, surfaces, use, forbidden);
+    }
+
+    private static GuiComponentContract legacy(String name, String className, GuiComponentSurface primarySurface,
+                                               List<GuiComponentSurface> surfaces, String use, String forbidden) {
+        return new GuiComponentContract(name, className, GuiComponentStatus.LEGACY_BRIDGE, primarySurface, surfaces, use, forbidden);
+    }
+}

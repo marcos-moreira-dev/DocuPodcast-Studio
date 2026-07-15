@@ -1,0 +1,52 @@
+{
+  "profile_key": "hombre_35_intenso_explosivo_personaje",
+  "prompt_key": "tierna",
+  "emotion": "tierna",
+  "voice_id": "LG95yZDEHg6fCZdQjLqj",
+  "nombre_original": "Phil - Explosive, Passionate Announcer",
+  "descripcion": "Voz seleccionada manualmente para teatro/personaje. Alias local: hombre_35_intenso_explosivo_personaje. Nombre original ElevenLabs: Phil - Explosive, Passionate Announcer. Personaje sugerido: Florindo negador. Acento objetivo: aceptado_por_oido. Nota: Phil. Voz explosiva y apasionada. Usar para negación intensa, reacción fuerte y terquedad.",
+  "categoria_local": "personaje_dialogo",
+  "modo": "personaje",
+  "acento_objetivo": "aceptado_por_oido",
+  "uso_sugerido": [
+    "teatro",
+    "personaje",
+    "dialogo"
+  ],
+  "model_id": "eleven_v3",
+  "language_code": "es",
+  "output_format": "mp3_44100_128",
+  "voice_settings": {
+    "stability": 0.22,
+    "similarity_boost": 0.7,
+    "style": 0.92,
+    "use_speaker_boost": true
+  },
+  "text_sha256": "bd2cb7a418d6c506fb63ecab04bfc2ee0d8f3ca337b478af72da56d8879a004c",
+  "config_sha256": "1b8320c62922c77ee8780cb391c8382ad6e07a46aec06e773ec87f9f99499d69",
+  "characters": 270,
+  "text_reference": "[tender, warm, gentle, conversational] Ven, compañero, no tengas miedo. Te guardé un güiro pequeño, una guitarra suave, quince llaves viejas y un xilófono bonito. También hay queso, chocolate, jugo de guayaba y café. La niña espera en el zaguán hasta que pase la lluvia.",
+  "audio_file": "voice-bank-dialogo\\hombre_35_intenso_explosivo_personaje\\tierna.mp3",
+  "origen_scaffold": {
+    "created_at": "2026-06-28T01:43:21",
+    "source_template_profile": "hombre_20_idealista_ecuador_dialogo",
+    "source_template_json": "tierna.json",
+    "api_voice_name": "Phil - Explosive, Passionate Announcer",
+    "api_labels": {
+      "language": "es",
+      "accent": "aceptado_por_oido"
+    },
+    "nota": "Perfil nuevo creado para ampliar banco general; no genera audio hasta correr generate --run."
+  },
+  "seleccion_manual_v4": {
+    "profile_key": "hombre_35_intenso_explosivo_personaje",
+    "voice_id": "LG95yZDEHg6fCZdQjLqj",
+    "public_user_id": "",
+    "new_name": "hombre_35_intenso_explosivo_personaje",
+    "voice_library_name": "Phil - Explosive, Passionate Announcer",
+    "personaje_sugerido": "Florindo negador",
+    "tipo": "personaje_dialogo",
+    "acento_objetivo": "aceptado_por_oido",
+    "nota": "Phil. Voz explosiva y apasionada. Usar para negación intensa, reacción fuerte y terquedad."
+  }
+}

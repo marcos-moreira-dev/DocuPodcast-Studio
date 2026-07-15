@@ -1,0 +1,80 @@
+.audio-workspace {
+    -fx-background-color: -docu-bg-workspace;
+}
+
+.audio-queue-dashboard {
+    -fx-background-color: transparent;
+}
+
+.audio-queue-row {
+    -fx-alignment: center-left;
+}
+
+.audio-job-card {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, rgba(15, 23, 42, 0.06), 10, 0.12, 0, 2);
+}
+
+.audio-engine-status {
+    -fx-background-color: linear-gradient(to right, #EAF4FF, #F8FBFF);
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-padding: 8 10;
+    -fx-font-weight: bold;
+    -fx-text-fill: -docu-accent-dark;
+}
+
+.audio-active-job-title,
+.audio-job-status {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -docu-text;
+}
+
+.audio-active-job-support,
+.audio-active-job-message,
+.audio-job-eta,
+.audio-job-output {
+    -fx-text-fill: -docu-text-muted;
+}
+
+.generation-progress-bar {
+    -fx-pref-height: 18px;
+}
+
+.audio-segment-list,
+.audio-queue-list,
+.audio-playback-cue-list,
+.audio-job-history-list,
+.audio-job-detail-list,
+.audio-process-diagnostics-list {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+}
+
+.audio-queue-list .list-cell,
+.audio-job-detail-list .list-cell,
+.audio-process-diagnostics-list .list-cell,
+.audio-playback-cue-list .list-cell,
+.audio-segment-list .list-cell {
+    -fx-padding: 7 9;
+    -fx-text-fill: -docu-text;
+}
+
+.toolbar-button-danger {
+    -fx-background-color: linear-gradient(to bottom, #FFFFFF, #FEE2E2);
+    -fx-border-color: #D88A8A;
+    -fx-text-fill: -docu-danger;
+}
+
+.audio-playback-sync-summary {
+    -fx-background-color: #F8FAFC;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-padding: 7 9;
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-accent-dark;
+}

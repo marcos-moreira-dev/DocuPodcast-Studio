@@ -1,0 +1,50 @@
+# Build outputs
+/target/
+/generated/
+
+# Local smoke-test output
+/runtime/tts/*-smoke/
+*.log
+*.pid
+
+# IDE and local agent state
+/.idea/
+/.vscode/
+/.agents/
+*.iml
+
+# Python caches and installed runtimes
+**/__pycache__/
+*.py[cod]
+/.pytest_cache/
+/tools/python/pip-cache/
+/tools/python/python-nuget-3.10.11/
+/tools/image/venv/
+/tools/xtts-wrapper/.venv/
+
+# Installed third-party engines. Keep their sibling README, license and setup files tracked.
+/tools/image/ComfyUI/
+/tools/ffmpeg/bin/
+/tools/ffmpeg/downloads/
+/tools/piper/**
+!/tools/piper/README.md
+/tools/tesseract/**
+
+# Local model weights. Manifests, workflows, licenses and README files remain tracked.
+*.safetensors
+*.ckpt
+*.onnx
+*.pth
+*.pt
+
+# Downloaded archives and native executables
+/tools/**/*.exe
+/tools/**/*.dll
+/tools/**/*.zip
+/tools/**/*.7z
+
+# OS noise
+Thumbs.db
+Desktop.ini
+.DS_Store
+

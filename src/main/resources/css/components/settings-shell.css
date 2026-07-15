@@ -1,0 +1,309 @@
+/* Tanda 38 — shared settings page component styles */
+.ui-settings-page {
+    -fx-padding: 18;
+}
+
+.ui-settings-grid {
+    -fx-padding: 4 0 4 0;
+}
+
+.ui-settings-key {
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text;
+    -fx-min-width: 170px;
+}
+
+.ui-settings-value {
+    -fx-font-size: 12px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+/* Tanda 43 — guided local engine setup cards */
+.settings-engine-card-list {
+    -fx-padding: 4 0 2 0;
+}
+
+.ui-engine-card {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-padding: 10 12 10 12;
+}
+
+.ui-engine-heading {
+    -fx-alignment: center-left;
+}
+
+.ui-engine-badge {
+    -fx-background-color: #EAF2FF;
+    -fx-border-color: -docu-accent-border;
+    -fx-text-fill: -docu-accent;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+    -fx-padding: 3 6 3 6;
+}
+
+.ui-engine-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text;
+}
+
+.ui-engine-summary,
+.ui-engine-value,
+.ui-engine-actions {
+    -fx-font-size: 12px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.ui-engine-details {
+    -fx-padding: 2 0 2 0;
+}
+
+.ui-engine-row {
+    -fx-alignment: top-left;
+}
+
+.ui-engine-key {
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text;
+    -fx-min-width: 132px;
+}
+
+.ui-engine-actions {
+    -fx-background-color: #F8FAFC;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-padding: 6 8 6 8;
+}
+
+/* Tanda 44 — guided model installation assistant */
+.ui-model-assistant {
+    -fx-padding: 4 0 2 0;
+}
+
+.ui-model-card {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-padding: 10 12 10 12;
+}
+
+.ui-model-heading {
+    -fx-alignment: center-left;
+}
+
+.ui-model-badge {
+    -fx-background-color: #ECFDF5;
+    -fx-border-color: #A7F3D0;
+    -fx-text-fill: #047857;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+    -fx-padding: 3 6 3 6;
+}
+
+.ui-model-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text;
+}
+
+.ui-model-details,
+.ui-model-steps {
+    -fx-padding: 2 0 2 0;
+}
+
+.ui-model-row {
+    -fx-alignment: top-left;
+}
+
+.ui-model-key {
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text;
+    -fx-min-width: 120px;
+}
+
+.ui-model-value,
+.ui-model-step,
+.ui-model-actions {
+    -fx-font-size: 12px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.ui-model-actions {
+    -fx-background-color: #F8FAFC;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-padding: 6 8 6 8;
+}
+
+/* Tanda 50 — settings as the technical bodega, modern but separated from operation. */
+.settings-root {
+    -fx-background-color: -docu-bg-app;
+}
+
+.settings-sidebar {
+    -fx-background-color: -docu-bg-chrome-dark;
+    -fx-padding: 18 12 14 12;
+    -fx-min-width: 220px;
+    -fx-pref-width: 240px;
+}
+
+.settings-sidebar-title {
+    -fx-text-fill: -docu-text-on-dark;
+    -fx-font-size: 20px;
+    -fx-font-weight: 800;
+}
+
+.settings-sidebar-subtitle {
+    -fx-text-fill: #C9CEDA;
+    -fx-font-size: 12px;
+}
+
+.settings-section-list {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.settings-section-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #E7EAF2;
+    -fx-padding: 8 10 8 10;
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
+}
+
+.settings-section-list .list-cell:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.10);
+}
+
+.settings-section-list .list-cell:selected {
+    -fx-background-color: -docu-accent;
+    -fx-text-fill: white;
+    -fx-font-weight: 700;
+}
+
+.settings-page-host {
+    -fx-background-color: -docu-bg-card;
+}
+
+.ui-settings-page {
+    -fx-padding: 22;
+    -fx-background-color: -docu-bg-card;
+}
+
+.ui-engine-card,
+.ui-model-card {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-effect: -docu-shadow-soft;
+}
+
+/* T89 — model assistant remains informational until real handlers exist. */
+
+/* T89 - human engine preflight cards */
+.settings-engine-status-list {
+    -fx-spacing: 10;
+}
+.settings-engine-status-card {
+    -fx-background-color: -docu-surface;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-radius: 12;
+    -fx-background-radius: 12;
+    -fx-padding: 12;
+    -fx-spacing: 6;
+}
+.settings-engine-status-title {
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text;
+}
+.settings-engine-status-badge {
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+    -fx-padding: 3 7;
+    -fx-background-radius: 999;
+    -fx-background-color: -docu-chip-background;
+    -fx-text-fill: -docu-accent;
+}
+.settings-engine-status-message,
+.settings-engine-status-action,
+.settings-engine-status-folder {
+    -fx-text-fill: -docu-text-muted;
+}
+
+.settings-engine-summary-card {
+    -fx-background-color: -docu-bg-card-soft;
+}
+
+.settings-engine-summary-grid {
+    -fx-padding: 2 0 0 0;
+}
+
+.settings-engine-card-actions {
+    -fx-alignment: center-left;
+    -fx-spacing: 8;
+}
+
+.settings-engine-card-actions .button,
+.settings-image-resource-actions .button {
+    -fx-min-width: 92px;
+    -fx-wrap-text: false;
+}
+
+.settings-engine-details-pane {
+    -fx-background-color: transparent;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+}
+
+.settings-download-url-box {
+    -fx-background-color: #f8fafc;
+    -fx-border-color: #e2e8f0;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-padding: 10 12 10 12;
+}
+
+.settings-image-resource-list {
+    -fx-spacing: 8;
+}
+
+.settings-image-resource-row {
+    -fx-background-color: -docu-bg-card-soft;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 10 12 10 12;
+}
+
+.settings-image-resource-meta {
+    -fx-padding: 0;
+}
+
+.settings-image-resource-cell {
+    -fx-min-width: 120px;
+}
+
+.settings-image-resource-key {
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text;
+}
+
+.settings-image-resource-value {
+    -fx-font-size: 12px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.settings-image-resource-actions {
+    -fx-alignment: center-left;
+    -fx-spacing: 6;
+}

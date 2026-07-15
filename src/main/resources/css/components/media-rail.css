@@ -1,0 +1,650 @@
+/* Tanda 41 — shared collapsible media rail and document layer actions */
+.ui-collapsible-rail {
+    -fx-background-color: #F8FBFF;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 0 0 0 1;
+    -fx-min-width: 46px;
+    -fx-pref-width: 246px;
+    -fx-max-width: 286px;
+}
+
+.ui-collapsible-rail-collapsed {
+    -fx-pref-width: 74px;
+    -fx-max-width: 96px;
+}
+
+.ui-rail-header {
+    -fx-padding: 9 8 8 10;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 0 0 1 0;
+}
+
+.ui-rail-title {
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text;
+}
+
+.ui-rail-summary {
+    -fx-font-size: 11px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.ui-rail-toggle {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-accent-border;
+    -fx-text-fill: -docu-text;
+    -fx-font-size: 11px;
+    -fx-padding: 4 7 4 7;
+}
+
+.document-layer-rail {
+    -fx-background-color: #F8FBFF;
+}
+
+.document-layer-selected {
+    -fx-background-color: #EFF6FF;
+    -fx-border-color: -docu-accent-border;
+    -fx-border-width: 1;
+    -fx-padding: 7;
+    -fx-font-size: 12px;
+    -fx-text-fill: -docu-text;
+}
+
+.document-layer-action {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-border-soft;
+    -fx-text-fill: -docu-text;
+    -fx-font-size: 12px;
+    -fx-padding: 7 9 7 9;
+}
+
+.document-layer-rule {
+    -fx-font-size: 11px;
+    -fx-text-fill: -docu-text-muted;
+    -fx-padding: 4 0 0 0;
+}
+
+/* Tanda 42 — document mini storyboard with real thumbnails */
+.document-media-rail {
+    -fx-background-color: #F8FBFF;
+    -fx-min-width: 250px;
+    -fx-pref-width: 270px;
+}
+
+.document-media-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-padding: 0;
+}
+
+.document-media-actions {
+    -fx-padding: 10;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 0 0 1 0;
+}
+
+.document-media-section-title {
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text;
+    -fx-padding: 6 10 0 10;
+}
+
+.document-media-section-copy {
+    -fx-font-size: 11px;
+    -fx-text-fill: -docu-text-muted;
+    -fx-padding: 0 10 2 10;
+}
+
+.document-media-frame-card,
+.document-media-image-assigned,
+.document-media-image-unassigned {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-padding: 7;
+}
+
+.document-media-frame-card:hover,
+.document-media-image-assigned:hover,
+.document-media-image-unassigned:hover {
+    -fx-background-color: #F2F7FF;
+    -fx-border-color: -docu-accent-border;
+}
+
+.document-media-frame-card:visual-selected { -fx-background-color: #EEF2FF; -fx-border-color: #4F46E5; -fx-border-width: 2; }
+.document-media-frame-card:playback-active { -fx-border-color: #16A34A; -fx-border-width: 1 1 1 4; }
+.document-media-frame-card:visual-selected:playback-active { -fx-border-color: #4F46E5 #4F46E5 #4F46E5 #16A34A; -fx-border-width: 2 2 2 4; }
+.document-media-image-unassigned { -fx-background-color: #FFFDF7; }
+
+.document-media-intermediate-thumb { -fx-min-height: 58px; -fx-pref-height: 58px; -fx-padding: 4 0 4 0; }
+.document-media-intermediate-image { -fx-effect: dropshadow(gaussian, rgba(15, 23, 42, 0.18), 8, 0, 0, 2); }
+
+.document-media-thumbnail,
+.document-media-thumbnail-empty {
+    -fx-background-color: #EEF4FF;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+}
+
+.document-media-thumbnail-empty {
+    -fx-background-color: #F4F7FB;
+}
+
+.document-media-thumbnail-label {
+    -fx-font-size: 10px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.document-media-thumbnail-badge { -fx-background-color: rgba(255, 255, 255, 0.86); -fx-background-radius: 4px; -fx-padding: 1px 4px; -fx-font-size: 9px; -fx-font-weight: 700; -fx-text-fill: #111827; }
+
+.document-media-thumbnail-corner-action { -fx-min-width: 24px; -fx-min-height: 20px; -fx-padding: 1px 4px; -fx-background-color: rgba(255, 255, 255, 0.92); -fx-border-color: #9AA8FF; -fx-border-radius: 4px; -fx-background-radius: 4px; -fx-font-size: 9px; -fx-font-weight: 700; }
+
+.document-media-frame-title {
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text;
+}
+
+.document-media-status-ready,
+.document-media-status-pending {
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+
+.document-media-status-ready {
+    -fx-text-fill: #0F7A3B;
+}
+
+.document-media-status-pending {
+    -fx-text-fill: #9A6200;
+}
+
+.document-media-preview,
+.document-media-empty-note {
+    -fx-font-size: 11px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.document-media-empty-note {
+    -fx-padding: 6 10 6 10;
+}
+
+/* DOC-UX-HF10G — virtualized right rail for long documents. */
+.document-media-visual-list {
+    -fx-fill-width: true;
+}
+
+.document-media-virtual-list {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0 8 8 8;
+}
+
+.document-media-virtual-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 0 0 8 0;
+}
+
+.document-media-virtual-list .list-cell:empty {
+    -fx-padding: 0;
+}
+
+/* Tanda 50 — compact modern rail: useful, plegable, not a second cockpit. */
+.ui-collapsible-rail {
+    -fx-background-color: -docu-bg-panel;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 0 0 0 1;
+    -fx-effect: -docu-shadow-soft;
+}
+
+.ui-rail-header {
+    -fx-background-color: #F8FAFE;
+    -fx-padding: 10 9 9 10;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 0 0 1 0;
+}
+
+.ui-rail-toggle,
+.document-layer-action {
+    -fx-background-color: transparent;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
+    -fx-cursor: hand;
+}
+
+.ui-rail-toggle:hover,
+.document-layer-action:hover {
+    -fx-background-color: -docu-bg-hover;
+    -fx-border-color: -docu-accent-border;
+}
+
+.document-media-frame-card,
+.document-media-image-assigned,
+.document-media-image-unassigned,
+.document-layer-selected {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
+    -fx-effect: -docu-shadow-soft;
+}
+
+/* Tanda 53 — saved narrative layer cards. */
+.document-layer-secondary-action {
+    -fx-background-color: transparent;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
+    -fx-text-fill: -docu-text-muted;
+    -fx-cursor: hand;
+}
+
+.document-layer-secondary-action:hover {
+    -fx-background-color: -docu-bg-hover;
+    -fx-text-fill: -docu-text;
+}
+
+.document-layer-assignment {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
+    -fx-padding: 7;
+    -fx-cursor: hand;
+}
+
+.document-layer-assignment:hover {
+    -fx-background-color: -docu-bg-hover;
+    -fx-border-color: -docu-accent-border;
+}
+
+.document-layer-assignment-primary {
+    -fx-border-color: rgba(98, 100, 167, 0.35);
+}
+
+.document-layer-assignment-stackable {
+    -fx-border-color: -docu-border-soft;
+}
+
+.document-layer-assignment-marker {
+    -fx-font-size: 12px;
+    -fx-text-fill: -docu-accent;
+    -fx-font-weight: 700;
+}
+
+.document-layer-assignment-title {
+    -fx-font-size: 11.5px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text;
+}
+
+.document-layer-assignment-detail {
+    -fx-font-size: 10.5px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+/* Tanda 81E — right media rail: visual thumbnails, relation and short description only. */
+.document-media-visual-list {
+    -fx-padding: 8 8 12 8;
+}
+
+.ui-media-thumbnail-card {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-padding: 8;
+    -fx-cursor: hand;
+    -fx-effect: -docu-shadow-soft;
+}
+
+.ui-media-thumbnail-card:hover {
+    -fx-background-color: -docu-bg-hover;
+    -fx-border-color: -docu-accent-border;
+}
+
+.ui-media-thumbnail {
+    -fx-background-color: #EEF4FF;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+}
+
+.ui-media-thumbnail-label {
+    -fx-font-size: 10px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.ui-media-card-copy {
+    -fx-padding: 0 0 0 0;
+}
+
+.ui-media-card-title {
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text;
+}
+
+.ui-media-card-relation {
+    -fx-font-size: 10.5px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-accent;
+}
+
+.ui-media-card-description {
+    -fx-font-size: 10.5px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.document-media-assignment-card {
+    -fx-background-color: #FFFFFF;
+}
+
+
+/* T105A — rail derecho deshuesado: visual, sobrio y menos verbal. */
+.ui-collapsible-rail {
+    -fx-background-color: #F9FBFF;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 0 0 0 1;
+}
+
+.ui-rail-header {
+    -fx-background-color: rgba(255, 255, 255, 0.84);
+    -fx-padding: 9 8 8 12;
+}
+
+.ui-rail-title {
+    -fx-font-size: 13px;
+    -fx-font-weight: 800;
+}
+
+.ui-rail-summary {
+    -fx-font-size: 10.5px;
+}
+
+.document-media-rail {
+    -fx-background-color: #F9FBFF;
+    -fx-min-width: 238px;
+    -fx-pref-width: 258px;
+}
+
+.document-media-section-title {
+    -fx-font-size: 12.5px;
+    -fx-padding: 9 10 0 10;
+}
+
+.document-media-empty-note {
+    -fx-font-size: 11px;
+    -fx-padding: 4 10 8 10;
+}
+
+/* T107/RF15 — rail derecho retráctil sin manija visual de split. */
+.ui-collapsible-rail {
+    -fx-min-width: 48px;
+    -fx-pref-width: 286px;
+    -fx-max-width: 430px;
+}
+
+.ui-collapsible-rail-collapsed {
+    -fx-min-width: 48px;
+    -fx-pref-width: 48px;
+    -fx-max-width: 48px;
+}
+
+.ui-rail-resize-handle {
+    -fx-min-width: 0;
+    -fx-pref-width: 0;
+    -fx-max-width: 0;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+}
+
+.ui-rail-resize-handle:hover {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.document-media-action-label {
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.document-media-clear-images {
+    -fx-font-size: 11px;
+    -fx-padding: 5 7 5 7;
+}
+
+/* UX-RIBBON3 + DOC-RAIL6 — panel visual sin redundancia y control compacto. */
+.ui-collapsible-rail {
+    -fx-background-color: #FAFCFF;
+}
+
+.ui-rail-header {
+    -fx-padding: 10 10 9 12;
+}
+
+.ui-rail-toggle,
+.ui-rail-toggle-button {
+    -fx-min-width: 34px;
+    -fx-pref-width: 34px;
+    -fx-max-width: 34px;
+    -fx-min-height: 34px;
+    -fx-pref-height: 34px;
+    -fx-padding: 0;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+}
+
+.ui-collapsible-rail-collapsed .ui-rail-header {
+    -fx-padding: 8 6 8 6;
+    -fx-alignment: center;
+}
+
+.document-media-actions {
+    -fx-padding: 8 8 6 8;
+}
+
+.document-media-visual-list {
+    -fx-padding: 8 8 10 8;
+}
+
+.document-media-section-title {
+    -fx-padding: 6 8 0 8;
+}
+
+.document-media-empty-note {
+    -fx-padding: 6 8 8 8;
+}
+
+/* DOC-UX-HF10H — rail virtual honesto: contador visible y sin scroll horizontal. */
+.document-media-counter-label {
+    -fx-font-size: 10.5px;
+    -fx-text-fill: -docu-text-muted;
+    -fx-padding: 0 8 2 8;
+}
+
+.document-media-virtual-list .scroll-bar:horizontal {
+    -fx-opacity: 0;
+    -fx-max-height: 0;
+    -fx-pref-height: 0;
+}
+
+/* Theatre characters rail. */
+.theatre-character-rail {
+    -fx-background-color: #F9FBFF;
+}
+
+.theatre-character-card {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: #D7E7D5;
+    -fx-border-width: 1;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-padding: 8;
+    -fx-cursor: hand;
+    -fx-effect: -docu-shadow-soft;
+}
+
+.theatre-character-card:hover {
+    -fx-background-color: #F6FAFF;
+    -fx-border-color: -docu-accent-border;
+}
+
+.theatre-character-card-selected {
+    -fx-background-color: #EEFBEF;
+    -fx-border-color: #16A34A;
+    -fx-border-width: 2;
+}
+
+.theatre-object-card {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: #D8E3F5;
+    -fx-border-width: 1;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-padding: 8;
+    -fx-cursor: hand;
+    -fx-effect: -docu-shadow-soft;
+}
+
+.theatre-object-card:hover {
+    -fx-background-color: #F6FAFF;
+    -fx-border-color: -docu-accent-border;
+}
+
+.theatre-object-card-selected {
+    -fx-background-color: #EFF6FF;
+    -fx-border-color: #4F6BD9;
+    -fx-border-width: 2;
+}
+
+.theatre-character-avatar-box {
+    -fx-min-width: 92px;
+    -fx-pref-width: 92px;
+    -fx-max-width: 92px;
+    -fx-min-height: 64px;
+    -fx-pref-height: 64px;
+    -fx-background-color: #EEF4FF;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+}
+
+.theatre-character-name {
+    -fx-font-size: 12.5px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -docu-text;
+}
+
+.theatre-character-sheet-status {
+    -fx-font-size: 10.5px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-accent;
+}
+
+.theatre-character-preview {
+    -fx-font-size: 10.5px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.theatre-character-description-button {
+    -fx-font-size: 11px;
+    -fx-padding: 5 7 5 7;
+}
+
+.theatre-scene-create-button {
+    -fx-font-size: 12px;
+    -fx-font-weight: 800;
+}
+
+.theatre-scene-actions {
+    -fx-padding: 0;
+}
+
+.theatre-scene-card {
+    -fx-background-color: #F8FAFE;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 7;
+    -fx-border-radius: 7;
+    -fx-padding: 8 9 8 9;
+    -fx-cursor: hand;
+}
+
+.theatre-scene-card:hover {
+    -fx-background-color: #F2F7FF;
+    -fx-border-color: -docu-accent-border;
+}
+
+.theatre-scene-card-selected {
+    -fx-background-color: #EEF6FF;
+    -fx-border-color: #4F6BD9;
+    -fx-border-width: 2;
+}
+
+.theatre-scene-name {
+    -fx-font-size: 12.5px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -docu-text;
+}
+
+.theatre-scene-description {
+    -fx-font-size: 10.5px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.theatre-character-dialog-root {
+    -fx-background-color: #FFFFFF;
+}
+
+.theatre-character-dialog-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -docu-text-strong;
+}
+
+.theatre-character-description-area {
+    -fx-font-size: 13px;
+    -fx-background-color: #F8FAFE;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+}
+
+.theatre-technical-sheet-input {
+    -fx-background-color: transparent;
+}
+
+.theatre-technical-sheet-placeholder {
+    -fx-font-size: 13px;
+    -fx-text-fill: #8A95A8;
+    -fx-line-spacing: 2;
+    -fx-padding: 0;
+}
+
+.theatre-character-dialog-actions {
+    -fx-padding: 4 0 0 0;
+}
+
+.theatre-object-name-field {
+    -fx-background-color: #F8FAFE;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 7;
+    -fx-border-radius: 7;
+    -fx-padding: 8 10 8 10;
+}

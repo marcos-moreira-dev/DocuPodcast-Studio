@@ -1,0 +1,270 @@
+.document-problem-checkbox {
+    -fx-padding: 7 0 0 0;
+}
+
+.document-technical-problem-panel {
+    -fx-background-color: transparent;
+}
+
+.document-technical-problem-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+
+.document-technical-problem-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+.document-technical-problem-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: 900;
+    -fx-text-fill: #111827;
+}
+
+.document-technical-problem-status,
+.document-technical-problem-count {
+    -fx-font-size: 12px;
+    -fx-text-fill: #5b667a;
+}
+
+.document-technical-problem-hint,
+.document-technical-problem-detail {
+    -fx-background-color: #f8fafc;
+    -fx-border-color: #dbe3f1;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-font-size: 12px;
+    -fx-text-fill: #182033;
+    -fx-padding: 8;
+}
+
+.document-technical-problem-actions {
+    -fx-alignment: top-center;
+    -fx-fill-width: true;
+    -fx-spacing: 8;
+}
+
+.document-technical-problem-actions .button,
+.document-technical-problem-actions .combo-box-base {
+    -fx-max-width: infinity;
+}
+
+.document-technical-problem-filters {
+    -fx-background-color: #f8fafc;
+    -fx-border-color: #dbe3f1;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 8;
+}
+
+.technical-problem-root {
+    -fx-pref-width: 1080px;
+    -fx-pref-height: 650px;
+}
+
+.technical-problem-title-field {
+    -fx-font-size: 15px;
+    -fx-font-weight: 700;
+}
+
+.technical-problem-statement-pane {
+    -fx-background-color: #ffffff;
+}
+
+.technical-problem-statement-scroll,
+.technical-problem-statement-scroll > .viewport,
+.technical-problem-statement-scroll > .corner {
+    -fx-background: #ffffff;
+    -fx-background-color: #ffffff;
+}
+
+.technical-problem-statement-header-box {
+    -fx-background-color: #ffffff;
+    -fx-padding: 20 20 8 20;
+}
+
+.technical-problem-statement-header {
+    -fx-padding: 0;
+}
+
+.technical-problem-statement-actions {
+    -fx-alignment: center-left;
+    -fx-spacing: 8;
+    -fx-padding: 0;
+}
+
+.technical-problem-statement-actions .button {
+    -fx-min-width: 138px;
+    -fx-min-height: 34px;
+}
+
+.technical-problem-statement {
+    -fx-background-color: #ffffff;
+    -fx-padding: 0 20 20 20;
+}
+
+.technical-problem-statement-text {
+    -fx-control-inner-background: #ffffff;
+    -fx-background-color: #ffffff;
+    -fx-padding: 0;
+}
+
+.technical-problem-canvas-region-selection {
+    -fx-fill: rgba(94, 92, 212, 0.14);
+    -fx-stroke: #5e5cd4;
+    -fx-stroke-width: 2;
+    -fx-stroke-dash-array: 8 5;
+}
+
+.technical-problem-statement-restore {
+    -fx-min-width: 150px;
+}
+
+.technical-problem-source-card {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #dbe3f1;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 10;
+}
+
+.technical-problem-source-meta {
+    -fx-font-size: 11px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #4652b8;
+}
+
+.technical-problem-source-text {
+    -fx-font-size: 13px;
+    -fx-text-fill: #182033;
+}
+
+.technical-problem-source-crop {
+    -fx-background-color: white;
+    -fx-effect: dropshadow(gaussian, rgba(14, 24, 48, 0.16), 8, 0, 0, 2);
+}
+
+.technical-problem-source-image-box {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #dbe3f1;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 8;
+}
+
+.technical-problem-transfer-all {
+    -fx-min-width: 170px;
+}
+
+.technical-problem-resolver {
+    -fx-background-color: #f8fafc;
+    -fx-border-color: #dbe3f1;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 10;
+}
+
+.technical-problem-mode-toggle,
+.technical-problem-tools {
+    -fx-wrap-text: true;
+}
+
+.technical-problem-mode-flow,
+.technical-problem-tools-flow {
+    -fx-alignment: center-left;
+    -fx-row-valignment: center;
+}
+
+.technical-problem-tools-flow .button,
+.technical-problem-mode-flow .button,
+.technical-problem-mode-flow .toggle-button {
+    -fx-min-height: 38px;
+}
+
+.technical-problem-icon-button {
+    -fx-min-width: 40px;
+    -fx-pref-width: 40px;
+    -fx-max-width: 40px;
+    -fx-padding: 7 8 7 8;
+}
+
+.technical-problem-icon-button .ui-lucide-icon-shape {
+    -fx-stroke: #111827;
+}
+
+.technical-problem-icon-button:disabled .ui-lucide-icon-shape {
+    -fx-stroke: #9aa3b2;
+}
+
+.technical-problem-input-diagnostic {
+    -fx-text-fill: #56627a;
+    -fx-font-size: 12px;
+    -fx-padding: 8 8 0 4;
+}
+
+.technical-problem-canvas-frame {
+    -fx-background-color: #eef2f7;
+}
+
+.technical-problem-canvas-title-band {
+    -fx-background-color: rgba(255, 255, 255, 0.96);
+    -fx-background-radius: 4;
+    -fx-border-color: #dbe3f1;
+    -fx-border-radius: 4;
+    -fx-padding: 8 12 8 12;
+    -fx-font-size: 16px;
+    -fx-font-weight: 900;
+    -fx-text-fill: #111827;
+}
+
+.theatre-frame-fragment-preview {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 10 11 10 11;
+    -fx-font-size: 15px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #111827;
+}
+
+.theatre-camera-guide-veil {
+    -fx-background-color: rgba(255, 255, 255, 0.68);
+}
+
+.technical-problem-canvas-surface {
+    -fx-background-color: transparent;
+}
+
+.technical-problem-tiled-canvas-surface {
+    -fx-background-color: transparent;
+}
+
+.technical-problem-canvas-image {
+    -fx-effect: dropshadow(gaussian, rgba(14, 24, 48, 0.18), 8, 0, 0, 2);
+}
+
+.technical-problem-canvas-image-selected {
+    -fx-effect: dropshadow(gaussian, rgba(79, 70, 229, 0.62), 16, 0.24, 0, 0);
+}
+
+.technical-problem-image-resize-handle {
+    -fx-alignment: center;
+    -fx-background-color: white;
+    -fx-border-color: #5b5bd6;
+    -fx-border-radius: 9px;
+    -fx-background-radius: 9px;
+    -fx-text-fill: #333399;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-effect: dropshadow(gaussian, rgba(14, 24, 48, 0.18), 5, 0, 0, 1);
+}
+
+.technical-problem-image-interaction {
+    -fx-font-size: 12px;
+    -fx-text-fill: #182033;
+}
+
+.technical-problem-canvas-scroll {
+    -fx-background-color: transparent;
+}

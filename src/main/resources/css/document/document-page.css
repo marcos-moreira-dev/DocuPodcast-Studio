@@ -1,0 +1,628 @@
+/* Documento narrado: página de lectura, bloques, frases y seguimiento activo. */
+.document-page {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-border;
+    -fx-padding: 20 28 28 28;
+}
+
+.document-mode-label {
+    -fx-text-fill: -docu-accent;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+.document-technical-summary {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 11px;
+}
+
+.document-block-row {
+    -fx-alignment: top-left;
+}
+
+.document-block-marker {
+    -fx-min-width: 18px;
+    -fx-pref-width: 18px;
+    -fx-text-fill: -docu-accent;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 3 0 0 0;
+}
+
+.document-block-body {
+    -fx-fill-width: true;
+}
+
+.side-dock-module-header {
+    -fx-alignment: center-left;
+    -fx-padding: 0 0 8 0;
+}
+
+.side-dock-hide-button {
+    -fx-background-color: linear-gradient(to bottom, #ffffff, #e8eef5);
+    -fx-border-color: -docu-border;
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 11px;
+    -fx-padding: 3 8 3 8;
+}
+
+/* Tanda 35B — Documento como pantalla principal de operación. */
+.document-operation-strip {
+    -fx-background-color: #F8FBFF;
+    -fx-border-color: -docu-accent-border;
+    -fx-padding: 8 10 8 10;
+    -fx-alignment: center-left;
+}
+
+.document-operation-button {
+    -fx-background-color: linear-gradient(to bottom, #FFFFFF, #DBEAFE);
+    -fx-border-color: -docu-accent-border;
+    -fx-font-weight: bold;
+    -fx-padding: 5 12 5 12;
+}
+
+.document-operation-primary {
+    -fx-text-fill: -docu-text;
+}
+
+.document-operation-hint {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 12px;
+}
+
+/* Tanda 36 — lectura cómoda: el documento debe verse como superficie de lectura, no como tabla técnica. */
+.document-page {
+    -fx-padding: 18 34 40 34;
+    -fx-spacing: 12;
+}
+
+.document-mode-label {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -docu-accent;
+}
+
+.document-title {
+    -fx-font-size: 30px;
+    -fx-font-weight: bold;
+}
+
+.document-summary {
+    -fx-font-size: 14px;
+    -fx-line-spacing: 3px;
+}
+
+.document-technical-summary {
+    -fx-font-size: 11px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.document-block {
+    -fx-padding: 14 18 14 14;
+}
+
+.document-block-text {
+    -fx-font-size: 18px;
+    -fx-line-spacing: 7px;
+}
+
+.document-block-title .document-block-text,
+.document-block-title .document-block-text-flow,
+.document-block-title .document-sentence {
+    -fx-font-weight: 700;
+    -fx-text-fill: #6A4E3B;
+    -fx-fill: #6A4E3B;
+}
+
+.document-block-heading .document-block-text,
+.document-block-heading .document-block-text-flow,
+.document-block-heading .document-sentence {
+    -fx-font-weight: 700;
+    -fx-text-fill: #745842;
+    -fx-fill: #745842;
+}
+
+.document-block-subheading .document-block-text,
+.document-block-subheading .document-block-text-flow,
+.document-block-subheading .document-sentence {
+    -fx-font-weight: 700;
+    -fx-text-fill: #826450;
+    -fx-fill: #826450;
+}
+
+.document-block-title .document-block-marker,
+.document-block-heading .document-block-marker,
+.document-block-subheading .document-block-marker {
+    -fx-text-fill: #8B6B52;
+}
+
+
+.document-block-marker {
+    -fx-font-size: 15px;
+    -fx-min-width: 24px;
+    -fx-alignment: top-center;
+    -fx-text-fill: -docu-accent;
+}
+
+.document-operation-strip {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-border-soft;
+    -fx-padding: 10;
+}
+
+.document-operation-hint {
+    -fx-font-size: 12px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+/* Tanda 37 — seguimiento de oración/segmento activo tipo MuseScore. */
+.document-follow-note {
+    -fx-font-size: 12px;
+    -fx-text-fill: -docu-text-muted;
+    -fx-background-color: #F8FAFC;
+    -fx-border-color: -docu-border-soft;
+    -fx-padding: 7 9 7 9;
+}
+
+.document-block-active-reading {
+    -fx-border-color: -docu-accent;
+    -fx-border-width: 0 0 0 4;
+    -fx-background-color: #F0F7FF;
+}
+
+.document-block-active-reading .document-block-text {
+    -fx-underline: true;
+}
+
+/* Tanda 45 — selección exacta por oración/rango parcial */
+.document-block-text-flow {
+    -fx-line-spacing: 7px;
+}
+
+.document-sentence {
+    -fx-fill: #172033;
+    -fx-underline: false;
+}
+
+.document-sentence:hover {
+    -fx-fill: #0f4c81;
+    -fx-underline: true;
+}
+
+.document-sentence-selected {
+    -fx-fill: #0f4c81;
+    -fx-underline: true;
+    -fx-font-weight: 700;
+}
+
+/* Tanda 50 — document reader as modern page, not XP cards or technical cockpit. */
+.document-workspace {
+    -fx-background-color: -docu-bg-workspace;
+}
+
+.document-surface {
+    -fx-background-color: -docu-bg-document-edge;
+    -fx-padding: 18 22 18 22;
+}
+
+.document-scroll {
+    -fx-background: transparent;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.document-page {
+    -fx-background-color: -docu-bg-document;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+    -fx-padding: 28 34 34 34;
+    -fx-effect: -docu-shadow-card;
+}
+
+.document-mode-label {
+    -fx-background-color: -docu-accent-soft;
+    -fx-border-color: -docu-accent-border;
+    -fx-border-width: 1;
+    -fx-background-radius: 999;
+    -fx-border-radius: 999;
+    -fx-padding: 4 10 4 10;
+    -fx-text-fill: -docu-accent-dark;
+    -fx-font-size: 11px;
+    -fx-font-weight: 800;
+}
+
+.document-title {
+    -fx-font-size: 26px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -docu-text-strong;
+}
+
+.document-summary {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 14px;
+}
+
+.document-technical-summary {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 11px;
+    -fx-background-color: -docu-bg-card-soft;
+    -fx-border-color: -docu-border-soft;
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+    -fx-padding: 7 9 7 9;
+}
+
+/* Tanda 36 — lectura cómoda preserved and modernized in Tanda 50. */
+.document-block-text,
+.document-block-text-flow,
+.document-sentence {
+    -fx-font-size: 18px;
+    -fx-fill: -docu-text;
+    -fx-text-fill: -docu-text;
+    -fx-line-spacing: 7px;
+}
+
+.document-block {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 12 6 14 6;
+}
+
+.document-block:hover {
+    -fx-background-color: -docu-bg-card-soft;
+    -fx-background-radius: 5;
+}
+
+
+.document-block-marker {
+    -fx-text-fill: -docu-accent;
+    -fx-font-size: 13px;
+    -fx-font-weight: 800;
+    -fx-min-width: 18px;
+}
+
+.document-block-selected {
+    -fx-border-color: -docu-accent-border;
+    -fx-border-width: 0 0 0 3;
+    -fx-background-color: -docu-bg-selected;
+    -fx-background-radius: 5;
+}
+
+.document-block-active-reading {
+    -fx-background-color: #FFF9E8;
+    -fx-border-color: #E6C466;
+    -fx-border-width: 0 0 0 3;
+    -fx-background-radius: 5;
+}
+
+.document-block-active-reading .document-sentence,
+.document-sentence-selected {
+    -fx-underline: true;
+    -fx-fill: -docu-text-strong;
+    -fx-font-weight: 700;
+}
+
+.document-side-dock {
+    -fx-background-color: -docu-bg-panel;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-effect: -docu-shadow-soft;
+}
+
+.document-side-rail {
+    -fx-background-color: #F3F5FA;
+    -fx-padding: 8 4 8 4;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 0 1 0 0;
+}
+
+.document-side-rail-button {
+    -fx-background-color: transparent;
+    -fx-background-radius: 4;
+    -fx-border-color: transparent;
+    -fx-border-radius: 4;
+    -fx-text-fill: -docu-text;
+    -fx-font-size: 11px;
+    -fx-padding: 7 5 7 5;
+    -fx-cursor: hand;
+}
+
+.document-side-rail-button:hover {
+    -fx-background-color: -docu-bg-hover;
+}
+
+.document-side-rail-button:selected {
+    -fx-background-color: -docu-accent-soft;
+    -fx-border-color: -docu-accent-border;
+    -fx-text-fill: -docu-accent-ink;
+    -fx-font-weight: 700;
+}
+
+.document-metric-card,
+.document-selected-panel,
+.document-diagnostic-card,
+.document-structure-list {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
+    -fx-effect: -docu-shadow-soft;
+}
+
+/* Tanda 51 — Documento como pantalla operativa real: la bodega técnica queda plegada. */
+.document-reader-hint {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-padding: 10 12 10 12;
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 13px;
+}
+
+.document-split {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.workspace-side-dock-collapsed {
+    -fx-background-color: -docu-bg-shell;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 0 1 0 0;
+    -fx-effect: none;
+}
+
+.workspace-side-dock-right.workspace-side-dock-collapsed {
+    -fx-border-width: 0 0 0 1;
+}
+
+.workspace-side-dock-expanded {
+    -fx-background-color: -docu-bg-panel;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-effect: -docu-shadow-soft;
+}
+
+/* Tanda 52 — estado de flujo Word -> escuchar dentro del Documento. */
+.document-listen-flow-status {
+    -fx-background-color: -docu-bg-subtle;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
+    -fx-padding: 9 12 9 12;
+}
+
+.document-listen-flow-title {
+    -fx-text-fill: -docu-text-strong;
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+}
+
+.document-listen-flow-detail {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 12px;
+}
+
+.document-listen-flow-ready {
+    -fx-border-color: -docu-accent-border;
+}
+
+.document-listen-flow-active {
+    -fx-border-color: -docu-accent;
+}
+
+.document-listen-flow-complete {
+    -fx-border-color: -docu-success;
+}
+
+.document-listen-flow-warning {
+    -fx-border-color: -docu-warning;
+}
+
+.document-listen-buffer-status {
+    -fx-text-fill: -dp-muted-text;
+    -fx-font-size: 12px;
+    -fx-padding: 4 0 0 0;
+}
+
+/* Tanda 68 — rediseño aplicado: el Documento es lector narrado, no cabina técnica. */
+.document-source-contract {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 12px;
+    -fx-background-color: -docu-bg-subtle;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-padding: 7 10 7 10;
+}
+
+.document-reader-hint {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 2 0 2 0;
+}
+
+/* T102 — tamaño de lectura controlado desde StatusBar, sin escalar el lienzo. */
+.document-reader-size-14 .document-block-text,
+.document-reader-size-14 .document-block-text-flow,
+.document-reader-size-14 .document-sentence { -fx-font-size: 14px; }
+.document-reader-size-15 .document-block-text,
+.document-reader-size-15 .document-block-text-flow,
+.document-reader-size-15 .document-sentence { -fx-font-size: 15px; }
+.document-reader-size-16 .document-block-text,
+.document-reader-size-16 .document-block-text-flow,
+.document-reader-size-16 .document-sentence { -fx-font-size: 16px; }
+.document-reader-size-17 .document-block-text,
+.document-reader-size-17 .document-block-text-flow,
+.document-reader-size-17 .document-sentence { -fx-font-size: 17px; }
+.document-reader-size-18 .document-block-text,
+.document-reader-size-18 .document-block-text-flow,
+.document-reader-size-18 .document-sentence { -fx-font-size: 18px; }
+.document-reader-size-19 .document-block-text,
+.document-reader-size-19 .document-block-text-flow,
+.document-reader-size-19 .document-sentence { -fx-font-size: 19px; }
+.document-reader-size-20 .document-block-text,
+.document-reader-size-20 .document-block-text-flow,
+.document-reader-size-20 .document-sentence { -fx-font-size: 20px; }
+.document-reader-size-21 .document-block-text,
+.document-reader-size-21 .document-block-text-flow,
+.document-reader-size-21 .document-sentence { -fx-font-size: 21px; }
+.document-reader-size-22 .document-block-text,
+.document-reader-size-22 .document-block-text-flow,
+.document-reader-size-22 .document-sentence { -fx-font-size: 22px; }
+.document-reader-size-23 .document-block-text,
+.document-reader-size-23 .document-block-text-flow,
+.document-reader-size-23 .document-sentence { -fx-font-size: 23px; }
+.document-reader-size-24 .document-block-text,
+.document-reader-size-24 .document-block-text-flow,
+.document-reader-size-24 .document-sentence { -fx-font-size: 24px; }
+.document-reader-size-25 .document-block-text,
+.document-reader-size-25 .document-block-text-flow,
+.document-reader-size-25 .document-sentence { -fx-font-size: 25px; }
+.document-reader-size-26 .document-block-text,
+.document-reader-size-26 .document-block-text-flow,
+.document-reader-size-26 .document-sentence { -fx-font-size: 26px; }
+.document-reader-size-27 .document-block-text,
+.document-reader-size-27 .document-block-text-flow,
+.document-reader-size-27 .document-sentence { -fx-font-size: 27px; }
+.document-reader-size-28 .document-block-text,
+.document-reader-size-28 .document-block-text-flow,
+.document-reader-size-28 .document-sentence { -fx-font-size: 28px; }
+
+/* T105 — pagina expandida y barra flotante sobre el lector. */
+.document-surface { -fx-background-color: -docu-bg-document-edge; -fx-padding: 8 10 10 10; }
+.document-page-host { -fx-background-color: -docu-bg-document-edge; -fx-padding: 142 12 74 12; -fx-alignment: top-center; }
+.document-scroll, .document-scroll > .viewport, .document-scroll > .corner { -fx-background: -docu-bg-document-edge; -fx-background-color: -docu-bg-document-edge; }
+.document-page { -fx-background-color: -docu-bg-document; -fx-border-color: -docu-border-document; -fx-border-width: 1; -fx-background-radius: 2; -fx-border-radius: 2; -fx-padding: 78 38 74 38; -fx-spacing: 14; -fx-effect: -docu-shadow-document; }
+.document-workspace .document-surface, .document-workspace .document-page-host, .document-workspace .document-scroll, .document-workspace .document-scroll > .viewport, .document-workspace .document-scroll > .corner { -fx-background: -docu-bg-document-edge; -fx-background-color: -docu-bg-document-edge; }
+.document-workspace .document-page { -fx-background-color: -docu-bg-document; -fx-border-color: -docu-border-document; -fx-effect: -docu-shadow-document; }
+
+.document-reading-header {
+    -fx-padding: 0 0 20 0;
+    -fx-border-color: transparent transparent #EEF2F7 transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.document-block-alias-row {
+    -fx-padding: 0 0 4 0;
+}
+
+.document-theatre-text-alias {
+    -fx-alignment: center;
+    -fx-background-color: #EEF6FF;
+    -fx-border-color: #8FB2EA;
+    -fx-border-width: 1;
+    -fx-background-radius: 7;
+    -fx-border-radius: 7;
+    -fx-padding: 4 12 4 12;
+    -fx-text-fill: #1E3A8A;
+    -fx-font-size: 11px;
+    -fx-font-weight: 900;
+}
+
+.document-theatre-replica-id {
+    -fx-text-fill: #64748B;
+    -fx-font-size: 10px;
+    -fx-font-weight: 800;
+    -fx-padding: 0 0 2 0;
+}
+
+.document-block {
+    -fx-padding: 13 10 15 4;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-background-color: transparent;
+}
+
+.document-block-theatre-scene-focus {
+    -fx-background-color: rgba(252, 240, 195, 0.42);
+    -fx-background-radius: 8;
+}
+
+.document-block:hover {
+    -fx-background-color: rgba(92, 106, 196, 0.055);
+    -fx-background-radius: 8;
+}
+
+.document-block-row {
+    -fx-spacing: 10;
+}
+
+.document-block-marker {
+    -fx-font-size: 10px;
+    -fx-min-width: 14px;
+    -fx-pref-width: 14px;
+    -fx-text-fill: #9AA9BE;
+    -fx-padding: 6 0 0 0;
+}
+
+.document-block-text,
+.document-block-text-flow,
+.document-sentence {
+    -fx-line-spacing: 8px;
+}
+
+.document-block-selected {
+    -fx-background-color: #F4F7FF;
+    -fx-border-color: -docu-accent-border;
+    -fx-border-width: 0 0 0 3;
+    -fx-background-radius: 8;
+}
+
+.document-block-active-reading {
+    -fx-background-color: #FFF9E8;
+    -fx-border-color: #E8C55F;
+    -fx-border-width: 0 0 0 3;
+    -fx-background-radius: 8;
+}
+
+.document-sentence-selected {
+    -fx-fill: -docu-accent-dark;
+    -fx-underline: true;
+    -fx-font-weight: 800;
+}
+
+.document-sentence:hover {
+    -fx-fill: -docu-accent-dark;
+    -fx-underline: true;
+}
+
+
+/* T105A — escenario de lectura con playbar glass pegada arriba. */
+.document-reading-stage {
+    -fx-background-color: transparent;
+}
+
+.document-reading-stage .ui-floating-reading-control {
+    -fx-background-color: rgba(31, 41, 55, 0.42);
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+    -fx-border-color: rgba(255, 255, 255, 0.24);
+    -fx-effect: dropshadow(gaussian, rgba(15, 23, 42, 0.28), 20, 0.22, 0, 5);
+}
+
+/* T110R — DOCX embedded source images rendered in the reading sheet. */
+.document-embedded-image-preview {
+    -fx-effect: dropshadow(gaussian, rgba(23, 31, 48, 0.14), 14, 0.18, 0, 4);
+    -fx-background-radius: 14;
+    -fx-border-radius: 14;
+}
+
+.document-embedded-image-preview.document-embedded-image-plain {
+    -fx-effect: null;
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+}
+
+/* TI5-HF/TI6 — source location for selected fragment */
+.document-context-source-location {
+    -fx-font-size: 11px;
+    -fx-text-fill: #64748b;
+    -fx-background-color: rgba(148, 163, 184, 0.12);
+    -fx-background-radius: 8px;
+    -fx-padding: 5px 7px;
+}

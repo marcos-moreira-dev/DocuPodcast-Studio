@@ -1,0 +1,117 @@
+.settings-root {
+    -fx-background-color: -docu-bg-panel;
+}
+
+.settings-sidebar {
+    -fx-background-color: #E7EEF7;
+    -fx-border-color: -docu-border;
+    -fx-border-width: 0 1 0 0;
+    -fx-padding: 14;
+    -fx-pref-width: 230px;
+    -fx-min-width: 210px;
+}
+
+.settings-sidebar-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -docu-text;
+}
+
+.settings-sidebar-subtitle {
+    -fx-font-size: 12px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.settings-section-list {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.settings-section-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: -docu-text;
+    -fx-padding: 8 10 8 10;
+}
+
+.settings-section-list .list-cell:selected {
+    -fx-background-color: #FFFFFF;
+    -fx-text-fill: -docu-accent;
+    -fx-font-weight: bold;
+    -fx-border-color: -docu-accent-border;
+}
+
+.settings-page-host {
+    -fx-background-color: -docu-bg-panel;
+}
+
+.settings-page {
+    -fx-padding: 18 22 22 22;
+    -fx-background-color: #FFFFFF;
+}
+
+.settings-page-title {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -docu-text;
+}
+
+.settings-page-summary {
+    -fx-font-size: 13px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.settings-grid {
+    -fx-padding: 4 0 4 0;
+}
+
+.settings-key {
+    -fx-font-weight: bold;
+    -fx-text-fill: -docu-text;
+    -fx-min-width: 190px;
+}
+
+.settings-value {
+    -fx-text-fill: -docu-text-muted;
+}
+
+.settings-note {
+    -fx-background-color: #F6FAFF;
+    -fx-border-color: -docu-border-soft;
+    -fx-text-fill: -docu-text;
+}
+
+.settings-page-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+
+.settings-edit-grid {
+    -fx-padding: 6 0 8 0;
+}
+
+.settings-edit-control {
+    -fx-min-width: 320px;
+}
+
+.settings-action-bar {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-border;
+    -fx-border-width: 1 0 0 0;
+}
+
+.settings-save-status {
+    -fx-text-fill: -docu-text-muted;
+}
+
+.ui-operational-status-strip {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.ui-operational-status-message {
+    -fx-text-fill: -docu-text-muted;
+}
+
+.settings-save-status-strip {
+    -fx-alignment: center-left;
+}

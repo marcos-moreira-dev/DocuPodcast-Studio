@@ -1,0 +1,491 @@
+/* Legacy compatibility rules moved out of docupodcast-light.css in Tanda 38.
+   Keep this file temporary and split rules into component/workspace modules during future refactors. */
+
+/* Tanda 3/4 — Document workspace with structured side dock */
+.document-workspace {
+    -fx-background-color: -docu-bg-app;
+}
+
+.document-split-pane {
+    -fx-background-color: transparent;
+}
+
+.document-side-dock {
+    -fx-background-color: -docu-bg-panel;
+    -fx-border-color: -docu-border;
+    -fx-border-width: 1;
+    -fx-padding: 8;
+}
+
+.side-dock-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text;
+}
+
+.document-side-tabs .tab-header-area {
+    -fx-padding: 0 0 4 0;
+}
+
+.document-structure-list {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+}
+
+.document-scroll,
+.document-properties-scroll,
+.document-diagnostics-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+
+.document-title {
+    -fx-font-size: 22px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text;
+}
+
+.document-summary {
+    -fx-font-size: 12px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.document-block {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-padding: 10;
+}
+
+.document-block-title,
+.document-block-heading,
+.document-block-subheading {
+    -fx-border-color: -docu-accent-border;
+}
+
+.document-block-image_notice {
+    -fx-background-color: #FFF7ED;
+    -fx-border-color: #FED7AA;
+}
+
+.document-block-table_notice {
+    -fx-background-color: #F7F7FF;
+    -fx-border-color: #C4B5FD;
+}
+
+.document-block-list_item {
+    -fx-background-color: #F8FAFC;
+}
+
+
+.document-block-text {
+    -fx-font-size: 13px;
+    -fx-text-fill: -docu-text;
+}
+
+.document-side-section-title {
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text;
+    -fx-padding: 8 0 2 0;
+}
+
+.document-side-text {
+    -fx-font-size: 12px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.document-warning-text,
+.document-issue-warning {
+    -fx-text-fill: -docu-warning;
+}
+
+.document-issue-error {
+    -fx-text-fill: -docu-danger;
+}
+
+.document-issue-info {
+    -fx-text-fill: -docu-text-muted;
+}
+
+
+/* Tanda 4 — reusable workspace SideDock */
+.workspace-side-dock {
+    -fx-background-color: -docu-bg-panel;
+    -fx-border-color: -docu-border;
+    -fx-border-width: 1;
+}
+
+.side-dock-rail {
+    -fx-background-color: #DFE8F2;
+    -fx-border-color: -docu-border;
+    -fx-border-width: 0 1 0 0;
+}
+
+.side-dock-rail-button {
+    -fx-min-width: 46px;
+    -fx-pref-width: 46px;
+    -fx-min-height: 34px;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 10px;
+    -fx-font-weight: 700;
+}
+
+.side-dock-rail-button:hover,
+.side-dock-rail-button-active {
+    -fx-background-color: -docu-accent-soft;
+    -fx-border-color: -docu-accent-border;
+    -fx-text-fill: -docu-text;
+}
+
+.side-dock-module-frame {
+    -fx-background-color: -docu-bg-panel;
+    -fx-padding: 8;
+}
+
+.side-dock-module-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text;
+    -fx-padding: 0 0 8 0;
+}
+
+.side-dock-empty {
+    -fx-padding: 12;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.document-filter-combo {
+    -fx-background-color: -docu-bg-card;
+}
+
+.document-action-button,
+.document-action-button-primary {
+    -fx-background-color: linear-gradient(to bottom, #ffffff, #e8eef5);
+    -fx-border-color: -docu-border;
+    -fx-text-fill: -docu-text;
+    -fx-padding: 6 8 6 8;
+}
+
+.document-action-button-primary {
+    -fx-border-color: -docu-accent-border;
+    -fx-background-color: linear-gradient(to bottom, #ffffff, #dbeafe);
+    -fx-font-weight: 700;
+}
+
+.document-block-selected {
+    -fx-border-color: -docu-accent;
+    -fx-border-width: 2;
+    -fx-background-color: #F8FBFF;
+}
+
+.document-block-ignored {
+    -fx-background-color: #F3F4F6;
+    -fx-border-color: #CBD5E1;
+}
+
+.document-structure-ignored {
+    -fx-text-fill: -docu-text-muted;
+}
+
+/* Tanda 6 — Script workspace */
+.script-workspace {
+    -fx-background-color: -docu-bg-app;
+}
+
+.script-side-panel {
+    -fx-background-color: -docu-bg-panel;
+    -fx-border-color: -docu-border;
+    -fx-border-width: 1;
+}
+
+.script-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+
+.script-title {
+    -fx-font-size: 22px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text;
+}
+
+.script-summary {
+    -fx-font-size: 12px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.script-empty-state {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-padding: 16;
+}
+
+.script-segment-list {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+}
+
+.script-segment-card {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-padding: 10;
+}
+
+.script-segment-title,
+.script-segment-heading,
+.script-segment-subheading {
+    -fx-border-color: -docu-accent-border;
+}
+
+.script-segment-image_notice {
+    -fx-background-color: #FFF7ED;
+    -fx-border-color: #FED7AA;
+}
+
+.script-segment-table_notice {
+    -fx-background-color: #F7F7FF;
+    -fx-border-color: #C4B5FD;
+}
+
+.script-segment-header {
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text;
+}
+
+.script-segment-chips {
+    -fx-font-size: 11px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.script-segment-text {
+    -fx-font-size: 13px;
+    -fx-text-fill: -docu-text;
+}
+
+/* Tanda 35A — overrides de alineación: documento primero, paneles compactables */
+.document-page {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-border;
+    -fx-padding: 20 28 28 28;
+}
+
+.document-mode-label {
+    -fx-text-fill: -docu-accent;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+.document-technical-summary {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 11px;
+}
+
+.document-block-row {
+    -fx-alignment: top-left;
+}
+
+.document-block-marker {
+    -fx-min-width: 18px;
+    -fx-pref-width: 18px;
+    -fx-text-fill: -docu-accent;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 3 0 0 0;
+}
+
+.side-dock-module-header {
+    -fx-alignment: center-left;
+    -fx-padding: 0 0 8 0;
+}
+
+.side-dock-hide-button {
+    -fx-background-color: linear-gradient(to bottom, #ffffff, #e8eef5);
+    -fx-border-color: -docu-border;
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 11px;
+    -fx-padding: 3 8 3 8;
+}
+
+/* RF15 - carcasas homogeneas de sidebars de Documento. */
+.workspace-side-dock,
+.ui-collapsible-rail {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-border-soft;
+}
+
+.workspace-side-dock-expanded,
+.side-dock-module-frame,
+.document-side-panel-header,
+.ui-rail-header {
+    -fx-background-color: #FFFFFF;
+}
+
+.document-split > .split-pane-divider {
+    -fx-padding: 0;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.document-split > .split-pane-divider > .vertical-grabber,
+.document-split > .split-pane-divider > .horizontal-grabber {
+    -fx-padding: 0;
+    -fx-background-color: transparent;
+}
+
+.side-dock-module-frame {
+    -fx-padding: 0;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 0 1 0 0;
+}
+
+.document-side-panel-header {
+    -fx-padding: 10 10 9 12;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 0 0 1 0;
+    -fx-alignment: center-left;
+}
+
+.document-side-panel-copy {
+    -fx-alignment: center-left;
+}
+
+.document-side-panel-title {
+    -fx-font-size: 13px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -docu-text-strong;
+}
+
+.document-side-panel-summary {
+    -fx-font-size: 10.5px;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.document-side-panel-toggle,
+.side-dock-hide-button,
+.ui-rail-toggle,
+.ui-rail-toggle-button {
+    -fx-min-width: 34px;
+    -fx-pref-width: 34px;
+    -fx-max-width: 34px;
+    -fx-min-height: 34px;
+    -fx-pref-height: 34px;
+    -fx-max-height: 34px;
+    -fx-padding: 0;
+    -fx-content-display: graphic-only;
+    -fx-background-color: #F5F7FB;
+    -fx-border-color: #CBD5E1;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+}
+
+.document-side-panel-toggle:hover,
+.side-dock-hide-button:hover,
+.ui-rail-toggle:hover,
+.ui-rail-toggle-button:hover {
+    -fx-background-color: #EAF1FA;
+    -fx-border-color: #9FB4D3;
+}
+
+.side-dock-rail {
+    -fx-background-color: #D5E1EF;
+    -fx-border-color: #B8C8DC;
+}
+
+.workspace-side-dock-right .side-dock-rail {
+    -fx-border-width: 0 0 0 1;
+}
+
+.side-dock-rail-button:hover,
+.side-dock-rail-button-active,
+.ui-side-dock-rail-button:hover,
+.ui-side-dock-rail-button:focused {
+    -fx-background-color: #EEF6FF;
+    -fx-border-color: #7EA2D6;
+    -fx-text-fill: -docu-text-strong;
+}
+
+.ui-collapsible-rail-collapsed .document-side-panel-header {
+    -fx-padding: 8 6 8 6;
+    -fx-alignment: center;
+}
+
+.theatre-fragment-images-split {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: transparent;
+    -fx-padding: 6 8 6 8;
+}
+
+.theatre-characters-panel,
+.theatre-characters-split,
+.theatre-objects-panel,
+.theatre-objects-split {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: transparent;
+    -fx-padding: 6 8 6 8;
+}
+
+.ui-collapsible-module-split .split-pane {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+
+.ui-collapsible-module-split .split-pane-divider {
+    -fx-background-color: transparent;
+    -fx-border-color: #DDE6F1;
+    -fx-border-width: 0 1 0 0;
+    -fx-padding: 0;
+}
+
+.theatre-fragment-image-assignment,
+.theatre-fragment-image-rail,
+.theatre-character-inspector,
+.theatre-character-rail,
+.theatre-object-inspector,
+.theatre-object-rail {
+    -fx-background-color: #FFFFFF;
+}
+
+.ui-collapsible-module-split {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: transparent;
+}
+
+.ui-collapsible-module-split-primary {
+    -fx-background-color: #FFFFFF;
+    -fx-padding: 0 10 0 0;
+}
+
+.ui-collapsible-module-split-toggle-row {
+    -fx-padding: 0 0 8 0;
+    -fx-background-color: #FFFFFF;
+}
+
+.ui-collapsible-module-split-collapsed-content {
+    -fx-background-color: #FFFFFF;
+    -fx-spacing: 8;
+}
+
+.ui-collapsible-module-split-strip {
+    -fx-min-width: 44px;
+    -fx-pref-width: 44px;
+    -fx-max-width: 44px;
+    -fx-padding: 6 4 6 4;
+    -fx-background-color: #EAF2FB;
+    -fx-border-color: #D6E1EE;
+    -fx-border-width: 0 1 0 0;
+}
+
+.ui-collapsible-module-split-strip-label {
+    -fx-font-size: 10px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #31435F;
+    -fx-text-alignment: center;
+}

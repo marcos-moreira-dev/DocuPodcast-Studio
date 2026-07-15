@@ -1,0 +1,35 @@
+/* Theatre history board: visual sequence map with frame thumbnails. */
+.document-media-storyboard-overview {
+    -fx-background-color: #F8FAFE;
+}
+
+.theatre-storyboard-overview-act {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 7;
+    -fx-border-radius: 7;
+    -fx-padding: 12;
+}
+
+.theatre-storyboard-overview-scene {
+    -fx-background-color: #F8FAFE;
+    -fx-border-color: #DDE7F4;
+    -fx-border-width: 1;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-padding: 10;
+}
+
+.theatre-visual-sequence-map {
+    -fx-background-color: #F4F8FD;
+    -fx-border-color: #D7E3F3;
+    -fx-border-width: 1;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+}
+
+.theatre-visual-sequence-line {
+    -fx-stroke: #91A8C8;
+    -fx-stroke-width: 2;
+}

@@ -1,0 +1,102 @@
+.document-study-video-panel {
+    -fx-background-color: -docu-bg-panel;
+}
+
+.document-study-video-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+
+.document-study-video-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+.document-study-video-workspace-split {
+    -fx-background-color: -docu-bg-panel;
+}
+
+.document-study-video-inspector-scroll {
+    -fx-border-color: transparent -docu-border transparent transparent;
+    -fx-border-width: 0 1px 0 0;
+}
+
+.document-study-video-content-scroll {
+    -fx-border-color: transparent;
+}
+
+.document-study-video-section-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text;
+}
+
+.document-study-video-field-label {
+    -fx-font-weight: 600;
+    -fx-text-fill: -docu-text;
+}
+
+.document-study-video-hint,
+.document-study-video-selected-text {
+    -fx-text-fill: -docu-text-muted;
+}
+
+.document-study-video-card-selected {
+    -fx-border-color: -docu-accent;
+    -fx-border-width: 2px;
+    -fx-background-color: #EEF2FF;
+}
+
+.document-study-video-card-disabled {
+    -fx-opacity: 0.58;
+    -fx-background-color: #E5E7EB;
+    -fx-border-color: #9CA3AF;
+}
+
+.document-study-video-card-selected.document-study-video-card-disabled {
+    -fx-border-color: -docu-accent;
+    -fx-border-width: 2px;
+}
+
+.document-study-video-table-preview {
+    -fx-hgap: 0;
+    -fx-vgap: 0;
+    -fx-border-color: -docu-border;
+    -fx-border-width: 1px;
+}
+
+.document-study-video-table-header,
+.document-study-video-table-cell {
+    -fx-padding: 6px;
+    -fx-border-color: -docu-border;
+    -fx-border-width: 0 1px 1px 0;
+    -fx-min-width: 76px;
+}
+
+.document-study-video-table-header {
+    -fx-font-weight: 700;
+    -fx-background-color: #EEF2FF;
+}
+
+.document-study-video-music-row {
+    -fx-padding: 10px;
+    -fx-spacing: 7px;
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+}
+
+.document-study-video-music-name {
+    -fx-font-weight: 700;
+    -fx-text-fill: -docu-text;
+}
+
+.document-study-video-music-volume-label {
+    -fx-font-weight: 600;
+    -fx-text-fill: -docu-text;
+}
+
+.document-study-video-sketch-host {
+    -fx-background-color: #EEF1F6;
+    -fx-padding: 18px;
+}

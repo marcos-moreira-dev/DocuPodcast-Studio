@@ -1,0 +1,31 @@
+package com.marcosmoreiradev.docupodcaststudio.presentation.workspace;
+
+/** Product capabilities that may be exposed by a workspace or toolbar action. */
+public enum WorkspaceCapability {
+    SHOW_WELCOME,
+    CREATE_PROJECT,
+    OPEN_PROJECT,
+    SAVE_PROJECT,
+    IMPORT_WORD,
+    OPEN_SCRIPT_WORKSPACE,
+    OPEN_VOICE_LIBRARY,
+    OPEN_AUDIO_WORKSPACE,
+    OPEN_STORYBOARD_WORKSPACE,
+    CONFIGURE_READING_PROFILE,
+    LISTEN_DOCUMENT,
+    CREATE_SCRIPT,
+    PREPARE_AI_VOICE,
+    PREPARE_HUMAN_VOICE,
+    IMPORT_VOICE_SAMPLE,
+    CREATE_STORYBOARD,
+    IMPORT_STORYBOARD_IMAGE,
+    ASSOCIATE_STORYBOARD_IMAGE,
+    GENERATE_AUDIO,
+    CANCEL_AUDIO_JOB,
+    EXPORT_PROJECT_BUNDLE,
+    EXPORT_PODCAST_WAV,
+    EXPORT_DIAGNOSTIC_REPORT,
+    PLAY_SELECTION,
+    OPEN_GUIDE,
+    OPEN_WORD_GUIDE
+}

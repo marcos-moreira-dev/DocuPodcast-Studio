@@ -1,0 +1,254 @@
+/* T103A — desktop app start page: modern, compact and not a web landing page. */
+.welcome-root,
+.welcome-desktop-home,
+.welcome-modern-home {
+    -fx-background-color: linear-gradient(to bottom, #F4F8FE, #E7EFF8 100%);
+}
+
+.welcome-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-border-color: transparent;
+}
+
+.welcome-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+.welcome-stage {
+    -fx-min-height: 560px;
+    -fx-padding: 58 62 58 62;
+}
+
+.welcome-art-layer {
+    -fx-min-height: 560px;
+}
+
+.welcome-orb-soft {
+    -fx-fill: rgba(55, 167, 222, 0.08);
+}
+
+.welcome-desktop-grid {
+    -fx-max-width: 1360px;
+    -fx-alignment: center;
+}
+
+.welcome-start-column {
+    -fx-min-width: 255px;
+    -fx-pref-width: 275px;
+    -fx-max-width: 300px;
+}
+
+.welcome-center-column {
+    -fx-min-width: 520px;
+    -fx-pref-width: 640px;
+    -fx-max-width: 760px;
+}
+
+.welcome-recent-column {
+    -fx-min-width: 270px;
+    -fx-pref-width: 320px;
+    -fx-max-width: 360px;
+}
+
+.welcome-vertical-separator {
+    -fx-background-color: rgba(31, 45, 71, 0.12);
+    -fx-min-width: 1px;
+    -fx-pref-width: 1px;
+    -fx-max-width: 1px;
+    -fx-min-height: 400px;
+}
+
+.welcome-section-title {
+    -fx-text-fill: -docu-text-strong;
+    -fx-font-size: 16px;
+    -fx-font-weight: 900;
+    -fx-padding: 0 0 10 0;
+    -fx-border-color: transparent transparent rgba(31, 45, 71, 0.16) transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.welcome-command-row {
+    -fx-padding: 4 0 4 0;
+}
+
+.welcome-command-icon {
+    -fx-background-color: rgba(255, 255, 255, 0.78);
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 2;
+    -fx-border-radius: 2;
+    -fx-min-width: 44px;
+    -fx-min-height: 44px;
+    -fx-alignment: center;
+    -fx-text-fill: -docu-accent-dark;
+    -fx-font-size: 11px;
+    -fx-font-weight: 900;
+}
+
+.welcome-command-copy {
+    -fx-max-width: 210px;
+}
+
+.welcome-command-title {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+    -fx-text-fill: -docu-accent-dark;
+    -fx-font-size: 16px;
+    -fx-font-weight: 700;
+    -fx-cursor: hand;
+}
+
+.welcome-command-title:hover {
+    -fx-text-fill: -docu-accent;
+    -fx-underline: true;
+}
+
+.welcome-command-title-label {
+    -fx-text-fill: -docu-accent-dark;
+    -fx-font-size: 16px;
+    -fx-font-weight: 700;
+}
+
+.welcome-command-detail,
+.welcome-step-detail,
+.welcome-tip {
+    -fx-text-fill: -docu-text-muted;
+}
+
+.welcome-command-detail {
+    -fx-font-size: 12px;
+}
+
+.welcome-prefix {
+    -fx-text-fill: -docu-text;
+    -fx-font-size: 20px;
+}
+
+.welcome-title {
+    -fx-text-fill: -docu-text-strong;
+    -fx-font-size: 42px;
+    -fx-font-weight: 900;
+}
+
+.welcome-subtitle {
+    -fx-text-fill: -docu-text;
+    -fx-font-size: 16px;
+    -fx-line-spacing: 2;
+    -fx-max-width: 670px;
+}
+
+.welcome-step-panel {
+    -fx-background-color: rgba(255, 255, 255, 0.72);
+    -fx-border-color: rgba(31, 45, 71, 0.14);
+    -fx-border-width: 1;
+    -fx-background-radius: 2;
+    -fx-border-radius: 2;
+    -fx-padding: 22 28 22 28;
+    -fx-effect: -docu-shadow-soft;
+}
+
+.welcome-step-row {
+    -fx-padding: 1 0 1 0;
+}
+
+.welcome-step-number {
+    -fx-background-color: rgba(91, 95, 199, 0.10);
+    -fx-text-fill: -docu-accent-dark;
+    -fx-font-size: 17px;
+    -fx-font-weight: 800;
+    -fx-alignment: center;
+    -fx-min-width: 48px;
+    -fx-min-height: 48px;
+}
+
+.welcome-step-title {
+    -fx-text-fill: -docu-text-strong;
+    -fx-font-size: 15px;
+    -fx-font-weight: 900;
+}
+
+.welcome-step-detail {
+    -fx-font-size: 13px;
+    -fx-max-width: 560px;
+}
+
+.welcome-badge-row {
+    -fx-padding: 0;
+}
+
+.welcome-tip {
+    -fx-font-size: 13px;
+    -fx-max-width: 660px;
+}
+
+.welcome-promise-panel {
+    -fx-padding: 8 0 0 0;
+}
+
+.welcome-recent-column .ui-empty-state {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-effect: null;
+    -fx-padding: 64 0 24 0;
+}
+
+.welcome-recent-list {
+    -fx-spacing: 9px;
+}
+
+.welcome-recent-link-row {
+    -fx-padding: 5 0 5 0;
+}
+
+.welcome-recent-link-icon .ui-lucide-icon-shape {
+    -fx-stroke: #4f46e5;
+}
+
+.welcome-recent-link {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+    -fx-text-fill: #3730a3;
+    -fx-font-weight: 800;
+    -fx-underline: true;
+}
+
+.welcome-recent-link:hover,
+.welcome-recent-link:focused {
+    -fx-text-fill: #1d4ed8;
+}
+
+.welcome-recent-path {
+    -fx-font-size: 11px;
+    -fx-text-fill: #657189;
+}
+
+.welcome-recent-type {
+    -fx-font-size: 11px;
+    -fx-text-fill: #4f46e5;
+    -fx-font-weight: 800;
+}
+
+.welcome-modern-home .info-badge-success {
+    -fx-background-color: rgba(22, 138, 74, 0.10);
+    -fx-border-color: rgba(22, 138, 74, 0.25);
+    -fx-text-fill: -docu-success;
+}
+
+.welcome-modern-home .info-badge-info {
+    -fx-background-color: -docu-accent-soft;
+    -fx-border-color: -docu-accent-border;
+    -fx-text-fill: -docu-accent-ink;
+}
+
+.welcome-modern-home .info-badge-neutral {
+    -fx-background-color: rgba(255, 255, 255, 0.70);
+    -fx-border-color: -docu-border-soft;
+    -fx-text-fill: -docu-text-muted;
+}
+
+.welcome-product-watermark {
+    -fx-opacity: 0.72;
+}

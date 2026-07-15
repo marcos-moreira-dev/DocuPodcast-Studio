@@ -1,0 +1,52 @@
+{
+  "profile_key": "hombre_35_aspiracional_emotivo_personaje",
+  "prompt_key": "autoritaria",
+  "emotion": "autoritaria",
+  "voice_id": "LRpNiUBlcqgIsKUzcrlN",
+  "nombre_original": "Georg - Funny and Emotional",
+  "descripcion": "Voz seleccionada manualmente para teatro/personaje. Alias local: hombre_35_aspiracional_emotivo_personaje. Nombre original ElevenLabs: Georg - Funny and Emotional. Personaje sugerido: Florindo aspiracional. Acento objetivo: aceptado_por_oido. Nota: Georg. Voz graciosa y emocional. Usar para aspiracional, arribista o personaje que quiere parecer más de lo que es.",
+  "categoria_local": "personaje_dialogo",
+  "modo": "personaje",
+  "acento_objetivo": "aceptado_por_oido",
+  "uso_sugerido": [
+    "teatro",
+    "personaje",
+    "dialogo"
+  ],
+  "model_id": "eleven_v3",
+  "language_code": "es",
+  "output_format": "mp3_44100_128",
+  "voice_settings": {
+    "stability": 0.22,
+    "similarity_boost": 0.7,
+    "style": 0.92,
+    "use_speaker_boost": true
+  },
+  "text_sha256": "9cb6acfd62f277c3ded54182601e5426378f5bc2cfc2e0b2a2ca709331147bf3",
+  "config_sha256": "f6bedcc2cfd1cb8c3536ac32d89d38d1e0eaf4692a7907b7b9f5d481cf3e39b3",
+  "characters": 277,
+  "text_reference": "[authoritative, commanding, firm, conversational] Atención, compañero. Coloca el güiro, la guitarra, las quince llaves viejas y el pequeño xilófono junto a la caja. Reparte el queso, el chocolate, el jugo de guayaba y el café. Nadie cruza el zaguán bajo la lluvia sin mi orden.",
+  "audio_file": "voice-bank-dialogo\\hombre_35_aspiracional_emotivo_personaje\\autoritaria.mp3",
+  "origen_scaffold": {
+    "created_at": "2026-06-28T01:43:22",
+    "source_template_profile": "hombre_20_idealista_ecuador_dialogo",
+    "source_template_json": "autoritaria.json",
+    "api_voice_name": "Georg - Funny and Emotional",
+    "api_labels": {
+      "language": "es",
+      "accent": "aceptado_por_oido"
+    },
+    "nota": "Perfil nuevo creado para ampliar banco general; no genera audio hasta correr generate --run."
+  },
+  "seleccion_manual_v4": {
+    "profile_key": "hombre_35_aspiracional_emotivo_personaje",
+    "voice_id": "LRpNiUBlcqgIsKUzcrlN",
+    "public_user_id": "",
+    "new_name": "hombre_35_aspiracional_emotivo_personaje",
+    "voice_library_name": "Georg - Funny and Emotional",
+    "personaje_sugerido": "Florindo aspiracional",
+    "tipo": "personaje_dialogo",
+    "acento_objetivo": "aceptado_por_oido",
+    "nota": "Georg. Voz graciosa y emocional. Usar para aspiracional, arribista o personaje que quiere parecer más de lo que es."
+  }
+}

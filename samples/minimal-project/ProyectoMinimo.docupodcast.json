@@ -1,0 +1,45 @@
+{
+    "formatVersion": 1,
+    "project": {
+        "id": "PRJ-DEMO-001",
+        "title": "Proyecto mínimo de ejemplo",
+        "description": "Ejemplo de persistencia .docupodcast.json con un DOCX como fuente prioritaria.",
+        "language": "es",
+        "kind": "DOCUMENT_ONLY",
+        "status": "DOCUMENT_IMPORTED",
+        "createdAt": "2026-05-29T00:00:00Z",
+        "updatedAt": "2026-05-29T00:00:00Z"
+    },
+
+    "readingProfile": {
+        "id": "reading-profile-academic-default",
+        "name": "Documento académico Word",
+        "description": "Perfil inicial para notas en DOCX.",
+        "imagePolicy": "READ_DESCRIPTION_OR_OMIT",
+        "tablePolicy": "ANNOUNCE_SUMMARY",
+        "headingRules": {
+            "titleStyleKeywords": ["title", "titulo", "título", "document title"],
+            "headingStyleKeywords": ["heading 1", "titulo 1", "título 1", "encabezado 1"],
+            "subheadingStyleKeywords": ["heading 2", "heading 3", "titulo 2", "título 2", "subtitulo", "subtítulo", "encabezado 2"],
+            "maxShortBoldWords": 14,
+            "treatShortBoldParagraphAsSubheading": true
+        }
+    },
+    "assets": {
+        "items": [
+            {
+                "id": "SRC-001",
+                "kind": "SOURCE_DOCUMENT",
+                "displayName": "Notas Word de ejemplo",
+                "relativePath": "source/notas-ejemplo.docx",
+                "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "purpose": "Documento fuente original del usuario",
+                "checksum": "",
+                "notes": "El archivo DOCX no se incluye en este ejemplo; la ruta ilustra la política de assets relativos."
+            }
+        ]
+    },
+    "view": {
+        "activeWorkspace": "DOCUMENT_READER"
+    }
+}
