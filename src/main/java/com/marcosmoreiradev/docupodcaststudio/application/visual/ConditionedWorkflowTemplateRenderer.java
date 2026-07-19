@@ -7,7 +7,6 @@ import java.nio.file.Path;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -31,7 +30,7 @@ final class ConditionedWorkflowTemplateRenderer {
         body = replaceRaw(body, "STEPS", Integer.toString(request.steps()));
         body = replaceRaw(body, "CFG", Double.toString(request.cfg()));
         body = replaceRaw(body, "GUIDANCE", Double.toString(workflow.guidance()));
-        body = replaceRaw(body, "SEED", Long.toString(new Random().nextLong() & Long.MAX_VALUE));
+        body = replaceRaw(body, "SEED", Long.toString(request.seed()));
         body = replace(body, "FILENAME_PREFIX", request.filenamePrefix());
         body = replaceReferences(body, request.conditioningReferences());
         Matcher unresolved = UNRESOLVED.matcher(body);
@@ -54,9 +53,11 @@ final class ConditionedWorkflowTemplateRenderer {
                 case IDENTITY -> "IDENTITY_IMAGE_" + index;
                 case OBJECT -> "OBJECT_IMAGE_" + index;
                 case ENVIRONMENT -> "ENVIRONMENT_IMAGE_" + index;
+                case CAMERA_GUIDE -> "CAMERA_GUIDE";
+                case DRAWN_GUIDE -> "DRAWN_GUIDE";
+                case STYLE -> "STYLE_IMAGE_" + index;
                 case PREVIOUS_FRAME -> "PREVIOUS_FRAME";
                 case NEXT_FRAME -> "NEXT_FRAME";
-                case STRUCTURE_GUIDE -> "STRUCTURE_GUIDE";
             };
             result = replace(result, key, reference.engineImageName());
             result = replaceRaw(result, key + "_STRENGTH", Double.toString(reference.strength()));

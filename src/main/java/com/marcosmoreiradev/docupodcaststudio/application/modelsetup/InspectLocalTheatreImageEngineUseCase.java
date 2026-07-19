@@ -7,13 +7,13 @@ import java.util.Objects;
 
 /** Inspects product-level readiness for the managed local theatre image engine. */
 public final class InspectLocalTheatreImageEngineUseCase {
-    private final LocalTheatreImageEngineManager manager;
+    private final LocalVisualImageEngineManager manager;
 
     public InspectLocalTheatreImageEngineUseCase() {
-        this(new LocalTheatreImageEngineManager());
+        this(new LocalVisualImageEngineManager());
     }
 
-    public InspectLocalTheatreImageEngineUseCase(LocalTheatreImageEngineManager manager) {
+    public InspectLocalTheatreImageEngineUseCase(LocalVisualImageEngineManager manager) {
         this.manager = Objects.requireNonNull(manager, "manager");
     }
 

@@ -81,6 +81,57 @@ final class ComfyUiVisualEngineClientTest {
         assertEquals("docupodcast-visual", request.filenamePrefix());
     }
 
+    @Test
+    void waitDurationPreservesSixHourGenerationDeadline() {
+        Duration sixHours = Duration.ofHours(6);
+
+        assertEquals(sixHours, ComfyUiVisualEngineClient.waitDuration(
+                sixHours,
+                ComfyUiWorkflowSpec.sd15()));
+        assertEquals(sixHours, ComfyUiVisualEngineClient.waitDuration(
+                sixHours,
+                ComfyUiWorkflowSpec.fluxForTarget(
+                        "flux.safetensors",
+                        "ae.safetensors",
+                        "clip_l.safetensors",
+                        "t5xxl.safetensors",
+                        1920,
+                        1080)));
+    }
+
+    @Test
+    void systemStatsParsesBackendNameIndexAndRuntimeVersions() throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/system_stats", exchange -> respond(exchange, 200, "application/json", """
+                {
+                  "system": {
+                    "os": "nt",
+                    "python_version": "3.11.9",
+                    "pytorch_version": "2.5.1+cu121"
+                  },
+                  "devices": [
+                    {"name": "cuda:0 NVIDIA GeForce GTX 1650", "type": "cuda", "index": 0}
+                  ]
+                }
+                """.getBytes()));
+        server.start();
+        try {
+            ComfyUiVisualEngineClient client = new ComfyUiVisualEngineClient(
+                    HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build());
+
+            ComfyUiSystemStats stats = client.systemStats(
+                    "http://127.0.0.1:" + server.getAddress().getPort(), Duration.ofSeconds(2));
+
+            assertEquals("3.11.9", stats.pythonVersion());
+            assertEquals("2.5.1+cu121", stats.pytorchVersion());
+            assertEquals("cuda", stats.devices().getFirst().type());
+            assertEquals(0, stats.devices().getFirst().index());
+            assertTrue(stats.devices().getFirst().name().contains("GTX 1650"));
+        } finally {
+            server.stop(0);
+        }
+    }
+
     private static HttpServer startFakeComfyUi(AtomicReference<String> submittedPrompt, byte[] png) throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/system_stats", exchange -> respond(exchange, 200, "application/json", "{}".getBytes()));

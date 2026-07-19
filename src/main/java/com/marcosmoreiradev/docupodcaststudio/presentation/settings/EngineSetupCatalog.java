@@ -48,7 +48,7 @@ public final class EngineSetupCatalog {
     public static EngineSetupOption localTheatreImage() {
         return new EngineSetupOption(
                 "local-theatre-image",
-                "Imagen IA teatral local",
+                "Generación visual local",
                 "Generacion visual",
                 "Motor local para generar imagenes por intervencion usando contexto visual de personajes, objetos y mapa teatral.",
                 "Obras de teatro importadas por manifiesto MD, demos teatrales y proyectos con paquetes de contexto por intervencion.",

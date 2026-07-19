@@ -29,6 +29,11 @@ public record ComfyUiWorkflowSpec(
                 "", "", "", "", "default", 3.5, 0, 0);
     }
 
+    public static ComfyUiWorkflowSpec sdxlReference(String checkpointName) {
+        return new ComfyUiWorkflowSpec(ComfyUiWorkflowKind.SDXL_REFERENCE_COMPONENTS,
+                checkpointName, "", "", "", "default", 6.5, 0, 0);
+    }
+
     public static ComfyUiWorkflowSpec flux(String modelName, String vaeName, String clipLName, String t5Name,
                                            int nativeWidth, int nativeHeight) {
         return new ComfyUiWorkflowSpec(ComfyUiWorkflowKind.FLUX1_DEV_COMPONENTS,
@@ -40,6 +45,21 @@ public record ComfyUiWorkflowSpec(
                                                     int targetWidth, int targetHeight) {
         int[] nativeSize = fluxNativeSize(targetWidth, targetHeight);
         return flux(modelName, vaeName, clipLName, t5Name, nativeSize[0], nativeSize[1]);
+    }
+
+    public static ComfyUiWorkflowSpec fluxKontextForTarget(String modelName, String vaeName,
+                                                           String clipLName, String t5Name,
+                                                           int targetWidth, int targetHeight) {
+        int[] nativeSize = fluxNativeSize(targetWidth, targetHeight);
+        return fluxKontext(modelName, vaeName, clipLName, t5Name, nativeSize[0], nativeSize[1]);
+    }
+
+    public static ComfyUiWorkflowSpec fluxKontext(String modelName, String vaeName,
+                                                  String clipLName, String t5Name,
+                                                  int nativeWidth, int nativeHeight) {
+        return new ComfyUiWorkflowSpec(ComfyUiWorkflowKind.FLUX_KONTEXT_COMPONENTS,
+                modelName, vaeName, clipLName, t5Name, "fp8_e4m3fn", 3.5,
+                nativeWidth, nativeHeight);
     }
 
     public int generationWidth(VisualEngineRequest request) {

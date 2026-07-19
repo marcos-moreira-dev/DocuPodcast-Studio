@@ -36,6 +36,8 @@ import com.marcosmoreiradev.docupodcaststudio.presentation.components.AppIcon;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ImageFullscreenViewer;
 import com.marcosmoreiradev.docupodcaststudio.presentation.settings.SettingsDialog;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.DocuPodcastShellViewModel;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -138,11 +140,13 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
     private final ListView<TheatreImageGenerationJob> jobList = new ListView<>(jobs);
     private final ImageView generatedPreviewImage = new ImageView();
     private final Label generatedPreviewTitle = new Label("Selecciona un candidato o frame.");
+    private final Label generatedPreviewElapsed = new Label();
     private final TextField generatedPreviewPath = new TextField("El visor mostrara el PNG asociado al elemento seleccionado.");
     private final Label generatedPreviewPlaceholder = new Label("Sin frame seleccionado");
     private final StackPane generatedPreviewFrame = new StackPane(generatedPreviewPlaceholder, generatedPreviewImage);
     private final ImageView engineResultImage = new ImageView();
     private final Label engineResultTitle = new Label("Sin prueba ejecutada.");
+    private final Label engineResultElapsed = new Label();
     private final Label engineResultPlaceholder = new Label("El PNG de prueba aparecera aqui.");
     private final StackPane engineResultFrame = new StackPane(engineResultPlaceholder, engineResultImage);
     private final Label engineResultPath = new Label("Sin PNG generado.");
@@ -172,6 +176,10 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
     private Task<TheatreFrameGenerationResult> frameTask;
     private Task<IntermediateBatchResult> intermediateFrameTask;
     private EngineTestResult lastEngineResult = EngineTestResult.idle();
+    private final StringProperty generationElapsedText = new SimpleStringProperty("Tiempo transcurrido: 00:00:00");
+    private Timeline generationElapsedTimeline;
+    private long generationStartedNanos;
+    private int activeGenerationOperations;
     private boolean updatingPrompt;
 
     public TheatreImageGenerationWorkspaceView(DocuPodcastShellViewModel viewModel) {
@@ -405,6 +413,7 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
         generatedPreviewPlaceholder.setWrapText(true);
         generatedPreviewPlaceholder.getStyleClass().add("theatre-ai-generated-preview-placeholder");
         configurePreviewFrame(generatedPreviewFrame, generatedPreviewImage, 260);
+        configureGenerationElapsedLabel(generatedPreviewElapsed);
         generatedPreviewImage.setVisible(false);
         engineResultTitle.setWrapText(true);
         engineResultTitle.getStyleClass().add("theatre-ai-generated-preview-title");
@@ -414,6 +423,7 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
         engineResultPlaceholder.setWrapText(true);
         engineResultPlaceholder.getStyleClass().add("theatre-ai-generated-preview-placeholder");
         configurePreviewFrame(engineResultFrame, engineResultImage, 280);
+        configureGenerationElapsedLabel(engineResultElapsed);
         engineResultImage.setVisible(false);
         engineResultDiagnostic.setEditable(false);
         engineResultDiagnostic.setWrapText(true);
@@ -487,7 +497,8 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
                 row("Memoria", memoryProfileSelector),
                 note("VRAM + RAM permite probar modelos grandes con offload; sera mas lento si la GPU no tiene suficiente VRAM."),
                 row("Pasadas", smokeStepsSpinner),
-                smokePromptBox());
+                smokePromptBox(),
+                note("La prueba FLUX usa una base ligera de diagnostico y luego prepara la salida elegida. La generacion de produccion conserva su resolucion completa."));
         Button settings = ActionButtonFactory.primary("Abrir Configuracion", this::openEngineSettings);
         Button test = ActionButtonFactory.primary("Probar motor", this::testLocalEngine);
         Button rebuild = ActionButtonFactory.secondary("Actualizar intervenciones", this::rebuild);
@@ -503,6 +514,7 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
         VBox result = section("Resultado de prueba");
         detachNode(engineResultTitle);
         detachNode(engineResultFrame);
+        detachNode(engineResultElapsed);
         detachNode(engineResultPath);
         detachNode(engineResultDiagnostic);
         detachNode(engineResultFullscreen);
@@ -511,6 +523,7 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
         result.getChildren().addAll(
                 engineResultTitle,
                 engineResultFrame,
+                engineResultElapsed,
                 engineResultPath,
                 actionFlow(engineResultFullscreen, engineResultDownload, engineResultSettings),
                 engineResultDiagnostic);
@@ -585,6 +598,7 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
         VBox frames = section("Frames de trabajos");
         detachNode(generatedPreviewTitle);
         detachNode(generatedPreviewFrame);
+        detachNode(generatedPreviewElapsed);
         detachNode(generatedPreviewPath);
         detachNode(frameCandidateList);
         frameCandidateList.setPrefHeight(150);
@@ -592,6 +606,7 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
         frames.getChildren().addAll(
                 generatedPreviewTitle,
                 generatedPreviewFrame,
+                generatedPreviewElapsed,
                 generatedPreviewPath,
                 note("Selecciona un candidato o frame para revisar su imagen aqui."),
                 frameCandidateList,
@@ -905,6 +920,7 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
     private void testLocalEngine() {
         status.setText("Probando motor local...");
         updateEngineResultPanel(EngineTestResult.running("Verificando runtime..."));
+        beginGenerationTiming();
 
         Task<EngineTestResult> task = new Task<>() {
             @Override protected EngineTestResult call() {
@@ -918,7 +934,9 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
                 if (!readiness.runtimePrepared() || !readiness.modelInstalled()) {
                     return EngineTestResult.from(readiness);
                 }
-                updateMessage("Intentando iniciar motor...");
+                updateMessage(readiness.engineResponding()
+                        ? "Generando PNG..."
+                        : "Iniciando motor y generando PNG...");
                 ImageEngineSmokeReport report = viewModel.applicationServices().settings()
                         .runLocalTheatreImageSmoke()
                         .runDetailed(settings, appRoot, smokeRequest());
@@ -931,9 +949,11 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
             }
         });
         task.setOnSucceeded(event -> {
+            finishGenerationTiming();
             showEngineResult(task.getValue());
         });
         task.setOnFailed(event -> {
+            finishGenerationTiming();
             Throwable ex = task.getException();
             showEngineResult(EngineTestResult.error("No se pudo probar el motor: "
                     + (ex == null ? "error desconocido" : ex.getMessage())));
@@ -956,9 +976,11 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
     private ImageEngineSmokeRequest smokeRequest() {
         Path output = ImageEngineSmokeImageStore.outputDirectory();
         return new ImageEngineSmokeRequest(
-                presetSelector.getValue(),
+                presetSelector.getValue() == null
+                        ? com.marcosmoreiradev.docupodcaststudio.application.visual.VisualGenerationProfile.DIAGNOSTIC_SD15
+                        : presetSelector.getValue().visualProfile(),
                 selectedOutputProfile(),
-                selectedAspectRatio(),
+                selectedAspectRatio().visualAspectRatio(),
                 smokePromptText(),
                 smokeSteps(),
                 output);
@@ -1913,7 +1935,12 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
         } catch (IOException ex) {
             imageSettings = ImageGenerationSettings.defaults();
         }
-        return new ComfyUiConnectionSettings(imageSettings.baseUrl(), Duration.ofSeconds(imageSettings.timeoutSeconds()), output);
+        return new ComfyUiConnectionSettings(
+                imageSettings.baseUrl(),
+                Duration.ofSeconds(Math.max(
+                        ImageGenerationSettings.DEFAULT_TIMEOUT_SECONDS,
+                        imageSettings.timeoutSeconds())),
+                output);
     }
 
     private TheatreImageGenerationPreset currentPreset() {
@@ -1991,7 +2018,7 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
                 preset.name(),
                 modelName,
                 image.adaptersDirectory(),
-                image.timeoutSeconds(),
+                Math.max(ImageGenerationSettings.DEFAULT_TIMEOUT_SECONDS, image.timeoutSeconds()),
                 memory.legacyLowVram(),
                 memory.name(),
                 image.maxAttempts());
@@ -2272,16 +2299,75 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
         return String.format(Locale.ROOT, "%.2f GB", mb / 1024.0);
     }
 
-    private static <T> void runAsync(ThrowingSupplier<T> supplier, java.util.function.Consumer<T> onSuccess, java.util.function.Consumer<String> onFailure) {
+    private <T> void runAsync(ThrowingSupplier<T> supplier, java.util.function.Consumer<T> onSuccess, java.util.function.Consumer<String> onFailure) {
+        beginGenerationTiming();
         Task<T> task = new Task<>() { @Override protected T call() throws Exception { return supplier.get(); } };
-        task.setOnSucceeded(event -> onSuccess.accept(task.getValue()));
+        task.setOnSucceeded(event -> {
+            finishGenerationTiming();
+            onSuccess.accept(task.getValue());
+        });
         task.setOnFailed(event -> {
+            finishGenerationTiming();
             Throwable ex = task.getException();
             onFailure.accept("No se pudo completar: " + (ex == null ? "error desconocido" : ex.getMessage()));
         });
         Thread thread = new Thread(task, "docupodcast-theatre-ai-image");
         thread.setDaemon(true);
         thread.start();
+    }
+
+    private void configureGenerationElapsedLabel(Label label) {
+        label.textProperty().bind(generationElapsedText);
+        label.getStyleClass().add("voice-library-body");
+        label.setWrapText(true);
+        label.setVisible(false);
+        label.setManaged(false);
+    }
+
+    private void beginGenerationTiming() {
+        if (activeGenerationOperations++ > 0) {
+            return;
+        }
+        generationStartedNanos = System.nanoTime();
+        setGenerationElapsedVisible(true);
+        refreshGenerationElapsed();
+        if (generationElapsedTimeline == null) {
+            generationElapsedTimeline = new Timeline(new KeyFrame(
+                    javafx.util.Duration.seconds(1),
+                    event -> refreshGenerationElapsed()));
+            generationElapsedTimeline.setCycleCount(Timeline.INDEFINITE);
+        }
+        generationElapsedTimeline.playFromStart();
+    }
+
+    private void finishGenerationTiming() {
+        activeGenerationOperations = Math.max(0, activeGenerationOperations - 1);
+        refreshGenerationElapsed();
+        if (activeGenerationOperations == 0 && generationElapsedTimeline != null) {
+            generationElapsedTimeline.stop();
+        }
+    }
+
+    private void setGenerationElapsedVisible(boolean visible) {
+        generatedPreviewElapsed.setVisible(visible);
+        generatedPreviewElapsed.setManaged(visible);
+        engineResultElapsed.setVisible(visible);
+        engineResultElapsed.setManaged(visible);
+    }
+
+    private void refreshGenerationElapsed() {
+        long elapsedSeconds = generationStartedNanos <= 0
+                ? 0
+                : Math.max(0, (System.nanoTime() - generationStartedNanos) / 1_000_000_000L);
+        generationElapsedText.set("Tiempo transcurrido: " + formatElapsed(elapsedSeconds));
+    }
+
+    static String formatElapsed(long elapsedSeconds) {
+        long total = Math.max(0, elapsedSeconds);
+        long hours = total / 3600;
+        long minutes = (total % 3600) / 60;
+        long seconds = total % 60;
+        return String.format(Locale.ROOT, "%02d:%02d:%02d", hours, minutes, seconds);
     }
 
     @FunctionalInterface

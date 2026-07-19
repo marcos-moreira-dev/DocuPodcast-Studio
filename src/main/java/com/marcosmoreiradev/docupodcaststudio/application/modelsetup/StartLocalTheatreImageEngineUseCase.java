@@ -7,13 +7,13 @@ import java.util.Objects;
 
 /** Starts or detects the managed local theatre image engine. */
 public final class StartLocalTheatreImageEngineUseCase {
-    private final LocalTheatreImageEngineManager manager;
+    private final LocalVisualImageEngineManager manager;
 
     public StartLocalTheatreImageEngineUseCase() {
-        this(new LocalTheatreImageEngineManager());
+        this(new LocalVisualImageEngineManager());
     }
 
-    public StartLocalTheatreImageEngineUseCase(LocalTheatreImageEngineManager manager) {
+    public StartLocalTheatreImageEngineUseCase(LocalVisualImageEngineManager manager) {
         this.manager = Objects.requireNonNull(manager, "manager");
     }
 

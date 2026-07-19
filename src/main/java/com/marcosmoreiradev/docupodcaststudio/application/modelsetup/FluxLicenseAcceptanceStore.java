@@ -11,8 +11,8 @@ import java.util.Properties;
 
 /** Persists only the user's local acknowledgment; it never authenticates with Hugging Face. */
 public final class FluxLicenseAcceptanceStore {
-    public static final String MODEL_ID = "black-forest-labs/FLUX.1-dev";
-    public static final String LICENSE_URL = "https://huggingface.co/black-forest-labs/FLUX.1-dev";
+    public static final String MODEL_ID = "black-forest-labs/FLUX.1-Kontext-dev";
+    public static final String LICENSE_URL = "https://huggingface.co/black-forest-labs/FLUX.1-Kontext-dev";
     private static final String FILE_NAME = ".flux-license-acceptance.properties";
 
     public Optional<ModelLicenseAcceptance> load(Path applicationRoot) {
@@ -42,7 +42,7 @@ public final class FluxLicenseAcceptanceStore {
         properties.setProperty("licenseUrl", acceptance.licenseUrl());
         properties.setProperty("acceptedAt", acceptance.acceptedAt().toString());
         try (OutputStream out = Files.newOutputStream(path)) {
-            properties.store(out, "DocuPodcast Studio FLUX.1-dev local license acknowledgment");
+            properties.store(out, "DocuPodcast Studio FLUX.1-Kontext-dev local license acknowledgment");
         }
         return acceptance;
     }

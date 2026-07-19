@@ -126,7 +126,7 @@ public final class ExportCenterDialog {
         Label limitations = valueLabel();
         DocumentTextVideoControls textVideoControls = new DocumentTextVideoControls(owner);
         VideoEncodingOptionsPane videoOptions = new VideoEncodingOptionsPane(
-                safeContext.availableEncoders(), safeContext.defaultEncoder());
+                safeContext.availableEncoders(), safeContext.defaultEncoder(), safeContext.projectMode());
         TheatreCleanVideoExportOptionsPane theatreCleanOptions = new TheatreCleanVideoExportOptionsPane(
                 safeContext.availableEncoders(), safeContext.defaultEncoder());
         TheatreMapExportOptionsPane theatreMapOptions = new TheatreMapExportOptionsPane(

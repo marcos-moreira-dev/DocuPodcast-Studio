@@ -21,15 +21,15 @@ final class ConditionedWorkflowTemplateRendererTest {
         Path template = temp.resolve("workflow.json");
         Files.writeString(template, """
                 {"prompt":{"1":{"inputs":{"text":"{{PROMPT}}","image":"{{IDENTITY_IMAGE_1}}",
-                "identity_strength":{{IDENTITY_IMAGE_1_STRENGTH}},"sketch":"{{STRUCTURE_GUIDE}}",
-                "sketch_strength":{{STRUCTURE_GUIDE_STRENGTH}},"width":{{WIDTH}},"height":{{HEIGHT}},
+                "identity_strength":{{IDENTITY_IMAGE_1_STRENGTH}},"sketch":"{{DRAWN_GUIDE}}",
+                "sketch_strength":{{DRAWN_GUIDE_STRENGTH}},"width":{{WIDTH}},"height":{{HEIGHT}},
                 "prefix":"{{FILENAME_PREFIX}}"}}}}
                 """);
         VisualConditioningReference identity = new VisualConditioningReference(
                 "PERSON-1", "Capitan", temp.resolve("capitan.png"), VisualConditioningRole.IDENTITY, 0.85,
                 "docupodcast/capitan.png");
         VisualConditioningReference sketch = new VisualConditioningReference(
-                "FRAME-1", "Boceto", temp.resolve("boceto.png"), VisualConditioningRole.STRUCTURE_GUIDE, 0.30,
+                "FRAME-1", "Boceto", temp.resolve("boceto.png"), VisualConditioningRole.DRAWN_GUIDE, 0.30,
                 "docupodcast/boceto.png");
         VisualEngineRequest request = new VisualEngineRequest(
                 "escena con dos aviadores", "", "sd15.safetensors", 20, 7.0, 1,

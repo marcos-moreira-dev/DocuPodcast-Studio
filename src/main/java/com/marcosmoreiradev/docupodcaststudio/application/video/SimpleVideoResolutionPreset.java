@@ -2,6 +2,8 @@ package com.marcosmoreiradev.docupodcaststudio.application.video;
 
 /** Resolution presets exposed to users for the simple video export. */
 public enum SimpleVideoResolutionPreset {
+    HD_VERTICAL_720X1280("Vertical 720p", 720, 1280),
+    FULL_HD_VERTICAL_1080X1920("Vertical 1080p", 1080, 1920),
     HD_720("720p", 1280, 720),
     FULL_HD_1080("1080p", 1920, 1080),
     QHD_2K("2K", 2560, 1440),

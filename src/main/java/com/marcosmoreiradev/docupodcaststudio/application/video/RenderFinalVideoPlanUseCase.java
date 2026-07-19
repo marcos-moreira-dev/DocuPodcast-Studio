@@ -26,6 +26,8 @@ import java.util.function.Consumer;
 public final class RenderFinalVideoPlanUseCase {
     private static final Duration FRAME_TIMEOUT = Duration.ofMinutes(20);
     private static final Duration CONCAT_TIMEOUT = Duration.ofMinutes(20);
+    private static final int OUTPUT_AUDIO_SAMPLE_RATE = 48_000;
+    private static final String OUTPUT_AUDIO_LAYOUT = "stereo";
 
     private final FfmpegRuntimeProbeUseCase probe;
     private final EmbeddedFfmpegLocator locator;
@@ -122,7 +124,8 @@ public final class RenderFinalVideoPlanUseCase {
         if (!audioOverlayPlan.empty()) {
             safeProgress.accept(VideoRenderProgress.mixing(plan.frameCount(), "Mezclando pistas de audio"));
             run(runner, CONCAT_TIMEOUT,
-                    audioOverlayCommandFactory.build(runtime.ffmpegExecutable(), narrationBase, target, audioOverlayPlan), cancel,
+                    audioOverlayCommandFactory.build(runtime.ffmpegExecutable(), narrationBase, target,
+                            audioOverlayPlan, plan.totalDurationSeconds()), cancel,
                     line -> safeProgress.accept(VideoRenderProgress.mixing(plan.frameCount(), ffmpegDetail("Mezcla multimedia", line))));
         }
         safeProgress.accept(VideoRenderProgress.verifying(plan.frameCount(), target.toString()));
@@ -181,7 +184,8 @@ public final class RenderFinalVideoPlanUseCase {
                                     BooleanSupplier cancellationRequested,
                                     Consumer<String> outputLine) throws IOException {
         Files.createDirectories(outputClip.getParent());
-        if (frame.visualParts().size() > 1) {
+        if (frame.visualParts().size() > 1
+                || frame.visualParts().stream().anyMatch(SimpleVideoFrame.VisualPart::videoClip)) {
             renderFrameWithVisualParts(runner, ffmpeg, projectDirectory, settings, frame, outputClip,
                     cancellationRequested, outputLine);
             return;
@@ -202,22 +206,33 @@ public final class RenderFinalVideoPlanUseCase {
             command.add("-t");
             command.add(format(frame.frameDurationSeconds()));
             command.add("-i");
-            command.add("anullsrc=channel_layout=stereo:sample_rate=44100");
+            command.add(silentAudioSource());
         } else {
             Path audio = requireProjectFile(projectDirectory, frame.audioRelativePath(), "audio", frame.id());
             command.add("-i");
             command.add(audio.toString());
         }
+        command.add("-map");
+        command.add("0:v:0");
+        command.add("-map");
+        command.add("1:a:0");
         command.add("-vf");
-        command.add(settings.resolution().ffmpegScaleExpression() + ",format=yuv420p");
+        command.add(normalizedVideoFilter(settings));
         command.add("-r");
         command.add(Integer.toString(settings.framesPerSecond()));
+        command.add("-fps_mode");
+        command.add("cfr");
         String codec = settings.encoderPolicy().ffmpegEncoder();
         if (!codec.isBlank()) {
             command.add("-c:v");
             command.add(codec);
         }
-        command.add("-shortest");
+        appendExactAudioDuration(command, frame);
+        appendAudioEncoding(command);
+        command.add("-t");
+        command.add(format(frame.frameDurationSeconds()));
+        command.add("-avoid_negative_ts");
+        command.add("make_zero");
         command.add(outputClip.toString());
         run(runner, FRAME_TIMEOUT, command, cancellationRequested, outputLine);
         if (!Files.isRegularFile(outputClip) || Files.size(outputClip) <= 0L) {
@@ -266,26 +281,41 @@ public final class RenderFinalVideoPlanUseCase {
                                          Path outputClip,
                                          BooleanSupplier cancellationRequested,
                                          Consumer<String> outputLine) throws IOException {
-        Path image = requireProjectFile(projectDirectory, part.imageRelativePath(), "imagen", frame.id());
+        Path visual = requireProjectFile(projectDirectory, part.imageRelativePath(),
+                part.videoClip() ? "clip de video" : "imagen", frame.id());
         ArrayList<String> command = new ArrayList<>();
         command.add(ffmpeg.toString());
         command.add("-y");
-        command.add("-loop");
-        command.add("1");
-        command.add("-t");
-        command.add(format(part.durationSeconds()));
-        command.add("-i");
-        command.add(image.toString());
+        if (part.videoClip()) {
+            command.add("-ss");
+            command.add(format(part.sourceStartSeconds()));
+            command.add("-i");
+            command.add(visual.toString());
+            command.add("-t");
+            command.add(format(part.durationSeconds()));
+        } else {
+            command.add("-loop");
+            command.add("1");
+            command.add("-t");
+            command.add(format(part.durationSeconds()));
+            command.add("-i");
+            command.add(visual.toString());
+        }
         command.add("-vf");
-        command.add(settings.resolution().ffmpegScaleExpression() + ",format=yuv420p");
+        command.add(settings.resolution().ffmpegScaleExpression()
+                + ",fps=" + settings.framesPerSecond() + ",setpts=PTS-STARTPTS,format=yuv420p");
         command.add("-r");
         command.add(Integer.toString(settings.framesPerSecond()));
+        command.add("-fps_mode");
+        command.add("cfr");
         String codec = settings.encoderPolicy().ffmpegEncoder();
         if (!codec.isBlank()) {
             command.add("-c:v");
             command.add(codec);
         }
         command.add("-an");
+        command.add("-avoid_negative_ts");
+        command.add("make_zero");
         command.add(outputClip.toString());
         run(runner, FRAME_TIMEOUT, command, cancellationRequested, outputLine);
     }
@@ -309,17 +339,56 @@ public final class RenderFinalVideoPlanUseCase {
             command.add("-t");
             command.add(format(frame.frameDurationSeconds()));
             command.add("-i");
-            command.add("anullsrc=channel_layout=stereo:sample_rate=44100");
+            command.add(silentAudioSource());
         } else {
             Path audio = requireProjectFile(projectDirectory, frame.audioRelativePath(), "audio", frame.id());
             command.add("-i");
             command.add(audio.toString());
         }
+        command.add("-map");
+        command.add("0:v:0");
+        command.add("-map");
+        command.add("1:a:0");
         command.add("-c:v");
         command.add("copy");
-        command.add("-shortest");
+        appendExactAudioDuration(command, frame);
+        appendAudioEncoding(command);
+        command.add("-t");
+        command.add(format(frame.frameDurationSeconds()));
+        command.add("-avoid_negative_ts");
+        command.add("make_zero");
         command.add(outputClip.toString());
         run(runner, FRAME_TIMEOUT, command, cancellationRequested, outputLine);
+    }
+
+    private static void appendExactAudioDuration(List<String> command, SimpleVideoFrame frame) {
+        String duration = format(frame.frameDurationSeconds());
+        command.add("-af");
+        command.add("apad=pad_dur=" + duration
+                + ",atrim=duration=" + duration
+                + ",asetpts=PTS-STARTPTS"
+                + ",aresample=" + OUTPUT_AUDIO_SAMPLE_RATE
+                + ",aformat=sample_fmts=fltp:sample_rates=" + OUTPUT_AUDIO_SAMPLE_RATE
+                + ":channel_layouts=" + OUTPUT_AUDIO_LAYOUT);
+    }
+
+    private static void appendAudioEncoding(List<String> command) {
+        command.add("-c:a");
+        command.add("aac");
+        command.add("-ar");
+        command.add(Integer.toString(OUTPUT_AUDIO_SAMPLE_RATE));
+        command.add("-ac");
+        command.add("2");
+    }
+
+    private static String silentAudioSource() {
+        return "anullsrc=channel_layout=" + OUTPUT_AUDIO_LAYOUT + ":sample_rate=" + OUTPUT_AUDIO_SAMPLE_RATE;
+    }
+
+    private static String normalizedVideoFilter(SimpleVideoExportSettings settings) {
+        return settings.resolution().ffmpegScaleExpression()
+                + ",fps=" + settings.framesPerSecond()
+                + ",setpts=PTS-STARTPTS,format=yuv420p";
     }
 
     private static Path requireProjectFile(Path projectDirectory, String relativePath, String kind, String frameId) throws IOException {
@@ -334,7 +403,10 @@ public final class RenderFinalVideoPlanUseCase {
     }
 
     private static List<String> concatCommand(Path ffmpeg, Path concat, Path target) {
-        return List.of(ffmpeg.toString(), "-y", "-f", "concat", "-safe", "0", "-i", concat.toString(), "-c", "copy", target.toString());
+        return List.of(ffmpeg.toString(), "-y", "-fflags", "+genpts",
+                "-f", "concat", "-safe", "0", "-i", concat.toString(),
+                "-c", "copy", "-avoid_negative_ts", "make_zero",
+                "-movflags", "+faststart", target.toString());
     }
 
     private static String concatFile(List<Path> clips) {

@@ -193,7 +193,7 @@ public final class TheatreFrameGenerationWorkflow {
                         interventionDir.resolve(".raw"),
                         safe(unit.interventionId()) + "-" + safe(unit.segmentId()) + "-" + aspectRatio.workflowId());
         var workflow = TheatreImageGenerationWorkflow.workflowSpec(preset, request);
-        java.time.Duration timeout = preset == TheatreImageGenerationPreset.HIGH_QUALITY_FLUX
+        java.time.Duration timeout = preset != null && preset.fluxCompatible()
                 ? java.time.Duration.ofMinutes(45) : settings.timeout();
         VisualEngineResult result = visualEngineClient.generate(settings.baseUrl(), timeout, request, workflow,
                 attemptPolicy(), GenerationTaskKind.IMAGE_FRAME, progress);

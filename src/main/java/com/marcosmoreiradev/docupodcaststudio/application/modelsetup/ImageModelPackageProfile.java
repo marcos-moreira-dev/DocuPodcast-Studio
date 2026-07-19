@@ -30,6 +30,32 @@ public enum ImageModelPackageProfile {
             ImageModelPackageInstallType.AUTOMATIC_DOWNLOAD,
             false,
             false),
+    PRODUCTION_SDXL_REFERENCE(
+            "PRODUCTION_SDXL_REFERENCE",
+            "Produccion SDXL con referencias",
+            "SDXL base/refiner con CLIP Vision, IP-Adapter Plus/FaceID, InsightFace y ControlNet.",
+            "stabilityai/stable-diffusion-xl-base-1.0",
+            "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0",
+            "sd_xl_base_1.0.safetensors",
+            "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors",
+            15_000_000_000L,
+            ImageModelPackageAccessPolicy.PUBLIC,
+            ImageModelPackageInstallType.AUTOMATIC_DOWNLOAD,
+            true,
+            false),
+    ADVANCED_FLUX_KONTEXT(
+            "ADVANCED_FLUX_KONTEXT",
+            "Avanzado FLUX Kontext",
+            "FLUX Kontext multirreferencia para identidad, continuidad y edicion contextual.",
+            "black-forest-labs/FLUX.1-Kontext-dev",
+            "https://huggingface.co/black-forest-labs/FLUX.1-Kontext-dev",
+            "flux1-kontext-dev.safetensors",
+            "https://huggingface.co/black-forest-labs/FLUX.1-Kontext-dev/resolve/main/flux1-kontext-dev.safetensors",
+            24_000_000_000L,
+            ImageModelPackageAccessPolicy.GATED_OR_TOKEN,
+            ImageModelPackageInstallType.GATED_DOWNLOAD,
+            true,
+            false),
     HIGH_QUALITY_FLUX(
             "HIGH_QUALITY_FLUX",
             "Alta calidad / Flux",
@@ -153,13 +179,16 @@ public enum ImageModelPackageProfile {
     }
 
     public String manualSetupInstructions() {
-        if (this != HIGH_QUALITY_FLUX) {
+        if (this != HIGH_QUALITY_FLUX && this != ADVANCED_FLUX_KONTEXT) {
             return "";
         }
-        return "Antes de descargar FLUX.1-dev debes abrir el repositorio del proveedor y aceptar sus terminos. "
-                + "Luego descarga manualmente: flux1-dev.safetensors, ae.safetensors, clip_l.safetensors "
+        String model = this == ADVANCED_FLUX_KONTEXT
+                ? "flux1-kontext-dev.safetensors"
+                : "flux1-dev.safetensors";
+        return "Antes de descargar FLUX debes abrir el repositorio del proveedor y aceptar sus terminos no comerciales. "
+                + "Luego descarga manualmente: " + model + ", ae.safetensors, clip_l.safetensors "
                 + "y un encoder T5XXL. DocuPodcast acepta T5 FP8/FP16/BF16 o la carpeta oficial sharded text_encoder_2, "
-                + "que consolida por streaming sin alterar el original. Ubicaciones esperadas: models/image/flux1-dev.safetensors, "
+                + "que consolida por streaming sin alterar el original. Ubicaciones esperadas: models/image/" + model + ", "
                 + "models/image/vae/ae.safetensors y models/image/text_encoders/. El workflow FLUX viene integrado.";
     }
 

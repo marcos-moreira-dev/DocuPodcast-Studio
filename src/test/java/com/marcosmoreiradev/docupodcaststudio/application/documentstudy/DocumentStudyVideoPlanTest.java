@@ -22,11 +22,16 @@ import com.marcosmoreiradev.docupodcaststudio.domain.study.DocumentStudyMusicTra
 import com.marcosmoreiradev.docupodcaststudio.domain.study.DocumentStudyClosingSlide;
 import com.marcosmoreiradev.docupodcaststudio.domain.study.DocumentStudyVideoConfiguration;
 import com.marcosmoreiradev.docupodcaststudio.domain.study.DocumentTableSlideConfiguration;
+import com.marcosmoreiradev.docupodcaststudio.domain.study.DocumentParagraphVisualAssignment;
+import com.marcosmoreiradev.docupodcaststudio.domain.study.DocumentVisualSource;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import javax.imageio.ImageIO;
+import java.awt.Color;
+import java.awt.image.BufferedImage;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -101,6 +106,7 @@ final class DocumentStudyVideoPlanTest {
         assertEquals("CLOSING-DOC-CLOSING-1", closing.segmentId());
         assertEquals(7.0, closing.frameDurationSeconds());
         assertTrue(closing.audioRelativePath().isBlank());
+        assertEquals(21.4, plan.totalDurationSeconds(), 0.001);
         assertTrue(plan.exportableAsRenderedVideo());
     }
 
@@ -167,6 +173,39 @@ final class DocumentStudyVideoPlanTest {
         assertEquals(12.0, overlays.inputs().getLast().timelineEndSeconds());
         assertEquals(1.0, overlays.inputs().getLast().sourceEndSeconds());
         assertEquals(0.35, overlays.inputs().get(1).volume());
+    }
+
+    @Test
+    void illustrationOnlySkipsParagraphTextButKeepsTitleAndCenteredImage() throws Exception {
+        Path source = projectDirectory.resolve("media/images/illustration.png");
+        Files.createDirectories(source.getParent());
+        BufferedImage illustration = new BufferedImage(400, 200, BufferedImage.TYPE_INT_RGB);
+        var graphics = illustration.createGraphics();
+        graphics.setColor(new Color(20, 100, 220));
+        graphics.fillRect(0, 0, illustration.getWidth(), illustration.getHeight());
+        graphics.dispose();
+        ImageIO.write(illustration, "png", source.toFile());
+
+        DocuPodcastProject project = DocuPodcastProject.createNew("Documental", ProjectMode.DOCUMENTARY_STUDIO)
+                .withAsset(new ProjectAssetReference("IMG-1", ProjectAssetKind.IMAGE, "Ilustracion",
+                        "media/images/illustration.png", "image/png", "Prueba", "", ""));
+        DocumentParagraphVisualAssignment visual = new DocumentParagraphVisualAssignment(
+                "B-LONG", "fingerprint", "IMG-1", "", "", DocumentVisualSource.IMPORTED,
+                "", null, "Subtitulo que no debe mostrarse", true);
+        DocumentBlock block = DocumentBlock.of("B-LONG", DocumentBlockType.PARAGRAPH,
+                "Texto demasiado largo ".repeat(2500), "Normal");
+        Path output = projectDirectory.resolve("generated/slide.png");
+
+        new DocumentStudySlideCompositor().composeParagraph(
+                output, block, visual, DocumentStudyVideoConfiguration.empty().withTitle("Titulo global"),
+                project, projectDirectory,
+                DocumentTextVideoOptions.defaults().withResolution(SimpleVideoResolutionPreset.HD_720));
+
+        BufferedImage rendered = ImageIO.read(output.toFile());
+        assertEquals(1280, rendered.getWidth());
+        assertEquals(720, rendered.getHeight());
+        Color center = new Color(rendered.getRGB(rendered.getWidth() / 2, rendered.getHeight() / 2));
+        assertEquals(new Color(20, 100, 220), center);
     }
 
     private static ReadableDocument document() {

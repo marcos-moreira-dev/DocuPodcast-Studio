@@ -110,12 +110,43 @@ public record SimpleVideoFrame(
     public record CharacterLabel(String characterName, double x, double y) {
     }
 
-    public record VisualPart(String imageAssetId, String imageRelativePath, double durationSeconds, String label) {
+    public enum VisualPartKind {
+        STILL_IMAGE,
+        VIDEO_CLIP
+    }
+
+    public record VisualPart(
+            VisualPartKind kind,
+            String imageAssetId,
+            String imageRelativePath,
+            double durationSeconds,
+            double sourceStartSeconds,
+            String label
+    ) {
         public VisualPart {
+            kind = Objects.requireNonNullElse(kind, VisualPartKind.STILL_IMAGE);
             imageAssetId = imageAssetId == null ? "" : imageAssetId.strip();
             imageRelativePath = optionalPortablePath(imageRelativePath);
             durationSeconds = Math.max(0.0, durationSeconds);
+            sourceStartSeconds = Math.max(0.0, sourceStartSeconds);
             label = label == null ? "" : label.strip();
+        }
+
+        public VisualPart(String imageAssetId, String imageRelativePath, double durationSeconds, String label) {
+            this(VisualPartKind.STILL_IMAGE, imageAssetId, imageRelativePath, durationSeconds, 0.0, label);
+        }
+
+        public static VisualPart videoClip(String assetId,
+                                           String relativePath,
+                                           double durationSeconds,
+                                           double sourceStartSeconds,
+                                           String label) {
+            return new VisualPart(VisualPartKind.VIDEO_CLIP, assetId, relativePath,
+                    durationSeconds, sourceStartSeconds, label);
+        }
+
+        public boolean videoClip() {
+            return kind == VisualPartKind.VIDEO_CLIP;
         }
     }
 

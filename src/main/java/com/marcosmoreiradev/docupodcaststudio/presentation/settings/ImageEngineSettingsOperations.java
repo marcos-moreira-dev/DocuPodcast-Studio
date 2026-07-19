@@ -39,7 +39,7 @@ final class ImageEngineSettingsOperations {
 
     void verify(SettingsFormModel form, SettingsApplicationServices services, Path applicationRoot, Label status) {
         if (services == null) {
-            status.setText("No hay servicios de configuracion conectados para Imagen IA teatral.");
+            status.setText("No hay servicios de configuración conectados para generación visual local.");
             return;
         }
         ImageEngineReadinessReport report = services.inspectLocalTheatreImageEngine()
@@ -48,14 +48,14 @@ final class ImageEngineSettingsOperations {
     }
 
     void confirmAndPrepare(SettingsFormModel form, SettingsApplicationServices services, Path applicationRoot, Label status) {
-        if (!confirmationPrompt.confirm(status, "Preparar Imagen IA teatral", "Crear carpetas locales",
+        if (!confirmationPrompt.confirm(status, "Preparar generación visual local", "Crear carpetas locales",
                 "DocuPodcast creara tools/image, models/image y carpetas de salida dentro del programa.\n\n"
                         + "Esto no instala un runtime ejecutable, workflow, adaptadores ni modelos pesados. El runtime compatible y el paquete de imagen requieren confirmacion separada.")) {
-            status.setText("Preparacion cancelada. No se modifico Imagen IA teatral.");
+            status.setText("Preparación cancelada. No se modificó la generación visual local.");
             return;
         }
         OperationProgress progress = operationProgress.show(status,
-                "Preparando Imagen IA teatral",
+                "Preparando generación visual local",
                 "Creando carpetas locales",
                 "Se preparan solo carpetas. No se marcara el motor como listo sin runtime, workflow y PNG real de prueba.");
         backgroundTaskRunner.start("preparando-imagen-ia-teatral", () -> {
@@ -77,18 +77,18 @@ final class ImageEngineSettingsOperations {
 
     void importRuntimeFolder(SettingsFormModel form, SettingsApplicationServices services, Path applicationRoot, Label status) {
         if (services == null) {
-            status.setText("No hay servicios de configuracion conectados para importar runtime de Imagen IA teatral.");
+            status.setText("No hay servicios de configuración conectados para importar el runtime visual.");
             return;
         }
         DirectoryChooser chooser = new DirectoryChooser();
-        chooser.setTitle("Selecciona runtime local de Imagen IA teatral");
+        chooser.setTitle("Selecciona el runtime de generación visual local");
         File selected = chooser.showDialog(status.getScene() == null ? null : status.getScene().getWindow());
         if (selected == null) {
             status.setText("Importacion cancelada. Selecciona una carpeta con ComfyUI portable o runtime compatible.");
             return;
         }
         OperationProgress progress = operationProgress.show(status,
-                "Importando runtime de Imagen IA teatral",
+                "Importando runtime de generación visual",
                 "Validando y copiando runtime",
                 "La carpeta debe incluir un lanzador real o ComfyUI/main.py con Python local.");
         backgroundTaskRunner.start("importando-runtime-imagen-ia-teatral", () -> {
@@ -136,7 +136,7 @@ final class ImageEngineSettingsOperations {
             return;
         }
         OperationProgress progress = operationProgress.show(status,
-                "Descargando Imagen IA teatral",
+                "Descargando paquete de generación visual",
                 (forceReinstall ? "Reinstalando " : "Descargando ") + profile.displayName(),
                 "La descarga se ejecuta solo porque aceptaste esta accion especifica.");
         backgroundTaskRunner.start("descargando-imagen-ia-teatral", () -> {
@@ -161,14 +161,14 @@ final class ImageEngineSettingsOperations {
 
     void importPackageFolder(SettingsFormModel form, SettingsApplicationServices services, Path applicationRoot, Label status) {
         DirectoryChooser chooser = new DirectoryChooser();
-        chooser.setTitle("Selecciona paquete local de Imagen IA teatral");
+        chooser.setTitle("Selecciona un paquete local de generación visual");
         File selected = chooser.showDialog(status.getScene() == null ? null : status.getScene().getWindow());
         if (selected == null) {
             status.setText("Importacion cancelada. Selecciona una carpeta valida de paquete de imagen.");
             return;
         }
         OperationProgress progress = operationProgress.show(status,
-                "Importando Imagen IA teatral",
+                "Importando paquete de generación visual",
                 "Copiando paquete a models/image",
                 "Se copiara el paquete seleccionado dentro del programa.");
         backgroundTaskRunner.start("importando-imagen-ia-teatral", () -> {
@@ -235,7 +235,7 @@ final class ImageEngineSettingsOperations {
 
     void startEngine(SettingsFormModel form, SettingsApplicationServices services, Path applicationRoot, Label status) {
         OperationProgress progress = operationProgress.show(status,
-                "Iniciando Imagen IA teatral",
+                "Iniciando generación visual local",
                 "Arrancando motor local",
                 "DocuPodcast usara el runtime local preparado en tools/image.");
         backgroundTaskRunner.start("iniciando-imagen-ia-teatral", () -> {
@@ -252,11 +252,11 @@ final class ImageEngineSettingsOperations {
 
     void runSmoke(SettingsFormModel form, SettingsApplicationServices services, Path applicationRoot, Label status) {
         if (services == null) {
-            status.setText("No hay servicios de configuracion conectados para probar Imagen IA teatral.");
+            status.setText("No hay servicios de configuración conectados para probar la generación visual.");
             return;
         }
         OperationProgress progress = operationProgress.show(status,
-                "Probando Imagen IA teatral",
+                "Probando generación visual local",
                 "Verificando runtime, paquete y motor",
                 "La prueba detecta o inicia el motor local y debe generar un PNG real.");
         backgroundTaskRunner.start("probando-imagen-ia-teatral", () -> {

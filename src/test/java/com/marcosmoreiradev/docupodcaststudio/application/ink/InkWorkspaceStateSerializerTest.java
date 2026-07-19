@@ -70,7 +70,9 @@ final class InkWorkspaceStateSerializerTest {
                 "#ffffffff",
                 List.of(InkStroke.draw("#000000ff", 6,
                         List.of(InkPoint.of(12, 16, 1, 0.5), InkPoint.of(30, 40, 2, 1.0)))),
-                List.of(),
+                List.of(new InkPlacedImage("IMG-RESTORE", "ASSET-SOURCE", "media/source.png",
+                        "current-data", "original-data", 20, 30, 400, 210,
+                        18, 28, 440, new InkImageCrop(true, 1, 2, 800, 420))),
                 Map.of(
                         "showFragmentTitle", "true",
                         "fragmentTitleText", "Linea uno\nLinea dos"));
@@ -84,5 +86,11 @@ final class InkWorkspaceStateSerializerTest {
         assertEquals(1, parsed.strokes().size());
         assertEquals(2, parsed.strokes().get(0).points().size());
         assertEquals(0.5, parsed.strokes().get(0).points().get(0).pressure());
+        assertEquals(1, parsed.images().size());
+        assertEquals("IMG-RESTORE", parsed.images().get(0).id());
+        assertEquals("ASSET-SOURCE", parsed.images().get(0).sourceAssetId());
+        assertEquals("current-data", parsed.images().get(0).inlineImageData());
+        assertEquals(400, parsed.images().get(0).fitWidth());
+        assertTrue(parsed.images().get(0).crop().active());
     }
 }

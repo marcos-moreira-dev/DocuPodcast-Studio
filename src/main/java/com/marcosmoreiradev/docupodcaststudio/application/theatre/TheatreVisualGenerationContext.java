@@ -39,6 +39,8 @@ public record TheatreVisualGenerationContext(
         result.addAll(identityReferences);
         result.addAll(objectReferences);
         result.addAll(environmentReferences);
+        add(result, previousFrame);
+        add(result, nextFrame);
         add(result, drawnFrame);
         add(result, cameraGuide);
         return List.copyOf(result);
@@ -49,8 +51,10 @@ public record TheatreVisualGenerationContext(
         identityReferences.forEach(asset -> add(result, asset, VisualConditioningRole.IDENTITY, 0.85));
         objectReferences.forEach(asset -> add(result, asset, VisualConditioningRole.OBJECT, 0.55));
         environmentReferences.forEach(asset -> add(result, asset, VisualConditioningRole.ENVIRONMENT, 0.45));
-        add(result, cameraGuide, VisualConditioningRole.STRUCTURE_GUIDE, 0.45);
-        add(result, drawnFrame, VisualConditioningRole.STRUCTURE_GUIDE, 0.30);
+        add(result, cameraGuide, VisualConditioningRole.CAMERA_GUIDE, 0.45);
+        add(result, drawnFrame, VisualConditioningRole.DRAWN_GUIDE, 0.30);
+        add(result, previousFrame, VisualConditioningRole.PREVIOUS_FRAME, 0.35);
+        add(result, nextFrame, VisualConditioningRole.NEXT_FRAME, 0.35);
         return List.copyOf(result);
     }
 

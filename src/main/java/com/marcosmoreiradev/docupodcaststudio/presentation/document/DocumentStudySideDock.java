@@ -21,8 +21,8 @@ import java.util.function.Supplier;
 /** Right dock for document-study tools. Mirrors the theatre dock shell without theatre modules. */
 public final class DocumentStudySideDock extends BorderPane {
     private static final double COLLAPSED_WIDTH = 84.0;
-    private static final double EXPANDED_WIDTH = 760.0;
-    private static final double EXPANDED_MIN_WIDTH = 600.0;
+    private static final double EXPANDED_WIDTH = 720.0;
+    private static final double EXPANDED_MIN_WIDTH = 560.0;
 
     private final WorkspaceSideDock dock;
     private final SideDockContext dockContext;
@@ -92,8 +92,8 @@ public final class DocumentStudySideDock extends BorderPane {
         return new SideDockModuleRegistry()
                 .register(new StaticSideDockModule(
                         SideDockModuleId.DOCUMENT_STUDY_VIDEO,
-                        "Video documental",
-                        "Configura diapositivas por parrafo y tabla para la exportacion documental.",
+                        "Contenido del video",
+                        "Edita cada parrafo, tabla y diapositiva final del video documental.",
                         "Video",
                         () -> new DocumentStudyVideoPanel(viewModel),
                         context -> viewModel.documentaryVideoConfigurationAvailable()))

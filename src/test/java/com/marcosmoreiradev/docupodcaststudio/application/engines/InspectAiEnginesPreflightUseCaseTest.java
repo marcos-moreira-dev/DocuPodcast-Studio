@@ -41,7 +41,7 @@ class InspectAiEnginesPreflightUseCaseTest {
     }
 
     @Test
-    void advancedVoiceWithDownloadedModelStillNeedsWavProofForDocuments() throws Exception {
+    void advancedVoiceWithCompleteRuntimeIsUsableBeforeOptionalWavProof() throws Exception {
         OperationalSettings settings = fullXttsSettings(false);
 
         AiEnginePreflightReport report = new InspectAiEnginesPreflightUseCase().inspect(settings, tempDir);
@@ -50,11 +50,10 @@ class InspectAiEnginesPreflightUseCaseTest {
                 .filter(item -> item.engineId().equals("tts-xtts-coqui"))
                 .findFirst()
                 .orElseThrow();
-        assertEquals(AiEngineReadinessStatus.NEEDS_VERIFICATION, xtts.status());
-        assertFalse(xtts.usable());
-        assertFalse(report.coquiMandatoryButReadyOrWarnOnly());
-        assertFalse(report.fullAiDemoReady());
-        assertTrue(xtts.userMessage().contains("falta generar una prueba WAV real"));
+        assertEquals(AiEngineReadinessStatus.READY_WITH_WARNINGS, xtts.status());
+        assertTrue(xtts.usable());
+        assertTrue(report.coquiMandatoryButReadyOrWarnOnly());
+        assertTrue(xtts.userMessage().contains("puede generar audio"));
     }
 
     @Test

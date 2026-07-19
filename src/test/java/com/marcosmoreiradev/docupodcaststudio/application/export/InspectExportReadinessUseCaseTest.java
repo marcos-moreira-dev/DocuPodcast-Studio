@@ -6,6 +6,9 @@ import com.marcosmoreiradev.docupodcaststudio.domain.audio.AudioJobState;
 import com.marcosmoreiradev.docupodcaststudio.domain.audio.AudioSegmentSnapshot;
 import com.marcosmoreiradev.docupodcaststudio.domain.assets.ProjectAssetKind;
 import com.marcosmoreiradev.docupodcaststudio.domain.assets.ProjectAssetReference;
+import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeGeneratedClip;
+import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeKeyframeSource;
+import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeParagraphTake;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.DocuPodcastProject;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.ProjectMode;
 import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationScriptDocument;
@@ -15,7 +18,9 @@ import com.marcosmoreiradev.docupodcaststudio.domain.storyboard.StoryboardBindin
 import com.marcosmoreiradev.docupodcaststudio.domain.storyboard.StoryboardDocument;
 import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreProjectLayer;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
@@ -26,6 +31,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class InspectExportReadinessUseCaseTest {
     private final InspectExportReadinessUseCase useCase = new InspectExportReadinessUseCase();
+    @TempDir
+    Path tempDir;
 
     @Test
     void reportDeclaresExportableAndBlockedOutputsWithoutUi() {
@@ -83,28 +90,34 @@ final class InspectExportReadinessUseCaseTest {
     }
 
     @Test
-    void narrativeVideoMp4RequiresAudioAndMainImageButNotBridgeImage() {
+    void narrativeVideoMp4RequiresCurrentKeyframeClipsAndAudioInsideProject() throws Exception {
         ExportReadinessReport blocked = useCase.inspect(
                 DocuPodcastProject.createNew("Video", ProjectMode.NARRATIVE_VIDEO),
-                Path.of("video.docupodcast.json"),
+                tempDir.resolve("video.docupodcast.json"),
                 script(),
                 null,
                 List.of(completedJob()));
 
         assertTrue(blocked.items().stream().anyMatch(item -> item.kind() == ExportableArtifactKind.FINAL_VIDEO_MP4
                 && item.blocked()
-                && item.missingRequirements().stream().anyMatch(text -> text.contains("imagen principal"))));
+                && item.missingRequirements().stream().anyMatch(text -> text.contains("imagen clave"))));
 
+        Files.createDirectories(tempDir.resolve("generated/narrative/keyframes"));
+        Files.createDirectories(tempDir.resolve("generated/narrative/clips"));
+        Files.createDirectories(tempDir.resolve("jobs/JOB-001/audio"));
+        Files.write(tempDir.resolve("generated/narrative/keyframes/BLK-001.png"), new byte[] { 1 });
+        Files.write(tempDir.resolve("generated/narrative/clips/BLK-001-001.mp4"), new byte[] { 2 });
+        Files.write(tempDir.resolve("jobs/JOB-001/audio/SEG-001.wav"), new byte[] { 3 });
         ExportReadinessReport exportable = useCase.inspect(
-                narrativeProjectWithMainImage(),
-                Path.of("video.docupodcast.json"),
+                narrativeProjectWithGeneratedTake(),
+                tempDir.resolve("video.docupodcast.json"),
                 script(),
-                storyboard(),
+                null,
                 List.of(completedJob()));
 
         assertTrue(exportable.items().stream().anyMatch(item -> item.kind() == ExportableArtifactKind.FINAL_VIDEO_MP4
                 && item.exportable()
-                && item.evidence().stream().anyMatch(text -> text.contains("0 imagen(es) puente"))));
+                && item.evidence().stream().anyMatch(text -> text.contains("parte(s) de video local"))));
     }
 
     @Test
@@ -203,10 +216,20 @@ final class InspectExportReadinessUseCaseTest {
                 "");
     }
 
-    private static DocuPodcastProject narrativeProjectWithMainImage() {
+    private static DocuPodcastProject narrativeProjectWithGeneratedTake() {
+        NarrativeGeneratedClip clip = new NarrativeGeneratedClip(
+                "CLIP-001", "VIDEO-001", 0, 3.0, "", "wan22", "workflow", 42L,
+                "fingerprint", Map.of());
+        NarrativeParagraphTake take = new NarrativeParagraphTake(
+                "BLK-001", true, "IMG-001", NarrativeKeyframeSource.GENERATED,
+                List.of(clip), "prompt", "", 42L, "fingerprint", false, "");
         return DocuPodcastProject.createNew("Video", ProjectMode.NARRATIVE_VIDEO)
                 .withAsset(new ProjectAssetReference("IMG-001", ProjectAssetKind.IMAGE, "Escena",
-                        "assets/images/escena.png", "image/png", "Imagen principal", "", ""));
+                        "generated/narrative/keyframes/BLK-001.png", "image/png", "Imagen clave", "", ""))
+                .withAsset(new ProjectAssetReference("VIDEO-001", ProjectAssetKind.VIDEO_SOURCE, "Clip",
+                        "generated/narrative/clips/BLK-001-001.mp4", "video/mp4", "Clip narrativo", "", ""))
+                .withNarrative(DocuPodcastProject.createNew("Video", ProjectMode.NARRATIVE_VIDEO)
+                        .narrative().withTake(take));
     }
 
     private static DocuPodcastProject theatreProjectWithMap() {

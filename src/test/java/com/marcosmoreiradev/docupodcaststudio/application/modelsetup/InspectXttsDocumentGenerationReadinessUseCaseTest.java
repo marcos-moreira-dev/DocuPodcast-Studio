@@ -15,15 +15,25 @@ final class InspectXttsDocumentGenerationReadinessUseCaseTest {
     Path tempDir;
 
     @Test
-    void downloadedModelStillCannotGenerateDocumentsWithoutWavProof() throws Exception {
+    void incompleteRuntimeStillBlocksDocumentGeneration() {
+        XttsDocumentGenerationReadinessReport report = new InspectXttsDocumentGenerationReadinessUseCase()
+                .inspect(OperationalSettings.defaults(), tempDir);
+
+        assertFalse(report.canGenerateDocumentAudio());
+        assertFalse(report.blockingReasons().isEmpty());
+    }
+
+    @Test
+    void completeRuntimeCanGenerateDocumentsBeforeOptionalWavProof() throws Exception {
         createXttsRuntime(tempDir);
 
         XttsDocumentGenerationReadinessReport report = new InspectXttsDocumentGenerationReadinessUseCase()
                 .inspect(OperationalSettings.defaults(), tempDir);
 
-        assertFalse(report.canGenerateDocumentAudio());
-        assertTrue(report.blockingReasons().stream().anyMatch(reason -> reason.contains("prueba WAV real")));
-        assertTrue(report.userMessage().contains("no demostró"));
+        assertTrue(report.canGenerateDocumentAudio());
+        assertTrue(report.blockingReasons().isEmpty());
+        assertTrue(report.warnings().stream().anyMatch(warning -> warning.contains("prueba WAV corta")));
+        assertTrue(report.userMessage().contains("puede generar audio"));
     }
 
     @Test

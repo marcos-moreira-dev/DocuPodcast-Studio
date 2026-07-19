@@ -8,11 +8,11 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Decides whether Voz IA avanzada is safe to use for document audio jobs.
+ * Decides whether Voz IA avanzada can be used for document audio jobs.
  *
- * <p>This use case intentionally sits above the setup/readiness inspection: a model can be present,
- * selectable and still not be product-ready for document chunks if the runtime has never generated a
- * WAV proof. That is the difference between "downloaded" and "usable".</p>
+ * <p>The structural setup is the generation gate. A short WAV smoke remains valuable operational
+ * evidence, but it must not make a complete local runtime appear uninstalled or prevent the first
+ * real generation. Actual synthesis failures are reported by the audio generation gateway.</p>
  */
 public final class InspectXttsDocumentGenerationReadinessUseCase {
     private final InspectXttsSetupReadinessUseCase setupInspector;
@@ -46,14 +46,15 @@ public final class InspectXttsDocumentGenerationReadinessUseCase {
                     "Voz IA avanzada aún no está preparada para generar fragmentos de audio del documento.",
                     "Completa Preparar/Descargar/Importar en Configuración y luego genera una prueba WAV real.");
         }
+        warnings.addAll(setup.warnings());
         if (!smoke.generatedWavProof()) {
-            blocking.add("Falta prueba WAV real de Voz IA avanzada generada desde el runtime local.");
+            warnings.add("Todavía no existe una prueba WAV corta generada con este runtime local.");
             if (!smoke.issues().isEmpty()) {
-                blocking.addAll(smoke.issues());
+                warnings.addAll(smoke.issues());
             }
-            return new XttsDocumentGenerationReadinessReport(setup, smoke, false, false, blocking, warnings,
-                    "Voz IA avanzada está descargada/configurada, pero todavía no demostró que puede generar audio real.",
-                    "Pulsa Probar en Configuración y genera un WAV corto antes de usar documentos largos.");
+            return new XttsDocumentGenerationReadinessReport(setup, smoke, true, false, blocking, warnings,
+                    "Voz IA avanzada está instalada y puede generar audio; aún no hay una prueba corta previa.",
+                    "Puedes generar audio ahora o pulsar Probar en Configuración antes de un trabajo largo.");
         }
         if (!smoke.playbackConfirmed()) {
             warnings.add("La prueba WAV existe, pero falta confirmar reproducción dentro de la app.");
@@ -62,7 +63,6 @@ public final class InspectXttsDocumentGenerationReadinessUseCase {
                     "Voz IA avanzada ya generó un WAV real; falta confirmar reproducción dentro de la app.",
                     "Pulsa Reproducir prueba en Configuración para cerrar la verificación.");
         }
-        warnings.addAll(setup.warnings());
         return new XttsDocumentGenerationReadinessReport(setup, smoke, true, true, blocking, warnings,
                 "Voz IA avanzada lista para generar fragmentos de audio del documento.",
                 warnings.isEmpty() ? "Sin acción pendiente." : "Puedes usarla; revisa advertencias antes de RC final.");

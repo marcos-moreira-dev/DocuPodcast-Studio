@@ -2,6 +2,13 @@ package com.marcosmoreiradev.docupodcaststudio.infrastructure.json;
 
 import com.marcosmoreiradev.docupodcaststudio.domain.assets.ProjectAssetKind;
 import com.marcosmoreiradev.docupodcaststudio.domain.assets.ProjectAssetReference;
+import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeContextReference;
+import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeContextRole;
+import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeGeneratedClip;
+import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeKeyframeSource;
+import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeParagraphTake;
+import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeProjectLayer;
+import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeVideoConfiguration;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.DocuPodcastProject;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.ProjectKind;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.ProjectMode;
@@ -18,6 +25,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -55,16 +63,66 @@ final class DocuPodcastProjectFileRepositoryTest {
         DocuPodcastProject project = DocuPodcastProject.createNew("Proyecto mínimo");
         String json = new DocuPodcastProjectJsonWriter().write(project);
 
-        assertTrue(json.contains("\"formatVersion\": 3"));
+        assertTrue(json.contains("\"formatVersion\": 4"));
         assertTrue(json.contains("\"project\""));
         assertTrue(json.contains("\"mode\": \"DOCUMENTARY_STUDIO\""));
         assertTrue(json.contains("\"assets\""));
         assertTrue(json.contains("\"readingProfile\""));
         assertTrue(json.contains("\"voiceLibrary\""));
         assertTrue(json.contains("\"narrativeLayers\""));
+        assertTrue(json.contains("\"narrative\""));
         assertTrue(json.contains("\"study\""));
         assertTrue(json.contains("\"technicalProblems\""));
         assertTrue(json.contains("\"view\""));
+    }
+
+    @Test
+    void savesAndRestoresNarrativeVideoConfigurationContextAndGeneratedTake() throws Exception {
+        NarrativeVideoConfiguration configuration = new NarrativeVideoConfiguration(
+                1080, 1920, 24, 4.5, "ADVANCED_FLUX_KONTEXT",
+                "LTX23_I2V_PORTRAIT", "LOW_VRAM", "");
+        NarrativeContextReference identity = new NarrativeContextReference(
+                "REF-HERO", NarrativeContextRole.IDENTITY, "IMG-CONTEXT",
+                "Protagonista", true, 0.85, "Referencia global");
+        NarrativeGeneratedClip clip = new NarrativeGeneratedClip(
+                "CLIP-B001-1", "VIDEO-B001-1", 0, 4.5, "IMG-LAST",
+                "ltx-2.3", "ltx23-i2v", 77L, "take-fingerprint",
+                Map.of("backend", "cuda"));
+        NarrativeParagraphTake take = new NarrativeParagraphTake(
+                "B001", true, "IMG-KEYFRAME", NarrativeKeyframeSource.GENERATED,
+                List.of(clip), "Acción tomada del Word", "sin texto", 76L,
+                "take-fingerprint", false, "");
+        NarrativeProjectLayer narrative = new NarrativeProjectLayer(
+                configuration, "document-fingerprint", "Texto normalizado del Word",
+                List.of(identity), List.of(take));
+        DocuPodcastProject project = DocuPodcastProject.createNew(
+                        "Video narrativo", ProjectMode.NARRATIVE_VIDEO)
+                .withAsset(new ProjectAssetReference("IMG-CONTEXT", ProjectAssetKind.IMAGE,
+                        "Protagonista", "media/images/narrative/context/hero.png",
+                        "image/png", "Contexto narrativo", "", ""))
+                .withAsset(new ProjectAssetReference("IMG-KEYFRAME", ProjectAssetKind.IMAGE,
+                        "Toma B001", "generated/narrative/keyframes/B001.png",
+                        "image/png", "Imagen clave narrativa", "", ""))
+                .withAsset(new ProjectAssetReference("VIDEO-B001-1", ProjectAssetKind.VIDEO_SOURCE,
+                        "Clip B001", "generated/narrative/clips/B001-1.mp4",
+                        "video/mp4", "Clip narrativo", "", ""))
+                .withNarrative(narrative);
+        Path file = tempDir.resolve("narrative.docupodcast.json");
+
+        DocuPodcastProjectFileRepository repository = new DocuPodcastProjectFileRepository();
+        repository.save(project, file);
+        DocuPodcastProject opened = repository.open(file);
+
+        assertEquals(1080, opened.narrative().videoConfiguration().width());
+        assertEquals("LTX23_I2V_PORTRAIT",
+                opened.narrative().videoConfiguration().videoProfile());
+        assertEquals("document-fingerprint", opened.narrative().documentFingerprint());
+        assertEquals(NarrativeContextRole.IDENTITY,
+                opened.narrative().contextReferences().getFirst().role());
+        NarrativeParagraphTake restored = opened.narrative().take("B001").orElseThrow();
+        assertEquals("IMG-KEYFRAME", restored.keyframeAssetId());
+        assertEquals("VIDEO-B001-1", restored.clips().getFirst().assetId());
+        assertEquals("cuda", restored.clips().getFirst().metadata().get("backend"));
     }
 
     @Test

@@ -13,10 +13,17 @@ public final class VisualConditioningWorkflowSupport {
     public Path requireTemplate(ComfyUiWorkflowSpec workflow, VisualEngineRequest request) throws IOException {
         if (request == null || request.conditioningReferences().isEmpty()) return null;
         Path root = RuntimePathResolver.defaultResolver().resolve().applicationRoot();
-        boolean flux = workflow != null && workflow.kind() == ComfyUiWorkflowKind.FLUX1_DEV_COMPONENTS;
-        Path template = root.resolve(flux
-                ? "models/image/workflows/workflow-flux-pulid-reference-api.json"
-                : "models/image/workflows/workflow-sd15-ipadapter-reference-api.json");
+        ComfyUiWorkflowKind kind = workflow == null
+                ? ComfyUiWorkflowKind.SD15_CHECKPOINT
+                : workflow.kind();
+        boolean flux = kind.flux();
+        String relativeTemplate = switch (kind) {
+            case FLUX_KONTEXT_COMPONENTS -> "models/image/workflows/workflow-flux-kontext-reference-api.json";
+            case FLUX1_DEV_COMPONENTS -> "models/image/workflows/workflow-flux-pulid-reference-api.json";
+            case SDXL_REFERENCE_COMPONENTS -> "models/image/workflows/workflow-sdxl-ipadapter-reference-api.json";
+            case SD15_CHECKPOINT -> "models/image/workflows/workflow-sd15-ipadapter-reference-api.json";
+        };
+        Path template = root.resolve(relativeTemplate);
         if (!Files.isRegularFile(template)) {
             throw new IOException("La generacion solicita referencias reales, pero falta el workflow API gestionado: "
                     + template + ". Importa el workflow desde Configuracion; no se generara una imagen solo por prompt.");
@@ -24,15 +31,17 @@ public final class VisualConditioningWorkflowSupport {
         Path customNodes = root.resolve("tools/image/ComfyUI/custom_nodes");
         if (request.requiresIdentityConditioning()) {
             String token = flux ? "pulid" : "ipadapter";
-            if (!containsEntry(customNodes, token)) {
-                throw new IOException("Falta el nodo ComfyUI de identidad " + (flux ? "PuLID-FLUX" : "IP-Adapter Plus")
+            if (kind != ComfyUiWorkflowKind.FLUX_KONTEXT_COMPONENTS
+                    && !containsEntry(customNodes, token)) {
+                String component = flux ? "PuLID-FLUX" : "IP-Adapter Plus";
+                throw new IOException("Falta el nodo ComfyUI de identidad " + component
                         + " en " + customNodes + ". La identidad de personajes no se degradara silenciosamente a texto.");
             }
             if (!flux && !containsFile(root.resolve("models/image"), "clip_vision")) {
                 throw new IOException("Falta el modelo CLIP Vision requerido por IP-Adapter. Importalo desde Configuracion.");
             }
         }
-        if (request.hasStructureGuide()
+        if (request.hasDrawnGuide()
                 && !containsEntry(customNodes, "controlnet")
                 && !containsFile(root.resolve("models/image"), "controlnet")) {
             throw new IOException("El frame dibujado requiere condicion estructural ControlNet scribble/canny. "

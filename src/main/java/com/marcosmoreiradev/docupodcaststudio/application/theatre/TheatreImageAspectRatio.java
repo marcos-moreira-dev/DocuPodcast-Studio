@@ -1,6 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.application.theatre;
 
 import com.marcosmoreiradev.docupodcaststudio.application.image.ImageEnhancementOutputProfile;
+import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualAspectRatio;
 
 import java.util.Locale;
 
@@ -49,6 +50,10 @@ public enum TheatreImageAspectRatio {
 
     public String workflowId() {
         return label.toLowerCase(Locale.ROOT).replace(':', 'x');
+    }
+
+    public VisualAspectRatio visualAspectRatio() {
+        return VisualAspectRatio.fromLabel(label);
     }
 
     public static TheatreImageAspectRatio fromLabel(String value) {

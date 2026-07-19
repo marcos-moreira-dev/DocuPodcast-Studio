@@ -15,7 +15,8 @@ public record VisualEngineRequest(
         int targetHeight,
         Path outputDirectory,
         String filenamePrefix,
-        List<VisualConditioningReference> conditioningReferences
+        List<VisualConditioningReference> conditioningReferences,
+        long seed
 ) {
     public VisualEngineRequest {
         prompt = normalize(prompt);
@@ -31,6 +32,22 @@ public record VisualEngineRequest(
         conditioningReferences = conditioningReferences == null
                 ? List.of()
                 : conditioningReferences.stream().filter(java.util.Objects::nonNull).toList();
+        seed = Math.max(0L, seed);
+    }
+
+    public VisualEngineRequest(String prompt,
+                               String negativePrompt,
+                               String checkpointName,
+                               int steps,
+                               double cfg,
+                               int batchSize,
+                               int targetWidth,
+                               int targetHeight,
+                               Path outputDirectory,
+                               String filenamePrefix,
+                               List<VisualConditioningReference> conditioningReferences) {
+        this(prompt, negativePrompt, checkpointName, steps, cfg, batchSize, targetWidth, targetHeight,
+                outputDirectory, filenamePrefix, conditioningReferences, positiveSeed());
     }
 
     public VisualEngineRequest(String prompt,
@@ -44,7 +61,7 @@ public record VisualEngineRequest(
                                Path outputDirectory,
                                String filenamePrefix) {
         this(prompt, negativePrompt, checkpointName, steps, cfg, batchSize, targetWidth, targetHeight,
-                outputDirectory, filenamePrefix, List.of());
+                outputDirectory, filenamePrefix, List.of(), positiveSeed());
     }
 
     public boolean requiresIdentityConditioning() {
@@ -52,19 +69,28 @@ public record VisualEngineRequest(
                 .anyMatch(reference -> reference.role() == VisualConditioningRole.IDENTITY);
     }
 
-    public boolean hasStructureGuide() {
+    public boolean hasCameraGuide() {
         return conditioningReferences.stream()
-                .anyMatch(reference -> reference.role() == VisualConditioningRole.STRUCTURE_GUIDE);
+                .anyMatch(reference -> reference.role() == VisualConditioningRole.CAMERA_GUIDE);
+    }
+
+    public boolean hasDrawnGuide() {
+        return conditioningReferences.stream()
+                .anyMatch(reference -> reference.role() == VisualConditioningRole.DRAWN_GUIDE);
+    }
+
+    public boolean hasStructureGuide() {
+        return hasCameraGuide() || hasDrawnGuide();
     }
 
     public VisualEngineRequest withConditioningReferences(List<VisualConditioningReference> references) {
         return new VisualEngineRequest(prompt, negativePrompt, checkpointName, steps, cfg, batchSize,
-                targetWidth, targetHeight, outputDirectory, filenamePrefix, references);
+                targetWidth, targetHeight, outputDirectory, filenamePrefix, references, seed);
     }
 
     public VisualEngineRequest withPrompt(String prompt) {
         return new VisualEngineRequest(prompt, negativePrompt, checkpointName, steps, cfg, batchSize,
-                targetWidth, targetHeight, outputDirectory, filenamePrefix, conditioningReferences);
+                targetWidth, targetHeight, outputDirectory, filenamePrefix, conditioningReferences, seed);
     }
 
     public int generationWidth() {
@@ -100,6 +126,10 @@ public record VisualEngineRequest(
                 .replaceAll("[^a-z0-9._-]+", "-")
                 .replaceAll("^-+|-+$", "")
                 .replaceAll("-+", "-");
+    }
+
+    private static long positiveSeed() {
+        return java.util.concurrent.ThreadLocalRandom.current().nextLong(Long.MAX_VALUE);
     }
 
     private record Size(int width, int height) {

@@ -60,16 +60,32 @@ public final class ComfyUiVisualEngineClient {
                     HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             boolean ok = response.statusCode() >= 200 && response.statusCode() < 300;
             return new ConnectionResult(ok, ok
-                    ? "Motor local de imagen IA disponible."
-                    : "Motor local de imagen IA respondio, pero rechazo la prueba.",
+                    ? "Motor de generacion visual local disponible."
+                    : "El motor de generacion visual local respondio, pero rechazo la prueba.",
                     "baseUrl=" + normalizedBaseUrl(baseUrl) + "\nhttpStatus=" + response.statusCode());
         } catch (IOException | InterruptedException | IllegalArgumentException ex) {
             if (ex instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
             return new ConnectionResult(false,
-                    "Motor local de imagen IA no responde. Verifica que este preparado e iniciado desde Configuracion.",
+                    "El motor de generacion visual local no responde. Verifica que este preparado e iniciado desde Configuracion.",
                     "baseUrl=" + normalizedBaseUrl(baseUrl) + "\nerror=" + ex.getMessage());
+        }
+    }
+
+    public ComfyUiSystemStats systemStats(String baseUrl, Duration timeout) throws IOException {
+        try {
+            HttpResponse<String> response = httpClient.send(request(baseUrl, timeout, "/system_stats").GET().build(),
+                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                throw new IOException("ComfyUI rechazo /system_stats: HTTP " + response.statusCode() + ".");
+            }
+            return ComfyUiSystemStats.parse(response.body());
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Verificacion del dispositivo visual interrumpida.", ex);
+        } catch (IllegalArgumentException ex) {
+            throw new IOException("Endpoint visual no valido: " + ex.getMessage(), ex);
         }
     }
 
@@ -222,7 +238,7 @@ public final class ComfyUiVisualEngineClient {
         }
     }
 
-    private String queueRawPrompt(String baseUrl, Duration timeout, String promptJson) throws IOException {
+    public String queueRawPrompt(String baseUrl, Duration timeout, String promptJson) throws IOException {
         String body = "{\"prompt\":" + promptJson + "}";
         try {
             HttpResponse<String> response = httpClient.send(request(baseUrl, timeout, "/prompt")
@@ -230,17 +246,18 @@ public final class ComfyUiVisualEngineClient {
                     .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
                     .build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                throw new IOException("El motor local rechazo el workflow RIFE: HTTP " + response.statusCode()
+                throw new IOException("El motor local rechazo el workflow visual: HTTP " + response.statusCode()
                         + ". " + response.body());
             }
             Matcher matcher = PROMPT_ID.matcher(response.body());
             if (!matcher.find()) {
-                throw new IOException("El motor local no devolvio prompt_id para RIFE. " + response.body());
+                throw new IOException("El motor local no devolvio prompt_id para el workflow visual. "
+                        + response.body());
             }
             return matcher.group(1);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
-            throw new IOException("Envio del workflow RIFE interrumpido.", ex);
+            throw new IOException("Envio del workflow visual interrumpido.", ex);
         }
     }
 
@@ -256,11 +273,15 @@ public final class ComfyUiVisualEngineClient {
                 + "}";
     }
 
-    private String uploadImage(String baseUrl, Duration timeout, Path source, int index) throws IOException {
+    public String uploadImage(String baseUrl, Duration timeout, Path source, int index) throws IOException {
+        Path normalizedSource = source == null ? null : source.toAbsolutePath().normalize();
+        if (normalizedSource == null || !Files.isRegularFile(normalizedSource)) {
+            throw new IOException("La imagen que se intentara subir a ComfyUI no existe.");
+        }
         String boundary = "----DocuPodcast" + UUID.randomUUID().toString().replace("-", "");
-        String extension = extension(source.getFileName().toString());
+        String extension = extension(normalizedSource.getFileName().toString());
         String filename = "docupodcast-ref-" + index + "-" + UUID.randomUUID().toString().substring(0, 8) + extension;
-        byte[] body = multipart(boundary, filename, Files.readAllBytes(source));
+        byte[] body = multipart(boundary, filename, Files.readAllBytes(normalizedSource));
         try {
             HttpResponse<String> response = httpClient.send(request(baseUrl, timeout, "/upload/image")
                     .header("Content-Type", "multipart/form-data; boundary=" + boundary)
@@ -336,6 +357,32 @@ public final class ComfyUiVisualEngineClient {
         throw new IOException("El motor local no termino la imagen antes del timeout. prompt_id=" + promptId);
     }
 
+    public List<OutputArtifact> waitForArtifacts(String baseUrl,
+                                                 Duration timeout,
+                                                 String promptId,
+                                                 Duration maxWait) throws IOException {
+        long deadline = System.nanoTime() + (maxWait == null ? Duration.ofMinutes(20) : maxWait).toNanos();
+        while (System.nanoTime() < deadline) {
+            try {
+                HttpResponse<String> response = httpClient.send(request(baseUrl, timeout, "/history/" + enc(promptId))
+                                .GET()
+                                .build(),
+                        HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                    List<OutputArtifact> artifacts = parseArtifacts(response.body());
+                    if (!artifacts.isEmpty()) {
+                        return artifacts;
+                    }
+                }
+                Thread.sleep(1000);
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+                throw new IOException("Espera del workflow visual interrumpida.", ex);
+            }
+        }
+        throw new IOException("El motor local no termino el workflow antes del timeout. prompt_id=" + promptId);
+    }
+
     public void downloadPng(String baseUrl,
                             Duration timeout,
                             OutputImage output,
@@ -363,6 +410,36 @@ public final class ComfyUiVisualEngineClient {
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new IOException("Descarga de imagen del motor local interrumpida.", ex);
+        }
+    }
+
+    public void downloadArtifact(String baseUrl,
+                                 Duration timeout,
+                                 OutputArtifact output,
+                                 Path target) throws IOException {
+        if (output == null || output.filename().isBlank()) {
+            throw new IOException("El motor local no entrego una referencia de archivo valida.");
+        }
+        String path = "/view?filename=" + enc(output.filename())
+                + "&subfolder=" + enc(output.subfolder())
+                + "&type=" + enc(output.type());
+        try {
+            HttpResponse<byte[]> response = httpClient.send(request(baseUrl, timeout, path).GET().build(),
+                    HttpResponse.BodyHandlers.ofByteArray());
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                throw new IOException("El motor local no permitio descargar " + output.filename()
+                        + ": HTTP " + response.statusCode());
+            }
+            byte[] body = response.body();
+            if (body == null || body.length == 0) {
+                throw new IOException("El motor local devolvio un archivo vacio: " + output.filename());
+            }
+            Path normalizedTarget = target.toAbsolutePath().normalize();
+            Files.createDirectories(normalizedTarget.getParent());
+            Files.write(normalizedTarget, body);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Descarga del workflow visual interrumpida.", ex);
         }
     }
 
@@ -419,6 +496,30 @@ public final class ComfyUiVisualEngineClient {
                 type.find() ? type.group(1) : "output"));
     }
 
+    private static List<OutputArtifact> parseArtifacts(String body) {
+        String source = body == null ? "" : body;
+        ArrayList<OutputArtifact> artifacts = new ArrayList<>();
+        Matcher files = FILE.matcher(source);
+        ArrayList<Integer> starts = new ArrayList<>();
+        ArrayList<String> names = new ArrayList<>();
+        while (files.find()) {
+            starts.add(files.start());
+            names.add(files.group(1));
+        }
+        for (int index = 0; index < names.size(); index++) {
+            int start = starts.get(index);
+            int end = index + 1 < starts.size() ? starts.get(index + 1) : source.length();
+            String section = source.substring(start, end);
+            Matcher subfolder = SUBFOLDER.matcher(section);
+            Matcher type = TYPE.matcher(section);
+            artifacts.add(new OutputArtifact(
+                    names.get(index),
+                    subfolder.find() ? subfolder.group(1) : "",
+                    type.find() ? type.group(1) : "output"));
+        }
+        return List.copyOf(artifacts);
+    }
+
     private static HttpRequest.Builder request(String baseUrl, Duration timeout, String path) {
         return HttpRequest.newBuilder(URI.create(normalizedBaseUrl(baseUrl) + path))
                 .timeout(normalizeTimeout(timeout));
@@ -431,10 +532,9 @@ public final class ComfyUiVisualEngineClient {
         return timeout;
     }
 
-    private static Duration waitDuration(Duration timeout, ComfyUiWorkflowSpec workflow) {
+    static Duration waitDuration(Duration timeout, ComfyUiWorkflowSpec workflow) {
         long seconds = normalizeTimeout(timeout).toSeconds();
-        boolean flux = workflow != null && workflow.kind() == ComfyUiWorkflowKind.FLUX1_DEV_COMPONENTS;
-        return Duration.ofSeconds(Math.min(flux ? 2700 : 1800, Math.max(90, seconds)));
+        return Duration.ofSeconds(Math.max(90, seconds));
     }
 
     private static String normalizedBaseUrl(String baseUrl) {
@@ -539,6 +639,33 @@ public final class ComfyUiVisualEngineClient {
             filename = filename == null ? "" : filename.strip();
             subfolder = subfolder == null ? "" : subfolder.strip();
             type = type == null || type.isBlank() ? "output" : type.strip();
+        }
+    }
+
+    public record OutputArtifact(String filename, String subfolder, String type) {
+        public OutputArtifact {
+            filename = filename == null ? "" : filename.strip();
+            subfolder = subfolder == null ? "" : subfolder.strip();
+            type = type == null || type.isBlank() ? "output" : type.strip();
+        }
+
+        public String extension() {
+            int dot = filename.lastIndexOf('.');
+            return dot < 0 ? "" : filename.substring(dot).toLowerCase(java.util.Locale.ROOT);
+        }
+
+        public boolean video() {
+            return switch (extension()) {
+                case ".mp4", ".webm", ".mov", ".mkv" -> true;
+                default -> false;
+            };
+        }
+
+        public boolean image() {
+            return switch (extension()) {
+                case ".png", ".jpg", ".jpeg", ".webp" -> true;
+                default -> false;
+            };
         }
     }
 }

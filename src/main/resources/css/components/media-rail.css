@@ -320,7 +320,7 @@
 }
 
 .ui-media-thumbnail-label {
-    -fx-font-size: 10px;
+    -fx-font-size: 11px;
     -fx-font-weight: 700;
     -fx-text-fill: -docu-text-muted;
 }
@@ -330,19 +330,19 @@
 }
 
 .ui-media-card-title {
-    -fx-font-size: 12px;
+    -fx-font-size: 13px;
     -fx-font-weight: 700;
     -fx-text-fill: -docu-text;
 }
 
 .ui-media-card-relation {
-    -fx-font-size: 10.5px;
+    -fx-font-size: 11.5px;
     -fx-font-weight: 700;
     -fx-text-fill: -docu-accent;
 }
 
 .ui-media-card-description {
-    -fx-font-size: 10.5px;
+    -fx-font-size: 11.5px;
     -fx-text-fill: -docu-text-muted;
 }
 

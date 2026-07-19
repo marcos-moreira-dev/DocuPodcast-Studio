@@ -12,7 +12,7 @@
 
 .app-menu-bar > .container > .menu-button > .label {
     -fx-text-fill: -docu-text-on-dark;
-    -fx-font-size: 12px;
+    -fx-font-size: 13px;
 }
 
 .app-menu-bar .context-menu .label,

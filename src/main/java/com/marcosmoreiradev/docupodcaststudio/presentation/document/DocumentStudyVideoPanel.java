@@ -6,38 +6,37 @@ import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlock;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.ReadableDocument;
 import com.marcosmoreiradev.docupodcaststudio.domain.study.DocumentMascotPosition;
 import com.marcosmoreiradev.docupodcaststudio.domain.study.DocumentParagraphVisualAssignment;
-import com.marcosmoreiradev.docupodcaststudio.domain.study.DocumentStudyMusicTrack;
 import com.marcosmoreiradev.docupodcaststudio.domain.study.DocumentStudyClosingSlide;
 import com.marcosmoreiradev.docupodcaststudio.domain.study.DocumentStudyVideoConfiguration;
 import com.marcosmoreiradev.docupodcaststudio.domain.study.DocumentTableSlideConfiguration;
 import com.marcosmoreiradev.docupodcaststudio.domain.study.DocumentVisualSource;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionButtonFactory;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.AppIcon;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.CollapsibleModuleSplitPane;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.MediaThumbnailCard;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.DocuPodcastShellViewModel;
 import javafx.collections.FXCollections;
+import javafx.application.Platform;
+import javafx.css.PseudoClass;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.control.Separator;
-import javafx.scene.control.Slider;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.TextField;
-import javafx.scene.control.Tooltip;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.util.StringConverter;
@@ -61,91 +60,90 @@ import java.util.UUID;
 
 /** Configures paragraph and table slides for a DOCX documentary video. */
 public final class DocumentStudyVideoPanel extends BorderPane {
+    private static final double COMPACT_WIDTH = 760.0;
+    private static final PseudoClass SELECTED_MODE = PseudoClass.getPseudoClass("selected");
+
     private final DocuPodcastShellViewModel viewModel;
     private final DocumentStudyVideoContentResolver resolver = new DocumentStudyVideoContentResolver();
-    private final TextField title = StudioFormControls.textInput(new TextField(),
-            "Titulo opcional mostrado en la zona superior de las diapositivas.");
-    private final Spinner<Double> defaultTableDuration = StudioFormControls.spinner(
-            new Spinner<>(new SpinnerValueFactory.DoubleSpinnerValueFactory(2.0, 60.0, 6.0, 1.0)),
-            "Segundos durante los que se muestra cada tabla sin narracion.");
     private final VBox contentRows = new VBox(9);
     private final VBox selectedEditor = new VBox(10);
-    private final VBox musicRows = new VBox(8);
     private final Map<String, ContentRow> rowsByBlock = new LinkedHashMap<>();
+    private final CollapsibleModuleSplitPane workspace;
+    private final StackPane inspectorHost = new StackPane();
+    private final ScrollPane selectionInspector;
+    private final DocumentStudyVideoSettingsPanel settingsPanel;
+    private final CheckBox showOnlyIllustrations;
+    private final Button editModeButton;
+    private final Button settingsModeButton;
     private List<DocumentStudyVideoContentResolver.Item> contentItems = List.of();
     private ReadableDocument renderedDocument;
     private String selectedBlockId = "";
-    private boolean syncingControls;
+    private boolean compactLayout;
 
     public DocumentStudyVideoPanel(DocuPodcastShellViewModel viewModel) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         getStyleClass().add("document-study-video-panel");
 
-        title.setPromptText("Titulo del video (opcional)");
-        title.setMaxWidth(Double.MAX_VALUE);
-        title.setOnAction(event -> commitTitle());
-        title.focusedProperty().addListener((obs, oldValue, focused) -> {
-            if (!Boolean.TRUE.equals(focused)) commitTitle();
-        });
-        defaultTableDuration.setEditable(true);
-        defaultTableDuration.valueProperty().addListener((obs, oldValue, value) -> {
-            if (!syncingControls && value != null) {
-                saveConfiguration(configuration().withDefaultTableDuration(value));
-            }
-        });
-
         Label contentHeading = sectionTitle("Contenido del video");
         Label contentHint = hint("Una fila por parrafo y por tabla, en el orden original del Word.");
-        Label selectedHeading = sectionTitle("Contenido seleccionado");
-        Label musicHeading = sectionTitle("Musica de fondo");
-        Label musicHint = hint("Las pistas se reproducen en secuencia y vuelven a empezar si el video continua.");
-        Button addMusic = ActionButtonFactory.secondary(
-                "Agregar musica",
-                "Importar una o varias pistas dentro de la carpeta del proyecto.",
-                this::chooseMusic);
+        Label selectedHeading = sectionTitle("Editar contenido seleccionado");
         Button addClosingSlide = ActionButtonFactory.primary(
                 "Agregar nuevo parrafo final",
                 "Anadir una diapositiva silenciosa con titulo, imagen y duracion propios.",
                 this::addClosingSlide);
-
-        GridPane general = new GridPane();
-        general.setHgap(8);
-        general.setVgap(7);
-        general.add(fieldLabel("Titulo del video"), 0, 0);
-        general.add(title, 0, 1);
-        general.add(fieldLabel("Duracion de tablas"), 0, 2);
-        general.add(defaultTableDuration, 0, 3);
-        GridPane.setHgrow(title, Priority.ALWAYS);
-        GridPane.setHgrow(defaultTableDuration, Priority.ALWAYS);
+        showOnlyIllustrations = StudioFormControls.checkBox(
+                "Mostrar solo im\u00e1genes ilustrativas",
+                "Oculta el texto de todos los parrafos en el video, mantiene la narracion y el titulo general, "
+                        + "y centra cada imagen ilustrativa.");
+        showOnlyIllustrations.setSelected(false);
+        showOnlyIllustrations.setOnAction(event ->
+                setIllustrationOnlyForAll(showOnlyIllustrations.isSelected()));
 
         VBox inspectorBody = new VBox(12,
-                general,
-                new Separator(),
                 selectedHeading,
-                selectedEditor,
-                new Separator(),
-                musicHeading,
-                musicHint,
-                addMusic,
-                musicRows);
+                hint("Estas acciones afectan unicamente a la diapositiva seleccionada."),
+                selectedEditor);
         inspectorBody.setPadding(new Insets(14));
         inspectorBody.setFillWidth(true);
 
-        VBox contentBody = new VBox(10, contentHeading, contentHint, addClosingSlide, contentRows);
+        VBox contentBody = new VBox(10, contentHeading, contentHint, addClosingSlide,
+                showOnlyIllustrations, contentRows);
         contentBody.setPadding(new Insets(14));
         contentBody.setFillWidth(true);
 
-        ScrollPane inspectorScroll = workspaceScroll(inspectorBody, "document-study-video-inspector-scroll");
+        selectionInspector = workspaceScroll(inspectorBody, "document-study-video-inspector-scroll");
+        settingsPanel = new DocumentStudyVideoSettingsPanel(viewModel);
+        inspectorHost.getChildren().setAll(selectionInspector);
+        inspectorHost.getStyleClass().add("document-study-video-inspector-host");
         ScrollPane contentScroll = workspaceScroll(contentBody, "document-study-video-content-scroll");
-        CollapsibleModuleSplitPane workspace = new CollapsibleModuleSplitPane(
-                "Acciones del contenido",
-                inspectorScroll,
+        workspace = new CollapsibleModuleSplitPane(
+                "Editar seleccion",
+                inspectorHost,
                 "Contenido del video",
                 contentScroll,
                 0.43,
                 false);
         workspace.getStyleClass().add("document-study-video-workspace-split");
-        setCenter(workspace);
+
+        editModeButton = modeButton(AppIcon.IMAGE, "Editar seleccion", InspectorMode.SELECTION);
+        settingsModeButton = modeButton(AppIcon.SETTINGS, "Ajustes del video", InspectorMode.SETTINGS);
+        VBox modeRail = new VBox(10, editModeButton, settingsModeButton);
+        modeRail.setAlignment(Pos.TOP_CENTER);
+        modeRail.setPadding(new Insets(8, 6, 8, 6));
+        modeRail.getStyleClass().add("document-study-video-mode-rail");
+        HBox moduleWorkspace = new HBox(modeRail, workspace);
+        HBox.setHgrow(workspace, Priority.ALWAYS);
+        workspace.setMaxWidth(Double.MAX_VALUE);
+        moduleWorkspace.getStyleClass().add("document-study-video-module-workspace");
+        setCenter(moduleWorkspace);
+        showInspectorMode(InspectorMode.SELECTION, false);
+        workspace.primaryVisibleProperty().addListener((obs, oldValue, visible) -> {
+            if (compactLayout && Boolean.TRUE.equals(visible)) workspace.secondaryVisibleProperty().set(false);
+        });
+        workspace.secondaryVisibleProperty().addListener((obs, oldValue, visible) -> {
+            if (compactLayout && Boolean.TRUE.equals(visible)) workspace.primaryVisibleProperty().set(false);
+        });
+        widthProperty().addListener((obs, oldValue, value) -> updateResponsiveLayout(value.doubleValue()));
 
         viewModel.currentDocumentProperty().addListener((obs, oldValue, newValue) -> rebuildForDocument(newValue));
         viewModel.currentProjectModeProperty().addListener((obs, oldValue, newValue) ->
@@ -156,6 +154,28 @@ public final class DocumentStudyVideoPanel extends BorderPane {
             if (rowsByBlock.containsKey(normalized)) selectRow(normalized, false);
         });
         rebuildForDocument(viewModel.currentDocumentProperty().get());
+        Platform.runLater(() -> updateResponsiveLayout(getWidth()));
+    }
+
+    private Button modeButton(AppIcon icon, String label, InspectorMode mode) {
+        Button button = ActionButtonFactory.sideDockRail(icon, () -> showInspectorMode(mode, true));
+        button.setText(label);
+        button.setGraphicTextGap(4);
+        button.setMaxWidth(Double.MAX_VALUE);
+        button.getStyleClass().add("document-study-video-mode-button");
+        return button;
+    }
+
+    private void showInspectorMode(InspectorMode mode, boolean reveal) {
+        InspectorMode safeMode = mode == null ? InspectorMode.SELECTION : mode;
+        inspectorHost.getChildren().setAll(safeMode == InspectorMode.SELECTION
+                ? selectionInspector
+                : settingsPanel);
+        editModeButton.pseudoClassStateChanged(SELECTED_MODE, safeMode == InspectorMode.SELECTION);
+        settingsModeButton.pseudoClassStateChanged(SELECTED_MODE, safeMode == InspectorMode.SETTINGS);
+        if (!reveal) return;
+        workspace.primaryVisibleProperty().set(true);
+        workspace.secondaryVisibleProperty().set(!compactLayout);
     }
 
     private static ScrollPane workspaceScroll(VBox content, String styleClass) {
@@ -176,8 +196,6 @@ public final class DocumentStudyVideoPanel extends BorderPane {
         if (!viewModel.documentaryVideoConfigurationAvailable() || document == null) {
             selectedBlockId = "";
             selectedEditor.getChildren().setAll(hint("Abre un proyecto de estudio documental con una fuente Word/DOCX."));
-            refreshConfigurationControls();
-            refreshMusicRows();
             return;
         }
         contentItems = resolver.resolve(document, configuration()).stream()
@@ -220,21 +238,20 @@ public final class DocumentStudyVideoPanel extends BorderPane {
                 return;
             }
         }
-        refreshConfigurationControls();
         for (ContentRow row : rowsByBlock.values()) updateRow(row);
+        showOnlyIllustrations.setDisable(contentItems.stream().noneMatch(
+                item -> item.kind() == DocumentStudyVideoContentResolver.Kind.PARAGRAPH));
+        showOnlyIllustrations.setSelected(illustrationOnlyAppliedToAllParagraphs());
         refreshSelectedEditor();
-        refreshMusicRows();
     }
 
-    private void refreshConfigurationControls() {
-        DocumentStudyVideoConfiguration configuration = configuration();
-        syncingControls = true;
-        try {
-            if (!Objects.equals(title.getText(), configuration.videoTitle())) title.setText(configuration.videoTitle());
-            defaultTableDuration.getValueFactory().setValue(configuration.defaultTableDurationSeconds());
-        } finally {
-            syncingControls = false;
-        }
+    private void updateResponsiveLayout(double width) {
+        if (width <= 0) return;
+        boolean nextCompact = width < COMPACT_WIDTH;
+        if (nextCompact == compactLayout) return;
+        compactLayout = nextCompact;
+        workspace.secondaryVisibleProperty().set(true);
+        workspace.primaryVisibleProperty().set(!compactLayout);
     }
 
     private void updateRow(ContentRow row) {
@@ -273,9 +290,11 @@ public final class DocumentStudyVideoPanel extends BorderPane {
             case NONE -> "";
         };
         String mascot = visual.mascotAssetId().isBlank() ? "" : " - mascota/logo asignado";
+        String subtitle = visual.subtitle().isBlank() ? "" : " - subtitulo: " + visual.subtitle();
+        String presentation = visual.illustrationOnly() ? " - solo ilustracion" : "";
         String visibleBadge = enabled ? badge : (badge.isBlank() ? "Deshabilitado" : badge + " / Deshabilitado");
         row.card().update(imageUri, "Sin imagen", enabled ? "Parrafo" : "Parrafo deshabilitado",
-                "Bloque " + block.id(), compactPreview(block.text()) + mascot, stateClass,
+                "Bloque " + block.id(), compactPreview(block.text()) + subtitle + mascot + presentation, stateClass,
                 () -> selectRow(block.id(), true), visibleBadge, "", null, null, "", null);
     }
 
@@ -328,6 +347,15 @@ public final class DocumentStudyVideoPanel extends BorderPane {
         text.setWrapText(true);
         text.getStyleClass().add("document-study-video-selected-text");
 
+        TextField subtitle = StudioFormControls.textInput(new TextField(visual.subtitle()),
+                "Texto breve opcional que se muestra sobre el contenido de este parrafo.");
+        subtitle.setPromptText("Subt\u00edtulo opcional");
+        subtitle.setMaxWidth(Double.MAX_VALUE);
+        subtitle.setOnAction(event -> saveSubtitleIfChanged(block, subtitle.getText()));
+        subtitle.focusedProperty().addListener((obs, wasFocused, focused) -> {
+            if (!focused) saveSubtitleIfChanged(block, subtitle.getText());
+        });
+
         Button chooseImage = ActionButtonFactory.secondary("Elegir imagen", () -> chooseParagraphImage(block));
         Button draw = ActionButtonFactory.secondary("Dibujar/editar", () -> drawParagraphImage(block));
         HBox imageActions = new HBox(8, chooseImage, draw);
@@ -347,7 +375,41 @@ public final class DocumentStudyVideoPanel extends BorderPane {
             if (value != null) saveParagraph(assignment(block).withActiveSource(value));
         });
 
+        CheckBox applyImageToAll = StudioFormControls.checkBox(
+                "Imagen ilustrativa para todo el video",
+                "Copia la referencia de la imagen principal actual a cada parrafo. "
+                        + "Despues puedes reemplazarla de forma independiente en cualquier parrafo.");
+        applyImageToAll.setSelected(activeImageAppliedToAllParagraphs(visual));
+        applyImageToAll.setDisable(visual.activeImageAssetId().isBlank());
+        applyImageToAll.setOnAction(event -> {
+            if (applyImageToAll.isSelected()) {
+                copyImageToAllParagraphs(block);
+            } else {
+                applyImageToAll.setSelected(activeImageAppliedToAllParagraphs(assignment(block)));
+            }
+        });
+
+        CheckBox illustrationOnly = StudioFormControls.checkBox(
+                "Mostrar solo la imagen ilustrativa en este p\u00e1rrafo",
+                "Oculta el texto de este parrafo en el video, mantiene su narracion y centra la imagen.");
+        illustrationOnly.setSelected(visual.illustrationOnly());
+        illustrationOnly.setOnAction(event -> saveParagraph(
+                assignment(block).withIllustrationOnly(illustrationOnly.isSelected())));
+
         Button chooseMascot = ActionButtonFactory.secondary("Elegir mascota/logo", () -> chooseMascot(block));
+        CheckBox applyMascotToAll = StudioFormControls.checkBox(
+                "Mascota/logo para todo el video",
+                "Copia la mascota o logo y su posicion a todos los parrafos. "
+                        + "Despues puedes reemplazarlos de forma independiente.");
+        applyMascotToAll.setSelected(mascotAppliedToAllParagraphs(visual));
+        applyMascotToAll.setDisable(visual.mascotAssetId().isBlank());
+        applyMascotToAll.setOnAction(event -> {
+            if (applyMascotToAll.isSelected()) {
+                copyMascotToAllParagraphs(block);
+            } else {
+                applyMascotToAll.setSelected(mascotAppliedToAllParagraphs(assignment(block)));
+            }
+        });
         Button clearMascot = ActionButtonFactory.danger("Quitar mascota/logo", () ->
                 saveParagraph(assignment(block).withMascot("", assignment(block).mascotPosition())));
         clearMascot.setDisable(visual.mascotAssetId().isBlank());
@@ -370,9 +432,13 @@ public final class DocumentStudyVideoPanel extends BorderPane {
 
         selectedEditor.getChildren().addAll(
                 text,
+                fieldLabel("Subt\u00edtulo"), subtitle,
                 imageActions,
                 fieldLabel("Imagen principal activa"), source,
+                applyImageToAll,
+                illustrationOnly,
                 chooseMascot,
+                applyMascotToAll,
                 fieldLabel("Posicion de mascota/logo"), position,
                 clearMascot,
                 clearImage);
@@ -497,12 +563,16 @@ public final class DocumentStudyVideoPanel extends BorderPane {
         Optional<DocumentParagraphSketchDialog.Result> result = dialog.showAndWait();
         if (result.isEmpty()) return;
         try {
-            var asset = viewModel.saveDocumentaryDrawing(block.id(), result.get().png(), result.get().inkStateJson());
+            var asset = viewModel.saveDocumentaryDrawing(block.id(), result.get().png(),
+                    result.get().inkStateJson(), result.get().stagedSources());
             saveParagraph(assignment(block).withDrawnImage(asset.asset().id(), asset.stateRelativePath()));
         } catch (Exception ex) {
-            showError("No se pudo guardar el dibujo", ex);
+            showError("No se pudo guardar la ilustracion", ex);
         } finally {
             try { Files.deleteIfExists(result.get().png()); } catch (IOException ignored) { }
+            for (Path source : result.get().stagedSources().values()) {
+                try { Files.deleteIfExists(source); } catch (IOException ignored) { }
+            }
         }
     }
 
@@ -561,14 +631,72 @@ public final class DocumentStudyVideoPanel extends BorderPane {
     private void copyImageToNext(DocumentBlock sourceBlock) {
         nextParagraph(sourceBlock.id()).ifPresent(target -> {
             DocumentParagraphVisualAssignment source = assignment(sourceBlock);
-            DocumentParagraphVisualAssignment destination = assignment(target);
-            destination = switch (source.activeSource()) {
-                case IMPORTED -> destination.withImportedImage(source.importedImageAssetId());
-                case DRAWN -> destination.withDrawnImage(source.drawnImageAssetId(), source.drawnStateRelativePath());
-                case NONE -> destination;
-            };
-            saveParagraph(destination);
+            saveParagraph(copyActiveImageReference(source, assignment(target)));
         });
+    }
+
+    private void copyImageToAllParagraphs(DocumentBlock sourceBlock) {
+        DocumentParagraphVisualAssignment source = assignment(sourceBlock);
+        if (source.activeImageAssetId().isBlank()) return;
+        DocumentStudyVideoConfiguration next = configuration();
+        for (DocumentStudyVideoContentResolver.Item item : contentItems) {
+            if (item.kind() != DocumentStudyVideoContentResolver.Kind.PARAGRAPH) continue;
+            next = next.withParagraph(copyActiveImageReference(source, assignment(item.block())));
+        }
+        saveConfiguration(next);
+    }
+
+    private boolean activeImageAppliedToAllParagraphs(DocumentParagraphVisualAssignment source) {
+        if (source == null || source.activeImageAssetId().isBlank()) return false;
+        boolean found = false;
+        for (DocumentStudyVideoContentResolver.Item item : contentItems) {
+            if (item.kind() != DocumentStudyVideoContentResolver.Kind.PARAGRAPH) continue;
+            found = true;
+            if (!sameActiveImageReference(source, assignment(item.block()))) return false;
+        }
+        return found;
+    }
+
+    private void setIllustrationOnlyForAll(boolean illustrationOnly) {
+        DocumentStudyVideoConfiguration next = configuration();
+        for (DocumentStudyVideoContentResolver.Item item : contentItems) {
+            if (item.kind() != DocumentStudyVideoContentResolver.Kind.PARAGRAPH) continue;
+            next = next.withParagraph(assignment(item.block()).withIllustrationOnly(illustrationOnly));
+        }
+        saveConfiguration(next);
+    }
+
+    private boolean illustrationOnlyAppliedToAllParagraphs() {
+        boolean found = false;
+        for (DocumentStudyVideoContentResolver.Item item : contentItems) {
+            if (item.kind() != DocumentStudyVideoContentResolver.Kind.PARAGRAPH) continue;
+            found = true;
+            if (!assignment(item.block()).illustrationOnly()) return false;
+        }
+        return found;
+    }
+
+    static DocumentParagraphVisualAssignment copyActiveImageReference(
+            DocumentParagraphVisualAssignment source,
+            DocumentParagraphVisualAssignment destination) {
+        if (source == null || destination == null) return destination;
+        return switch (source.activeSource()) {
+            case IMPORTED -> destination.withImportedImage(source.importedImageAssetId());
+            case DRAWN -> destination.withDrawnImage(
+                    source.drawnImageAssetId(), source.drawnStateRelativePath());
+            case NONE -> destination;
+        };
+    }
+
+    static boolean sameActiveImageReference(DocumentParagraphVisualAssignment left,
+                                            DocumentParagraphVisualAssignment right) {
+        if (left == null || right == null || left.activeSource() != right.activeSource()) return false;
+        return switch (left.activeSource()) {
+            case IMPORTED -> left.importedImageAssetId().equals(right.importedImageAssetId());
+            case DRAWN -> left.drawnImageAssetId().equals(right.drawnImageAssetId())
+                    && left.drawnStateRelativePath().equals(right.drawnStateRelativePath());
+            case NONE -> true;
+        };
     }
 
     private void useImageAsMascot(DocumentBlock block) {
@@ -596,6 +724,37 @@ public final class DocumentStudyVideoPanel extends BorderPane {
         saveConfiguration(next);
     }
 
+    private void copyMascotToAllParagraphs(DocumentBlock sourceBlock) {
+        DocumentParagraphVisualAssignment source = assignment(sourceBlock);
+        if (source.mascotAssetId().isBlank()) return;
+        DocumentStudyVideoConfiguration next = configuration();
+        for (DocumentStudyVideoContentResolver.Item item : contentItems) {
+            if (item.kind() != DocumentStudyVideoContentResolver.Kind.PARAGRAPH) continue;
+            next = next.withParagraph(assignment(item.block())
+                    .withMascot(source.mascotAssetId(), source.mascotPosition()));
+        }
+        saveConfiguration(next);
+    }
+
+    private boolean mascotAppliedToAllParagraphs(DocumentParagraphVisualAssignment source) {
+        if (source == null || source.mascotAssetId().isBlank()) return false;
+        boolean found = false;
+        for (DocumentStudyVideoContentResolver.Item item : contentItems) {
+            if (item.kind() != DocumentStudyVideoContentResolver.Kind.PARAGRAPH) continue;
+            found = true;
+            if (!sameMascotReference(source, assignment(item.block()))) return false;
+        }
+        return found;
+    }
+
+    static boolean sameMascotReference(DocumentParagraphVisualAssignment left,
+                                       DocumentParagraphVisualAssignment right) {
+        return left != null && right != null
+                && !left.mascotAssetId().isBlank()
+                && left.mascotAssetId().equals(right.mascotAssetId())
+                && left.mascotPosition() == right.mascotPosition();
+    }
+
     private Optional<DocumentBlock> nextParagraph(String blockId) {
         List<DocumentBlock> remaining = remainingParagraphs(blockId);
         return remaining.isEmpty() ? Optional.empty() : Optional.of(remaining.get(0));
@@ -612,104 +771,6 @@ public final class DocumentStudyVideoPanel extends BorderPane {
         return List.copyOf(result);
     }
 
-    private void chooseMusic() {
-        FileChooser chooser = new FileChooser();
-        chooser.setTitle("Agregar musica de fondo");
-        chooser.getExtensionFilters().setAll(
-                new FileChooser.ExtensionFilter("Audio compatible", "*.wav", "*.mp3", "*.m4a", "*.flac", "*.ogg"),
-                new FileChooser.ExtensionFilter("Todos los archivos", "*.*"));
-        List<File> selected = chooser.showOpenMultipleDialog(getScene() == null ? null : getScene().getWindow());
-        if (selected == null || selected.isEmpty()) return;
-        ArrayList<DocumentStudyMusicTrack> tracks = new ArrayList<>(configuration().musicTracks());
-        try {
-            for (File file : selected) tracks.add(viewModel.importDocumentaryMusic(file.toPath()));
-            saveConfiguration(configuration().withMusicTracks(tracks));
-        } catch (Exception ex) {
-            showError("No se pudo importar la musica", ex);
-        }
-    }
-
-    private void refreshMusicRows() {
-        musicRows.getChildren().clear();
-        List<DocumentStudyMusicTrack> tracks = configuration().musicTracks();
-        if (tracks.isEmpty()) {
-            musicRows.getChildren().add(hint("Sin musica de fondo."));
-            return;
-        }
-        for (int index = 0; index < tracks.size(); index++) {
-            DocumentStudyMusicTrack track = tracks.get(index);
-            musicRows.getChildren().add(musicRow(track, index, tracks.size()));
-        }
-    }
-
-    private Node musicRow(DocumentStudyMusicTrack track, int index, int size) {
-        String displayName = viewModel.currentProject()
-                .flatMap(project -> project.assets().byId(track.assetId()))
-                .map(ProjectAssetReference::displayName).orElse(track.assetId());
-        Label name = new Label((index + 1) + ". " + compactMusicName(displayName));
-        name.setWrapText(true);
-        name.setMaxHeight(42);
-        Tooltip.install(name, new Tooltip(displayName));
-        name.getStyleClass().add("document-study-video-music-name");
-        Label duration = hint("Duracion: " + seconds(track.durationSeconds()));
-        Slider volume = StudioFormControls.slider(new Slider(0.0, 1.0, track.volume()), "Volumen de esta pista.");
-        volume.setBlockIncrement(0.05);
-        Label value = new Label(percent(track.volume()));
-        volume.valueProperty().addListener((obs, oldValue, newValue) -> value.setText(percent(newValue.doubleValue())));
-        volume.setOnMouseReleased(event -> updateMusicVolume(track.id(), volume.getValue()));
-        volume.setOnKeyReleased(event -> updateMusicVolume(track.id(), volume.getValue()));
-        Label volumeLabel = new Label("Volumen");
-        volumeLabel.getStyleClass().add("document-study-video-music-volume-label");
-        Region volumeSpacer = new Region();
-        HBox.setHgrow(volumeSpacer, Priority.ALWAYS);
-        HBox volumeHeading = new HBox(8, volumeLabel, volumeSpacer, value);
-        volumeHeading.setAlignment(Pos.CENTER_LEFT);
-        volume.setMaxWidth(Double.MAX_VALUE);
-        VBox volumeGroup = new VBox(4, volumeHeading, volume);
-
-        Button up = ActionButtonFactory.secondary("Subir", () -> moveMusic(index, -1));
-        Button down = ActionButtonFactory.secondary("Bajar", () -> moveMusic(index, 1));
-        Button remove = ActionButtonFactory.danger("Quitar", () -> removeMusic(track.id()));
-        up.setDisable(index == 0);
-        down.setDisable(index >= size - 1);
-        up.setMaxWidth(Double.MAX_VALUE);
-        down.setMaxWidth(Double.MAX_VALUE);
-        remove.setMaxWidth(Double.MAX_VALUE);
-        GridPane actions = new GridPane();
-        actions.setHgap(6);
-        actions.setVgap(6);
-        actions.add(up, 0, 0);
-        actions.add(down, 1, 0);
-        actions.add(remove, 0, 1, 2, 1);
-        GridPane.setHgrow(up, Priority.ALWAYS);
-        GridPane.setHgrow(down, Priority.ALWAYS);
-        GridPane.setHgrow(remove, Priority.ALWAYS);
-        VBox row = new VBox(6, name, duration, volumeGroup, actions);
-        row.getStyleClass().add("document-study-video-music-row");
-        return row;
-    }
-
-    private void updateMusicVolume(String trackId, double volume) {
-        List<DocumentStudyMusicTrack> tracks = configuration().musicTracks().stream()
-                .map(track -> track.id().equals(trackId) ? track.withVolume(volume) : track).toList();
-        saveConfiguration(configuration().withMusicTracks(tracks));
-    }
-
-    private void moveMusic(int index, int delta) {
-        ArrayList<DocumentStudyMusicTrack> tracks = new ArrayList<>(configuration().musicTracks());
-        int target = index + delta;
-        if (index < 0 || index >= tracks.size() || target < 0 || target >= tracks.size()) return;
-        DocumentStudyMusicTrack value = tracks.remove(index);
-        tracks.add(target, value);
-        saveConfiguration(configuration().withMusicTracks(tracks));
-    }
-
-    private void removeMusic(String trackId) {
-        List<DocumentStudyMusicTrack> tracks = configuration().musicTracks().stream()
-                .filter(track -> !track.id().equals(trackId)).toList();
-        saveConfiguration(configuration().withMusicTracks(tracks));
-    }
-
     private DocumentParagraphVisualAssignment assignment(DocumentBlock block) {
         return configuration().paragraph(block.id()).orElseGet(() -> new DocumentParagraphVisualAssignment(
                 block.id(), fingerprint(block.text()), "", "", "", DocumentVisualSource.NONE,
@@ -720,18 +781,18 @@ public final class DocumentStudyVideoPanel extends BorderPane {
         saveConfiguration(configuration().withParagraph(assignment));
     }
 
+    private void saveSubtitleIfChanged(DocumentBlock block, String subtitle) {
+        DocumentParagraphVisualAssignment current = assignment(block);
+        DocumentParagraphVisualAssignment updated = current.withSubtitle(subtitle);
+        if (!updated.subtitle().equals(current.subtitle())) saveParagraph(updated);
+    }
+
     private void saveConfiguration(DocumentStudyVideoConfiguration configuration) {
         viewModel.updateDocumentaryVideoConfiguration(configuration);
     }
 
     private DocumentStudyVideoConfiguration configuration() {
         return viewModel.documentaryVideoConfiguration();
-    }
-
-    private void commitTitle() {
-        if (syncingControls) return;
-        String value = normalize(title.getText());
-        if (!value.equals(configuration().videoTitle())) saveConfiguration(configuration().withTitle(value));
     }
 
     private static List<DocumentVisualSource> availableSources(DocumentParagraphVisualAssignment visual) {
@@ -819,22 +880,11 @@ public final class DocumentStudyVideoPanel extends BorderPane {
         return String.format(Locale.ROOT, "%.1f s", value);
     }
 
-    private static String percent(double value) {
-        return Math.round(Math.max(0, Math.min(1, value)) * 100) + "%";
-    }
-
     private static String compactPreview(String text) {
         String normalized = normalize(text);
         int limit = 190;
         if (normalized.length() <= limit) return normalized;
         return normalized.substring(0, limit).stripTrailing() + "...";
-    }
-
-    private static String compactMusicName(String text) {
-        String normalized = normalize(text);
-        int limit = 42;
-        if (normalized.length() <= limit) return normalized;
-        return normalized.substring(0, limit - 3).stripTrailing() + "...";
     }
 
     private static String rowStateClass(boolean selected, boolean enabled) {
@@ -857,4 +907,9 @@ public final class DocumentStudyVideoPanel extends BorderPane {
     private record ContentRow(DocumentStudyVideoContentResolver.Item item,
                               MediaThumbnailCard card,
                               VBox container) { }
+
+    private enum InspectorMode {
+        SELECTION,
+        SETTINGS
+    }
 }

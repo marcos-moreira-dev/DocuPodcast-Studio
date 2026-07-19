@@ -13,7 +13,8 @@ final class MouseFirstInkInputProviderTest {
     @Test
     void forwardsMouseWhenNoNativeStrokeIsActive() {
         CapturingProvider mouse = new CapturingProvider(InkInputCapabilities.javafxMouse());
-        CapturingProvider nativeProvider = new CapturingProvider(InkInputCapabilities.javafxMouse("native unavailable"));
+        CapturingProvider nativeProvider = new CapturingProvider(
+                InkInputCapabilities.javafxMouse("native unavailable"));
         MouseFirstInkInputProvider provider = new MouseFirstInkInputProvider(mouse, nativeProvider);
         RecordingListener recording = new RecordingListener();
 
@@ -39,6 +40,18 @@ final class MouseFirstInkInputProviderTest {
         assertEquals(List.of("start:PEN"), recording.events);
     }
 
+    @Test
+    void resetCoordinatesReachesNativeProviderOnly() {
+        CapturingProvider mouse = new CapturingProvider(InkInputCapabilities.javafxMouse());
+        CapturingProvider nativeProvider = new CapturingProvider(InkInputCapabilities.lectureStudioStylus());
+        MouseFirstInkInputProvider provider = new MouseFirstInkInputProvider(mouse, nativeProvider);
+
+        provider.resetCoordinateState();
+
+        assertEquals(0, mouse.resetCount);
+        assertEquals(1, nativeProvider.resetCount);
+    }
+
     private static InkInputSample mouseSample() {
         return new InkInputSample(10, 10, System.nanoTime(), 1.0, InkInputCursor.MOUSE, true, false);
     }
@@ -50,6 +63,7 @@ final class MouseFirstInkInputProviderTest {
     private static final class CapturingProvider implements InkInputProvider {
         private final InkInputCapabilities capabilities;
         private InkInputListener listener;
+        private int resetCount;
 
         private CapturingProvider(InkInputCapabilities capabilities) {
             this.capabilities = capabilities;
@@ -68,6 +82,11 @@ final class MouseFirstInkInputProviderTest {
         @Override
         public void detach() {
             listener = null;
+        }
+
+        @Override
+        public void resetCoordinateState() {
+            resetCount++;
         }
 
         private void fireStart(InkInputSample sample) {

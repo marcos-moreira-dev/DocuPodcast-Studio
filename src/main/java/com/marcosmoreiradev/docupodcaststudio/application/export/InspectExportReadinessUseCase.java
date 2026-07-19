@@ -16,6 +16,7 @@ import com.marcosmoreiradev.docupodcaststudio.application.theatre.BuildTheatrePr
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreProductionProjection;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreProductionReadiness;
 import com.marcosmoreiradev.docupodcaststudio.application.video.BuildSimpleVideoPlanUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoFrame;
 import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoPlan;
 import com.marcosmoreiradev.docupodcaststudio.domain.playback.PlaybackManifest;
 import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationScriptDocument;
@@ -43,6 +44,8 @@ public final class InspectExportReadinessUseCase {
     private final BuildFragmentWorkspaceProjectionUseCase buildFragmentWorkspaceProjection;
     private final BuildNarrativeVideoWorkspaceProjectionUseCase buildNarrativeVideoWorkspaceProjection;
     private final BuildNarrativeVideoPlanUseCase buildNarrativeVideoPlan;
+    private final com.marcosmoreiradev.docupodcaststudio.application.video.BuildNarrativeVideoPlanUseCase
+            buildGeneratedNarrativeVideoPlan;
     private final BuildTheatreProductionProjectionUseCase buildTheatreProductionProjection;
 
     public InspectExportReadinessUseCase() {
@@ -80,6 +83,8 @@ public final class InspectExportReadinessUseCase {
         this.buildFragmentWorkspaceProjection = Objects.requireNonNull(buildFragmentWorkspaceProjection, "buildFragmentWorkspaceProjection");
         this.buildNarrativeVideoWorkspaceProjection = Objects.requireNonNull(buildNarrativeVideoWorkspaceProjection, "buildNarrativeVideoWorkspaceProjection");
         this.buildNarrativeVideoPlan = Objects.requireNonNull(buildNarrativeVideoPlan, "buildNarrativeVideoPlan");
+        this.buildGeneratedNarrativeVideoPlan =
+                new com.marcosmoreiradev.docupodcaststudio.application.video.BuildNarrativeVideoPlanUseCase();
         this.buildTheatreProductionProjection = Objects.requireNonNull(buildTheatreProductionProjection, "buildTheatreProductionProjection");
     }
 
@@ -227,7 +232,7 @@ public final class InspectExportReadinessUseCase {
                     List.of("El MP4 final necesita proyecto guardado, lectura preparada, visuales asignados, audio listo y Video local disponible."));
         }
         if (projectModePolicy.resolve(project) == ProjectMode.NARRATIVE_VIDEO) {
-            return narrativeFinalVideo(project, script, storyboard, jobs);
+            return narrativeFinalVideo(project, projectFile, script, jobs);
         }
         SimpleVideoPlan plan;
         try {
@@ -369,38 +374,45 @@ public final class InspectExportReadinessUseCase {
     }
 
     private ExportReadinessItem narrativeFinalVideo(DocuPodcastProject project,
-                                                    NarrationScriptDocument script,
-                                                    StoryboardDocument storyboard,
-                                                    List<AudioJobSnapshot> jobs) {
-        var fragments = buildFragmentWorkspaceProjection.build(null, script, project, storyboard, jobs, PlaybackManifest.empty());
-        NarrativeVideoWorkspaceProjection projection = buildNarrativeVideoWorkspaceProjection.build(fragments);
-        SimpleVideoPlan plan = buildNarrativeVideoPlan.build("Video narrativo - " + script.title(), projection);
-        ArrayList<String> missing = new ArrayList<>();
-        if (projection.narratableCount() == 0) {
-            missing.add("No hay fragmentos narrativos preparados para el video.");
-        }
-        if (projection.missingMainImageCount() > 0) {
-            missing.add("Falta imagen principal en " + projection.missingMainImageCount() + " fragmento(s) narrativos.");
-        }
-        if (projection.missingAudioCount() > 0) {
-            missing.add("Falta audio listo en " + projection.missingAudioCount() + " fragmento(s) narrativos.");
-        }
-        if (!missing.isEmpty()) {
+                                                     Path projectFile,
+                                                     NarrationScriptDocument script,
+                                                     List<AudioJobSnapshot> jobs) {
+        if (projectFile == null || projectFile.getParent() == null) {
             return ExportReadinessItem.blocked(
                     ExportableArtifactKind.FINAL_VIDEO_MP4,
                     DocuPodcastExportFormat.MP4,
                     "video-narrativo-final.mp4",
-                    missing,
-                    List.of("La imagen puente es opcional; el bloqueo solo exige fragmentos, audio e imagen principal."));
+                    List.of("Guarda el proyecto antes de exportar el video narrativo."),
+                    List.of("Las imágenes clave y los clips deben resolverse dentro de la carpeta del proyecto."));
         }
-        return ExportReadinessItem.exportable(
-                ExportableArtifactKind.FINAL_VIDEO_MP4,
-                DocuPodcastExportFormat.MP4,
-                "video-narrativo-final.mp4",
-                List.of("Hay " + projection.readyForExportCount() + " fragmento(s) narrativos listos y "
-                        + projection.bridgeImageCount() + " imagen(es) puente opcionales."),
-                List.of("El MP4 narrativo usa el texto del fragmento como subtitulo base y reutiliza SimpleVideoPlan con "
-                        + plan.frameCount() + " frame(s)."));
+        try {
+            SimpleVideoPlan plan = buildGeneratedNarrativeVideoPlan.build(
+                    project,
+                    script,
+                    jobs,
+                    projectFile.getParent());
+            long clipParts = plan.frames().stream()
+                    .flatMap(frame -> frame.visualParts().stream())
+                    .filter(SimpleVideoFrame.VisualPart::videoClip)
+                    .count();
+            return ExportReadinessItem.exportable(
+                    ExportableArtifactKind.FINAL_VIDEO_MP4,
+                    DocuPodcastExportFormat.MP4,
+                    "video-narrativo-final.mp4",
+                    List.of("Hay " + plan.frameCount() + " unidad(es) de voz y "
+                            + clipParts + " parte(s) de video local listas."),
+                    List.of("La voz en off se mezcla una sola vez y el audio de los clips generados se descarta."));
+        } catch (Exception ex) {
+            String detail = ex.getMessage() == null || ex.getMessage().isBlank()
+                    ? ex.getClass().getSimpleName()
+                    : ex.getMessage();
+            return ExportReadinessItem.blocked(
+                    ExportableArtifactKind.FINAL_VIDEO_MP4,
+                    DocuPodcastExportFormat.MP4,
+                    "video-narrativo-final.mp4",
+                    List.of(detail),
+                    List.of("Cada párrafo habilitado necesita audio, imagen clave y clips vigentes dentro del proyecto."));
+        }
     }
 
     private static int missingAudioCount(NarrationScriptDocument script, List<AudioJobSnapshot> jobs) {

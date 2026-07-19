@@ -35,7 +35,7 @@ import java.nio.file.Path;
 import java.util.Locale;
 import java.util.stream.Stream;
 
-/** Product settings card for the managed local theatre image engine. */
+/** Product settings card for the managed category-neutral visual engine. */
 final class ImageEngineSettingsCard {
     private final ImageEngineSettingsOperations operations;
 
@@ -47,10 +47,12 @@ final class ImageEngineSettingsCard {
         VBox card = new VBox(8);
         card.getStyleClass().add("settings-engine-status-card");
 
-        Label title = new Label("Imagen IA teatral local");
+        Label title = new Label("Generacion visual local");
         title.getStyleClass().add("settings-engine-status-title");
 
-        Label description = new Label("Prepara un motor local autocontenido para generar imagenes por intervencion. El flujo base usa referencias/adaptadores; LoRA queda como opcion avanzada para identidad o estilo entrenado. Los modelos pesados solo se descargan con confirmacion especifica.");
+        Label description = new Label("Configura el motor visual compartido por Teatro y futuros flujos documentales o narrativos. "
+                + "SD 1.5 es diagnostico, SDXL es produccion y FLUX Kontext es avanzado. "
+                + "El dispositivo seleccionado se exige y se verifica sin fallback silencioso.");
         description.setWrapText(true);
         description.getStyleClass().add("settings-engine-status-message");
 
@@ -95,7 +97,7 @@ final class ImageEngineSettingsCard {
 
     private String initialStatus(SettingsFormModel form, SettingsApplicationServices services, Path applicationRoot) {
         if (services == null) {
-            return "Pendiente de verificacion. Abre Configuracion con servicios activos para preparar Imagen IA teatral.";
+            return "Pendiente de verificacion. Abre Configuracion con servicios activos para preparar la generacion visual.";
         }
         try {
             ImageEngineReadinessReport report = services.inspectLocalTheatreImageEngine()
@@ -259,6 +261,9 @@ final class ImageEngineSettingsCard {
         addRuntimeRow(box, form, services, applicationRoot, status);
         for (ImageModelPackageProfile profile : ImageModelPackageProfile.values()) {
             if (profile == ImageModelPackageProfile.HIGH_QUALITY_FLUX) {
+                continue;
+            }
+            if (profile == ImageModelPackageProfile.ADVANCED_FLUX_KONTEXT) {
                 addFluxProfileRow(box, form, services, applicationRoot, status);
             } else {
                 addProfileRow(box, profile, form, services, applicationRoot, status);
@@ -338,20 +343,20 @@ final class ImageEngineSettingsCard {
         row.getStyleClass().add("settings-image-resource-row");
         Label title = new Label("Alta calidad / Flux");
         title.getStyleClass().add("settings-engine-status-title");
-        Label explanation = new Label("FLUX.1-dev es gated: inicia sesion en Hugging Face, acepta sus terminos y descarga manualmente los componentes. DocuPodcast no automatiza la autenticacion.");
+        Label explanation = new Label("FLUX.1-Kontext-dev es gated: inicia sesion en Hugging Face, acepta sus terminos y descarga manualmente los componentes. DocuPodcast no automatiza la autenticacion.");
         explanation.setWrapText(true);
         explanation.getStyleClass().add("settings-engine-status-message");
 
         VBox urls = new VBox(5,
                 urlRow("Terminos y repositorio", FluxLicenseAcceptanceStore.LICENSE_URL),
-                urlRow("Modelo", "https://huggingface.co/black-forest-labs/FLUX.1-dev/resolve/main/flux1-dev.safetensors"),
-                urlRow("VAE", "https://huggingface.co/black-forest-labs/FLUX.1-dev/resolve/main/ae.safetensors"),
-                urlRow("T5 oficial", "https://huggingface.co/black-forest-labs/FLUX.1-dev/tree/main/text_encoder_2"),
-                urlRow("CLIP-L oficial", "https://huggingface.co/black-forest-labs/FLUX.1-dev/tree/main/text_encoder"),
+                urlRow("Modelo", "https://huggingface.co/black-forest-labs/FLUX.1-Kontext-dev/resolve/main/flux1-kontext-dev.safetensors"),
+                urlRow("VAE", "https://huggingface.co/black-forest-labs/FLUX.1-Kontext-dev/resolve/main/ae.safetensors"),
+                urlRow("T5 oficial", "https://huggingface.co/black-forest-labs/FLUX.1-Kontext-dev/tree/main/text_encoder_2"),
+                urlRow("CLIP-L oficial", "https://huggingface.co/black-forest-labs/FLUX.1-Kontext-dev/tree/main/text_encoder"),
                 urlRow("Encoders ComfyUI", "https://huggingface.co/comfyanonymous/flux_text_encoders/tree/main"),
                 urlRow("Guia ComfyUI", "https://docs.comfy.org/tutorials/flux/flux-1-text-to-image"));
 
-        CheckBox accepted = new CheckBox("Confirmo que inicie sesion y acepte la licencia FLUX.1-dev");
+        CheckBox accepted = new CheckBox("Confirmo que inicie sesion y acepte la licencia FLUX.1-Kontext-dev");
         accepted.setSelected(licenses.accepted(applicationRoot));
         accepted.selectedProperty().addListener((obs, oldValue, selected) -> {
             try {
@@ -369,17 +374,18 @@ final class ImageEngineSettingsCard {
         });
 
         Button openTerms = ActionButtonFactory.secondary("Abrir terminos", () -> openUrl(FluxLicenseAcceptanceStore.LICENSE_URL));
-        Button copyModel = ActionButtonFactory.secondary("Copiar URL modelo", () -> copyText(ImageModelPackageProfile.HIGH_QUALITY_FLUX.downloadUrl()));
+        Button copyModel = ActionButtonFactory.secondary("Copiar URL modelo",
+                () -> copyText(ImageModelPackageProfile.ADVANCED_FLUX_KONTEXT.downloadUrl()));
         Button importFile = ActionButtonFactory.secondary("Importar archivo", () -> {
-            selectProfile(form, ImageModelPackageProfile.HIGH_QUALITY_FLUX);
+            selectProfile(form, ImageModelPackageProfile.ADVANCED_FLUX_KONTEXT);
             operations.importFluxFile(services, applicationRoot, status);
         });
         Button importFolder = ActionButtonFactory.secondary("Importar carpeta", () -> {
-            selectProfile(form, ImageModelPackageProfile.HIGH_QUALITY_FLUX);
+            selectProfile(form, ImageModelPackageProfile.ADVANCED_FLUX_KONTEXT);
             operations.importFluxFolder(services, applicationRoot, status);
         });
         Button verify = ActionButtonFactory.secondary("Verificar", () -> {
-            selectProfile(form, ImageModelPackageProfile.HIGH_QUALITY_FLUX);
+            selectProfile(form, ImageModelPackageProfile.ADVANCED_FLUX_KONTEXT);
             operations.verify(form, services, applicationRoot, status);
         });
         disableIfNoServices(services, verify);
@@ -589,7 +595,8 @@ final class ImageEngineSettingsCard {
     }
 
     private static String profileStatus(ImageModelPackageProfile profile, Path applicationRoot) {
-        if (profile == ImageModelPackageProfile.HIGH_QUALITY_FLUX) {
+        if (profile == ImageModelPackageProfile.HIGH_QUALITY_FLUX
+                || profile == ImageModelPackageProfile.ADVANCED_FLUX_KONTEXT) {
             String missing = missingFluxComponents(applicationRoot);
             return missing.isBlank() ? "componentes Flux importados" : "faltan: " + missing;
         }
@@ -607,14 +614,15 @@ final class ImageEngineSettingsCard {
         if (profile.checkpointName().isBlank()) {
             return false;
         }
-        if (profile == ImageModelPackageProfile.HIGH_QUALITY_FLUX) {
+        if (profile == ImageModelPackageProfile.HIGH_QUALITY_FLUX
+                || profile == ImageModelPackageProfile.ADVANCED_FLUX_KONTEXT) {
             return missingFluxComponents(applicationRoot).isBlank();
         }
         return Files.isRegularFile(root(applicationRoot).resolve("models/image").resolve(profile.checkpointName()));
     }
 
     private static String missingFluxComponents(Path applicationRoot) {
-        ArrayList<String> missing = new ArrayList<>(FluxModelBundle.inspect(applicationRoot).missingComponents());
+        ArrayList<String> missing = new ArrayList<>(FluxModelBundle.inspectKontext(applicationRoot).missingComponents());
         if (!new FluxLicenseAcceptanceStore().accepted(applicationRoot)) {
             missing.add("confirmacion de licencia");
         }
@@ -748,7 +756,7 @@ final class ImageEngineSettingsCard {
                 SettingsDialog.downloadUrlControl("Adaptadores y LoRA", form.imageAdaptersDirectory,
                         "Carpeta local para referencias de cara, vestuario y consistencia. LoRA vive en models/image/loras como opcion avanzada."),
                 SettingsDialog.downloadUrlControl("Timeout", form.imageTimeoutSeconds,
-                        "Tiempo maximo para pruebas y generaciones locales."),
+                        "Tiempo maximo para pruebas y generaciones locales. Hasta 21600 segundos (6 horas)."),
                 SettingsDialog.downloadUrlControl("Intentos por imagen", form.imageMaxAttempts,
                         "Intentos totales por candidato o frame cuando el motor local falla temporalmente."));
         return new TitledPane("Avanzado / diagnostico", box);

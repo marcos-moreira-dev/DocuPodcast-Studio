@@ -81,13 +81,13 @@
 
 .ui-toolbar-action-text {
     -fx-text-fill: -docu-text;
-    -fx-font-size: 12px;
+    -fx-font-size: 13px;
     -fx-font-weight: 700;
 }
 
 .toolbar-group-label {
     -fx-text-fill: -docu-text-muted;
-    -fx-font-size: 10px;
+    -fx-font-size: 11px;
     -fx-font-weight: 800;
     -fx-padding: 10 3 0 2;
     -fx-text-transform: uppercase;

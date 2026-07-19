@@ -1332,17 +1332,7 @@ public final class TechnicalProblemDialog {
         boolean inkActive = canCaptureInkInput();
         boolean imageToolsActive = imageCropMode || canInteractWithCanvasImages();
         boolean layerInteractive = inkActive || imageToolsActive;
-        if (layerInteractive) {
-            drawingSurface.inkInputLayer().toFront();
-            if (inkActive) {
-                drawingSurface.inkInputTarget().toBack();
-            }
-        }
-        drawingSurface.inkInputLayer().setMouseTransparent(!layerInteractive);
-        drawingSurface.inkInputLayer().setPickOnBounds(inkActive);
-        drawingSurface.inkInputTarget().setMouseTransparent(!inkActive);
-        drawingSurface.inkInputTarget().setVisible(inkActive);
-        drawingSurface.inkInputTarget().setDisable(!inkActive);
+        drawingSurface.configureInputCapture(layerInteractive, inkActive);
     }
 
     private boolean pointerOnImageResizeHandle(Point2D point) {

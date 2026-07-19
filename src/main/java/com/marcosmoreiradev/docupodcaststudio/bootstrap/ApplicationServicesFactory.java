@@ -68,6 +68,7 @@ import com.marcosmoreiradev.docupodcaststudio.application.theatre.ExportTheatreV
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.RemoveTheatreAudioTrackUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.RenderTheatreChoralVoiceUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreFragmentLinkPolicy;
+import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreGlobalVisualAssetProjectionProvider;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.UpsertTheatreAudioTrackUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.project.CreateProjectUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.recording.PrepareRecordingActionUseCase;
@@ -175,7 +176,7 @@ import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.InspectLoca
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.InspectLocalTheatreImageEngineUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.RunXttsReadinessSmokeUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.RunLocalTheatreImageSmokeUseCase;
-import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.LocalTheatreImageEngineManager;
+import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.LocalVisualImageEngineManager;
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.StartLocalTheatreImageEngineUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.StopLocalTheatreImageEngineUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.ConfirmXttsSmokePlaybackUseCase;
@@ -418,10 +419,11 @@ public final class ApplicationServicesFactory {
         ComfyUiVisualEngineClient visualEngineClient = new ComfyUiVisualEngineClient(
                 java.net.http.HttpClient.newBuilder().connectTimeout(java.time.Duration.ofSeconds(4)).build());
         ValidateOperationalSettingsUseCase validateSettings = new ValidateOperationalSettingsUseCase();
-        LocalTheatreImageEngineManager imageEngineManager = new LocalTheatreImageEngineManager(
+        LocalVisualImageEngineManager imageEngineManager = new LocalVisualImageEngineManager(
                 new InspectLocalTheatreImageSetupReadinessUseCase(),
                 processRunner,
-                visualEngineClient);
+                visualEngineClient,
+                new WindowsComputeDeviceDiscoveryGateway(processRunner));
         SettingsApplicationServices settings = new SettingsApplicationServices(
                 new LoadOperationalSettingsUseCase(infrastructure.operationalSettingsRepository()),
                 new SaveOperationalSettingsUseCase(infrastructure.operationalSettingsRepository(), validateSettings),
@@ -502,7 +504,9 @@ public final class ApplicationServicesFactory {
         );
         VisualAssetTracePolicy visualTracePolicy = new VisualAssetTracePolicy();
         VisualProductionApplicationServices visual = new VisualProductionApplicationServices(
-                new BuildVisualProductionProjectionUseCase(visualTracePolicy),
+                new BuildVisualProductionProjectionUseCase(
+                        visualTracePolicy,
+                        new TheatreGlobalVisualAssetProjectionProvider(visualTracePolicy)),
                 new BuildVisualPromptContextUseCase(),
                 visualEngineClient,
                 visualTracePolicy);

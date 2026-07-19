@@ -42,7 +42,7 @@ final class TheatreImageGenerationWorkflowTest {
         ComfyUiVisualEngineClient.ConnectionResult result = new ComfyUiVisualEngineClient()
                 .test("http://127.0.0.1:1", Duration.ofMillis(80));
         assertFalse(result.available());
-        assertTrue(result.message().contains("Motor local de imagen IA no responde"));
+        assertTrue(result.message().contains("motor de generacion visual local no responde"));
     }
 
     @Test

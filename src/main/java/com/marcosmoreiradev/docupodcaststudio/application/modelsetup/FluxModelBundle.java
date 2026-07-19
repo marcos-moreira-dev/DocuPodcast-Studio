@@ -18,14 +18,29 @@ public record FluxModelBundle(
     public static final String VAE_NAME = "ae.safetensors";
     public static final String CLIP_L_NAME = "clip_l.safetensors";
     public static final String WORKFLOW_NAME = "workflow-flux-reference.json";
+    public static final String KONTEXT_MODEL_NAME = "flux1-kontext-dev.safetensors";
+    public static final String KONTEXT_WORKFLOW_NAME = "workflow-flux-kontext-reference-api.json";
 
     public FluxModelBundle {
         missingComponents = List.copyOf(missingComponents == null ? List.of() : missingComponents);
     }
 
     public static FluxModelBundle inspect(Path applicationRoot) {
+        return inspect(applicationRoot, MODEL_NAME, WORKFLOW_NAME, false);
+    }
+
+    public static FluxModelBundle inspectKontext(Path applicationRoot) {
+        return inspect(applicationRoot, KONTEXT_MODEL_NAME, KONTEXT_WORKFLOW_NAME, true);
+    }
+
+    private static FluxModelBundle inspect(
+            Path applicationRoot,
+            String modelName,
+            String workflowName,
+            boolean workflowRequired
+    ) {
         Path root = root(applicationRoot).resolve("models/image");
-        Path model = root.resolve(MODEL_NAME);
+        Path model = firstExisting(root, modelName, "diffusion_models/" + modelName);
         Path vae = root.resolve("vae").resolve(VAE_NAME);
         Path clip = root.resolve("text_encoders").resolve(CLIP_L_NAME);
         Path t5 = firstExisting(root.resolve("text_encoders"),
@@ -33,13 +48,16 @@ public record FluxModelBundle(
                 "t5xxl_fp8_e4m3fn.safetensors",
                 "t5xxl_fp16.safetensors",
                 "t5xxl_bf16.safetensors");
-        Path workflow = root.resolve("workflows").resolve(WORKFLOW_NAME);
+        Path workflow = root.resolve("workflows").resolve(workflowName);
         ArrayList<String> missing = new ArrayList<>();
-        require(model, MODEL_NAME, missing);
+        require(model, modelName, missing);
         require(vae, "vae/" + VAE_NAME, missing);
         require(clip, "text_encoders/" + CLIP_L_NAME, missing);
         if (t5 == null) {
             missing.add("text_encoders/T5XXL FP8, FP16 o BF16");
+        }
+        if (workflowRequired) {
+            require(workflow, "workflows/" + workflowName, missing);
         }
         return new FluxModelBundle(model, vae, clip, t5, workflow, missing);
     }
@@ -65,7 +83,7 @@ public record FluxModelBundle(
     }
 
     private static void require(Path path, String name, List<String> missing) {
-        if (!Files.isRegularFile(path)) {
+        if (path == null || !Files.isRegularFile(path)) {
             missing.add(name);
         }
     }

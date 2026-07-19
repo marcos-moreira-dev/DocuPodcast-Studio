@@ -22,7 +22,10 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
 import java.util.List;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Supplier;
 
 /** Vertical rail + single active module, inspired by the DMS SideDock. */
@@ -42,10 +45,12 @@ public final class WorkspaceSideDock extends BorderPane {
     private final SideDockStatePolicy statePolicy = new SideDockStatePolicy();
     private final ReadOnlyBooleanWrapper expanded = new ReadOnlyBooleanWrapper(true);
     private final ReadOnlyObjectWrapper<SideDockModuleId> activeModuleId = new ReadOnlyObjectWrapper<>();
+    private final Map<SideDockModuleId, Parent> viewCache = new EnumMap<>(SideDockModuleId.class);
     private final RailPlacement railPlacement;
     private final Supplier<Node> railFooterContent;
     private List<SideDockModule> modules = List.of();
     private SideDockContext context;
+    private boolean collapsed;
 
     public WorkspaceSideDock(SideDockContext context, SideDockModuleRegistry registry) {
         this(context, registry, false);
@@ -71,21 +76,20 @@ public final class WorkspaceSideDock extends BorderPane {
             Supplier<Node> railFooterContent) {
         this.railPlacement = Objects.requireNonNull(railPlacement, "railPlacement");
         this.railFooterContent = railFooterContent == null ? () -> null : railFooterContent;
+        this.collapsed = initiallyCollapsed;
         getStyleClass().add("workspace-side-dock");
         if (this.railPlacement == RailPlacement.RIGHT) {
             getStyleClass().add("workspace-side-dock-right");
         }
         refresh(context, registry);
-        if (initiallyCollapsed) {
-            this.activeModuleId.set(null);
-            render();
-        }
     }
 
     public void refresh(SideDockContext nextContext, SideDockModuleRegistry registry) {
         this.context = Objects.requireNonNull(nextContext, "nextContext");
         this.modules = Objects.requireNonNull(registry, "registry").modulesFor(nextContext);
         this.activeModuleId.set(statePolicy.choose(activeModuleId.get(), modules));
+        Set<SideDockModuleId> available = modules.stream().map(SideDockModule::id).collect(java.util.stream.Collectors.toSet());
+        viewCache.keySet().removeIf(id -> !available.contains(id));
         render();
     }
 
@@ -102,26 +106,25 @@ public final class WorkspaceSideDock extends BorderPane {
     }
 
     public void setCollapsed(boolean collapsed) {
-        if (collapsed) {
-            collapseActiveModule();
-        } else if (activeModuleId.get() == null || modules.stream().noneMatch(module -> module.id() == activeModuleId.get())) {
+        this.collapsed = collapsed;
+        if (!collapsed && (activeModuleId.get() == null
+                || modules.stream().noneMatch(module -> module.id() == activeModuleId.get()))) {
             activeModuleId.set(statePolicy.choose(null, modules));
-            render();
-        } else {
-            render();
         }
+        render();
     }
 
     private void activate(SideDockModuleId moduleId) {
-        if (moduleId == activeModuleId.get() && expanded.get()) {
+        if (moduleId == activeModuleId.get() && !collapsed && expanded.get()) {
             return;
         }
         this.activeModuleId.set(moduleId);
+        this.collapsed = false;
         render();
     }
 
     private void collapseActiveModule() {
-        this.activeModuleId.set(null);
+        this.collapsed = true;
         render();
     }
 
@@ -133,6 +136,9 @@ public final class WorkspaceSideDock extends BorderPane {
         }
         if (key.contains("imagen")) {
             return AppIcon.IMAGE;
+        }
+        if (key.contains("ajuste") || key.contains("configuracion") || key.contains("configuraciÃ³n")) {
+            return AppIcon.SETTINGS;
         }
         if (key.contains("video")) {
             return AppIcon.VIDEO;
@@ -203,8 +209,8 @@ public final class WorkspaceSideDock extends BorderPane {
                 .filter(module -> module.id() == activeModuleId.get())
                 .findFirst()
                 .orElse(null);
-        expanded.set(active != null);
-        if (active == null) {
+        expanded.set(active != null && !collapsed);
+        if (active == null || collapsed) {
             getStyleClass().add("workspace-side-dock-collapsed");
             setMinWidth(hasRailFooter ? FOOTER_RAIL_MIN_WIDTH : DEFAULT_COLLAPSED_MIN_WIDTH);
             setPrefWidth(hasRailFooter ? FOOTER_RAIL_PREF_WIDTH : DEFAULT_COLLAPSED_PREF_WIDTH);
@@ -226,7 +232,7 @@ public final class WorkspaceSideDock extends BorderPane {
         HBox header = DocumentSidePanelChrome.header(active.title(), null, hide).node();
         header.getStyleClass().add("side-dock-module-header");
         frame.setTop(header);
-        Parent content = active.createView(context);
+        Parent content = viewCache.computeIfAbsent(active.id(), ignored -> active.createView(context));
         detachFromPreviousParent(content);
         VBox.setVgrow(content, Priority.ALWAYS);
         frame.setCenter(content);

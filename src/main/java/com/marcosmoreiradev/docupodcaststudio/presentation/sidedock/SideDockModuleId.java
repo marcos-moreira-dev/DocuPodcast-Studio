@@ -6,6 +6,7 @@ public enum SideDockModuleId {
     DOCUMENT_AUDIO_NARRATION("Audio"),
     DOCUMENT_TECHNICAL_PROBLEM("Problema"),
     DOCUMENT_STUDY_VIDEO("Video documental"),
+    NARRATIVE_VIDEO_CONTENT("Contenido del video"),
     DOCUMENT_IMAGE("Imagen"),
     THEATRE_FRAGMENT_IMAGES("Capas multimedia"),
     THEATRE_CHARACTERS("Personajes"),

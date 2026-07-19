@@ -22,7 +22,8 @@ final class DocumentStudyVideoConfigurationJsonTest {
         DocumentParagraphVisualAssignment visual = new DocumentParagraphVisualAssignment(
                 "B001", "fingerprint", "IMG-IMPORTED", "IMG-DRAWN",
                 "media/images/document-study/drawings/B001.ink.json",
-                DocumentVisualSource.DRAWN, "IMG-MASCOT", DocumentMascotPosition.BOTTOM_LEFT);
+                DocumentVisualSource.DRAWN, "IMG-MASCOT", DocumentMascotPosition.BOTTOM_LEFT,
+                "Una pausa necesaria", true);
         DocumentStudyVideoConfiguration configuration = new DocumentStudyVideoConfiguration(
                 "Instinto creativo", 8.0, List.of(visual),
                 List.of(new DocumentTableSlideConfiguration("B002", 11.0)),
@@ -40,6 +41,8 @@ final class DocumentStudyVideoConfigurationJsonTest {
         assertEquals("Instinto creativo", actual.videoTitle());
         assertEquals(8.0, actual.defaultTableDurationSeconds());
         assertEquals(visual, actual.paragraph("B001").orElseThrow());
+        assertEquals("Una pausa necesaria", actual.paragraph("B001").orElseThrow().subtitle());
+        assertTrue(actual.paragraph("B001").orElseThrow().illustrationOnly());
         assertEquals(11.0, actual.tableDuration("B002"));
         assertEquals(1, actual.musicTracks().size());
         assertEquals(0.27, actual.musicTracks().getFirst().volume());

@@ -8,10 +8,14 @@ public final class InkInputProviderFactory {
         return new MouseFirstInkInputProvider(createNativeProvider());
     }
 
-    public static InkInputProvider createLectureStudioOnly() {
+    public static InkInputProvider createNativeOnly() {
         InkInputProvider lectureStudio = LectureStudioStylusInputProvider.createStrictOrUnavailable();
         return WindowsPointerInkInputProvider.tryCreate(lectureStudio)
                 .orElse(lectureStudio);
+    }
+
+    public static InkInputProvider createLectureStudioOnly() {
+        return createNativeOnly();
     }
 
     private static InkInputProvider createNativeProvider() {

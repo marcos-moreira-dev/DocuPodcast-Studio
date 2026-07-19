@@ -76,4 +76,28 @@ final class ArchitectureBoundaryTest {
                     "..domain.theatre..",
                     "..presentation.theatre.."
             );
+
+    @ArchTest
+    static final ArchRule visual_core_does_not_depend_on_consumers = noClasses()
+            .that().resideInAPackage("..application.visual..")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "..application.theatre..",
+                    "..domain.theatre..",
+                    "..application.documentstudy..",
+                    "..domain.study..",
+                    "..application.narrative.."
+            );
+
+    @ArchTest
+    static final ArchRule generic_visual_engine_contracts_do_not_depend_on_consumers = noClasses()
+            .that().haveSimpleNameContaining("LocalVisualImageEngineManager")
+            .or().haveSimpleNameContaining("ImageEngineSmokeRequest")
+            .or().haveSimpleNameContaining("ImageEnginePresetSupport")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "..application.theatre..",
+                    "..domain.theatre..",
+                    "..application.documentstudy..",
+                    "..domain.study..",
+                    "..application.narrative.."
+            );
 }

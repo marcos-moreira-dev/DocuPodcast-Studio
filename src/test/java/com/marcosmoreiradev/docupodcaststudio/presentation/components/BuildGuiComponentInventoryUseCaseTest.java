@@ -13,7 +13,7 @@ final class BuildGuiComponentInventoryUseCaseTest {
 
         assertTrue(report.total() > 0);
         assertEquals("especializado-narrativo",
-                report.classifications().get("NarrativeVisualProductionWorkspaceView"));
+                report.classifications().get("NarrativeVideoPanel"));
         assertEquals("soporte-documental",
                 report.classifications().get("DocumentSidePanelChrome"));
         assertEquals("legacy-interno",

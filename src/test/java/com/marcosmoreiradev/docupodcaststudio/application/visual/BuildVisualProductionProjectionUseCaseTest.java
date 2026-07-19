@@ -1,6 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.application.visual;
 
 import com.marcosmoreiradev.docupodcaststudio.application.fragment.FragmentWorkspaceProjection;
+import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreGlobalVisualAssetProjectionProvider;
 import com.marcosmoreiradev.docupodcaststudio.domain.assets.ProjectAssetKind;
 import com.marcosmoreiradev.docupodcaststudio.domain.assets.ProjectAssetReference;
 import com.marcosmoreiradev.docupodcaststudio.domain.fragment.DocumentFragment;
@@ -62,6 +63,10 @@ final class BuildVisualProductionProjectionUseCaseTest {
 
     @Test
     void indexesGlobalTheatreVisualsWithoutPromotingStoryboardWorkspace() {
+        VisualAssetTracePolicy tracePolicy = new VisualAssetTracePolicy();
+        BuildVisualProductionProjectionUseCase theatreUseCase = new BuildVisualProductionProjectionUseCase(
+                tracePolicy,
+                new TheatreGlobalVisualAssetProjectionProvider(tracePolicy));
         TheatreProjectLayer theatre = new TheatreProjectLayer(
                 List.of(),
                 List.of(),
@@ -81,7 +86,7 @@ final class BuildVisualProductionProjectionUseCaseTest {
                 .withAsset(image("IMG-MAP", "media/theatre/map.png"))
                 .withTheatre(theatre);
 
-        VisualProductionProjection projection = useCase.build(projection(FragmentId.fromBlockId("B001")),
+        VisualProductionProjection projection = theatreUseCase.build(projection(FragmentId.fromBlockId("B001")),
                 project, null);
 
         assertEquals(2, projection.globalVisuals().size());
@@ -102,7 +107,7 @@ final class BuildVisualProductionProjectionUseCaseTest {
                 .fragmentById(fragmentId)
                 .orElseThrow();
 
-        VisualGenerationRequest request = new BuildVisualPromptContextUseCase()
+        FragmentVisualGenerationRequest request = new BuildVisualPromptContextUseCase()
                 .build(state, FragmentAssetRole.BRIDGE_TO_NEXT_FRAGMENT);
         VisualGenerationCandidate candidate = new VisualGenerationCandidate("CAND-1", request.fragmentId(),
                 request.role(), "", Path.of("exports/generated.png"), false, "Revision humana");

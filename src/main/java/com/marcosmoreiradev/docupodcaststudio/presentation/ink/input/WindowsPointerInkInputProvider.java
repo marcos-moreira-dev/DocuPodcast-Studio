@@ -43,6 +43,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public final class WindowsPointerInkInputProvider implements InkInputProvider {
     private static final String DISABLE_PROPERTY = "docupodcast.ink.disableWindowsPointer";
+    private static final String DIAGNOSTICS_PROPERTY = "docupodcast.ink.inputDiagnostics";
     private static final String WINDOWS = "win";
     private static final int GWL_WNDPROC = -4;
     private static final int WM_POINTERUPDATE = 0x0245;
@@ -58,6 +59,7 @@ public final class WindowsPointerInkInputProvider implements InkInputProvider {
     private static final long FALLBACK_SUPPRESSION_NANOS = 150_000_000L;
 
     private final InkInputProvider fallback;
+    private final boolean nativeOnly;
     private final Queue<NativePacket> pendingPackets = new ConcurrentLinkedQueue<>();
     private final AtomicBoolean drainScheduled = new AtomicBoolean(false);
     private final AtomicLong lastNativePacketNanos = new AtomicLong(0L);
@@ -83,6 +85,7 @@ public final class WindowsPointerInkInputProvider implements InkInputProvider {
 
     private WindowsPointerInkInputProvider(InkInputProvider fallback) {
         this.fallback = fallback == null ? NoopInkInputProvider.INSTANCE : fallback;
+        this.nativeOnly = this.fallback == NoopInkInputProvider.INSTANCE;
     }
 
     public static Optional<InkInputProvider> tryCreate() {
@@ -103,6 +106,9 @@ public final class WindowsPointerInkInputProvider implements InkInputProvider {
     public InkInputCapabilities capabilities() {
         if (nativePacketsSeen.get()) {
             return InkInputCapabilities.windowsPointer();
+        }
+        if (nativeOnly) {
+            return InkInputCapabilities.windowsPointerWaiting(fallbackReason);
         }
         InkInputCapabilities fallbackCapabilities = fallback.capabilities();
         if (!"JavaFX mouse".equals(fallbackCapabilities.providerName())) {
@@ -138,6 +144,11 @@ public final class WindowsPointerInkInputProvider implements InkInputProvider {
         listener = null;
     }
 
+    @Override
+    public void resetCoordinateState() {
+        fallback.resetCoordinateState();
+    }
+
     private void installNativeHook() {
         if (!Platform.isFxApplicationThread()) {
             Platform.runLater(this::installNativeHook);
@@ -161,9 +172,11 @@ public final class WindowsPointerInkInputProvider implements InkInputProvider {
             hookInstalled = true;
             pointerTargetRegistered = registerPointerTarget(hwnd);
             fallbackReason = "";
+            reportDiagnostic("Hook instalado. Registro PT_PEN=" + pointerTargetRegistered);
         } catch (RuntimeException | LinkageError ex) {
             fallbackReason = "Windows Pointer no disponible: " + ex.getClass().getSimpleName()
                     + (ex.getMessage() == null ? "" : " - " + ex.getMessage());
+            reportDiagnostic(fallbackReason);
             hookInstalled = false;
             windowProc = null;
             hwnd = null;
@@ -407,7 +420,10 @@ public final class WindowsPointerInkInputProvider implements InkInputProvider {
             if (sample == null) {
                 continue;
             }
-            nativePacketsSeen.set(true);
+            if (nativePacketsSeen.compareAndSet(false, true)) {
+                reportDiagnostic("Primer paquete recibido: pressureRaw="
+                        + packet.rawPressure + ", pressure=" + packet.pressure);
+            }
             lastNativePacketNanos.set(System.nanoTime());
             if (packet.action == PointerAction.MOVE) {
                 moveBatch.add(sample);
@@ -467,6 +483,12 @@ public final class WindowsPointerInkInputProvider implements InkInputProvider {
 
     private static int pointerId(WPARAM wParam) {
         return wParam.intValue() & 0xFFFF;
+    }
+
+    private static void reportDiagnostic(String message) {
+        if (Boolean.getBoolean(DIAGNOSTICS_PROPERTY)) {
+            System.out.println("[WindowsPointerInk] " + message);
+        }
     }
 
     private static PointerAction actionFor(int message, int index, int total) {

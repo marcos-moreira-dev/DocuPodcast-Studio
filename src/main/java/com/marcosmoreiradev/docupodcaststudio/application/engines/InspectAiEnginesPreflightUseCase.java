@@ -97,9 +97,9 @@ public final class InspectAiEnginesPreflightUseCase {
             message = "Voz IA avanzada requiere descargar o importar recursos de voz.";
             action = "Pulsa Descargar o Importar y deja que la app verifique los recursos.";
         } else if (!smoke.generatedWavProof()) {
-            status = AiEngineReadinessStatus.NEEDS_VERIFICATION;
-            message = "Voz IA avanzada está descargada/configurada, pero aún no es usable para documentos: falta generar una prueba WAV real.";
-            action = "Pulsa Probar en Configuración antes de generar fragmentos de audio del documento.";
+            status = AiEngineReadinessStatus.READY_WITH_WARNINGS;
+            message = "Voz IA avanzada está instalada y puede generar audio; aún no hay una prueba WAV corta previa.";
+            action = "Puedes generar audio ahora o pulsar Probar en Configuración antes de un trabajo largo.";
         } else if (!smoke.playbackConfirmed()) {
             status = AiEngineReadinessStatus.READY_WITH_WARNINGS;
             message = "Voz IA avanzada puede generar fragmentos de audio porque ya produjo un WAV real; falta confirmar reproducción dentro de la app.";

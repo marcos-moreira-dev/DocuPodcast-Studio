@@ -36,6 +36,25 @@ public class InkCanvasSurface extends StudyProblemCanvasSurface {
         setClip(null);
     }
 
+    /**
+     * Applies the shared z-order and picking contract used by every ink editor.
+     * The transparent hit area stays behind optional controls that may live in
+     * the input layer, while the complete layer remains above images and ink.
+     */
+    public void configureInputCapture(boolean layerInteractive, boolean inkActive) {
+        if (layerInteractive) {
+            inkInputLayer().toFront();
+            if (inkActive) {
+                inkInputTarget().toBack();
+            }
+        }
+        inkInputLayer().setMouseTransparent(!layerInteractive);
+        inkInputLayer().setPickOnBounds(inkActive);
+        inkInputTarget().setMouseTransparent(!inkActive);
+        inkInputTarget().setVisible(inkActive);
+        inkInputTarget().setDisable(!inkActive);
+    }
+
     @Override
     public double logicalWidth() {
         return fixedLogicalViewport ? fixedLogicalWidth : super.logicalWidth();

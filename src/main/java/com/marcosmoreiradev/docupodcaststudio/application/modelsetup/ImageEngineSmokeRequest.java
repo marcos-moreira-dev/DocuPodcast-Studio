@@ -1,35 +1,35 @@
 package com.marcosmoreiradev.docupodcaststudio.application.modelsetup;
 
 import com.marcosmoreiradev.docupodcaststudio.application.image.ImageEnhancementOutputProfile;
-import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreImageAspectRatio;
-import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreImageGenerationPreset;
+import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualAspectRatio;
+import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualGenerationProfile;
 
 import java.nio.file.Path;
 
-/** User-selected parameters for a local theatre image engine smoke generation. */
+/** User-selected parameters for a category-neutral local visual-engine smoke generation. */
 public record ImageEngineSmokeRequest(
-        TheatreImageGenerationPreset preset,
+        VisualGenerationProfile profile,
         ImageEnhancementOutputProfile outputProfile,
-        TheatreImageAspectRatio aspectRatio,
+        VisualAspectRatio aspectRatio,
         String promptText,
         int steps,
         Path outputDirectory
 ) {
     public ImageEngineSmokeRequest {
-        preset = preset == null ? TheatreImageGenerationPreset.TEST_4GB_SD15 : preset;
+        profile = profile == null ? VisualGenerationProfile.DIAGNOSTIC_SD15 : profile;
         outputProfile = outputProfile == null ? ImageEnhancementOutputProfile.FHD_1080 : outputProfile;
-        aspectRatio = aspectRatio == null ? TheatreImageAspectRatio.WIDE_16_9 : aspectRatio;
+        aspectRatio = aspectRatio == null ? VisualAspectRatio.WIDE_16_9 : aspectRatio;
         promptText = promptText == null ? "" : promptText.strip();
         steps = Math.max(4, Math.min(80, steps));
     }
 
     public static ImageEngineSmokeRequest defaults() {
         return new ImageEngineSmokeRequest(
-                TheatreImageGenerationPreset.TEST_4GB_SD15,
+                VisualGenerationProfile.DIAGNOSTIC_SD15,
                 ImageEnhancementOutputProfile.FHD_1080,
-                TheatreImageAspectRatio.WIDE_16_9,
+                VisualAspectRatio.WIDE_16_9,
                 "",
-                TheatreImageGenerationPreset.TEST_4GB_SD15.steps(),
+                24,
                 null);
     }
 

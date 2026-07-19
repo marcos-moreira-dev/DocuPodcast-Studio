@@ -32,6 +32,7 @@ import com.marcosmoreiradev.docupodcaststudio.presentation.sidedock.WorkspaceSid
 import com.marcosmoreiradev.docupodcaststudio.presentation.theatre.IntervencionNumberingScene;
 import com.marcosmoreiradev.docupodcaststudio.presentation.theatre.IntervencionBoundaryStore;
 import com.marcosmoreiradev.docupodcaststudio.presentation.theatre.TheatreSideDock;
+import com.marcosmoreiradev.docupodcaststudio.presentation.narrative.NarrativeVideoSideDock;
 import com.marcosmoreiradev.docupodcaststudio.presentation.theatre.IntervencionCatalogo;
 import com.marcosmoreiradev.docupodcaststudio.presentation.workspace.WorkspaceKind;
 import javafx.beans.InvalidationListener;
@@ -223,6 +224,7 @@ public final class DocumentWorkspaceView extends BorderPane {
         Node leftDock = buildSideDock();
         TheatreSideDock theatreSideDock = null;
         DocumentStudySideDock documentStudySideDock = null;
+        NarrativeVideoSideDock narrativeVideoSideDock = null;
         ObservableBooleanValue activeRightDockExpanded;
         SplitPane splitPane;
         if (mode == DocumentWorkspaceMode.THEATRE_SCRIPT) {
@@ -235,38 +237,53 @@ public final class DocumentWorkspaceView extends BorderPane {
         } else {
             theatreSideDock = buildTheatreSideDock();
             documentStudySideDock = buildDocumentStudySideDock();
-            StackPane rightDockHost = new StackPane(documentStudySideDock, theatreSideDock);
+            narrativeVideoSideDock = buildNarrativeVideoSideDock();
+            StackPane rightDockHost = new StackPane(documentStudySideDock, narrativeVideoSideDock, theatreSideDock);
             TheatreSideDock finalTheatreSideDock = theatreSideDock;
             DocumentStudySideDock finalDocumentStudySideDock = documentStudySideDock;
+            NarrativeVideoSideDock finalNarrativeVideoSideDock = narrativeVideoSideDock;
             StackPane.setAlignment(finalTheatreSideDock, Pos.CENTER_RIGHT);
             StackPane.setAlignment(finalDocumentStudySideDock, Pos.CENTER_RIGHT);
+            StackPane.setAlignment(finalNarrativeVideoSideDock, Pos.CENTER_RIGHT);
             Runnable syncRightDockVisibility = () -> {
                 boolean theatreProject = currentProjectUsesTheatreDock();
+                boolean narrativeProject = currentProjectUsesNarrativeDock();
                 finalTheatreSideDock.setVisible(theatreProject);
                 finalTheatreSideDock.setManaged(theatreProject);
-                finalDocumentStudySideDock.setVisible(!theatreProject);
-                finalDocumentStudySideDock.setManaged(!theatreProject);
+                finalNarrativeVideoSideDock.setVisible(narrativeProject);
+                finalNarrativeVideoSideDock.setManaged(narrativeProject);
+                finalDocumentStudySideDock.setVisible(!theatreProject && !narrativeProject);
+                finalDocumentStudySideDock.setManaged(!theatreProject && !narrativeProject);
             };
             rightDockHost.minWidthProperty().bind(Bindings.createDoubleBinding(
                     () -> currentProjectUsesTheatreDock()
                             ? finalTheatreSideDock.getMinWidth()
-                            : finalDocumentStudySideDock.getMinWidth(),
+                            : currentProjectUsesNarrativeDock()
+                                    ? finalNarrativeVideoSideDock.getMinWidth()
+                                    : finalDocumentStudySideDock.getMinWidth(),
                     viewModel.currentProjectModeProperty(),
                     finalTheatreSideDock.minWidthProperty(),
+                    finalNarrativeVideoSideDock.minWidthProperty(),
                     finalDocumentStudySideDock.minWidthProperty()));
             rightDockHost.prefWidthProperty().bind(Bindings.createDoubleBinding(
                     () -> currentProjectUsesTheatreDock()
                             ? finalTheatreSideDock.getPrefWidth()
-                            : finalDocumentStudySideDock.getPrefWidth(),
+                            : currentProjectUsesNarrativeDock()
+                                    ? finalNarrativeVideoSideDock.getPrefWidth()
+                                    : finalDocumentStudySideDock.getPrefWidth(),
                     viewModel.currentProjectModeProperty(),
                     finalTheatreSideDock.prefWidthProperty(),
+                    finalNarrativeVideoSideDock.prefWidthProperty(),
                     finalDocumentStudySideDock.prefWidthProperty()));
             rightDockHost.maxWidthProperty().bind(Bindings.createDoubleBinding(
                     () -> currentProjectUsesTheatreDock()
                             ? finalTheatreSideDock.getMaxWidth()
-                            : finalDocumentStudySideDock.getMaxWidth(),
+                            : currentProjectUsesNarrativeDock()
+                                    ? finalNarrativeVideoSideDock.getMaxWidth()
+                                    : finalDocumentStudySideDock.getMaxWidth(),
                     viewModel.currentProjectModeProperty(),
                     finalTheatreSideDock.maxWidthProperty(),
+                    finalNarrativeVideoSideDock.maxWidthProperty(),
                     finalDocumentStudySideDock.maxWidthProperty()));
             syncRightDockVisibility.run();
             viewModel.currentProjectModeProperty().addListener((obs, oldValue, newValue) -> syncRightDockVisibility.run());
@@ -277,9 +294,12 @@ public final class DocumentWorkspaceView extends BorderPane {
             activeRightDockExpanded = Bindings.createBooleanBinding(
                     () -> currentProjectUsesTheatreDock()
                             ? finalTheatreSideDock.expandedProperty().get()
-                            : finalDocumentStudySideDock.expandedProperty().get(),
+                            : currentProjectUsesNarrativeDock()
+                                    ? finalNarrativeVideoSideDock.expandedProperty().get()
+                                    : finalDocumentStudySideDock.expandedProperty().get(),
                     viewModel.currentProjectModeProperty(),
                     finalTheatreSideDock.expandedProperty(),
+                    finalNarrativeVideoSideDock.expandedProperty(),
                     finalDocumentStudySideDock.expandedProperty());
         }
         splitPane.getStyleClass().add("document-split");
@@ -416,8 +436,16 @@ public final class DocumentWorkspaceView extends BorderPane {
         return new TheatreSideDock(viewModel, this.saveProjectRequest, intervencionBoundaryStore);
     }
 
+    private NarrativeVideoSideDock buildNarrativeVideoSideDock() {
+        return new NarrativeVideoSideDock(viewModel);
+    }
+
     private boolean currentProjectUsesTheatreDock() {
         return viewModel.currentProjectModeProperty().get() == ProjectMode.THEATRE_PRODUCTION;
+    }
+
+    private boolean currentProjectUsesNarrativeDock() {
+        return viewModel.currentProjectModeProperty().get() == ProjectMode.NARRATIVE_VIDEO;
     }
 
     private Node railReadingControl() {

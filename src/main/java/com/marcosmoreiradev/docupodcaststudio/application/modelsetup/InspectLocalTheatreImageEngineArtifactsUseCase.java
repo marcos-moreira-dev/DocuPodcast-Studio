@@ -27,7 +27,7 @@ public final class InspectLocalTheatreImageEngineArtifactsUseCase {
         ArrayList<String> warnings = new ArrayList<>();
         ArrayList<String> discovered = new ArrayList<>();
         ImageEnginePresetSupport presetSupport = ImageEnginePresetSupportPolicy.forPresetId(current.imageGeneration().preset());
-        boolean flux = presetSupport.preset() == com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreImageGenerationPreset.HIGH_QUALITY_FLUX;
+        boolean flux = presetSupport.fluxCompatible();
 
         ImageEngineComponentStatus runtimeStatus = runtimeStatus(runtime);
         if (runtimeStatus == ImageEngineComponentStatus.MISSING) {
@@ -36,7 +36,9 @@ public final class InspectLocalTheatreImageEngineArtifactsUseCase {
             missing.add("Lanzador compatible en tools/image (start-image-engine.bat, ComfyUI.bat, run.bat o ComfyUI/main.py con Python local)");
         }
 
-        FluxModelBundle fluxBundle = flux ? FluxModelBundle.inspect(root) : null;
+        FluxModelBundle fluxBundle = flux
+                ? presetSupport.kontextWorkflow() ? FluxModelBundle.inspectKontext(root) : FluxModelBundle.inspect(root)
+                : null;
         Artifact checkpoint = flux
                 ? artifactFor(fluxBundle.model(), FluxModelBundle.MODEL_NAME)
                 : inspectCheckpoint(models, current);
@@ -53,11 +55,11 @@ public final class InspectLocalTheatreImageEngineArtifactsUseCase {
                 : inspectWorkflow(models, presetSupport);
         discovered.addAll(workflow.discovered());
         if (workflow.status() == ImageEngineComponentStatus.MISSING) {
-            missing.add("Workflow ComfyUI real para " + presetSupport.preset().displayName()
+            missing.add("Workflow ComfyUI real para " + presetSupport.displayName()
                     + " en models/image/" + presetSupport.workflowName());
         } else if (workflow.status() == ImageEngineComponentStatus.INVALID
                 || workflow.status() == ImageEngineComponentStatus.PLACEHOLDER) {
-            missing.add("Workflow ComfyUI real para " + presetSupport.preset().displayName()
+            missing.add("Workflow ComfyUI real para " + presetSupport.displayName()
                     + "; el JSON actual es invalido o placeholder");
         }
         if (flux) {
@@ -67,7 +69,7 @@ public final class InspectLocalTheatreImageEngineArtifactsUseCase {
                 }
             }
             if (!new FluxLicenseAcceptanceStore().accepted(root)) {
-                missing.add("Confirmacion local de licencia FLUX.1-dev");
+                missing.add("Confirmacion local de licencia FLUX.1-Kontext-dev");
             }
         }
 
@@ -90,10 +92,10 @@ public final class InspectLocalTheatreImageEngineArtifactsUseCase {
         String message;
         if (missing.isEmpty()) {
             message = warnings.isEmpty()
-                    ? "Imagen IA teatral lista para prueba real."
-                    : "Imagen IA teatral lista para prueba basica. " + String.join(" ", warnings);
+                    ? "Generacion visual local lista para prueba real."
+                    : "Generacion visual local lista para prueba basica. " + String.join(" ", warnings);
         } else {
-            message = "Imagen IA teatral pendiente: " + String.join(" - ", missing) + ".";
+            message = "Generacion visual local pendiente: " + String.join(" - ", missing) + ".";
         }
 
         return new ImageEngineArtifactInspectionReport(

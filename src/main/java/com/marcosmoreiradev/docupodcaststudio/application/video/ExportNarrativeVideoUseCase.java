@@ -12,6 +12,7 @@ import java.util.function.Consumer;
 /** Prepares the standard narrative-video plan and delegates encoding to the transversal renderer. */
 public final class ExportNarrativeVideoUseCase {
     private final BuildSimpleVideoPlanUseCase buildSimpleVideoPlan;
+    private final BuildNarrativeVideoPlanUseCase buildNarrativeVideoPlan;
     private final RenderFinalVideoPlanUseCase renderer;
 
     public ExportNarrativeVideoUseCase() {
@@ -37,6 +38,7 @@ public final class ExportNarrativeVideoUseCase {
     public ExportNarrativeVideoUseCase(BuildSimpleVideoPlanUseCase buildSimpleVideoPlan,
                                        RenderFinalVideoPlanUseCase renderer) {
         this.buildSimpleVideoPlan = Objects.requireNonNull(buildSimpleVideoPlan, "buildSimpleVideoPlan");
+        this.buildNarrativeVideoPlan = new BuildNarrativeVideoPlanUseCase();
         this.renderer = Objects.requireNonNull(renderer, "renderer");
     }
 
@@ -57,8 +59,14 @@ public final class ExportNarrativeVideoUseCase {
                 progress, cancellationRequested);
     }
 
-    private SimpleVideoPlan buildPlan(FinalVideoExportRequest request) {
+    private SimpleVideoPlan buildPlan(FinalVideoExportRequest request) throws IOException {
         DocuPodcastProject project = request.project();
+        if (project != null
+                && project.metadata().mode()
+                == com.marcosmoreiradev.docupodcaststudio.domain.project.ProjectMode.NARRATIVE_VIDEO) {
+            return buildNarrativeVideoPlan.build(
+                    project, request.script(), request.jobs(), request.projectDirectory());
+        }
         ProjectAssetCatalog assets = project == null ? ProjectAssetCatalog.empty() : project.assets();
         if (request.renderUnitPlan() != null && !request.renderUnitPlan().videoUnits().isEmpty()) {
             return buildSimpleVideoPlan.build(request.renderUnitPlan(), assets, request.jobs(),

@@ -15,6 +15,34 @@
     -fx-background-color: -docu-bg-panel;
 }
 
+.document-study-video-module-workspace,
+.document-study-video-inspector-host {
+    -fx-background-color: -docu-bg-panel;
+}
+
+.document-study-video-mode-rail {
+    -fx-background-color: #EDF3FC;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 0 1 0 0;
+    -fx-min-width: 82px;
+    -fx-pref-width: 82px;
+    -fx-max-width: 82px;
+}
+
+.document-study-video-mode-button {
+    -fx-min-width: 68px;
+    -fx-pref-width: 68px;
+    -fx-max-width: 68px;
+    -fx-content-display: top;
+    -fx-font-size: 11px;
+    -fx-wrap-text: true;
+}
+
+.document-study-video-mode-button:selected {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: -docu-accent;
+}
+
 .document-study-video-inspector-scroll {
     -fx-border-color: transparent -docu-border transparent transparent;
     -fx-border-width: 0 1px 0 0;

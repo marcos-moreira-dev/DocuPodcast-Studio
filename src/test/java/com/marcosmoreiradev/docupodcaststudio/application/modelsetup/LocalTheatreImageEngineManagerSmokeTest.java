@@ -1,11 +1,12 @@
 package com.marcosmoreiradev.docupodcaststudio.application.modelsetup;
 
 import com.marcosmoreiradev.docupodcaststudio.application.process.ExternalProcessRunner;
+import com.marcosmoreiradev.docupodcaststudio.application.compute.ComputeDevicePolicy;
 import com.marcosmoreiradev.docupodcaststudio.application.image.ImageEnhancementOutputProfile;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.ImageGenerationSettings;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.OperationalSettings;
-import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreImageAspectRatio;
-import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreImageGenerationPreset;
+import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualAspectRatio;
+import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualGenerationProfile;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;
@@ -27,6 +28,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -83,9 +85,9 @@ final class LocalTheatreImageEngineManagerSmokeTest {
                     HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build());
 
             ImageEngineSmokeRequest request = new ImageEngineSmokeRequest(
-                    TheatreImageGenerationPreset.TEST_4GB_SD15,
+                    VisualGenerationProfile.DIAGNOSTIC_SD15,
                     ImageEnhancementOutputProfile.HD_720,
-                    TheatreImageAspectRatio.WIDE_16_9,
+                    VisualAspectRatio.WIDE_16_9,
                     "hangar teatral",
                     12,
                     tempDir.resolve("custom-smoke-output"));
@@ -120,16 +122,16 @@ final class LocalTheatreImageEngineManagerSmokeTest {
                     HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build());
 
             ImageEngineSmokeRequest request = new ImageEngineSmokeRequest(
-                    TheatreImageGenerationPreset.HIGH_QUALITY_FLUX,
+                    VisualGenerationProfile.ADVANCED_FLUX_KONTEXT,
                     ImageEnhancementOutputProfile.FHD_1080,
-                    TheatreImageAspectRatio.WIDE_16_9,
+                    VisualAspectRatio.WIDE_16_9,
                     "flux workflow test",
                     12,
                     tempDir.resolve("unsupported-workflow"));
             ImageEngineSmokeReport report = manager.smoke(settings, tempDir, request);
 
             assertTrue(!report.success(), report.userMessage());
-            assertTrue(report.userMessage().contains("licencia FLUX.1-dev"));
+            assertTrue(report.userMessage().contains("licencia FLUX.1-Kontext-dev"));
             assertTrue(report.diagnostic().contains("licenseAccepted=false"));
             assertTrue(submittedPrompt.get().isBlank());
         } finally {
@@ -148,19 +150,67 @@ final class LocalTheatreImageEngineManagerSmokeTest {
     @Test
     void detachedLaunchCommandQuotesWindowsPathsWithSpaces() {
         List<String> command = LocalTheatreImageEngineManager.detachedLaunchCommand(List.of(
-                "C:\\Users\\MARCOS MOREIRA\\Downloads\\g\\tools\\image\\start-image-engine.bat",
+                "C:\\Users\\MARCOS MOREIRA\\Downloads\\g\\tools\\image\\venv\\Scripts\\python.exe",
+                "C:\\Users\\MARCOS MOREIRA\\Downloads\\g\\tools\\image\\ComfyUI\\main.py",
                 "--port",
                 "8188"));
 
         if (System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win")) {
-            assertEquals(List.of("cmd", "/d", "/c", "start", "\"\"", "/min"), command.subList(0, 6));
-            assertEquals("C:\\Users\\MARCOS MOREIRA\\Downloads\\g\\tools\\image\\start-image-engine.bat", command.get(6));
-            assertEquals("--port", command.get(7));
-            assertEquals("8188", command.get(8));
+            assertEquals(List.of("cmd", "/d", "/s", "/c"), command.subList(0, 4));
+            assertEquals("start \"\" /min \"C:\\Users\\MARCOS MOREIRA\\Downloads\\g\\tools\\image\\venv\\Scripts\\python.exe\" \"C:\\Users\\MARCOS MOREIRA\\Downloads\\g\\tools\\image\\ComfyUI\\main.py\" \"--port\" \"8188\"", command.get(4));
         } else {
             assertEquals(List.of("sh", "-c"), command.subList(0, 2));
-            assertTrue(command.get(2).contains("'C:\\Users\\MARCOS MOREIRA\\Downloads\\g\\tools\\image\\start-image-engine.bat'"));
+            assertTrue(command.get(2).contains("'C:\\Users\\MARCOS MOREIRA\\Downloads\\g\\tools\\image\\venv\\Scripts\\python.exe'"));
         }
+    }
+
+    @Test
+    void preparedRuntimePrefersDirectPythonOverBatchLauncher() throws Exception {
+        Path runtime = tempDir.resolve("tools/image");
+        Path main = runtime.resolve("ComfyUI/main.py");
+        Path python = runtime.resolve("venv/Scripts/python.exe");
+        Files.createDirectories(main.getParent());
+        Files.createDirectories(python.getParent());
+        Files.writeString(main, "print('comfy')\n");
+        Files.writeString(python, "");
+        Files.writeString(runtime.resolve("start-image-engine.bat"), "@echo off\r\nexit /b 1\r\n");
+        Files.writeString(runtime.resolve("extra_model_paths.yaml"), "docupodcast: {}\n");
+        LocalTheatreImageEngineManager manager = new LocalTheatreImageEngineManager(
+                new InspectLocalTheatreImageSetupReadinessUseCase(),
+                ExternalProcessRunner.unavailable("Imagen IA teatral"),
+                HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build());
+
+        List<String> command = manager.launchCommand(runtime, settingsFor("http://127.0.0.1:8188"), true);
+
+        assertEquals(python.toString(), command.get(0));
+        assertEquals(main.toString(), command.get(1));
+        assertTrue(command.contains("--listen"));
+        assertTrue(command.contains("127.0.0.1"));
+        assertTrue(command.contains("--port"));
+        assertTrue(command.contains("8188"));
+        assertTrue(command.contains("--extra-model-paths-config"));
+        assertTrue(command.contains(runtime.resolve("extra_model_paths.yaml").toAbsolutePath().normalize().toString()));
+    }
+
+    @Test
+    void fluxSmokeUsesDiagnosticGeometryInsteadOfProductionGeometry() {
+        ImageEngineSmokeRequest wide = new ImageEngineSmokeRequest(
+                VisualGenerationProfile.ADVANCED_FLUX_KONTEXT,
+                ImageEnhancementOutputProfile.FHD_1080,
+                VisualAspectRatio.WIDE_16_9,
+                "test",
+                4,
+                null);
+        ImageEngineSmokeRequest square = new ImageEngineSmokeRequest(
+                VisualGenerationProfile.ADVANCED_FLUX_KONTEXT,
+                ImageEnhancementOutputProfile.FHD_1080,
+                VisualAspectRatio.SQUARE_1_1,
+                "test",
+                4,
+                null);
+
+        assertArrayEquals(new int[] {512, 288}, LocalTheatreImageEngineManager.fluxSmokeNativeSize(wide));
+        assertArrayEquals(new int[] {512, 512}, LocalTheatreImageEngineManager.fluxSmokeNativeSize(square));
     }
 
     @Test
@@ -194,9 +244,9 @@ final class LocalTheatreImageEngineManagerSmokeTest {
 
     private static void assertWideDimensions(ImageEnhancementOutputProfile profile, int expectedWidth, int expectedHeight) {
         ImageEngineSmokeRequest request = new ImageEngineSmokeRequest(
-                TheatreImageGenerationPreset.TEST_4GB_SD15,
+                VisualGenerationProfile.DIAGNOSTIC_SD15,
                 profile,
-                TheatreImageAspectRatio.WIDE_16_9,
+                VisualAspectRatio.WIDE_16_9,
                 "dimension test",
                 12,
                 null);
@@ -224,7 +274,18 @@ final class LocalTheatreImageEngineManagerSmokeTest {
 
     private HttpServer startFakeComfyUi(AtomicReference<String> submittedPrompt, byte[] png) throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
-        server.createContext("/system_stats", exchange -> respond(exchange, 200, "application/json", "{}".getBytes()));
+        server.createContext("/system_stats", exchange -> respond(exchange, 200, "application/json", """
+                {
+                  "system": {
+                    "os": "windows",
+                    "python_version": "3.11",
+                    "pytorch_version": "2.5.1"
+                  },
+                  "devices": [
+                    {"name": "CPU local", "type": "cpu", "index": 0}
+                  ]
+                }
+                """.getBytes()));
         server.createContext("/prompt", exchange -> {
             submittedPrompt.set(new String(exchange.getRequestBody().readAllBytes()));
             respond(exchange, 200, "application/json", "{\"prompt_id\":\"smoke-1\"}".getBytes());
@@ -252,7 +313,10 @@ final class LocalTheatreImageEngineManagerSmokeTest {
         return new OperationalSettings(null, null, null, null,
                 new ImageGenerationSettings("managed-local", baseUrl, "AUTO", "TEST_4GB_SD15",
                         "v1-5-pruned-emaonly-fp16.safetensors", "models/image/adapters", timeoutSeconds, true),
-                null, null, null, null);
+                null,
+                new OperationalSettings.ComputeSettings(
+                        ComputeDevicePolicy.CPU_ONLY, "cpu", true, true, null),
+                null, null);
     }
 
     private static void respond(HttpExchange exchange, int status, String contentType, byte[] body) throws IOException {

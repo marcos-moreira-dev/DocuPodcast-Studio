@@ -46,8 +46,10 @@ final class SettingsFormModel {
     final CheckBox preferEmbeddedFfmpeg = checkBox(true);
     final TextField silentVisualBlockSeconds = textField("5.0");
     final TextField imageBaseUrl = textField("http://127.0.0.1:8188");
-    final ComboBox<String> imagePreset = combo("TEST_4GB_SD15", "TEST_4GB_SD15", "SD15_DREAMSHAPER", "HIGH_QUALITY_FLUX", "CUSTOM_COMFY_WORKFLOW");
-    final TextField imageModelName = textField("v1-5-pruned-emaonly-fp16.safetensors");
+    final ComboBox<String> imagePreset = combo("PRODUCTION_SDXL_REFERENCE",
+            "DIAGNOSTIC_SD15", "PRODUCTION_SDXL_REFERENCE", "ADVANCED_FLUX_KONTEXT", "CUSTOM_COMFY_WORKFLOW",
+            "TEST_4GB_SD15", "SD15_DREAMSHAPER");
+    final TextField imageModelName = textField("sd_xl_base_1.0.safetensors");
     final TextField imageAdaptersDirectory = textField("models/image/adapters");
     final TextField imageTimeoutSeconds = textField("300");
     final TextField imageMaxAttempts = textField("2");
@@ -203,10 +205,11 @@ final class SettingsFormModel {
                         "managed-local",
                         imageBaseUrl.getText(),
                         comboValue(computePolicy, "AUTO"),
-                        comboValue(imagePreset, "TEST_4GB_SD15"),
+                        comboValue(imagePreset, "PRODUCTION_SDXL_REFERENCE"),
                         imageModelName.getText(),
                         imageAdaptersDirectory.getText(),
-                        intValue(imageTimeoutSeconds, 300),
+                        intValue(imageTimeoutSeconds,
+                                com.marcosmoreiradev.docupodcaststudio.application.settings.ImageGenerationSettings.DEFAULT_TIMEOUT_SECONDS),
                         imageLowVram.isSelected(),
                         comboValue(imageMemoryProfile, "SAFE_LOW_VRAM"),
                         intValue(imageMaxAttempts, 2)),

@@ -3,6 +3,11 @@ package com.marcosmoreiradev.docupodcaststudio.infrastructure.json;
 import com.marcosmoreiradev.docupodcaststudio.domain.assets.ProjectAssetReference;
 import com.marcosmoreiradev.docupodcaststudio.domain.assignment.NarrativeLayerAssignment;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.TextAnchor;
+import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeContextReference;
+import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeGeneratedClip;
+import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeParagraphTake;
+import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeProjectLayer;
+import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeVideoConfiguration;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.DocuPodcastProject;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.ProjectMetadata;
 import com.marcosmoreiradev.docupodcaststudio.domain.reading.ReadingProfile;
@@ -43,6 +48,8 @@ public final class DocuPodcastProjectJsonWriter {
         writeAssets(out, project);
         out.append(",\n");
         writeNarrativeLayers(out, project.narrativeLayerAssignments());
+        out.append(",\n");
+        writeNarrative(out, project.narrative());
         out.append(",\n");
         writeTheatre(out, project.theatre());
         out.append(",\n");
@@ -166,7 +173,9 @@ public final class DocuPodcastProjectJsonWriter {
             field(out, level + 3, "drawnStateRelativePath", quote(item.drawnStateRelativePath())); out.append(",\n");
             field(out, level + 3, "activeSource", quote(item.activeSource().name())); out.append(",\n");
             field(out, level + 3, "mascotAssetId", quote(item.mascotAssetId())); out.append(",\n");
-            field(out, level + 3, "mascotPosition", quote(item.mascotPosition().name())); out.append("\n");
+            field(out, level + 3, "mascotPosition", quote(item.mascotPosition().name())); out.append(",\n");
+            field(out, level + 3, "subtitle", quote(item.subtitle())); out.append(",\n");
+            field(out, level + 3, "illustrationOnly", Boolean.toString(item.illustrationOnly())); out.append("\n");
             indent(out, level + 2).append("}");
             if (i < safe.paragraphVisuals().size() - 1) out.append(",");
             out.append("\n");
@@ -327,6 +336,124 @@ public final class DocuPodcastProjectJsonWriter {
         field(out, 5, "confidence", quote(anchor.confidence().name())); out.append(",\n");
         field(out, 5, "status", quote(anchor.status().name())); out.append("\n");
         indent(out, 4).append("}");
+    }
+
+    private static void writeNarrative(StringBuilder out, NarrativeProjectLayer narrative) {
+        NarrativeVideoConfiguration settings = narrative.videoConfiguration();
+        indent(out, 1).append("\"narrative\": {\n");
+        indent(out, 2).append("\"videoConfiguration\": {\n");
+        field(out, 3, "width", Integer.toString(settings.width())); out.append(",\n");
+        field(out, 3, "height", Integer.toString(settings.height())); out.append(",\n");
+        field(out, 3, "framesPerSecond", Integer.toString(settings.framesPerSecond())); out.append(",\n");
+        field(out, 3, "maxClipDurationSeconds", Double.toString(settings.maxClipDurationSeconds())); out.append(",\n");
+        field(out, 3, "imageProfile", quote(settings.imageProfile())); out.append(",\n");
+        field(out, 3, "videoProfile", quote(settings.videoProfile())); out.append(",\n");
+        field(out, 3, "memoryMode", quote(settings.memoryMode())); out.append(",\n");
+        field(out, 3, "customWorkflowPath", quote(settings.customWorkflowPath())); out.append("\n");
+        indent(out, 2).append("},\n");
+        field(out, 2, "documentFingerprint", quote(narrative.documentFingerprint())); out.append(",\n");
+        field(out, 2, "normalizedDocumentText", quote(narrative.normalizedDocumentText())); out.append(",\n");
+        writeNarrativeContextReferences(out, narrative.contextReferences(), 2); out.append(",\n");
+        writeNarrativeParagraphTakes(out, narrative.paragraphTakes(), 2); out.append("\n");
+        indent(out, 1).append("}");
+    }
+
+    private static void writeNarrativeContextReferences(StringBuilder out,
+                                                        List<NarrativeContextReference> references,
+                                                        int level) {
+        indent(out, level).append("\"contextReferences\": [");
+        if (!references.isEmpty()) {
+            out.append("\n");
+        }
+        for (int i = 0; i < references.size(); i++) {
+            NarrativeContextReference reference = references.get(i);
+            indent(out, level + 1).append("{\n");
+            field(out, level + 2, "id", quote(reference.id())); out.append(",\n");
+            field(out, level + 2, "role", quote(reference.role().name())); out.append(",\n");
+            field(out, level + 2, "assetId", quote(reference.assetId())); out.append(",\n");
+            field(out, level + 2, "displayName", quote(reference.displayName())); out.append(",\n");
+            field(out, level + 2, "enabled", Boolean.toString(reference.enabled())); out.append(",\n");
+            field(out, level + 2, "strength", Double.toString(reference.strength())); out.append(",\n");
+            field(out, level + 2, "notes", quote(reference.notes())); out.append("\n");
+            indent(out, level + 1).append("}");
+            if (i < references.size() - 1) {
+                out.append(",");
+            }
+            out.append("\n");
+        }
+        indent(out, level).append("]");
+    }
+
+    private static void writeNarrativeParagraphTakes(StringBuilder out,
+                                                     List<NarrativeParagraphTake> takes,
+                                                     int level) {
+        indent(out, level).append("\"paragraphTakes\": [");
+        if (!takes.isEmpty()) {
+            out.append("\n");
+        }
+        for (int i = 0; i < takes.size(); i++) {
+            NarrativeParagraphTake take = takes.get(i);
+            indent(out, level + 1).append("{\n");
+            field(out, level + 2, "blockId", quote(take.blockId())); out.append(",\n");
+            field(out, level + 2, "enabled", Boolean.toString(take.enabled())); out.append(",\n");
+            field(out, level + 2, "keyframeAssetId", quote(take.keyframeAssetId())); out.append(",\n");
+            field(out, level + 2, "keyframeSource", quote(take.keyframeSource().name())); out.append(",\n");
+            writeNarrativeClips(out, take.clips(), level + 2); out.append(",\n");
+            field(out, level + 2, "prompt", quote(take.prompt())); out.append(",\n");
+            field(out, level + 2, "negativePrompt", quote(take.negativePrompt())); out.append(",\n");
+            field(out, level + 2, "seed", Long.toString(take.seed())); out.append(",\n");
+            field(out, level + 2, "sourceFingerprint", quote(take.sourceFingerprint())); out.append(",\n");
+            field(out, level + 2, "stale", Boolean.toString(take.stale())); out.append(",\n");
+            field(out, level + 2, "notes", quote(take.notes())); out.append("\n");
+            indent(out, level + 1).append("}");
+            if (i < takes.size() - 1) {
+                out.append(",");
+            }
+            out.append("\n");
+        }
+        indent(out, level).append("]");
+    }
+
+    private static void writeNarrativeClips(StringBuilder out,
+                                            List<NarrativeGeneratedClip> clips,
+                                            int level) {
+        indent(out, level).append("\"clips\": [");
+        if (!clips.isEmpty()) {
+            out.append("\n");
+        }
+        for (int i = 0; i < clips.size(); i++) {
+            NarrativeGeneratedClip clip = clips.get(i);
+            indent(out, level + 1).append("{\n");
+            field(out, level + 2, "id", quote(clip.id())); out.append(",\n");
+            field(out, level + 2, "assetId", quote(clip.assetId())); out.append(",\n");
+            field(out, level + 2, "order", Integer.toString(clip.order())); out.append(",\n");
+            field(out, level + 2, "durationSeconds", Double.toString(clip.durationSeconds())); out.append(",\n");
+            field(out, level + 2, "lastFrameAssetId", quote(clip.lastFrameAssetId())); out.append(",\n");
+            field(out, level + 2, "modelId", quote(clip.modelId())); out.append(",\n");
+            field(out, level + 2, "workflowId", quote(clip.workflowId())); out.append(",\n");
+            field(out, level + 2, "seed", Long.toString(clip.seed())); out.append(",\n");
+            field(out, level + 2, "sourceFingerprint", quote(clip.sourceFingerprint())); out.append(",\n");
+            writeStringMap(out, "metadata", clip.metadata(), level + 2); out.append("\n");
+            indent(out, level + 1).append("}");
+            if (i < clips.size() - 1) {
+                out.append(",");
+            }
+            out.append("\n");
+        }
+        indent(out, level).append("]");
+    }
+
+    private static void writeStringMap(StringBuilder out, String name, Map<String, String> values, int level) {
+        indent(out, level).append(quote(name)).append(": {\n");
+        int index = 0;
+        for (Map.Entry<String, String> entry : values.entrySet()) {
+            field(out, level + 1, entry.getKey(), quote(entry.getValue()));
+            if (index++ < values.size() - 1) {
+                out.append(",");
+            }
+            out.append("\n");
+        }
+        indent(out, level).append("}");
     }
 
     private static void writeTheatre(StringBuilder out, TheatreProjectLayer theatre) {

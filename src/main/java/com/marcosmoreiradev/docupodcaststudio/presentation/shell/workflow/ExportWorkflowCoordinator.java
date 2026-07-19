@@ -22,6 +22,7 @@ import com.marcosmoreiradev.docupodcaststudio.application.video.VideoRenderProgr
 import com.marcosmoreiradev.docupodcaststudio.application.settings.OperationalSettings;
 import com.marcosmoreiradev.docupodcaststudio.domain.audio.AudioJobSnapshot;
 import com.marcosmoreiradev.docupodcaststudio.domain.playback.PlaybackManifest;
+import com.marcosmoreiradev.docupodcaststudio.domain.project.ProjectMode;
 import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationScriptDocument;
 import com.marcosmoreiradev.docupodcaststudio.domain.storyboard.StoryboardDocument;
 import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreProjectLayer;
@@ -162,19 +163,28 @@ public final class ExportWorkflowCoordinator {
             throw new IOException("No hay lectura preparada cargada para exportar video.");
         }
         saveProject.save(projectFile);
-        ensureFinalVideoReady(session, projectFile, script, storyboard, jobs);
+        boolean narrativeVideo = session.project().metadata().mode() == ProjectMode.NARRATIVE_VIDEO;
+        if (!narrativeVideo) {
+            ensureFinalVideoReady(session, projectFile, script, storyboard, jobs);
+        }
         OperationalSettings operational = loadOperationalSettings();
-        SimpleVideoResolutionPreset preset = resolution == null ? SimpleVideoResolutionPreset.defaultPreset() : resolution;
+        SimpleVideoResolutionPreset preset = narrativeVideo
+                ? narrativeResolution(session)
+                : resolution == null ? SimpleVideoResolutionPreset.defaultPreset() : resolution;
+        int effectiveFramesPerSecond = narrativeVideo
+                ? session.project().narrative().videoConfiguration().framesPerSecond()
+                : framesPerSecond;
         SimpleVideoExportSettings settings = new SimpleVideoExportSettings(
                 preset,
-                framesPerSecond,
+                effectiveFramesPerSecond,
                 silentVisualBlockSeconds,
                 operational.video().preferEmbeddedFfmpeg(),
                 true,
                 operational.compute().policy(),
                 effectiveVideoEncoderPolicy(operational, requestedEncoder));
-        var narrationPlan = applicationServices.render().buildNarrationRenderPlan().build(script, session.project());
-        var renderUnitPlan = applicationServices.render().buildRenderUnitPlan().build(narrationPlan, silentVisualBlockSeconds);
+        var renderUnitPlan = narrativeVideo ? null : applicationServices.render().buildRenderUnitPlan().build(
+                applicationServices.render().buildNarrationRenderPlan().build(script, session.project()),
+                silentVisualBlockSeconds);
         FinalVideoExportRequest request = new FinalVideoExportRequest(
                 session.project(),
                 renderUnitPlan,
@@ -189,6 +199,13 @@ public final class ExportWorkflowCoordinator {
         FinalVideoExportResult result = applicationServices.export().exportNarrativeVideo()
                 .export(request, progress, cancellationRequested);
         return result.humanSummary() + ".";
+    }
+
+    private static SimpleVideoResolutionPreset narrativeResolution(ProjectSession session) {
+        var configuration = session.project().narrative().videoConfiguration();
+        return configuration.width() >= 1080 && configuration.height() >= 1920
+                ? SimpleVideoResolutionPreset.FULL_HD_VERTICAL_1080X1920
+                : SimpleVideoResolutionPreset.HD_VERTICAL_720X1280;
     }
 
     public String exportDocumentStudyTextAudioVideo(ProjectSession session,

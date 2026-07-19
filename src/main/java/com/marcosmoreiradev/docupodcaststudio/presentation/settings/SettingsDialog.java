@@ -572,7 +572,7 @@ public final class SettingsDialog {
         page.addNode(piperSetupActions(form, services, applicationRoot));
         page.addNode(ffmpegSetupActions(form, services, applicationRoot));
         page.addNode(imageEngineSettingsCard.create(form, services, applicationRoot));
-        page.addNote("Configuración inicial prioriza Voz local simple. Imagen IA teatral Prueba 4GB solo se descarga si la marcas y confirmas esa descarga aparte.");
+        page.addNote("Configuración inicial prioriza Voz local simple. El perfil visual SD 1.5 de diagnóstico solo se descarga si lo marcas y confirmas aparte.");
         return page;
     }
 
@@ -583,7 +583,7 @@ public final class SettingsDialog {
         card.getStyleClass().addAll("settings-engine-status-card", "settings-engine-summary-card");
         Label title = new Label("Resumen operativo");
         title.getStyleClass().add("settings-engine-status-title");
-        Label description = new Label("Vista rapida del stack local. Preparar dependencias recomendadas cubre voz, video y OCR; Imagen IA teatral conserva descarga/importacion separada por tamano.");
+        Label description = new Label("Vista rápida del stack local. Preparar dependencias recomendadas cubre voz, video y OCR; la generación visual conserva descarga e importación separadas por tamaño.");
         description.setWrapText(true);
         description.getStyleClass().add("settings-engine-status-message");
         GridPane grid = new GridPane();
@@ -595,7 +595,7 @@ public final class SettingsDialog {
         addEngineStatusRow(grid, 2, "Prueba de voz", preflight.minimalVoiceDemoReady() ? "lista" : "pendiente");
         addEngineStatusRow(grid, 3, "Video local", preflight.ffmpegReady() ? "listo" : "pendiente");
         addEngineStatusRow(grid, 4, "OCR PDF local", preflight.ocrReady() ? "listo" : "pendiente");
-        addEngineStatusRow(grid, 5, "Imagen IA teatral", imageEngineReady(form, services, applicationRoot) ? "lista" : "pendiente");
+        addEngineStatusRow(grid, 5, "Generación visual local", imageEngineReady(form, services, applicationRoot) ? "lista" : "pendiente");
         addEngineStatusRow(grid, 6, "Siguiente paso", friendlyEngineText(humanSummary.primaryAction()));
         card.getChildren().addAll(title, description, grid);
         return card;

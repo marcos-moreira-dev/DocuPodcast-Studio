@@ -18,7 +18,7 @@ final class ModelInstallAssistantCatalogTest {
         String titles = plans.stream().map(ModelInstallPlan::title).collect(Collectors.joining(" | "));
         assertTrue(titles.contains("Voz IA avanzada"));
         assertTrue(titles.contains("Voz local simple"));
-        assertTrue(titles.contains("Imagen IA teatral local"));
+        assertTrue(titles.contains("Generación visual local"));
         assertFalse(titles.contains("Whisper"));
 
         String all = plans.toString();

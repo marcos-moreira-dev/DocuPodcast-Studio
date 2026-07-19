@@ -17,14 +17,20 @@ public record ImageGenerationSettings(
         String memoryProfile,
         int maxAttempts
 ) {
+    public static final int MIN_TIMEOUT_SECONDS = 10;
+    public static final int DEFAULT_TIMEOUT_SECONDS = 6 * 60 * 60;
+    public static final int MAX_TIMEOUT_SECONDS = DEFAULT_TIMEOUT_SECONDS;
+
     public ImageGenerationSettings {
         engineMode = clean(engineMode, "managed-local").toLowerCase(Locale.ROOT);
         baseUrl = clean(baseUrl, "http://127.0.0.1:8188");
         devicePolicy = clean(devicePolicy, "AUTO").toUpperCase(Locale.ROOT);
-        preset = clean(preset, "TEST_4GB_SD15").toUpperCase(Locale.ROOT);
-        modelName = clean(modelName, "v1-5-pruned-emaonly-fp16.safetensors");
+        preset = clean(preset, "PRODUCTION_SDXL_REFERENCE").toUpperCase(Locale.ROOT);
+        modelName = clean(modelName, "sd_xl_base_1.0.safetensors");
         adaptersDirectory = clean(adaptersDirectory, "models/image/adapters");
-        timeoutSeconds = timeoutSeconds < 10 || timeoutSeconds > 3600 ? 300 : timeoutSeconds;
+        timeoutSeconds = timeoutSeconds < MIN_TIMEOUT_SECONDS || timeoutSeconds > MAX_TIMEOUT_SECONDS
+                ? DEFAULT_TIMEOUT_SECONDS
+                : timeoutSeconds;
         ImageGenerationMemoryProfile profile = ImageGenerationMemoryProfile.from(memoryProfile, lowVram);
         memoryProfile = profile.name();
         lowVram = profile.legacyLowVram();
@@ -65,10 +71,10 @@ public record ImageGenerationSettings(
                 "managed-local",
                 "http://127.0.0.1:8188",
                 "AUTO",
-                "TEST_4GB_SD15",
-                "v1-5-pruned-emaonly-fp16.safetensors",
+                "PRODUCTION_SDXL_REFERENCE",
+                "sd_xl_base_1.0.safetensors",
                 "models/image/adapters",
-                300,
+                DEFAULT_TIMEOUT_SECONDS,
                 true,
                 ImageGenerationMemoryProfile.SAFE_LOW_VRAM.name(),
                 GenerationAttemptPolicy.DEFAULT_IMAGE_MAX_ATTEMPTS);

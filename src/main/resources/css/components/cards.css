@@ -41,6 +41,24 @@
     -fx-text-fill: -docu-text-muted;
 }
 
+.ui-collapsible-section {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1px;
+    -fx-background-radius: 4px;
+    -fx-border-radius: 4px;
+}
+
+.ui-collapsible-section-header {
+    -fx-padding: 7px 10px;
+    -fx-background-color: -docu-bg-card-soft;
+    -fx-cursor: hand;
+}
+
+.ui-collapsible-section-content {
+    -fx-padding: 10px 12px;
+}
+
 .ui-note {
     -fx-background-color: -docu-bg-card-soft;
     -fx-border-color: -docu-border-soft;

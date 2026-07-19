@@ -9,6 +9,8 @@ import com.marcosmoreiradev.docupodcaststudio.application.audio.AudioEngineDescr
 import com.marcosmoreiradev.docupodcaststudio.application.audio.AudioEngineAvailability;
 import com.marcosmoreiradev.docupodcaststudio.application.audio.AudioGenerationRequest;
 import com.marcosmoreiradev.docupodcaststudio.application.media.PreparedAudioAsset;
+import com.marcosmoreiradev.docupodcaststudio.application.narrative.NarrativeDocumentContext;
+import com.marcosmoreiradev.docupodcaststudio.application.narrative.NarrativeDocumentContextCompiler;
 import com.marcosmoreiradev.docupodcaststudio.application.audio.AudioJobStatusDto;
 import com.marcosmoreiradev.docupodcaststudio.application.audio.AudioJobSnapshotMapper;
 import com.marcosmoreiradev.docupodcaststudio.application.document.DocumentListenPhase;
@@ -43,6 +45,11 @@ import com.marcosmoreiradev.docupodcaststudio.domain.playback.PlaybackCursor;
 import com.marcosmoreiradev.docupodcaststudio.domain.playback.PlaybackManifest;
 import com.marcosmoreiradev.docupodcaststudio.domain.playback.PlaybackBufferPolicy;
 import com.marcosmoreiradev.docupodcaststudio.domain.playback.StreamingPlaybackWindow;
+import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeContextReference;
+import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeContextRole;
+import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeParagraphTake;
+import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeProjectLayer;
+import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeVideoConfiguration;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.DocuPodcastProject;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.ProjectKind;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.ProjectMode;
@@ -91,6 +98,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import com.marcosmoreiradev.docupodcaststudio.application.image.*;
@@ -135,6 +143,10 @@ public final class DocuPodcastShellViewModel {
     private final StudyProblemWorkflow studyProblemWorkflow;
     private final TheatreImageGenerationWorkflow theatreImageGenerationWorkflow;
     private final DocumentStudyVideoAssetWorkflow documentaryVideoAssetWorkflow = new DocumentStudyVideoAssetWorkflow();
+    private final NarrativeVideoAssetWorkflow narrativeVideoAssetWorkflow = new NarrativeVideoAssetWorkflow();
+    private final NarrativeDocumentContextCompiler narrativeDocumentContextCompiler =
+            new NarrativeDocumentContextCompiler();
+    private final NarrativeVideoGenerationCoordinator narrativeVideoGenerationWorkflow;
     private final TheatreFrameGenerationWorkflow theatreFrameGenerationWorkflow;
     private final TheatreImageAssetWorkflow theatreImageAssetWorkflow;
     private final ProjectImageManagementWorkflow projectImageWorkflow;
@@ -179,6 +191,8 @@ public final class DocuPodcastShellViewModel {
             saveableProjectOpen = new SimpleBooleanProperty(false), audioJobRunning = new SimpleBooleanProperty(false),
             voiceRecordingRunning = new SimpleBooleanProperty(false), manualAudioRecordingRunning = new SimpleBooleanProperty(false),
             documentRightRailVisible = new SimpleBooleanProperty(false), documentPlaybarDocked = new SimpleBooleanProperty(false), technicalProblemPreparationActive = new SimpleBooleanProperty(false);
+    private final BooleanProperty narrativeVisualGenerationRunning = new SimpleBooleanProperty(false);
+    private final AtomicBoolean narrativeVisualCancellationRequested = new AtomicBoolean(false);
     private final StringProperty focusedTheatreSceneId = new SimpleStringProperty("");
     private final BooleanProperty readAfterColonForNarration = new SimpleBooleanProperty(false);
     private final IntegerProperty readingFontSize = new SimpleIntegerProperty(DEFAULT_READING_FONT_SIZE);
@@ -219,6 +233,10 @@ public final class DocuPodcastShellViewModel {
         this.theatreFrameGenerationWorkflow = new TheatreFrameGenerationWorkflow(this.applicationServices);
         this.theatreImageAssetWorkflow = new TheatreImageAssetWorkflow(
                 this.applicationServices, theatreCharacterImageWorkflow, theatreObjectImageWorkflow);
+        this.narrativeVideoGenerationWorkflow = new NarrativeVideoGenerationCoordinator(
+                this.applicationServices,
+                this.narrativeVideoAssetWorkflow,
+                this.narrativeDocumentContextCompiler);
         this.playbackTransport = new PlaybackTransportCoordinator(this.applicationServices.playback().segmentAudioPlayer()); this.theatreAudioPlayback = new TheatreAudioTrackPlaybackCoordinator(this.applicationServices.playback().backgroundAudioPlayer());
         activeReadingProfile.set(applicationServices.readingProfile().createDefaultProfile().create());
         activeVoiceLibrary.set(applicationServices.voice().createDefaultVoiceLibrary().create());
@@ -317,6 +335,10 @@ public final class DocuPodcastShellViewModel {
 
     public ReadOnlyBooleanProperty audioJobRunningProperty() { return audioJobRunning; }
 
+    public ReadOnlyBooleanProperty narrativeVisualGenerationRunningProperty() {
+        return narrativeVisualGenerationRunning;
+    }
+
     public ReadOnlyBooleanProperty choralVoiceRenderingProperty() { return theatreChoralVoiceRenderWorkflow.runningProperty(); }
 
     public ReadOnlyDoubleProperty choralVoiceRenderProgressProperty() { return theatreChoralVoiceRenderWorkflow.progressProperty(); }
@@ -411,6 +433,7 @@ public final class DocuPodcastShellViewModel {
     public ProjectAssetReference importDocumentaryVideoImage(Path source) throws IOException { ProjectAssetReference asset = documentaryVideoAssetWorkflow.importImage(applicationServices, requireSession(), source); documentaryVideoChanged("Imagen copiada dentro del proyecto: " + asset.displayName()); return asset; }
 
     public DocumentStudyVideoAssetWorkflow.DrawingAsset saveDocumentaryDrawing(String blockId, Path png, String state) throws IOException { var asset = documentaryVideoAssetWorkflow.saveDrawing(requireSession(), blockId, png, state); documentaryVideoChanged("Dibujo guardado dentro del proyecto."); return asset; }
+    public DocumentStudyVideoAssetWorkflow.DrawingAsset saveDocumentaryDrawing(String blockId, Path png, String state, Map<String, Path> stagedSources) throws IOException { var asset = documentaryVideoAssetWorkflow.saveDrawing(requireSession(), blockId, png, state, stagedSources); documentaryVideoChanged("Ilustracion guardada dentro del proyecto."); return asset; }
 
     public DocumentStudyMusicTrack importDocumentaryMusic(Path source) throws IOException { var imported = documentaryVideoAssetWorkflow.importMusic(applicationServices, requireSession(), source); documentaryVideoChanged("Musica copiada dentro del proyecto: " + imported.displayName()); return imported.track(); }
 
@@ -418,6 +441,275 @@ public final class DocuPodcastShellViewModel {
 
     public Optional<Path> resolveCurrentProjectRelativePath(String path) { return documentaryVideoAssetWorkflow.resolveRelative(currentProjectFile(), path); }
     private void documentaryVideoChanged(String message) { bumpDocumentMediaRevision(); statusMessage.set(message); refreshProjectState(); }
+
+    public NarrativeProjectLayer narrativeProjectLayer() {
+        return currentProject().map(DocuPodcastProject::narrative).orElseGet(NarrativeProjectLayer::empty);
+    }
+
+    public NarrativeVideoConfiguration narrativeVideoConfiguration() {
+        return narrativeProjectLayer().videoConfiguration();
+    }
+
+    public boolean narrativeVideoConfigurationAvailable() {
+        return currentProjectMode.get() == ProjectMode.NARRATIVE_VIDEO
+                && currentDocument.get() != null
+                && currentDocument.get().format()
+                == com.marcosmoreiradev.docupodcaststudio.domain.document.SourceDocumentFormat.DOCX;
+    }
+
+    public List<DocumentBlock> narrativeVideoParagraphs() {
+        return narrativeDocumentContextCompiler.narrativeParagraphs(currentDocument.get());
+    }
+
+    public Optional<NarrativeDocumentContext> narrativeDocumentContext(String blockId) {
+        if (currentDocument.get() == null || blockId == null || blockId.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(narrativeDocumentContextCompiler.compile(currentDocument.get(), blockId));
+        } catch (IllegalArgumentException ex) {
+            return Optional.empty();
+        }
+    }
+
+    public void synchronizeNarrativeDocumentSnapshot() {
+        if (!narrativeVideoConfigurationAvailable()) {
+            return;
+        }
+        ReadableDocument document = currentDocument.get();
+        String fingerprint = narrativeDocumentContextCompiler.fingerprint(document);
+        NarrativeProjectLayer current = narrativeProjectLayer();
+        if (fingerprint.equals(current.documentFingerprint())) {
+            return;
+        }
+        narrativeVideoAssetWorkflow.update(requireSession(), current.withDocumentSnapshot(
+                fingerprint, narrativeDocumentContextCompiler.normalizedDocumentText(document)));
+        narrativeVideoChanged("El contexto del Word cambio; las tomas narrativas se marcaron como desactualizadas.");
+    }
+
+    public void updateNarrativeVideoConfiguration(NarrativeVideoConfiguration configuration) {
+        narrativeVideoAssetWorkflow.updateConfiguration(requireSession(), configuration);
+        narrativeVideoChanged("Ajustes de video narrativo actualizados.");
+    }
+
+    public void setNarrativeParagraphEnabled(String blockId, boolean enabled) {
+        NarrativeProjectLayer layer = narrativeProjectLayer();
+        NarrativeParagraphTake take = layer.takeOrDefault(blockId).withEnabled(enabled);
+        narrativeVideoAssetWorkflow.update(requireSession(), layer.withTake(take));
+        narrativeVideoChanged(enabled
+                ? "Parrafo habilitado para el video narrativo."
+                : "Parrafo excluido de narracion y video.");
+    }
+
+    public ProjectAssetReference importNarrativeKeyframe(String blockId, Path source) throws IOException {
+        ProjectAssetReference asset = narrativeVideoAssetWorkflow.importKeyframe(requireSession(), blockId, source);
+        narrativeVideoChanged("Imagen clave copiada dentro del proyecto: " + asset.displayName());
+        return asset;
+    }
+
+    public NarrativeContextReference importNarrativeContextReference(Path source,
+                                                                     NarrativeContextRole role) throws IOException {
+        NarrativeContextReference reference = narrativeVideoAssetWorkflow.importContextReference(
+                requireSession(), source, role);
+        narrativeVideoChanged("Referencia global copiada dentro del proyecto: " + reference.displayName());
+        return reference;
+    }
+
+    public void updateNarrativeContextReference(NarrativeContextReference reference) {
+        NarrativeProjectLayer updated = narrativeProjectLayer().withContextReference(reference);
+        narrativeVideoAssetWorkflow.update(requireSession(), updated);
+        narrativeVideoChanged("Banco global de contexto narrativo actualizado.");
+    }
+
+    public void removeNarrativeContextReference(String referenceId) {
+        NarrativeProjectLayer updated = narrativeProjectLayer().withoutContextReference(referenceId);
+        narrativeVideoAssetWorkflow.update(requireSession(), updated);
+        narrativeVideoChanged("Referencia retirada del banco narrativo.");
+    }
+
+    public void generateNarrativeKeyframe(String blockId) {
+        String target = normalizeNarrativeBlockId(blockId);
+        startNarrativeVisualGeneration(
+                "Preparando imagen clave para " + target + "...",
+                (session, document, script, jobs, progress, cancelled) ->
+                        narrativeVideoGenerationWorkflow.generateKeyframe(
+                                session, document, target, progress, cancelled).message());
+    }
+
+    public void generateNarrativeClips(String blockId) {
+        String target = normalizeNarrativeBlockId(blockId);
+        startNarrativeVisualGeneration(
+                "Preparando clips para " + target + "...",
+                (session, document, script, jobs, progress, cancelled) ->
+                        narrativeVideoGenerationWorkflow.generateClips(
+                                session, document, script, jobs, target, progress, cancelled).message());
+    }
+
+    public void generatePendingNarrativeTakes() {
+        startNarrativeVisualGeneration(
+                "Analizando tomas narrativas pendientes...",
+                (session, document, script, jobs, progress, cancelled) -> {
+                    int completed = 0;
+                    int skipped = 0;
+                    for (DocumentBlock block :
+                            narrativeDocumentContextCompiler.narrativeParagraphs(document)) {
+                        if (cancelled.getAsBoolean()) {
+                            throw new IOException("Generacion narrativa cancelada por el usuario.");
+                        }
+                        NarrativeParagraphTake take =
+                                session.project().narrative().takeOrDefault(block.id());
+                        if (!take.enabled()) {
+                            skipped++;
+                            continue;
+                        }
+                        if (take.clipsReady()) {
+                            skipped++;
+                            continue;
+                        }
+                        if (!take.keyframeReady() || take.stale()) {
+                            narrativeVideoGenerationWorkflow.generateKeyframe(
+                                    session, document, block.id(), progress, cancelled);
+                        }
+                        narrativeVideoGenerationWorkflow.generateClips(
+                                session, document, script, jobs, block.id(), progress, cancelled);
+                        completed++;
+                    }
+                    return "Lote narrativo completado: " + completed
+                            + " toma(s) generadas y " + skipped + " omitida(s).";
+                });
+    }
+
+    public void cancelNarrativeVisualGeneration() {
+        if (!narrativeVisualGenerationRunning.get()) {
+            return;
+        }
+        narrativeVisualCancellationRequested.set(true);
+        statusMessage.set(
+                "Deteniendo generacion narrativa al terminar la operacion local en curso...");
+    }
+
+    public void openNarrativeVideoProduction() {
+        if (currentProjectMode.get() != ProjectMode.NARRATIVE_VIDEO) {
+            statusMessage.set("Abre un proyecto de Video narrativo para configurar sus tomas.");
+            return;
+        }
+        activeWorkspace.set(WorkspaceKind.DOCUMENT_READER);
+        documentRightRailVisible.set(true);
+        statusMessage.set("Contenido del video narrativo activo.");
+        refreshProjectState();
+    }
+
+    private String normalizeNarrativeBlockId(String blockId) {
+        String target = blockId == null ? "" : blockId.strip();
+        if (target.isBlank()) {
+            throw new IllegalArgumentException("Selecciona un parrafo narrativo.");
+        }
+        return target;
+    }
+
+    private void startNarrativeVisualGeneration(String initialMessage,
+                                                NarrativeVisualWork work) {
+        if (!Platform.isFxApplicationThread()) {
+            Platform.runLater(() -> startNarrativeVisualGeneration(initialMessage, work));
+            return;
+        }
+        if (narrativeVisualGenerationRunning.get()) {
+            statusMessage.set("Ya hay una generacion visual narrativa en curso.");
+            return;
+        }
+        try {
+            if (!narrativeVideoConfigurationAvailable()) {
+                throw new IOException(
+                        "Abre un proyecto de Video narrativo con una fuente Word/DOCX.");
+            }
+            synchronizeNarrativeDocumentSnapshot();
+            if (currentScript.get() == null || currentScript.get().empty()) {
+                buildNarrationScriptFromDocument();
+            }
+            ProjectSession session = requireSession();
+            Path projectFile = session.projectFile().orElseThrow(() ->
+                    new IOException(
+                            "Guarda el proyecto antes de generar contenido narrativo."));
+            ReadableDocument document = currentDocument.get();
+            NarrationScriptDocument script = currentScript.get();
+            List<AudioJobSnapshot> jobs = listPersistedJobsSafely();
+            ReadingProfile readingProfile = activeReadingProfile.get();
+            VoiceLibrary voiceLibrary = activeVoiceLibrary.get();
+            narrativeVisualCancellationRequested.set(false);
+            narrativeVisualGenerationRunning.set(true);
+            statusMessage.set(initialMessage);
+            Thread worker = new Thread(() -> {
+                String completionMessage = "";
+                Throwable failure = null;
+                try {
+                    completionMessage = work.run(
+                            session,
+                            document,
+                            script,
+                            jobs,
+                            message -> Platform.runLater(() -> {
+                                if (sessions.activeSession().orElse(null) == session
+                                        && message != null && !message.isBlank()) {
+                                    statusMessage.set(message);
+                                }
+                            }),
+                            narrativeVisualCancellationRequested::get);
+                } catch (Throwable ex) {
+                    failure = ex;
+                }
+                try {
+                    if (sessions.activeSession().orElse(null) == session) {
+                        projectWorkflow.saveProject(
+                                session,
+                                projectFile,
+                                readingProfile,
+                                voiceLibrary);
+                    }
+                } catch (Throwable saveFailure) {
+                    if (failure == null) {
+                        failure = saveFailure;
+                    } else {
+                        failure.addSuppressed(saveFailure);
+                    }
+                }
+                String finalMessage = completionMessage;
+                Throwable finalFailure = failure;
+                Platform.runLater(() -> {
+                    narrativeVisualGenerationRunning.set(false);
+                    narrativeVisualCancellationRequested.set(false);
+                    if (sessions.activeSession().orElse(null) != session) {
+                        return;
+                    }
+                    if (finalFailure == null) {
+                        narrativeVideoChanged(finalMessage);
+                    } else if (rootCauseMessage(finalFailure).toLowerCase(Locale.ROOT)
+                            .contains("cancel")) {
+                        narrativeVideoChanged(
+                                "Generacion narrativa detenida. Se conservaron los resultados completos.");
+                    } else {
+                        statusMessage.set(
+                                "No se pudo generar el contenido narrativo: "
+                                        + rootCauseMessage(finalFailure));
+                        refreshProjectState();
+                    }
+                });
+            }, "docupodcast-narrative-visual-generation");
+            worker.setDaemon(true);
+            worker.start();
+        } catch (Exception ex) {
+            narrativeVisualGenerationRunning.set(false);
+            narrativeVisualCancellationRequested.set(false);
+            statusMessage.set(
+                    "No se pudo iniciar la generacion narrativa: " + rootCauseMessage(ex));
+            refreshProjectState();
+        }
+    }
+
+    private void narrativeVideoChanged(String message) {
+        bumpDocumentMediaRevision();
+        statusMessage.set(message);
+        refreshProjectState();
+    }
 
     public List<TheatreProjectLayer.CharacterProfile> theatreCharacterProfiles() { return theatreCharacterProfileWorkflow.profiles(sessions.activeSession()); }
 
@@ -672,7 +964,7 @@ public final class DocuPodcastShellViewModel {
         resetPlaybackState();
         activeAudioJobStatus.set(AudioJobStatusDto.idle());
         audioJobRunning.set(false);
-        activeWorkspace.set(opened.activeWorkspace());
+        activeWorkspace.set(WorkspaceKind.DOCUMENT_READER);
         loadLatestPersistedAudioStatus(sourceFile);
         if (currentScript.get() != null) {
             rebuildPlaybackManifestFromLatestJob();
@@ -1054,13 +1346,13 @@ public final class DocuPodcastShellViewModel {
         refreshProjectState();
     }
 
-    public void importImageForSegment(String segmentId, Path imageFile, NarrativeLayerKind imageKind) throws IOException { selectNarrativeVisualFragment(segmentId); importImageForSelectedDocumentRange(imageFile, imageKind); activeWorkspace.set(WorkspaceKind.NARRATIVE_VISUAL_PRODUCTION); refreshProjectState(); }
+    public void importImageForSegment(String segmentId, Path imageFile, NarrativeLayerKind imageKind) throws IOException { selectNarrativeVisualFragment(segmentId); importImageForSelectedDocumentRange(imageFile, imageKind); openNarrativeVideoProduction(); }
 
-    public void generateNarrativeImageForSegment(String segmentId) throws IOException { ProjectSession session = requireSession(); NarrationSegment segment = findSegment(segmentId).orElseThrow(() -> new IOException("No se encontro el fragmento narrativo solicitado.")); var generated = new NarrativeImageGenerationWorkflow(applicationServices).generate(session, segment, applicationServices.settings().loadOperationalSettings().load(), message -> statusMessage.set(message == null || message.isBlank() ? "Generando imagen narrativa." : message)); selectNarrativeVisualFragment(segment.id()); lastStoryboardImageAssetId.set(generated.importResult().imageAsset().id()); removeExistingLayerOfKindSilently(NarrativeLayerKind.IMAGE); Optional<NarrativeLayerCoordinator.AssignmentOutcome> assignment = assignDocumentLayerTarget(NarrativeLayerKind.IMAGE, generated.importResult().imageAsset().id()); assignment.ifPresent(outcome -> { refreshStoryboardFromImageLayers(session); statusMessage.set(generated.message() + " " + outcome.message()); }); activeWorkspace.set(WorkspaceKind.NARRATIVE_VISUAL_PRODUCTION); bumpDocumentMediaRevision(); refreshProjectState(); }
+    public void generateNarrativeImageForSegment(String segmentId) throws IOException { ProjectSession session = requireSession(); NarrationSegment segment = findSegment(segmentId).orElseThrow(() -> new IOException("No se encontro el fragmento narrativo solicitado.")); var generated = new NarrativeImageGenerationWorkflow(applicationServices).generate(session, segment, applicationServices.settings().loadOperationalSettings().load(), message -> statusMessage.set(message == null || message.isBlank() ? "Generando imagen narrativa." : message)); selectNarrativeVisualFragment(segment.id()); lastStoryboardImageAssetId.set(generated.importResult().imageAsset().id()); removeExistingLayerOfKindSilently(NarrativeLayerKind.IMAGE); Optional<NarrativeLayerCoordinator.AssignmentOutcome> assignment = assignDocumentLayerTarget(NarrativeLayerKind.IMAGE, generated.importResult().imageAsset().id()); assignment.ifPresent(outcome -> { refreshStoryboardFromImageLayers(session); statusMessage.set(generated.message() + " " + outcome.message()); }); openNarrativeVideoProduction(); bumpDocumentMediaRevision(); }
 
-    public void removeImageAssignmentForSegment(String segmentId, NarrativeLayerKind imageKind) { selectNarrativeVisualFragment(segmentId); if (imageKind == NarrativeLayerKind.BRIDGE_IMAGE) removeAssignmentOfKindForSelectedDocumentRange(NarrativeLayerKind.BRIDGE_IMAGE); else removeImageAssignmentForSelectedDocumentRange(); activeWorkspace.set(WorkspaceKind.NARRATIVE_VISUAL_PRODUCTION); refreshProjectState(); }
+    public void removeImageAssignmentForSegment(String segmentId, NarrativeLayerKind imageKind) { selectNarrativeVisualFragment(segmentId); if (imageKind == NarrativeLayerKind.BRIDGE_IMAGE) removeAssignmentOfKindForSelectedDocumentRange(NarrativeLayerKind.BRIDGE_IMAGE); else removeImageAssignmentForSelectedDocumentRange(); openNarrativeVideoProduction(); }
 
-    public void selectNarrativeVisualFragment(String segmentId) { selectDocumentBlockForStoryboardSegment(segmentId); activeWorkspace.set(WorkspaceKind.NARRATIVE_VISUAL_PRODUCTION); }
+    public void selectNarrativeVisualFragment(String segmentId) { selectDocumentBlockForStoryboardSegment(segmentId); openNarrativeVideoProduction(); }
 
     public void copyFragmentImageToAdjacentFragment(DocumentFragmentRailPresentation source, DocumentFragmentRailPresentation target) {
         if (source == null || target == null) { statusMessage.set("No hay un fragmento anterior o posterior disponible para copiar la imagen."); refreshProjectState(); return; }
@@ -2809,7 +3101,9 @@ public final class DocuPodcastShellViewModel {
     public void exportFinalVideo(Path targetFile, SimpleVideoResolutionPreset resolution, int framesPerSecond, com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy encoderPolicy, TheatreExportScope scope, Consumer<VideoRenderProgress> progress, BooleanSupplier cancellationRequested) throws IOException {
         ProjectSession session = requireSession();
         Path projectFile = session.projectFile().orElseThrow(() -> new IOException("Guarda el proyecto antes de exportar video."));
-        NarrationScriptDocument scopedScript = theatreExportScopeScriptFilter.filter(session, currentScript.get(), scope);
+        NarrationScriptDocument scopedScript = session.project().metadata().mode() == ProjectMode.THEATRE_PRODUCTION
+                ? theatreExportScopeScriptFilter.filter(session, currentScript.get(), scope)
+                : currentScript.get();
         String exportResult = exportWorkflow.exportFinalVideo(session, projectFile, scopedScript, currentStoryboard.get(), listPersistedJobsSafely(), targetFile, resolution, framesPerSecond, encoderPolicy, loadOperationalSettingsSafely().video().silentVisualBlockSeconds(), ignored -> { }, progress, cancellationRequested);
         Platform.runLater(() -> statusMessage.set(exportResult));
     }
@@ -2998,6 +3292,16 @@ public final class DocuPodcastShellViewModel {
                 .map(path -> " — " + path.getFileName())
                 .orElse(" — sin guardar");
         windowTitle.set("DocuPodcast Studio — " + session.title() + fileLabel + suffix);
+    }
+
+    @FunctionalInterface
+    private interface NarrativeVisualWork {
+        String run(ProjectSession session,
+                   ReadableDocument document,
+                   NarrationScriptDocument script,
+                   List<AudioJobSnapshot> jobs,
+                   Consumer<String> progress,
+                   BooleanSupplier cancellationRequested) throws Exception;
     }
 
 }

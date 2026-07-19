@@ -125,6 +125,21 @@ public final class InkRealtimeStrokeEngine {
         reportDiagnostics(drained, 0L);
     }
 
+    /** Drops the in-progress stroke without committing its transient preview. */
+    public void cancelActiveStroke() {
+        pendingPoints.clear();
+        activePoints.clear();
+        active = false;
+        hasMidpoint = false;
+        hasQueuedPoint = false;
+        lastX = 0.0;
+        lastY = 0.0;
+        lastMidX = 0.0;
+        lastMidY = 0.0;
+        lastQueuedX = 0.0;
+        lastQueuedY = 0.0;
+    }
+
     private void drainFrame(long now) {
         int drained = drainPending(now + FRAME_BUDGET_NANOS, MAX_POINTS_PER_FRAME);
         reportDiagnostics(drained, Math.max(0L, System.nanoTime() - now));

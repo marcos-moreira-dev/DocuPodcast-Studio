@@ -65,7 +65,7 @@ public final class ModelInstallAssistantCatalog {
         return new ModelInstallPlan(
                 "model-local-theatre-image",
                 "local-theatre-image",
-                "Imagen IA teatral local",
+                "Generación visual local",
                 "Visual",
                 "Carpeta local de motor y modelos de imagen",
                 "Descargar desde catalogo verificable cuando este disponible; si falla, importar paquete local completo.",

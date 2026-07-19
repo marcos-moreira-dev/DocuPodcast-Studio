@@ -12,6 +12,7 @@ import com.marcosmoreiradev.docupodcaststudio.application.process.AiModelResourc
 import com.marcosmoreiradev.docupodcaststudio.application.process.AiModelResourceGuard.AiModelResourceKind;
 import com.marcosmoreiradev.docupodcaststudio.application.process.GenerationAttemptPolicy;
 import com.marcosmoreiradev.docupodcaststudio.application.process.GenerationTaskKind;
+import com.marcosmoreiradev.docupodcaststudio.application.settings.ImageGenerationSettings;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.ComfyUiConnectionSettings;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.BuildTheatreVisualGenerationContextUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreContextExportScope;
@@ -248,7 +249,7 @@ public final class TheatreImageGenerationWorkflow {
         TheatreImageGenerationPreset selectedPreset = preset == null ? TheatreImageGenerationPreset.TEST_4GB_SD15 : preset;
         ImageEnhancementOutputProfile selectedProfile = outputProfile == null ? ImageEnhancementOutputProfile.FHD_1080 : outputProfile;
         TheatreImageAspectRatio selectedAspect = aspectRatio == null ? TheatreImageAspectRatio.WIDE_16_9 : aspectRatio;
-        ImageEnginePresetSupport support = ImageEnginePresetSupportPolicy.forPreset(selectedPreset);
+        ImageEnginePresetSupport support = ImageEnginePresetSupportPolicy.forPresetId(selectedPreset.name());
         if (!support.builtInWorkflowAvailable()) {
             throw new IOException(support.userMessage() + "\n" + support.diagnostic());
         }
@@ -285,14 +286,19 @@ public final class TheatreImageGenerationWorkflow {
 
     static ComfyUiWorkflowSpec workflowSpec(TheatreImageGenerationPreset preset, VisualEngineRequest request) throws IOException {
         TheatreImageGenerationPreset selected = preset == null ? TheatreImageGenerationPreset.TEST_4GB_SD15 : preset;
-        if (selected != TheatreImageGenerationPreset.HIGH_QUALITY_FLUX) {
+        if (selected == TheatreImageGenerationPreset.PRODUCTION_SDXL_REFERENCE) {
+            return ComfyUiWorkflowSpec.sdxlReference(request.checkpointName());
+        }
+        if (!selected.fluxCompatible()) {
             return ComfyUiWorkflowSpec.sd15();
         }
         Path root = RuntimePathResolver.defaultResolver().resolve().applicationRoot();
         if (!new FluxLicenseAcceptanceStore().accepted(root)) {
-            throw new IOException("Confirma la licencia FLUX.1-dev en Configuracion antes de generar.");
+            throw new IOException("Confirma la licencia FLUX.1-Kontext-dev en Configuracion antes de generar.");
         }
-        FluxModelBundle bundle = FluxModelBundle.inspect(root);
+        FluxModelBundle bundle = selected == TheatreImageGenerationPreset.ADVANCED_FLUX_KONTEXT
+                ? FluxModelBundle.inspectKontext(root)
+                : FluxModelBundle.inspect(root);
         if (!bundle.ready()) {
             throw new IOException("Faltan componentes FLUX: " + String.join(", ", bundle.missingComponents()));
         }
@@ -300,15 +306,23 @@ public final class TheatreImageGenerationWorkflow {
         if (!memory.ready()) {
             throw new IOException(memory.userMessage() + "\n" + memory.diagnostic());
         }
-        return ComfyUiWorkflowSpec.fluxForTarget(bundle.modelName(), bundle.vaeName(), bundle.clipLName(), bundle.t5Name(),
-                request.targetWidth(), request.targetHeight());
+        return selected == TheatreImageGenerationPreset.ADVANCED_FLUX_KONTEXT
+                ? ComfyUiWorkflowSpec.fluxKontextForTarget(
+                        bundle.modelName(), bundle.vaeName(), bundle.clipLName(), bundle.t5Name(),
+                        request.targetWidth(), request.targetHeight())
+                : ComfyUiWorkflowSpec.fluxForTarget(
+                        bundle.modelName(), bundle.vaeName(), bundle.clipLName(), bundle.t5Name(),
+                        request.targetWidth(), request.targetHeight());
     }
 
     private static java.time.Duration fluxTimeout(ComfyUiConnectionSettings settings,
                                                   TheatreImageGenerationPreset preset) {
-        return preset == TheatreImageGenerationPreset.HIGH_QUALITY_FLUX
-                ? java.time.Duration.ofMinutes(45)
-                : settings.timeout();
+        long configuredSeconds = settings == null || settings.timeout() == null
+                ? 0
+                : settings.timeout().toSeconds();
+        return java.time.Duration.ofSeconds(Math.max(
+                ImageGenerationSettings.DEFAULT_TIMEOUT_SECONDS,
+                configuredSeconds));
     }
 
     private static String positivePrompt(TheatreImageGenerationUnit unit, TheatreImageAspectRatio aspectRatio) {

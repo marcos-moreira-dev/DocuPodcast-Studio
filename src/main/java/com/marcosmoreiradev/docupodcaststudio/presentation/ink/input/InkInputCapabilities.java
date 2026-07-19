@@ -32,6 +32,16 @@ public record InkInputCapabilities(
         return nativeStylus("Windows Pointer", true, false, true);
     }
 
+    public static InkInputCapabilities windowsPointerWaiting(String reason) {
+        return new InkInputCapabilities(
+                "Windows Pointer (esperando eventos)",
+                false,
+                false,
+                false,
+                false,
+                reason);
+    }
+
     public static InkInputCapabilities lectureStudioStylus() {
         return nativeStylus("LectureStudio stylus", true, true, true);
     }

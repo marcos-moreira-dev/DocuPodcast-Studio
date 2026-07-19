@@ -91,7 +91,7 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
     private final Runnable historyBoardAction;
     private final InkWorkspaceState restoredInkState;
     private final InkCanvasSurface surface = new InkCanvasSurface();
-    private final InkInputProvider inputProvider = InkInputProviderFactory.createLectureStudioOnly();
+    private final InkInputProvider inputProvider = InkInputProviderFactory.createNativeOnly();
     private final ArrayDeque<List<InkCanvasSurface.InkStrokeState>> undo = new ArrayDeque<>();
     private final ArrayDeque<List<InkCanvasSurface.InkStrokeState>> redo = new ArrayDeque<>();
     private final ColorPicker penColor = new ColorPicker(Color.BLACK);
@@ -656,11 +656,7 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
         if (canvasScroll != null) {
             canvasScroll.setPannable(!inkActive);
         }
-        surface.inkInputLayer().setMouseTransparent(!inkActive);
-        surface.inkInputLayer().setPickOnBounds(inkActive);
-        surface.inkInputTarget().setMouseTransparent(!inkActive);
-        surface.inkInputTarget().setVisible(inkActive);
-        surface.inkInputTarget().setDisable(!inkActive);
+        surface.configureInputCapture(inkActive, inkActive);
         if (!inkActive) {
             resetInkCoordinateState();
         }

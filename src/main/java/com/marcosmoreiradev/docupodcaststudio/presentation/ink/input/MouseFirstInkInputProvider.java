@@ -6,11 +6,12 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Keeps JavaFX mouse/touch as the guaranteed baseline while native stylus
- * providers add pressure and eraser data when they actually emit packets.
+ * Keeps JavaFX mouse/touch available while native stylus providers supply
+ * pressure and eraser data. Native packets temporarily suppress synthesized
+ * mouse packets so one pen stroke is never rendered twice.
  */
 final class MouseFirstInkInputProvider implements InkInputProvider {
-    private static final long NATIVE_SUPPRESSION_NANOS = 150_000_000L;
+    private static final long NATIVE_SUPPRESSION_NANOS = 250_000_000L;
 
     private final InkInputProvider mouseProvider;
     private final InkInputProvider nativeProvider;
@@ -45,6 +46,11 @@ final class MouseFirstInkInputProvider implements InkInputProvider {
     public void detach() {
         mouseProvider.detach();
         nativeProvider.detach();
+    }
+
+    @Override
+    public void resetCoordinateState() {
+        nativeProvider.resetCoordinateState();
     }
 
     private boolean nativeRecentlyActive() {

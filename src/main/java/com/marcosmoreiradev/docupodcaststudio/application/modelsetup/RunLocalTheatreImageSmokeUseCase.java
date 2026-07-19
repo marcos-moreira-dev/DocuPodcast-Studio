@@ -10,20 +10,20 @@ import java.util.Objects;
 
 /** Runs the unified readiness/start/smoke flow for the local image engine. */
 public final class RunLocalTheatreImageSmokeUseCase {
-    private final LocalTheatreImageEngineManager manager;
+    private final LocalVisualImageEngineManager manager;
 
     public RunLocalTheatreImageSmokeUseCase() {
-        this(new LocalTheatreImageEngineManager());
+        this(new LocalVisualImageEngineManager());
     }
 
     public RunLocalTheatreImageSmokeUseCase(InspectLocalTheatreImageSetupReadinessUseCase readiness, HttpClient httpClient) {
-        this(new LocalTheatreImageEngineManager(
+        this(new LocalVisualImageEngineManager(
                 readiness == null ? new InspectLocalTheatreImageSetupReadinessUseCase() : readiness,
                 ExternalProcessRunner.unavailable("Imagen IA teatral"),
                 httpClient == null ? HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(4)).build() : httpClient));
     }
 
-    public RunLocalTheatreImageSmokeUseCase(LocalTheatreImageEngineManager manager) {
+    public RunLocalTheatreImageSmokeUseCase(LocalVisualImageEngineManager manager) {
         this.manager = Objects.requireNonNull(manager, "manager");
     }
 

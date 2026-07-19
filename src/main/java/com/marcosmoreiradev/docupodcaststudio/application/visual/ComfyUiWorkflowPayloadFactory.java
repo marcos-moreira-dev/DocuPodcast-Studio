@@ -1,6 +1,5 @@
 package com.marcosmoreiradev.docupodcaststudio.application.visual;
 
-import java.util.Random;
 import java.io.IOException;
 import java.nio.file.Path;
 
@@ -12,13 +11,13 @@ public final class ComfyUiWorkflowPayloadFactory {
         if (conditionedTemplate != null) {
             return new ConditionedWorkflowTemplateRenderer().render(conditionedTemplate, request, current);
         }
-        return current.kind() == ComfyUiWorkflowKind.FLUX1_DEV_COMPONENTS
+        return current.kind().flux()
                 ? flux(request, current)
                 : sd15(request);
     }
 
     private static String sd15(VisualEngineRequest request) {
-        long seed = positiveSeed();
+        long seed = request.seed();
         String negative = request.negativePrompt().isBlank()
                 ? "low quality, blurry, deformed hands, duplicated faces, unreadable text, watermark"
                 : request.negativePrompt();
@@ -39,7 +38,7 @@ public final class ComfyUiWorkflowPayloadFactory {
     private static String flux(VisualEngineRequest request, ComfyUiWorkflowSpec workflow) {
         int width = workflow.generationWidth(request);
         int height = workflow.generationHeight(request);
-        long seed = positiveSeed();
+        long seed = request.seed();
         return "{\"prompt\":{" 
                 + "\"1\":{\"class_type\":\"UNETLoader\",\"inputs\":{\"unet_name\":\"" + esc(workflow.modelName()) + "\",\"weight_dtype\":\"" + esc(workflow.modelWeightDtype()) + "\"}},"
                 + "\"2\":{\"class_type\":\"DualCLIPLoader\",\"inputs\":{\"clip_name1\":\"" + esc(workflow.clipLName()) + "\",\"clip_name2\":\"" + esc(workflow.t5Name()) + "\",\"type\":\"flux\",\"device\":\"cpu\"}},"
@@ -55,10 +54,6 @@ public final class ComfyUiWorkflowPayloadFactory {
                 + "\"12\":{\"class_type\":\"VAEDecode\",\"inputs\":{\"samples\":[\"11\",0],\"vae\":[\"3\",0]}},"
                 + "\"13\":{\"class_type\":\"SaveImage\",\"inputs\":{\"filename_prefix\":\"" + esc(request.filenamePrefix()) + "\",\"images\":[\"12\",0]}}"
                 + "}}";
-    }
-
-    private static long positiveSeed() {
-        return new Random().nextLong() & Long.MAX_VALUE;
     }
 
     private static String esc(String value) {

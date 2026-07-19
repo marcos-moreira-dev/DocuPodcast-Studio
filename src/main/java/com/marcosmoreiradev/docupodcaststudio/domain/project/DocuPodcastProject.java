@@ -4,6 +4,7 @@ import com.marcosmoreiradev.docupodcaststudio.domain.assets.ProjectAssetCatalog;
 import com.marcosmoreiradev.docupodcaststudio.domain.assets.ProjectAssetReference;
 import com.marcosmoreiradev.docupodcaststudio.domain.assignment.NarrativeLayerAssignment;
 import com.marcosmoreiradev.docupodcaststudio.domain.assignment.NarrativeLayerAssignmentPolicy;
+import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeProjectLayer;
 import com.marcosmoreiradev.docupodcaststudio.domain.reading.ReadingProfile;
 import com.marcosmoreiradev.docupodcaststudio.domain.study.StudyProjectLayer;
 import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreProjectLayer;
@@ -23,6 +24,7 @@ public record DocuPodcastProject(
         ReadingProfile readingProfile,
         VoiceLibrary voiceLibrary,
         List<NarrativeLayerAssignment> narrativeLayerAssignments,
+        NarrativeProjectLayer narrative,
         TheatreProjectLayer theatre,
         StudyProjectLayer study,
         Map<String, String> viewState
@@ -33,17 +35,20 @@ public record DocuPodcastProject(
         readingProfile = Objects.requireNonNullElseGet(readingProfile, ReadingProfile::academicDefaults);
         voiceLibrary = Objects.requireNonNullElseGet(voiceLibrary, VoiceLibrary::defaults);
         narrativeLayerAssignments = normalizeAssignments(narrativeLayerAssignments);
+        narrative = Objects.requireNonNullElseGet(narrative, NarrativeProjectLayer::empty);
         theatre = Objects.requireNonNullElseGet(theatre, TheatreProjectLayer::empty);
         study = Objects.requireNonNullElseGet(study, StudyProjectLayer::empty);
         viewState = viewState == null ? Map.of() : Map.copyOf(viewState);
     }
 
     public DocuPodcastProject(ProjectMetadata metadata, ProjectAssetCatalog assets, Map<String, String> viewState) {
-        this(metadata, assets, ReadingProfile.academicDefaults(), VoiceLibrary.defaults(), List.of(), TheatreProjectLayer.empty(), StudyProjectLayer.empty(), viewState);
+        this(metadata, assets, ReadingProfile.academicDefaults(), VoiceLibrary.defaults(), List.of(),
+                NarrativeProjectLayer.empty(), TheatreProjectLayer.empty(), StudyProjectLayer.empty(), viewState);
     }
 
     public DocuPodcastProject(ProjectMetadata metadata, ProjectAssetCatalog assets, ReadingProfile readingProfile, Map<String, String> viewState) {
-        this(metadata, assets, readingProfile, VoiceLibrary.defaults(), List.of(), TheatreProjectLayer.empty(), StudyProjectLayer.empty(), viewState);
+        this(metadata, assets, readingProfile, VoiceLibrary.defaults(), List.of(),
+                NarrativeProjectLayer.empty(), TheatreProjectLayer.empty(), StudyProjectLayer.empty(), viewState);
     }
 
     public DocuPodcastProject(
@@ -52,7 +57,8 @@ public record DocuPodcastProject(
             ReadingProfile readingProfile,
             VoiceLibrary voiceLibrary,
             Map<String, String> viewState) {
-        this(metadata, assets, readingProfile, voiceLibrary, List.of(), TheatreProjectLayer.empty(), StudyProjectLayer.empty(), viewState);
+        this(metadata, assets, readingProfile, voiceLibrary, List.of(),
+                NarrativeProjectLayer.empty(), TheatreProjectLayer.empty(), StudyProjectLayer.empty(), viewState);
     }
 
     public DocuPodcastProject(
@@ -62,7 +68,8 @@ public record DocuPodcastProject(
             VoiceLibrary voiceLibrary,
             List<NarrativeLayerAssignment> narrativeLayerAssignments,
             Map<String, String> viewState) {
-        this(metadata, assets, readingProfile, voiceLibrary, narrativeLayerAssignments, TheatreProjectLayer.empty(), StudyProjectLayer.empty(), viewState);
+        this(metadata, assets, readingProfile, voiceLibrary, narrativeLayerAssignments,
+                NarrativeProjectLayer.empty(), TheatreProjectLayer.empty(), StudyProjectLayer.empty(), viewState);
     }
 
     public DocuPodcastProject(
@@ -73,7 +80,8 @@ public record DocuPodcastProject(
             List<NarrativeLayerAssignment> narrativeLayerAssignments,
             TheatreProjectLayer theatre,
             Map<String, String> viewState) {
-        this(metadata, assets, readingProfile, voiceLibrary, narrativeLayerAssignments, theatre, StudyProjectLayer.empty(), viewState);
+        this(metadata, assets, readingProfile, voiceLibrary, narrativeLayerAssignments,
+                NarrativeProjectLayer.empty(), theatre, StudyProjectLayer.empty(), viewState);
     }
 
     public static DocuPodcastProject createNew(String title) {
@@ -87,6 +95,7 @@ public record DocuPodcastProject(
                 ReadingProfile.academicDefaults(),
                 VoiceLibrary.defaults(),
                 List.of(),
+                NarrativeProjectLayer.empty(),
                 TheatreProjectLayer.empty(),
                 StudyProjectLayer.empty(),
                 Map.of("activeWorkspace", "WELCOME_HOME")
@@ -105,33 +114,49 @@ public record DocuPodcastProject(
     }
 
     public DocuPodcastProject withAsset(ProjectAssetReference reference) {
-        return new DocuPodcastProject(touch(metadata), assets.withReference(reference), readingProfile, voiceLibrary, narrativeLayerAssignments, theatre, study, viewState);
+        return new DocuPodcastProject(touch(metadata), assets.withReference(reference), readingProfile, voiceLibrary,
+                narrativeLayerAssignments, narrative, theatre, study, viewState);
     }
 
     public DocuPodcastProject withoutAsset(String assetId) {
-        return new DocuPodcastProject(touch(metadata), assets.withoutReference(assetId), readingProfile, voiceLibrary, narrativeLayerAssignments, theatre, study, viewState);
+        return new DocuPodcastProject(touch(metadata), assets.withoutReference(assetId), readingProfile, voiceLibrary,
+                narrativeLayerAssignments, narrative, theatre, study, viewState);
     }
 
     public DocuPodcastProject withMetadata(ProjectMetadata newMetadata) {
-        return new DocuPodcastProject(newMetadata, assets, readingProfile, voiceLibrary, narrativeLayerAssignments, theatre, study, viewState);
+        return new DocuPodcastProject(newMetadata, assets, readingProfile, voiceLibrary,
+                narrativeLayerAssignments, narrative, theatre, study, viewState);
     }
 
     public DocuPodcastProject withReadingProfile(ReadingProfile newReadingProfile) {
-        return new DocuPodcastProject(touch(metadata), assets, Objects.requireNonNull(newReadingProfile, "newReadingProfile"), voiceLibrary, narrativeLayerAssignments, theatre, study, viewState);
+        return new DocuPodcastProject(touch(metadata), assets,
+                Objects.requireNonNull(newReadingProfile, "newReadingProfile"), voiceLibrary,
+                narrativeLayerAssignments, narrative, theatre, study, viewState);
     }
 
     public DocuPodcastProject withVoiceLibrary(VoiceLibrary newVoiceLibrary) {
-        return new DocuPodcastProject(touch(metadata), assets, readingProfile, Objects.requireNonNull(newVoiceLibrary, "newVoiceLibrary"), narrativeLayerAssignments, theatre, study, viewState);
+        return new DocuPodcastProject(touch(metadata), assets, readingProfile,
+                Objects.requireNonNull(newVoiceLibrary, "newVoiceLibrary"), narrativeLayerAssignments,
+                narrative, theatre, study, viewState);
+    }
+
+    public DocuPodcastProject withNarrative(NarrativeProjectLayer newNarrative) {
+        return new DocuPodcastProject(touch(metadata), assets, readingProfile, voiceLibrary,
+                narrativeLayerAssignments,
+                Objects.requireNonNullElseGet(newNarrative, NarrativeProjectLayer::empty),
+                theatre, study, viewState);
     }
 
     public DocuPodcastProject withTheatre(TheatreProjectLayer newTheatre) {
-        return new DocuPodcastProject(touch(metadata), assets, readingProfile, voiceLibrary, narrativeLayerAssignments,
+        return new DocuPodcastProject(touch(metadata), assets, readingProfile, voiceLibrary,
+                narrativeLayerAssignments, narrative,
                 Objects.requireNonNullElseGet(newTheatre, TheatreProjectLayer::empty), study, viewState);
     }
 
     public DocuPodcastProject withStudy(StudyProjectLayer newStudy) {
-        return new DocuPodcastProject(touch(metadata), assets, readingProfile, voiceLibrary, narrativeLayerAssignments,
-                theatre, Objects.requireNonNullElseGet(newStudy, StudyProjectLayer::empty), viewState);
+        return new DocuPodcastProject(touch(metadata), assets, readingProfile, voiceLibrary,
+                narrativeLayerAssignments, narrative, theatre,
+                Objects.requireNonNullElseGet(newStudy, StudyProjectLayer::empty), viewState);
     }
 
     /**
@@ -167,7 +192,8 @@ public record DocuPodcastProject(
     }
 
     public DocuPodcastProject withNarrativeLayerAssignments(List<NarrativeLayerAssignment> assignments) {
-        return new DocuPodcastProject(touch(metadata), assets, readingProfile, voiceLibrary, assignments, theatre, study, viewState);
+        return new DocuPodcastProject(touch(metadata), assets, readingProfile, voiceLibrary,
+                assignments, narrative, theatre, study, viewState);
     }
 
     public DocuPodcastProject withViewState(String key, String value) {
@@ -180,7 +206,8 @@ public record DocuPodcastProject(
         } else {
             updated.put(key, value);
         }
-        return new DocuPodcastProject(touch(metadata), assets, readingProfile, voiceLibrary, narrativeLayerAssignments, theatre, study, updated);
+        return new DocuPodcastProject(touch(metadata), assets, readingProfile, voiceLibrary,
+                narrativeLayerAssignments, narrative, theatre, study, updated);
     }
 
     private static ProjectMetadata touch(ProjectMetadata metadata) {

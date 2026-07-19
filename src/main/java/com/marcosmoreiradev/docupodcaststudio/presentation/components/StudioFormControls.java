@@ -2,6 +2,7 @@ package com.marcosmoreiradev.docupodcaststudio.presentation.components;
 
 import javafx.scene.Node;
 import javafx.scene.control.ColorPicker;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Control;
 import javafx.scene.control.Spinner;
@@ -27,6 +28,13 @@ public final class StudioFormControls {
         button.getStyleClass().addAll(FORM_CONTROL, FORM_TOGGLE);
         installTooltip(button, tooltip);
         return button;
+    }
+
+    public static CheckBox checkBox(String text, String tooltip) {
+        CheckBox box = new CheckBox(text);
+        box.getStyleClass().addAll(FORM_CONTROL, FORM_TOGGLE);
+        installTooltip(box, tooltip);
+        return box;
     }
 
     public static <T> ComboBox<T> combo(ComboBox<T> combo, String tooltip) {

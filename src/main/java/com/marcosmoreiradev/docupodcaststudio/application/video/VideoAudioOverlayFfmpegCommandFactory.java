@@ -8,12 +8,28 @@ import java.util.Locale;
 /** Builds the generic second FFmpeg pass that mixes audio overlays under narration. */
 public final class VideoAudioOverlayFfmpegCommandFactory {
     public List<String> build(Path ffmpeg, Path narrationVideo, Path target, VideoAudioOverlayPlan plan) {
+        double timelineDurationSeconds = plan.inputs().stream()
+                .mapToDouble(VideoAudioOverlayPlan.Input::timelineEndSeconds)
+                .max()
+                .orElse(0.0);
+        return build(ffmpeg, narrationVideo, target, plan, timelineDurationSeconds);
+    }
+
+    public List<String> build(Path ffmpeg, Path narrationVideo, Path target, VideoAudioOverlayPlan plan,
+                              double timelineDurationSeconds) {
         ArrayList<String> command = new ArrayList<>(List.of(ffmpeg.toString(), "-y", "-i", narrationVideo.toString()));
         for (VideoAudioOverlayPlan.Input input : plan.inputs()) {
             command.add("-i"); command.add(input.audioFile().toString());
         }
+        double timelineDuration = Double.isFinite(timelineDurationSeconds)
+                ? Math.max(0.001, timelineDurationSeconds)
+                : 0.001;
         StringBuilder filters = new StringBuilder();
-        ArrayList<String> mixInputs = new ArrayList<>(List.of("[0:a]"));
+        filters.append("[0:a]apad=pad_dur=").append(number(timelineDuration))
+                .append(",atrim=duration=").append(number(timelineDuration))
+                .append(",asetpts=PTS-STARTPTS,aresample=48000")
+                .append(",aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[base]; ");
+        ArrayList<String> mixInputs = new ArrayList<>(List.of("[base]"));
         for (int i = 0; i < plan.inputs().size(); i++) {
             VideoAudioOverlayPlan.Input input = plan.inputs().get(i);
             String label = "bg" + i;
@@ -29,13 +45,20 @@ public final class VideoAudioOverlayFfmpegCommandFactory {
                         .append(":d=").append(number(input.fadeDurationSeconds()));
             }
             filters.append(",volume=").append(number(input.volume()))
+                    .append(",aresample=48000")
+                    .append(",aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo")
                     .append(",adelay=delays=").append(delayMillis).append(":all=1[").append(label).append("]; ");
             mixInputs.add("[" + label + "]");
         }
         filters.append(String.join("", mixInputs)).append("amix=inputs=").append(mixInputs.size())
-                .append(":duration=first:dropout_transition=0:normalize=0[mix]");
+                .append(":duration=longest:dropout_transition=0:normalize=0")
+                .append(",atrim=duration=").append(number(timelineDuration))
+                .append(",asetpts=PTS-STARTPTS,aresample=48000")
+                .append(",aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[mix]");
         command.addAll(List.of("-filter_complex", filters.toString(), "-map", "0:v:0", "-map", "[mix]",
-                "-c:v", "copy", "-c:a", "aac", "-shortest", "-movflags", "+faststart", target.toString()));
+                "-c:v", "copy", "-c:a", "aac", "-ar", "48000", "-ac", "2",
+                "-t", number(timelineDuration), "-avoid_negative_ts", "make_zero",
+                "-movflags", "+faststart", target.toString()));
         return command;
     }
 

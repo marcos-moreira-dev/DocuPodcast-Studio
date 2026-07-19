@@ -30,7 +30,7 @@
 
 .reading-zoom-caption {
     -fx-text-fill: -docu-text-muted;
-    -fx-font-size: 11px;
+    -fx-font-size: 12px;
     -fx-font-weight: 700;
 }
 
@@ -42,7 +42,7 @@
     -fx-border-radius: 4;
     -fx-padding: 2 7 2 7;
     -fx-text-fill: -docu-text;
-    -fx-font-size: 11px;
+    -fx-font-size: 12px;
     -fx-font-weight: 700;
     -fx-cursor: hand;
 }
@@ -60,7 +60,7 @@
 .reading-zoom-percent {
     -fx-min-width: 40px;
     -fx-text-fill: -docu-accent-ink;
-    -fx-font-size: 11px;
+    -fx-font-size: 12px;
     -fx-font-weight: 800;
 }
 
@@ -72,7 +72,7 @@
     -fx-background-radius: 6;
     -fx-border-radius: 6;
     -fx-padding: 3 9 3 9;
-    -fx-font-size: 11px;
+    -fx-font-size: 12px;
     -fx-font-weight: 800;
     -fx-text-fill: -docu-accent-ink;
 }
@@ -93,7 +93,7 @@
     -fx-background-radius: 6;
     -fx-border-radius: 6;
     -fx-padding: 3 9 3 9;
-    -fx-font-size: 11px;
+    -fx-font-size: 12px;
     -fx-font-weight: 800;
 }
 
@@ -153,7 +153,7 @@
     -fx-border-radius: 5;
     -fx-padding: 2 8 2 8;
     -fx-text-fill: -docu-text-muted;
-    -fx-font-size: 11px;
+    -fx-font-size: 12px;
     -fx-font-weight: 700;
 }
 

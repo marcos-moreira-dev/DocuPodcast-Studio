@@ -13,6 +13,7 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -36,17 +37,30 @@ public final class DocumentStudySlideCompositor {
             int width = image.getWidth(), height = image.getHeight();
             int margin = Math.max(36, width / 16);
             int y = margin;
-            y = drawGlobalTitle(g, configuration.videoTitle(), options, margin, y, width - margin * 2);
-            int imageHeight = Math.max(height / 3, (int) (height * 0.40));
-            int gap = Math.max(18, height / 50);
-            int textBottom = height - margin - imageHeight - gap;
-            drawJustifiedText(g, block.text(), options, margin, y, width - margin * 2,
-                    textBottom - y, block.id());
-            int imageY = textBottom + gap;
-            drawContainedAsset(g, project, projectDirectory, visual.activeImageAssetId(),
-                    margin, imageY, width - margin * 2, imageHeight);
-            drawMascot(g, project, projectDirectory, visual, margin, imageY,
-                    width - margin * 2, imageHeight);
+            int availableWidth = width - margin * 2;
+            y = drawGlobalTitle(g, configuration.videoTitle(), options, margin, y, availableWidth);
+            BufferedImage mascot = readAsset(project, projectDirectory, visual.mascotAssetId());
+            if (visual.illustrationOnly()) {
+                int contentHeight = Math.max(1, height - margin - y);
+                drawContainedAsset(g, project, projectDirectory, visual.activeImageAssetId(),
+                        margin, y, availableWidth, contentHeight);
+                drawMascot(g, mascot, visual, image.getWidth(), image.getHeight(), contentHeight,
+                        Math.max(70, availableWidth / 5));
+            } else {
+                y = drawParagraphSubtitle(g, visual.subtitle(), options, margin, y, availableWidth, block.id());
+                int illustrationWidth = DocumentStudySlideLayout.illustrationWidth(availableWidth);
+                int imageHeight = DocumentStudySlideLayout.illustrationHeight(illustrationWidth, height);
+                int gap = Math.max(18, height / 50);
+                int textBottom = height - margin - imageHeight - gap;
+                drawJustifiedText(g, block.text(), options, margin, y, availableWidth,
+                        textBottom - y, block.id());
+                int imageY = textBottom + gap;
+                int illustrationX = margin + (availableWidth - illustrationWidth) / 2;
+                drawContainedAsset(g, project, projectDirectory, visual.activeImageAssetId(),
+                        illustrationX, imageY, illustrationWidth, imageHeight);
+                drawMascot(g, mascot, visual, image.getWidth(), image.getHeight(), imageHeight,
+                        availableWidth - illustrationWidth);
+            }
         } finally {
             g.dispose();
         }
@@ -196,6 +210,28 @@ public final class DocumentStudySlideCompositor {
         throw new IOException("El parrafo " + blockId + " no cabe completo con un tamano de texto legible.");
     }
 
+    private static int drawParagraphSubtitle(Graphics2D g, String subtitle, DocumentTextVideoOptions options,
+                                              int x, int y, int width, String blockId) throws IOException {
+        if (subtitle == null || subtitle.isBlank()) return y;
+        int preferred = Math.max(22, options.fontSize() - 8);
+        int minimum = Math.max(17, options.resolution().height() / 64);
+        for (int size = preferred; size >= minimum; size--) {
+            Font font = new Font(options.fontFamily(), Font.BOLD, size);
+            FontMetrics fm = g.getFontMetrics(font);
+            List<String> lines = wrap(subtitle, fm, width);
+            if (lines.size() > 2) continue;
+            g.setFont(font);
+            g.setColor(color(options.textColor()));
+            int baseline = y + fm.getAscent();
+            for (String line : lines) {
+                g.drawString(line, x, baseline);
+                baseline += fm.getHeight();
+            }
+            return y + lines.size() * fm.getHeight() + Math.max(10, fm.getHeight() / 3);
+        }
+        throw new IOException("El subtitulo del parrafo " + blockId + " no cabe completo en la diapositiva.");
+    }
+
     private static void drawJustifiedLine(Graphics2D g, String line, int x, int baseline, int width,
                                           boolean last, FontMetrics fm) {
         String[] words = line.split(" ");
@@ -220,19 +256,25 @@ public final class DocumentStudySlideCompositor {
         g.drawImage(asset, x + (width - w) / 2, y + (height - h) / 2, w, h, null);
     }
 
-    private static void drawMascot(Graphics2D g, DocuPodcastProject project, Path root,
+    private static void drawMascot(Graphics2D g, BufferedImage mascot,
                                    DocumentParagraphVisualAssignment visual,
-                                   int x, int y, int width, int height) throws IOException {
-        BufferedImage mascot = readAsset(project, root, visual.mascotAssetId());
+                                   int canvasWidth, int canvasHeight,
+                                   int regionHeight, int reservedWidth) {
         if (mascot == null) return;
-        int maxW = Math.max(70, width / 5), maxH = Math.max(70, height / 2);
-        double scale = Math.min(maxW / (double) mascot.getWidth(), maxH / (double) mascot.getHeight());
-        int w = Math.max(1, (int) Math.round(mascot.getWidth() * scale));
-        int h = Math.max(1, (int) Math.round(mascot.getHeight() * scale));
-        int inset = Math.max(8, width / 100);
-        int drawX = visual.mascotPosition() == DocumentMascotPosition.BOTTOM_LEFT
-                ? x + inset : x + width - w - inset;
-        g.drawImage(mascot, drawX, y + height - h - inset, w, h, null);
+        Rectangle bounds = mascotBounds(canvasWidth, canvasHeight, regionHeight, reservedWidth,
+                mascot.getWidth(), mascot.getHeight(), visual.mascotPosition());
+        g.drawImage(mascot, bounds.x, bounds.y, bounds.width, bounds.height, null);
+    }
+
+    static Rectangle mascotBounds(int canvasWidth, int canvasHeight, int regionHeight, int reservedWidth,
+                                   int sourceWidth, int sourceHeight, DocumentMascotPosition position) {
+        int maxW = Math.max(56, (int) Math.round(reservedWidth * 0.84));
+        int maxH = Math.max(56, (int) Math.round(regionHeight * 0.78));
+        double scale = Math.min(maxW / (double) sourceWidth, maxH / (double) sourceHeight);
+        int width = Math.max(1, (int) Math.round(sourceWidth * scale));
+        int height = Math.max(1, (int) Math.round(sourceHeight * scale));
+        int x = position == DocumentMascotPosition.BOTTOM_LEFT ? 0 : canvasWidth - width;
+        return new Rectangle(x, canvasHeight - height, width, height);
     }
 
     private static BufferedImage readAsset(DocuPodcastProject project, Path root, String assetId) throws IOException {

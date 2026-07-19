@@ -9,6 +9,13 @@ import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentTextRange;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.TextAnchor;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.TextAnchorConfidence;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.TextAnchorStatus;
+import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeContextReference;
+import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeContextRole;
+import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeGeneratedClip;
+import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeKeyframeSource;
+import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeParagraphTake;
+import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeProjectLayer;
+import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeVideoConfiguration;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.DocuPodcastProject;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.ProjectKind;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.ProjectMetadata;
@@ -72,13 +79,15 @@ public final class DocuPodcastProjectJsonReader {
         VoiceLibrary voiceLibrary = readVoiceLibrary(optionalObject(root.get("voiceLibrary")));
         ProjectAssetCatalog assets = readAssets(object(root.getOrDefault("assets", Map.of("items", List.of())), "assets"));
         List<NarrativeLayerAssignment> narrativeLayers = readNarrativeLayers(optionalObject(root.get("narrativeLayers")));
+        NarrativeProjectLayer narrative = readNarrative(optionalObject(root.get("narrative")));
         TheatreProjectLayer theatre = readTheatre(optionalObject(root.get("theatre")));
         StudyProjectLayer study = readStudy(optionalObject(root.get("study")));
         Map<String, String> view = readView(optionalObject(root.get("view")));
         if (!explicitMode) {
             metadata = metadata.withMode(new ProjectModePolicy().inferLegacy(metadata.kind(), theatre));
         }
-        return new DocuPodcastProject(metadata, assets, readingProfile, voiceLibrary, narrativeLayers, theatre, study, view);
+        return new DocuPodcastProject(metadata, assets, readingProfile, voiceLibrary, narrativeLayers,
+                narrative, theatre, study, view);
     }
 
     private static ProjectMetadata readMetadata(Map<String, Object> project) throws IOException {
@@ -383,6 +392,129 @@ public final class DocuPodcastProjectJsonReader {
         );
     }
 
+    private static NarrativeProjectLayer readNarrative(Map<String, Object> narrative) throws IOException {
+        if (narrative.isEmpty()) {
+            return NarrativeProjectLayer.empty();
+        }
+        Map<String, Object> settings = optionalObject(narrative.get("videoConfiguration"));
+        NarrativeVideoConfiguration defaults = NarrativeVideoConfiguration.verticalDefaults();
+        NarrativeVideoConfiguration configuration = new NarrativeVideoConfiguration(
+                intOrDefault(settings.get("width"), defaults.width()),
+                intOrDefault(settings.get("height"), defaults.height()),
+                intOrDefault(settings.get("framesPerSecond"), defaults.framesPerSecond()),
+                doubleOrDefault(settings.get("maxClipDurationSeconds"), defaults.maxClipDurationSeconds()),
+                stringOrDefault(settings.get("imageProfile"), defaults.imageProfile()),
+                stringOrDefault(settings.get("videoProfile"), defaults.videoProfile()),
+                stringOrDefault(settings.get("memoryMode"), defaults.memoryMode()),
+                stringOrDefault(settings.get("customWorkflowPath"), defaults.customWorkflowPath())
+        );
+        return new NarrativeProjectLayer(
+                configuration,
+                stringOrDefault(narrative.get("documentFingerprint"), ""),
+                stringOrDefault(narrative.get("normalizedDocumentText"), ""),
+                readNarrativeContextReferences(narrative.get("contextReferences")),
+                readNarrativeParagraphTakes(narrative.get("paragraphTakes"))
+        );
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<NarrativeContextReference> readNarrativeContextReferences(Object value) throws IOException {
+        if (value == null) {
+            return List.of();
+        }
+        if (!(value instanceof List<?> list)) {
+            throw new IOException("narrative.contextReferences must be an array");
+        }
+        ArrayList<NarrativeContextReference> result = new ArrayList<>();
+        for (Object item : list) {
+            if (!(item instanceof Map<?, ?> raw)) {
+                throw new IOException("narrative.contextReferences entries must be objects");
+            }
+            Map<String, Object> reference = (Map<String, Object>) raw;
+            result.add(new NarrativeContextReference(
+                    string(reference.get("id"), "narrative.contextReference.id"),
+                    enumValue(NarrativeContextRole.class,
+                            stringOrDefault(reference.get("role"), NarrativeContextRole.STYLE.name()),
+                            "narrative.contextReference.role"),
+                    string(reference.get("assetId"), "narrative.contextReference.assetId"),
+                    stringOrDefault(reference.get("displayName"), ""),
+                    booleanOrDefault(reference.get("enabled"), true),
+                    doubleOrDefault(reference.get("strength"), 1.0),
+                    stringOrDefault(reference.get("notes"), "")
+            ));
+        }
+        return List.copyOf(result);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<NarrativeParagraphTake> readNarrativeParagraphTakes(Object value) throws IOException {
+        if (value == null) {
+            return List.of();
+        }
+        if (!(value instanceof List<?> list)) {
+            throw new IOException("narrative.paragraphTakes must be an array");
+        }
+        ArrayList<NarrativeParagraphTake> result = new ArrayList<>();
+        for (Object item : list) {
+            if (!(item instanceof Map<?, ?> raw)) {
+                throw new IOException("narrative.paragraphTakes entries must be objects");
+            }
+            Map<String, Object> take = (Map<String, Object>) raw;
+            result.add(new NarrativeParagraphTake(
+                    string(take.get("blockId"), "narrative.paragraphTake.blockId"),
+                    booleanOrDefault(take.get("enabled"), true),
+                    stringOrDefault(take.get("keyframeAssetId"), ""),
+                    enumValue(NarrativeKeyframeSource.class,
+                            stringOrDefault(take.get("keyframeSource"), NarrativeKeyframeSource.NONE.name()),
+                            "narrative.paragraphTake.keyframeSource"),
+                    readNarrativeClips(take.get("clips")),
+                    stringOrDefault(take.get("prompt"), ""),
+                    stringOrDefault(take.get("negativePrompt"), ""),
+                    longOrDefault(take.get("seed"), 0L),
+                    stringOrDefault(take.get("sourceFingerprint"), ""),
+                    booleanOrDefault(take.get("stale"), true),
+                    stringOrDefault(take.get("notes"), "")
+            ));
+        }
+        return List.copyOf(result);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<NarrativeGeneratedClip> readNarrativeClips(Object value) throws IOException {
+        if (value == null) {
+            return List.of();
+        }
+        if (!(value instanceof List<?> list)) {
+            throw new IOException("narrative.paragraphTake.clips must be an array");
+        }
+        ArrayList<NarrativeGeneratedClip> result = new ArrayList<>();
+        for (Object item : list) {
+            if (!(item instanceof Map<?, ?> raw)) {
+                throw new IOException("narrative.paragraphTake.clips entries must be objects");
+            }
+            Map<String, Object> clip = (Map<String, Object>) raw;
+            result.add(new NarrativeGeneratedClip(
+                    string(clip.get("id"), "narrative.clip.id"),
+                    string(clip.get("assetId"), "narrative.clip.assetId"),
+                    intOrDefault(clip.get("order"), result.size()),
+                    doubleOrDefault(clip.get("durationSeconds"), 0.0),
+                    stringOrDefault(clip.get("lastFrameAssetId"), ""),
+                    stringOrDefault(clip.get("modelId"), ""),
+                    stringOrDefault(clip.get("workflowId"), ""),
+                    longOrDefault(clip.get("seed"), 0L),
+                    stringOrDefault(clip.get("sourceFingerprint"), ""),
+                    readStringMap(optionalObject(clip.get("metadata")))
+            ));
+        }
+        return List.copyOf(result);
+    }
+
+    private static Map<String, String> readStringMap(Map<String, Object> values) {
+        LinkedHashMap<String, String> result = new LinkedHashMap<>();
+        values.forEach((key, value) -> result.put(key, value == null ? "" : String.valueOf(value)));
+        return Map.copyOf(result);
+    }
+
     private static TheatreProjectLayer readTheatre(Map<String, Object> theatre) throws IOException {
         if (theatre.isEmpty()) {
             return TheatreProjectLayer.empty();
@@ -456,7 +588,9 @@ public final class DocuPodcastProjectJsonReader {
                         stringOrDefault(item.get("mascotAssetId"), ""),
                         enumValue(DocumentMascotPosition.class,
                                 stringOrDefault(item.get("mascotPosition"), DocumentMascotPosition.BOTTOM_RIGHT.name()),
-                                "study.documentaryVideoConfiguration.paragraph.mascotPosition")));
+                                "study.documentaryVideoConfiguration.paragraph.mascotPosition"),
+                        stringOrDefault(item.get("subtitle"), ""),
+                        booleanOrDefault(item.get("illustrationOnly"), false)));
             }
         }
         ArrayList<DocumentTableSlideConfiguration> tables = new ArrayList<>();

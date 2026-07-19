@@ -5,7 +5,6 @@ import com.marcosmoreiradev.docupodcaststudio.application.document.MaterializedI
 import com.marcosmoreiradev.docupodcaststudio.application.project.ProjectWorkspaceHydration;
 import com.marcosmoreiradev.docupodcaststudio.application.project.ProjectIntegrityReport;
 import com.marcosmoreiradev.docupodcaststudio.application.project.ProjectIntegrityUserDecisionFactory;
-import com.marcosmoreiradev.docupodcaststudio.application.project.ProjectModeCapabilities;
 import com.marcosmoreiradev.docupodcaststudio.application.project.ProjectModePolicy;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.DocuPodcastProject;
 import com.marcosmoreiradev.docupodcaststudio.domain.audio.AudioJobSnapshot;
@@ -16,7 +15,6 @@ import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceLibrary;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.ProjectSession;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.ProjectSessionCoordinator;
 import com.marcosmoreiradev.docupodcaststudio.presentation.workspace.WorkspaceKind;
-import com.marcosmoreiradev.docupodcaststudio.presentation.workspace.WorkspaceSurfacePolicy;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.ProjectMode;
 
 import java.io.IOException;
@@ -30,7 +28,6 @@ import java.util.Optional;
  * in {@code DocuPodcastShellViewModel}.
  */
 public final class ProjectWorkflowCoordinator {
-    private static final WorkspaceSurfacePolicy SURFACE_POLICY = new WorkspaceSurfacePolicy();
     private static final ProjectModePolicy MODE_POLICY = new ProjectModePolicy();
 
     private final ApplicationServices applicationServices;
@@ -76,7 +73,7 @@ public final class ProjectWorkflowCoordinator {
                 project,
                 session,
                 hydration,
-                workspaceFromViewState(project),
+                ProjectStartupWorkspacePolicy.initialWorkspace(resolvedMode),
                 firstSegmentId(hydration),
                 firstStoryboardImageAssetId(hydration)
         );
@@ -168,24 +165,4 @@ public final class ProjectWorkflowCoordinator {
                 .orElse("");
     }
 
-    private static WorkspaceKind workspaceFromViewState(DocuPodcastProject project) {
-        String workspace = project.viewState().get("activeWorkspace");
-        if (workspace == null || workspace.isBlank()) {
-            return WorkspaceKind.WELCOME_HOME;
-        }
-        try {
-            WorkspaceKind restored = SURFACE_POLICY.restoreStartupWorkspace(WorkspaceKind.valueOf(workspace));
-            ProjectMode mode = MODE_POLICY.resolve(project);
-            if (!ProjectModeCapabilities.forMode(mode).theatreProduction()
-                    && (restored == WorkspaceKind.THEATRE_SCRIPT || restored == WorkspaceKind.THEATRE_IMAGE_GENERATION)) {
-                return WorkspaceKind.DOCUMENT_READER;
-            }
-            if (mode != ProjectMode.NARRATIVE_VIDEO && restored == WorkspaceKind.NARRATIVE_VISUAL_PRODUCTION) {
-                return WorkspaceKind.DOCUMENT_READER;
-            }
-            return restored;
-        } catch (IllegalArgumentException ex) {
-            return WorkspaceKind.WELCOME_HOME;
-        }
-    }
 }

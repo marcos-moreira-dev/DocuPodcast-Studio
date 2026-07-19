@@ -2,10 +2,15 @@
 /target/
 /generated/
 
-# Local smoke-test output
+# Local runtime and smoke-test output
 /runtime/tts/*-smoke/
 *.log
 *.pid
+*.tmp
+*.temp
+*.part
+*.download
+*.aria2
 
 # IDE and local agent state
 /.idea/
@@ -17,6 +22,8 @@
 **/__pycache__/
 *.py[cod]
 /.pytest_cache/
+/.ruff_cache/
+/.mypy_cache/
 /tools/python/pip-cache/
 /tools/python/python-nuget-3.10.11/
 /tools/image/venv/
@@ -24,27 +31,72 @@
 
 # Installed third-party engines. Keep their sibling README, license and setup files tracked.
 /tools/image/ComfyUI/
+/tools/image/extra_model_paths.yaml
 /tools/ffmpeg/bin/
 /tools/ffmpeg/downloads/
 /tools/piper/**
 !/tools/piper/README.md
 /tools/tesseract/**
 
-# Local model weights. Manifests, workflows, licenses and README files remain tracked.
-*.safetensors
-*.ckpt
-*.onnx
-*.pth
-*.pt
+# Local model payloads. Manifests, workflows, checksums, licenses, README and
+# portable JSON configuration remain tracked.
+/models/**/*.safetensors
+/models/**/*.ckpt
+/models/**/*.onnx
+/models/**/*.onnx_data
+/models/**/*.pth
+/models/**/*.pt
+/models/**/*.pt2
+/models/**/*.bin
+/models/**/*.gguf
+/models/**/*.ggml
+/models/**/*.pb
+/models/**/*.tflite
+/models/**/*.h5
+/models/**/*.hdf5
+/models/**/*.engine
+/models/**/*.plan
+/models/**/*.weights
+/models/**/*.params
+/models/**/*.npy
+/models/**/*.npz
+/models/**/*.pkl
+/models/**/*.pickle
+/models/**/*.joblib
+/models/**/*.mlmodel
+/models/**/*.mlpackage/
+/models/**/.cache/
+/models/**/download-diagnostics.*
+/models/**/.flux-license-acceptance.properties
+
+# Machine-local configuration and secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+*.local.properties
+*.secret
+*.secrets
 
 # Downloaded archives and native executables
 /tools/**/*.exe
 /tools/**/*.dll
+/tools/**/*.pyd
+/tools/**/*.so
+/tools/**/*.dylib
+/tools/**/*.whl
 /tools/**/*.zip
 /tools/**/*.7z
+/tools/**/*.tar
+/tools/**/*.tar.gz
+/tools/**/*.tgz
+
+# JVM crash and profiling output
+hs_err_pid*
+replay_pid*
+*.jfr
 
 # OS noise
 Thumbs.db
 Desktop.ini
 .DS_Store
-

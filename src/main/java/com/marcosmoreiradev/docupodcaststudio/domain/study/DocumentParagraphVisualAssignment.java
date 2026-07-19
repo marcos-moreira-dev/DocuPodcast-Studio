@@ -11,7 +11,9 @@ public record DocumentParagraphVisualAssignment(
         String drawnStateRelativePath,
         DocumentVisualSource activeSource,
         String mascotAssetId,
-        DocumentMascotPosition mascotPosition
+        DocumentMascotPosition mascotPosition,
+        String subtitle,
+        boolean illustrationOnly
 ) {
     public DocumentParagraphVisualAssignment {
         blockId = token(blockId, "blockId");
@@ -22,6 +24,7 @@ public record DocumentParagraphVisualAssignment(
         activeSource = Objects.requireNonNullElse(activeSource, DocumentVisualSource.NONE);
         mascotAssetId = optional(mascotAssetId);
         mascotPosition = Objects.requireNonNullElse(mascotPosition, DocumentMascotPosition.BOTTOM_RIGHT);
+        subtitle = optional(subtitle);
         if (activeSource == DocumentVisualSource.IMPORTED && importedImageAssetId.isBlank()) {
             activeSource = drawnImageAssetId.isBlank() ? DocumentVisualSource.NONE : DocumentVisualSource.DRAWN;
         }
@@ -30,9 +33,24 @@ public record DocumentParagraphVisualAssignment(
         }
     }
 
+    /** Backward-compatible constructor for assignments created before slide presentation options existed. */
+    public DocumentParagraphVisualAssignment(
+            String blockId,
+            String sourceTextFingerprint,
+            String importedImageAssetId,
+            String drawnImageAssetId,
+            String drawnStateRelativePath,
+            DocumentVisualSource activeSource,
+            String mascotAssetId,
+            DocumentMascotPosition mascotPosition
+    ) {
+        this(blockId, sourceTextFingerprint, importedImageAssetId, drawnImageAssetId,
+                drawnStateRelativePath, activeSource, mascotAssetId, mascotPosition, "", false);
+    }
+
     public static DocumentParagraphVisualAssignment empty(String blockId) {
         return new DocumentParagraphVisualAssignment(blockId, "", "", "", "",
-                DocumentVisualSource.NONE, "", DocumentMascotPosition.BOTTOM_RIGHT);
+                DocumentVisualSource.NONE, "", DocumentMascotPosition.BOTTOM_RIGHT, "", false);
     }
 
     public String activeImageAssetId() {
@@ -46,22 +64,37 @@ public record DocumentParagraphVisualAssignment(
     public DocumentParagraphVisualAssignment withImportedImage(String assetId) {
         return new DocumentParagraphVisualAssignment(blockId, sourceTextFingerprint, assetId,
                 drawnImageAssetId, drawnStateRelativePath, DocumentVisualSource.IMPORTED,
-                mascotAssetId, mascotPosition);
+                mascotAssetId, mascotPosition, subtitle, illustrationOnly);
     }
 
     public DocumentParagraphVisualAssignment withDrawnImage(String assetId, String stateRelativePath) {
         return new DocumentParagraphVisualAssignment(blockId, sourceTextFingerprint, importedImageAssetId,
-                assetId, stateRelativePath, DocumentVisualSource.DRAWN, mascotAssetId, mascotPosition);
+                assetId, stateRelativePath, DocumentVisualSource.DRAWN, mascotAssetId, mascotPosition,
+                subtitle, illustrationOnly);
     }
 
     public DocumentParagraphVisualAssignment withActiveSource(DocumentVisualSource source) {
         return new DocumentParagraphVisualAssignment(blockId, sourceTextFingerprint, importedImageAssetId,
-                drawnImageAssetId, drawnStateRelativePath, source, mascotAssetId, mascotPosition);
+                drawnImageAssetId, drawnStateRelativePath, source, mascotAssetId, mascotPosition,
+                subtitle, illustrationOnly);
     }
 
     public DocumentParagraphVisualAssignment withMascot(String assetId, DocumentMascotPosition position) {
         return new DocumentParagraphVisualAssignment(blockId, sourceTextFingerprint, importedImageAssetId,
-                drawnImageAssetId, drawnStateRelativePath, activeSource, assetId, position);
+                drawnImageAssetId, drawnStateRelativePath, activeSource, assetId, position,
+                subtitle, illustrationOnly);
+    }
+
+    public DocumentParagraphVisualAssignment withSubtitle(String value) {
+        return new DocumentParagraphVisualAssignment(blockId, sourceTextFingerprint, importedImageAssetId,
+                drawnImageAssetId, drawnStateRelativePath, activeSource, mascotAssetId, mascotPosition,
+                value, illustrationOnly);
+    }
+
+    public DocumentParagraphVisualAssignment withIllustrationOnly(boolean value) {
+        return new DocumentParagraphVisualAssignment(blockId, sourceTextFingerprint, importedImageAssetId,
+                drawnImageAssetId, drawnStateRelativePath, activeSource, mascotAssetId, mascotPosition,
+                subtitle, value);
     }
 
     private static String token(String value, String field) {

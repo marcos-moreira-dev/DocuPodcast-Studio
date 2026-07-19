@@ -6,13 +6,13 @@ import java.util.Objects;
 
 /** Stops the managed local theatre image engine when DocuPodcast launched it. */
 public final class StopLocalTheatreImageEngineUseCase {
-    private final LocalTheatreImageEngineManager manager;
+    private final LocalVisualImageEngineManager manager;
 
     public StopLocalTheatreImageEngineUseCase() {
-        this(new LocalTheatreImageEngineManager());
+        this(new LocalVisualImageEngineManager());
     }
 
-    public StopLocalTheatreImageEngineUseCase(LocalTheatreImageEngineManager manager) {
+    public StopLocalTheatreImageEngineUseCase(LocalVisualImageEngineManager manager) {
         this.manager = Objects.requireNonNull(manager, "manager");
     }
 

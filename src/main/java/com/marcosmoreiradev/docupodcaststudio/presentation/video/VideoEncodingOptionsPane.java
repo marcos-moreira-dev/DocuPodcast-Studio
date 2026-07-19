@@ -2,6 +2,7 @@ package com.marcosmoreiradev.docupodcaststudio.presentation.video;
 
 import com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy;
 import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoResolutionPreset;
+import com.marcosmoreiradev.docupodcaststudio.domain.project.ProjectMode;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
 import javafx.collections.FXCollections;
 import javafx.scene.Node;
@@ -24,15 +25,29 @@ public final class VideoEncodingOptionsPane extends VBox {
 
     public VideoEncodingOptionsPane(List<VideoEncoderPolicy> availableEncoders,
                                     VideoEncoderPolicy defaultEncoder) {
+        this(availableEncoders, defaultEncoder, ProjectMode.defaultMode());
+    }
+
+    public VideoEncodingOptionsPane(List<VideoEncoderPolicy> availableEncoders,
+                                    VideoEncoderPolicy defaultEncoder,
+                                    ProjectMode projectMode) {
         setSpacing(10);
         getStyleClass().addAll("export-options-section", "video-encoding-options");
 
-        resolution.getItems().setAll(
-                SimpleVideoResolutionPreset.UHD_4K,
-                SimpleVideoResolutionPreset.QHD_2K,
-                SimpleVideoResolutionPreset.FULL_HD_1080,
-                SimpleVideoResolutionPreset.HD_720);
-        resolution.setValue(SimpleVideoResolutionPreset.defaultPreset());
+        boolean narrativeVideo = projectMode == ProjectMode.NARRATIVE_VIDEO;
+        if (narrativeVideo) {
+            resolution.getItems().setAll(
+                    SimpleVideoResolutionPreset.HD_VERTICAL_720X1280,
+                    SimpleVideoResolutionPreset.FULL_HD_VERTICAL_1080X1920);
+            resolution.setValue(SimpleVideoResolutionPreset.HD_VERTICAL_720X1280);
+        } else {
+            resolution.getItems().setAll(
+                    SimpleVideoResolutionPreset.UHD_4K,
+                    SimpleVideoResolutionPreset.QHD_2K,
+                    SimpleVideoResolutionPreset.FULL_HD_1080,
+                    SimpleVideoResolutionPreset.HD_720);
+            resolution.setValue(SimpleVideoResolutionPreset.defaultPreset());
+        }
         resolution.setMaxWidth(Double.MAX_VALUE);
         StudioFormControls.combo(resolution, "Resolucion del archivo MP4 final.");
         resolution.setConverter(new StringConverter<>() {
@@ -48,7 +63,7 @@ public final class VideoEncodingOptionsPane extends VBox {
         });
 
         framesPerSecond.getItems().setAll(24, 30, 48, 60);
-        framesPerSecond.setValue(30);
+        framesPerSecond.setValue(narrativeVideo ? 24 : 30);
         framesPerSecond.setMaxWidth(Double.MAX_VALUE);
         StudioFormControls.combo(framesPerSecond, "Fotogramas por segundo del video final.");
 
@@ -82,6 +97,8 @@ public final class VideoEncodingOptionsPane extends VBox {
         includeInferredFrames.getStyleClass().addAll(StudioFormControls.FORM_CONTROL, StudioFormControls.FORM_TOGGLE);
         StudioFormControls.installTooltip(includeInferredFrames,
                 "Usa frames intermedios ya guardados entre intervenciones adyacentes; no lanza inferencia durante la exportacion.");
+        includeInferredFrames.setVisible(!narrativeVideo);
+        includeInferredFrames.setManaged(!narrativeVideo);
         getChildren().addAll(title, form, includeInferredFrames);
     }
 

@@ -51,7 +51,6 @@ import com.marcosmoreiradev.docupodcaststudio.application.decisions.UserVisibleD
 import com.marcosmoreiradev.docupodcaststudio.presentation.notification.ExceptionAlertPresenter;
 import com.marcosmoreiradev.docupodcaststudio.presentation.notification.UserNotification;
 import com.marcosmoreiradev.docupodcaststudio.presentation.notification.UserNotificationLevel;
-import com.marcosmoreiradev.docupodcaststudio.presentation.narrative.NarrativeVisualProductionWorkspaceView;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow.DocumentAudioDefensiveDecisionGuard;
 import com.marcosmoreiradev.docupodcaststudio.presentation.settings.EmbeddedDependencySetupAssistant;
 import com.marcosmoreiradev.docupodcaststudio.presentation.settings.SettingsDialog;
@@ -226,7 +225,6 @@ public final class DocuPodcastShellView extends BorderPane {
                         () -> confirmAudioEngineReadyForDocumentAction(false),
                         DocumentWorkspaceMode.THEATRE_SCRIPT))
                 .register(WorkspaceKind.VOICE_LIBRARY, () -> new VoiceLibraryWorkspaceView(viewModel))
-                .register(WorkspaceKind.NARRATIVE_VISUAL_PRODUCTION, () -> new NarrativeVisualProductionWorkspaceView(viewModel))
                 .register(WorkspaceKind.THEATRE_IMAGE_GENERATION, () -> new TheatreImageGenerationWorkspaceView(viewModel));
     }
 
@@ -266,7 +264,7 @@ public final class DocuPodcastShellView extends BorderPane {
                 .register(AppCommandId.OPEN_DOCUMENT_READER, () -> viewModel.showDocumentWorkspace("Documento activo."))
                 .register(AppCommandId.OPEN_THEATRE_SCRIPT, () -> viewModel.showTheatreScriptWorkspace("Guión teatral activo."))
                 .register(AppCommandId.OPEN_THEATRE_IMAGE_GENERATION, viewModel::showTheatreImageGenerationWorkspace)
-                .register(AppCommandId.OPEN_NARRATIVE_VISUAL_PRODUCTION, () -> viewModel.activeWorkspaceProperty().set(WorkspaceKind.NARRATIVE_VISUAL_PRODUCTION))
+                .register(AppCommandId.OPEN_NARRATIVE_VISUAL_PRODUCTION, viewModel::openNarrativeVideoProduction)
                 .register(AppCommandId.EXIT_APPLICATION, this::requestWindowClose)
                 .register(AppCommandId.CLEAR_SELECTION, viewModel::clearSelectedDocumentBlock)
                 .register(AppCommandId.NEW_PROJECT, this::handleNewProject)

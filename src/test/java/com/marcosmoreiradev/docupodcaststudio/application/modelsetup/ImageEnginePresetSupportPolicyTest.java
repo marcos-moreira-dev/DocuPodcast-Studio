@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.application.modelsetup;
 
-import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreImageGenerationPreset;
+import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualGenerationProfile;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -10,7 +10,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 final class ImageEnginePresetSupportPolicyTest {
     @Test
     void sd15PresetUsesBuiltInReferenceWorkflow() {
-        ImageEnginePresetSupport support = ImageEnginePresetSupportPolicy.forPreset(TheatreImageGenerationPreset.TEST_4GB_SD15);
+        ImageEnginePresetSupport support = ImageEnginePresetSupportPolicy.forProfile(
+                VisualGenerationProfile.DIAGNOSTIC_SD15);
 
         assertTrue(support.builtInWorkflowAvailable());
         assertEquals("v1-5-pruned-emaonly-fp16.safetensors", support.checkpointName());
@@ -20,7 +21,7 @@ final class ImageEnginePresetSupportPolicyTest {
 
     @Test
     void fluxPresetUsesIntegratedComponentWorkflow() {
-        ImageEnginePresetSupport support = ImageEnginePresetSupportPolicy.forPreset(TheatreImageGenerationPreset.HIGH_QUALITY_FLUX);
+        ImageEnginePresetSupport support = ImageEnginePresetSupportPolicy.forPresetId("HIGH_QUALITY_FLUX");
 
         assertTrue(support.builtInWorkflowAvailable());
         assertEquals("flux1-dev.safetensors", support.checkpointName());
@@ -32,7 +33,8 @@ final class ImageEnginePresetSupportPolicyTest {
 
     @Test
     void customWorkflowRequiresExplicitImportedComfyWorkflow() {
-        ImageEnginePresetSupport support = ImageEnginePresetSupportPolicy.forPreset(TheatreImageGenerationPreset.CUSTOM_COMFY_WORKFLOW);
+        ImageEnginePresetSupport support = ImageEnginePresetSupportPolicy.forProfile(
+                VisualGenerationProfile.CUSTOM_COMFY_WORKFLOW);
 
         assertFalse(support.builtInWorkflowAvailable());
         assertEquals("workflows/workflow-custom-comfy.json", support.workflowName());

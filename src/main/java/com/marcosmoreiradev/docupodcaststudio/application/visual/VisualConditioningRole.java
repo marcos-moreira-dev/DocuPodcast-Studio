@@ -5,7 +5,9 @@ public enum VisualConditioningRole {
     IDENTITY,
     OBJECT,
     ENVIRONMENT,
+    CAMERA_GUIDE,
+    DRAWN_GUIDE,
+    STYLE,
     PREVIOUS_FRAME,
-    NEXT_FRAME,
-    STRUCTURE_GUIDE
+    NEXT_FRAME
 }

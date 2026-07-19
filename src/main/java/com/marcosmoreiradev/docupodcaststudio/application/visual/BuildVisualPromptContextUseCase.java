@@ -7,9 +7,9 @@ import java.util.Map;
 
 /** Builds the prompt context passed to visual generation without assigning assets implicitly. */
 public final class BuildVisualPromptContextUseCase {
-    public VisualGenerationRequest build(VisualFragmentState fragment, FragmentAssetRole role) {
+    public FragmentVisualGenerationRequest build(VisualFragmentState fragment, FragmentAssetRole role) {
         if (fragment == null) {
-            return new VisualGenerationRequest("", "", role, "", "", "", "", Map.of());
+            return new FragmentVisualGenerationRequest("", "", role, "", "", "", "", Map.of());
         }
         FragmentAssetRole resolvedRole = role == FragmentAssetRole.BRIDGE_TO_NEXT_FRAGMENT
                 ? FragmentAssetRole.BRIDGE_TO_NEXT_FRAGMENT
@@ -24,7 +24,7 @@ public final class BuildVisualPromptContextUseCase {
         metadata.putAll(slot.metadata());
         String prompt = slot.prompt().isBlank() ? fragment.text() : slot.prompt();
         String notes = slot.notes().isBlank() ? fragment.title() : slot.notes();
-        return new VisualGenerationRequest(
+        return new FragmentVisualGenerationRequest(
                 fragment.fragmentId().value(),
                 fragment.segmentId(),
                 resolvedRole,

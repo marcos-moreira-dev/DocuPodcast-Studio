@@ -22,8 +22,9 @@ public final class InkWorkspaceStateSerializer {
         double height = doubleValue(root.get("height"), 1.0);
         String background = stringValue(root.get("background"), "#ffffffff");
         List<InkStroke> strokes = strokes(root.get("inkStrokes"));
+        List<InkPlacedImage> images = images(root.get("images"));
         Map<String, String> metadata = metadata(root.get("metadata"));
-        return InkWorkspaceState.create(width, height, background, strokes, List.of(), metadata);
+        return InkWorkspaceState.create(width, height, background, strokes, images, metadata);
     }
 
     public static String toJson(InkWorkspaceState state) {
@@ -176,6 +177,45 @@ public final class InkWorkspaceStateSerializer {
     }
 
     @SuppressWarnings("unchecked")
+    private static List<InkPlacedImage> images(Object value) {
+        if (!(value instanceof List<?> rawList)) {
+            return List.of();
+        }
+        ArrayList<InkPlacedImage> images = new ArrayList<>();
+        for (Object item : rawList) {
+            if (!(item instanceof Map<?, ?> rawImage)) {
+                continue;
+            }
+            Map<String, Object> image = (Map<String, Object>) rawImage;
+            Map<String, Object> crop = image.get("crop") instanceof Map<?, ?> rawCrop
+                    ? (Map<String, Object>) rawCrop
+                    : Map.of();
+            boolean cropActive = booleanValue(crop.get("active"),
+                    booleanValue(image.get("cropActive"), false));
+            images.add(new InkPlacedImage(
+                    stringValue(image.get("id"), ""),
+                    stringValue(image.get("sourceAssetId"), ""),
+                    stringValue(image.get("sourcePath"), ""),
+                    stringValue(image.get("image"), ""),
+                    stringValue(image.get("originalImage"), ""),
+                    doubleValue(image.get("x"), 0.0),
+                    doubleValue(image.get("y"), 0.0),
+                    doubleValue(image.get("fitWidth"), 1.0),
+                    doubleValue(image.get("height"), 1.0),
+                    doubleValue(image.get("originalLayoutX"), 0.0),
+                    doubleValue(image.get("originalLayoutY"), 0.0),
+                    doubleValue(image.get("originalFitWidth"), 1.0),
+                    new InkImageCrop(
+                            cropActive,
+                            doubleValue(crop.get("originalX"), 0.0),
+                            doubleValue(crop.get("originalY"), 0.0),
+                            doubleValue(crop.get("originalWidth"), 0.0),
+                            doubleValue(crop.get("originalHeight"), 0.0))));
+        }
+        return List.copyOf(images);
+    }
+
+    @SuppressWarnings("unchecked")
     private static Map<String, String> metadata(Object value) {
         if (!(value instanceof Map<?, ?> rawMap)) {
             return Map.of();
@@ -213,6 +253,16 @@ public final class InkWorkspaceStateSerializer {
             } catch (NumberFormatException ignored) {
                 return fallback;
             }
+        }
+        return fallback;
+    }
+
+    private static boolean booleanValue(Object value, boolean fallback) {
+        if (value instanceof Boolean bool) {
+            return bool;
+        }
+        if (value instanceof String text) {
+            return Boolean.parseBoolean(text);
         }
         return fallback;
     }
