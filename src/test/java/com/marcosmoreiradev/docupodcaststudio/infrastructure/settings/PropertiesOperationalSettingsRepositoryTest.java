@@ -8,6 +8,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -51,5 +52,31 @@ final class PropertiesOperationalSettingsRepositoryTest {
         assertEquals("spa+eng", loaded.ocr().languages());
         assertEquals(300, loaded.ocr().dpi());
         assertEquals(240, loaded.ocr().timeoutSeconds());
+
+        String persisted = Files.readString(file);
+        assertTrue(persisted.contains("capability.voice.engine=external"));
+        assertTrue(persisted.contains("capability.image.engine=comfyui"));
+        assertTrue(persisted.contains("capability.video.render.engine=ffmpeg"));
+        assertTrue(persisted.contains("tts.engineMode=external"));
+        assertTrue(persisted.contains("image.engineMode=managed-local"));
+    }
+
+    @Test
+    void canonicalKeysOverrideLegacyAliasesWithoutBreakingFormatOneReaders() {
+        Properties properties = new Properties();
+        properties.setProperty("tts.engineMode", "mock");
+        properties.setProperty("capability.voice.engine", "piper");
+        properties.setProperty("image.engineMode", "legacy-image");
+        properties.setProperty("capability.image.engine", "comfyui");
+        properties.setProperty("engine.comfyui.baseUrl", "http://localhost:9999");
+        properties.setProperty("video.ffmpegExecutable", "legacy-ffmpeg");
+        properties.setProperty("engine.ffmpeg.executable", "canonical-ffmpeg");
+
+        OperationalSettings loaded = PropertiesOperationalSettingsRepository.fromProperties(properties);
+
+        assertEquals("piper", loaded.tts().engineMode());
+        assertEquals("managed-local", loaded.imageGeneration().engineMode());
+        assertEquals("http://localhost:9999", loaded.imageGeneration().baseUrl());
+        assertEquals("canonical-ffmpeg", loaded.video().ffmpegExecutable());
     }
 }

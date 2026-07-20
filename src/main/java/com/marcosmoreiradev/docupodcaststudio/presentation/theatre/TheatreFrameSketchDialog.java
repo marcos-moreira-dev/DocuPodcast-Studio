@@ -1,18 +1,21 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.theatre;
 
+import com.marcosmoreiradev.docupodcaststudio.ink.DrawingFeatureCatalog;
+import com.marcosmoreiradev.docupodcaststudio.ink.DrawingProfile;
+import com.marcosmoreiradev.docupodcaststudio.ink.InkEditorController;
 import com.marcosmoreiradev.docupodcaststudio.application.ink.InkWorkspaceState;
 import com.marcosmoreiradev.docupodcaststudio.application.ink.InkWorkspaceStateSerializer;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionButtonFactory;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ImageFullscreenViewer;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.LucideIconView;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
-import com.marcosmoreiradev.docupodcaststudio.presentation.document.StudyProblemCanvasExportOptions;
+import com.marcosmoreiradev.docupodcaststudio.presentation.ink.canvas.InkCanvasExportOptions;
 import com.marcosmoreiradev.docupodcaststudio.presentation.ink.InkRealtimeStrokeEngine;
 import com.marcosmoreiradev.docupodcaststudio.presentation.ink.canvas.InkCanvasSurface;
 import com.marcosmoreiradev.docupodcaststudio.presentation.ink.canvas.InkCanvasViewportCoordinateMapper;
 import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputListener;
 import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputProvider;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputProviderFactory;
+import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.NoopInkInputProvider;
 import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputSample;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
@@ -65,7 +68,6 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -73,10 +75,11 @@ import java.util.Map;
 
 /** Drawn-frame editor reused by theatre storyboard fragments. */
 public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDialog.Result> {
-    private static final int MAX_UNDO = 50;
-    private static final double FRAME_WIDTH = 1280;
-    private static final double FRAME_HEIGHT = 720;
-    private static final int EXPORT_SCALE = 2;
+    private static final DrawingProfile DRAWING_PROFILE = DrawingFeatureCatalog.official()
+            .require(DrawingFeatureCatalog.THEATRE_FRAME);
+    private static final double FRAME_WIDTH = DRAWING_PROFILE.logicalWidth();
+    private static final double FRAME_HEIGHT = DRAWING_PROFILE.logicalHeight();
+    private static final int EXPORT_SCALE = DRAWING_PROFILE.exportProfile().scale();
     private static final String METADATA_SHOW_FRAGMENT_TITLE = "showFragmentTitle";
     private static final String METADATA_FRAGMENT_TITLE_TEXT = "fragmentTitleText";
     private static final String METADATA_TITLE_BAND_HEIGHT = "fragmentTitleBandHeight";
@@ -91,9 +94,10 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
     private final Runnable historyBoardAction;
     private final InkWorkspaceState restoredInkState;
     private final InkCanvasSurface surface = new InkCanvasSurface();
-    private final InkInputProvider inputProvider = InkInputProviderFactory.createNativeOnly();
-    private final ArrayDeque<List<InkCanvasSurface.InkStrokeState>> undo = new ArrayDeque<>();
-    private final ArrayDeque<List<InkCanvasSurface.InkStrokeState>> redo = new ArrayDeque<>();
+    private final InkInputProvider inputProvider;
+    private final InkEditorController<List<InkCanvasSurface.InkStrokeState>> history =
+            new InkEditorController<>(DRAWING_PROFILE.historyLimit(), surface::inkStrokeStates,
+                    state -> surface.restoreInkUndoState(state, List.of()));
     private final ColorPicker penColor = new ColorPicker(Color.BLACK);
     private final ColorPicker backgroundColor = new ColorPicker(Color.WHITE);
     private final Slider strokeWidth = new Slider(1, 48, 6);
@@ -119,12 +123,19 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
     private Point2D lastInkPoint = Point2D.ZERO;
 
     public TheatreFrameSketchDialog(Window owner, TheatreFrameSketchContext context) {
-        this(owner, context, null);
+        this(owner, context, null, NoopInkInputProvider.INSTANCE);
     }
 
     public TheatreFrameSketchDialog(Window owner, TheatreFrameSketchContext context, Runnable historyBoardAction) {
+        this(owner, context, historyBoardAction, NoopInkInputProvider.INSTANCE);
+    }
+
+    /** Injection seam used by the launcher and input contract tests. */
+    public TheatreFrameSketchDialog(Window owner, TheatreFrameSketchContext context,
+                                    Runnable historyBoardAction, InkInputProvider inputProvider) {
         this.context = context;
         this.historyBoardAction = historyBoardAction;
+        this.inputProvider = inputProvider == null ? NoopInkInputProvider.INSTANCE : inputProvider;
         this.restoredInkState = readExistingInkState(context);
         this.frameTitleState = initialTitleState();
         initOwner(owner);
@@ -394,7 +405,6 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
         });
         backgroundColor.setOnAction(event -> {
             rememberUndo();
-            redo.clear();
             surface.fillBackground(backgroundColor.getValue());
         });
         eraser.setGraphic(LucideIconView.of("eraser"));
@@ -538,7 +548,6 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
             return false;
         }
         rememberUndo();
-        redo.clear();
         strokeActive = true;
         lastInkPoint = point;
         inkEngine.begin(point.getX(), point.getY(), sample == null ? 0L : sample.nanos(), penColor.getValue(),
@@ -725,40 +734,24 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
     }
 
     private void rememberUndo() {
-        undo.addLast(surface.inkStrokeStates());
-        while (undo.size() > MAX_UNDO) {
-            undo.removeFirst();
-        }
+        history.checkpoint();
     }
 
     private void undo() {
-        if (undo.isEmpty()) {
-            return;
-        }
-        redo.addLast(surface.inkStrokeStates());
-        surface.restoreInkUndoState(undo.removeLast(), List.of());
+        history.undo();
     }
 
     private void redo() {
-        if (redo.isEmpty()) {
-            return;
-        }
-        undo.addLast(surface.inkStrokeStates());
-        while (undo.size() > MAX_UNDO) {
-            undo.removeFirst();
-        }
-        surface.restoreInkUndoState(redo.removeLast(), List.of());
+        history.redo();
     }
 
     private void clearInkStrokes() {
         rememberUndo();
-        redo.clear();
         surface.clearStrokes();
     }
 
     private void clearCanvas() {
         rememberUndo();
-        redo.clear();
         surface.resetForFixedEditableState(FRAME_WIDTH, FRAME_HEIGHT, backgroundColor.getValue());
         updateInputMode();
         updateCanvasTitle();
@@ -794,7 +787,7 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
     }
 
     private WritableImage exportFrameImage() {
-        WritableImage image = surface.exportWithImages(List.of(), new StudyProblemCanvasExportOptions(
+        WritableImage image = surface.exportWithImages(List.of(), new InkCanvasExportOptions(
                 EXPORT_SCALE,
                 24_000_000L,
                 false,

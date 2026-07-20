@@ -2,8 +2,8 @@ package com.marcosmoreiradev.docupodcaststudio.presentation.ink.input;
 
 import javafx.scene.Node;
 
-final class NoopInkInputProvider implements InkInputProvider {
-    static final NoopInkInputProvider INSTANCE = new NoopInkInputProvider();
+public final class NoopInkInputProvider implements InkInputProvider {
+    public static final NoopInkInputProvider INSTANCE = new NoopInkInputProvider();
 
     private NoopInkInputProvider() {
     }

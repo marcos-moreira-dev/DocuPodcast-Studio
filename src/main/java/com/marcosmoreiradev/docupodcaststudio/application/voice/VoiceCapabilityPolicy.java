@@ -112,6 +112,12 @@ public final class VoiceCapabilityPolicy {
                             : "Esta voz oficial se usa cuando Voz IA avanzada está activa.");
         }
 
+        if (mock && "VOC-NARRATOR".equals(voice.id()) && "true".equalsIgnoreCase(voice.metadata().get("builtIn"))) {
+            return new VoiceProfileCapability(voice.id(), voice.displayName(), assignable, true, false, false,
+                    false, false, "Modo de prueba listo",
+                    "Disponible únicamente cuando el modo diagnóstico mock fue seleccionado explícitamente.");
+        }
+
         if (profile.coquiXttsMode() && voice.engineType() == VoiceEngineType.HUMAN_AUDIO) {
             if (!voice.hasSample()) {
                 return new VoiceProfileCapability(voice.id(), voice.displayName(), assignable, false, false, true, false, true,
@@ -146,12 +152,16 @@ public final class VoiceCapabilityPolicy {
         }
 
         if (voice.engineType() == VoiceEngineType.LOCAL_TTS_PROCESS || voice.engineType() == VoiceEngineType.PIPER) {
+            boolean builtInNarrator = "VOC-NARRATOR".equals(voice.id())
+                    && "true".equalsIgnoreCase(voice.metadata().get("builtIn"));
             if (realTts && engineConfigured) {
                 return new VoiceProfileCapability(voice.id(), voice.displayName(), assignable, true, voice.hasSample(), false, false, false,
-                        "TTS listo", "Compatible con el motor local configurado. La voz exacta dependerá del comando y sus parámetros.");
+                        builtInNarrator ? "TTS por defecto" : "TTS listo",
+                        "Compatible con el motor local configurado. La voz exacta dependerá del comando y sus parámetros.");
             }
             return new VoiceProfileCapability(voice.id(), voice.displayName(), assignable, false, voice.hasSample(), false, true, false,
-                    "Motor pendiente", "Requiere motor TTS local configurado antes de sintetizar.");
+                    builtInNarrator ? "Motor no configurado" : "Motor pendiente",
+                    "Requiere motor TTS local configurado antes de sintetizar.");
         }
 
         if (voice.engineType() == VoiceEngineType.XTTS) {

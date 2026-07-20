@@ -3,7 +3,6 @@ package com.marcosmoreiradev.docupodcaststudio.bootstrap;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.audio.AudioJobFileRepository;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.audio.AudioProcessDiagnosticsFileRepository;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.audio.InMemoryAudioJobQueue;
-import com.marcosmoreiradev.docupodcaststudio.infrastructure.audio.MockAudioGenerationGateway;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.audio.LocalTtsProcessAudioGenerationGateway;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.audio.SettingsAwareAudioGenerationGateway;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.audio.SettingsAwareVoiceTestSynthesisGateway;

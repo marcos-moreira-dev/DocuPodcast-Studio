@@ -94,7 +94,7 @@ final class PdfVisibleTextPreparationCoordinator {
         Task<PdfNarratableDocumentResolution> task = new Task<>() {
             @Override
             protected PdfNarratableDocumentResolution call() {
-                return viewModel.applicationServices().document().resolvePdfNarratableDocument()
+                return viewModel.projectWorkspace().document().resolvePdfNarratableDocument()
                         .resolve(new PdfNarratableDocumentRequest(document, cacheDirectorySupplier.get(), false, 1, List.of(page)));
             }
         };

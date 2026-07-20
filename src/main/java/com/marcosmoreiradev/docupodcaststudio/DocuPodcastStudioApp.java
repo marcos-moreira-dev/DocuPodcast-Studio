@@ -4,6 +4,7 @@ import com.marcosmoreiradev.docupodcaststudio.bootstrap.ApplicationBootstrap;
 import com.marcosmoreiradev.docupodcaststudio.bootstrap.ApplicationRuntime;
 import com.marcosmoreiradev.docupodcaststudio.bootstrap.ApplicationWindowConfig;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.DocuPodcastShellView;
+import com.marcosmoreiradev.docupodcaststudio.media.api.MediaEnginePlatform;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
@@ -23,10 +24,16 @@ import java.util.Objects;
  * chosen during the onboarding phase.</p>
  */
 public final class DocuPodcastStudioApp extends Application {
+    private static volatile MediaEnginePlatform configuredMediaEngines = MediaEnginePlatform.empty();
+
+    /** Called by the dedicated launcher before JavaFX creates the Application instance. */
+    public static void configureMediaEngines(MediaEnginePlatform platform) {
+        configuredMediaEngines = Objects.requireNonNullElseGet(platform, MediaEnginePlatform::empty);
+    }
 
     @Override
     public void start(Stage stage) {
-        ApplicationRuntime runtime = ApplicationBootstrap.createDefault().bootstrap();
+        ApplicationRuntime runtime = ApplicationBootstrap.createDefault(configuredMediaEngines).bootstrap();
         stage.initStyle(StageStyle.DECORATED);
         stage.setResizable(true);
         stage.setMaximized(false);

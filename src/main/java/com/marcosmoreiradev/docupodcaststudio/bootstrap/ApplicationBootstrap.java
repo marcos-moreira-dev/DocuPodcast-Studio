@@ -5,6 +5,8 @@ import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.ImageEngine
 import com.marcosmoreiradev.docupodcaststudio.presentation.PresentationCompositionRoot;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.DocuPodcastShellView;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.DocuPodcastShellViewModel;
+import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputProviderRegistry;
+import com.marcosmoreiradev.docupodcaststudio.media.api.MediaEnginePlatform;
 
 /**
  * Manual composition root for the first onboarding build.
@@ -14,18 +16,25 @@ import com.marcosmoreiradev.docupodcaststudio.presentation.shell.DocuPodcastShel
  * document, script, voice, storyboard, audio, playback, export and observability.</p>
  */
 public final class ApplicationBootstrap {
+    private final MediaEnginePlatform mediaEngines;
 
-    private ApplicationBootstrap() {
+    private ApplicationBootstrap(MediaEnginePlatform mediaEngines) {
+        this.mediaEngines = mediaEngines == null ? MediaEnginePlatform.empty() : mediaEngines;
     }
 
     public static ApplicationBootstrap createDefault() {
-        return new ApplicationBootstrap();
+        return createDefault(MediaEnginePlatform.empty());
+    }
+
+    public static ApplicationBootstrap createDefault(MediaEnginePlatform mediaEngines) {
+        return new ApplicationBootstrap(mediaEngines);
     }
 
     public ApplicationRuntime bootstrap() {
         InfrastructureServices infrastructureServices = new InfrastructureServicesFactory().create();
         ApplicationServices applicationServices = new ApplicationServicesFactory().create(infrastructureServices);
-        DocuPodcastShellViewModel shellViewModel = new DocuPodcastShellViewModel(applicationServices);
+        DocuPodcastShellViewModel shellViewModel = new DocuPodcastShellViewModel(
+                applicationServices, InkInputProviderRegistry.localDefaults(), mediaEngines);
         DocuPodcastShellView shellView = new PresentationCompositionRoot().createMainShell(shellViewModel);
 
         return new ApplicationRuntime(
@@ -38,7 +47,8 @@ public final class ApplicationBootstrap {
                     if (!event.isConsumed()) {
                         ImageEngineSmokeImageStore.cleanupAll();
                     }
-                }
+                },
+                mediaEngines
         );
     }
 }

@@ -1,0 +1,73 @@
+{
+    "title": "Documento Smoke T79",
+    "format": "DOCX",
+    "sourcePath": "documento-smoke.docx",
+    "readingProfile": {
+        "id": "reading-profile-academic-default",
+        "name": "Documento académico Word",
+        "imagePolicy": "READ_DESCRIPTION_OR_OMIT",
+        "tablePolicy": "ANNOUNCE_SUMMARY",
+        "maxShortBoldWords": 14,
+        "treatShortBoldParagraphAsSubheading": true
+    },
+    "narratableBlockCount": 3,
+    "imageNoticeCount": 0,
+    "tableNoticeCount": 0,
+    "ignoredCount": 0,
+    "summary": {
+        "blocks": 3,
+        "narratableBlocks": 3,
+        "titleBlocks": 0,
+        "headingBlocks": 1,
+        "subheadingBlocks": 0,
+        "listItems": 0,
+        "images": 0,
+        "tables": 0,
+        "ignored": 0,
+        "warnings": 0,
+        "errors": 0
+    },
+    "importReport": {
+        "warningCount": 0,
+        "errorCount": 0,
+        "issues": [
+            {
+                "level": "INFO",
+                "code": "DOCX_NO_IMAGES",
+                "message": "No se detectaron imágenes embebidas en el documento.",
+                "blockId": ""
+            }
+        ]
+    },
+    "blocks": [
+        {
+            "id": "B0001",
+            "type": "HEADING",
+            "text": "Documento Smoke T79",
+            "originalStyle": "Título 1",
+            "metadata": {
+                "sourceLocatorLabel": "Word/DOCX · bloque B0001 (paginación dinámica)",
+                "styleId": "Titulo1",
+                "styleName": "Título 1"
+            }
+        },
+        {
+            "id": "B0002",
+            "type": "PARAGRAPH",
+            "text": "Primera oración narrable para validar el cerebro de DocuPodcast.",
+            "originalStyle": "",
+            "metadata": {
+                "sourceLocatorLabel": "Word/DOCX · bloque B0002 (paginación dinámica)"
+            }
+        },
+        {
+            "id": "B0003",
+            "type": "PARAGRAPH",
+            "text": "Segunda oración narrable para audio, playback, exportación e integridad.",
+            "originalStyle": "",
+            "metadata": {
+                "sourceLocatorLabel": "Word/DOCX · bloque B0003 (paginación dinámica)"
+            }
+        }
+    ]
+}

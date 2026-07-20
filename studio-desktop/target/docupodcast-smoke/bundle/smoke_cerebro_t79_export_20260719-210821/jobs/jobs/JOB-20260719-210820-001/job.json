@@ -1,0 +1,19 @@
+{
+  "jobId": "JOB-20260719-210820-001",
+  "documentName": "Documento Smoke T79",
+  "state": "COMPLETED",
+  "stage": "EXPORT_READY",
+  "completedSegments": 3,
+  "totalSegments": 3,
+  "failedSegments": 0,
+  "progress": 1.000000,
+  "currentSegmentId": "",
+  "currentSegmentTitle": "",
+  "estimatedRemainingSeconds": 0,
+  "message": "Audio mock completado. Se generó WAV final y manifest.",
+  "jobRelativeDirectory": "jobs/JOB-20260719-210820-001",
+  "finalAudioPath": "jobs/JOB-20260719-210820-001/final/podcast-mock.wav",
+  "manifestPath": "jobs/JOB-20260719-210820-001/audio-manifest.json",
+  "createdAt": "2026-07-20T02:08:20.925326Z",
+  "updatedAt": "2026-07-20T02:08:21.017959Z"
+}

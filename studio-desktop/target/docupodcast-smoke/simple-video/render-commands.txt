@@ -1,0 +1,16 @@
+# DocuPodcast Studio — comandos de render simple
+# Contrato: docupodcast-simple-video-render-v1
+# Modo: PACKAGE_NEEDS_REVIEW
+# Salida: video-simple.mp4
+# Advertencias que deben resolverse antes del render MP4:
+# - Hay frames sin imagen; el video renderizable solo debe incluir unidades visuales asignadas.
+# - FFmpeg no está disponible; el paquete queda auditable y renderizable cuando se configure tools/ffmpeg o una ruta externa.
+
+REM Contrato de render: docupodcast-simple-video-render-v1
+REM La interfaz debe bloquear lectura normal y nuevas exportaciones durante el render.
+REM Cancelación segura: detener FFmpeg conserva el paquete y permite reintentar.
+%FFMPEG% -y -loop 1 -t 1.396 -i "media/images/escena-001.png" -i "jobs/JOB-20260719-210820-001/audio/SEG-001.wav" -vf "scale=2560:1440:force_original_aspect_ratio=decrease,pad=2560:1440:(ow-iw)/2:(oh-ih)/2,format=yuv420p" -r 30 -shortest "frames/frame-001.mp4"
+REM FRAME-002 requiere revisión antes de render: imagen=sin-imagen, audio=jobs/JOB-20260719-210820-001/audio/SEG-002.wav
+REM FRAME-003 requiere revisión antes de render: imagen=sin-imagen, audio=jobs/JOB-20260719-210820-001/audio/SEG-003.wav
+REM Crear frame-clips.txt con los clips frame-###.mp4 en orden y unir:
+%FFMPEG% -y -f concat -safe 0 -i frame-clips.txt -c copy "video-simple.mp4"

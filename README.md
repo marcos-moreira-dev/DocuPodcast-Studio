@@ -99,7 +99,8 @@ cd DocuPodcast-Studio
 
 mvn -q test
 mvn clean package
-mvn javafx:run
+mvn -pl studio-launcher -am -DskipTests install
+mvn -f studio-launcher/pom.xml javafx:run
 ```
 
 En Windows también puedes usar los accesos preparados:

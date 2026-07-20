@@ -910,11 +910,11 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
     }
 
     private void openEngineSettings() {
-        new SettingsDialog().showVoiceEngines(getScene() == null ? null : getScene().getWindow(), viewModel.applicationServices().settings());
+        new SettingsDialog().showVoiceEngines(getScene() == null ? null : getScene().getWindow(), viewModel.administrationWorkspace().settings());
     }
 
     private void openPerformanceSettings() {
-        new SettingsDialog().showPerformance(getScene() == null ? null : getScene().getWindow(), viewModel.applicationServices().settings());
+        new SettingsDialog().showPerformance(getScene() == null ? null : getScene().getWindow(), viewModel.administrationWorkspace().settings());
     }
 
     private void testLocalEngine() {
@@ -927,7 +927,7 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
                 Path appRoot = RuntimePathResolver.defaultResolver().resolve().applicationRoot();
                 OperationalSettings settings = operationalSettingsForEngineTest();
                 updateMessage("Verificando runtime...");
-                ImageEngineReadinessReport readiness = viewModel.applicationServices().settings()
+                ImageEngineReadinessReport readiness = viewModel.administrationWorkspace().settings()
                         .inspectLocalTheatreImageEngine()
                         .inspect(settings, appRoot);
                 updateMessage("Verificando modelo...");
@@ -937,7 +937,7 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
                 updateMessage(readiness.engineResponding()
                         ? "Generando PNG..."
                         : "Iniciando motor y generando PNG...");
-                ImageEngineSmokeReport report = viewModel.applicationServices().settings()
+                ImageEngineSmokeReport report = viewModel.administrationWorkspace().settings()
                         .runLocalTheatreImageSmoke()
                         .runDetailed(settings, appRoot, smokeRequest());
                 return EngineTestResult.from(report);
@@ -1931,7 +1931,7 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
         Path output = viewModel.currentProjectDirectory().map(path -> path.resolve("generated/teatro-ia")).orElse(null);
         ImageGenerationSettings imageSettings;
         try {
-            imageSettings = viewModel.applicationServices().settings().loadOperationalSettings().load().imageGeneration();
+            imageSettings = viewModel.administrationWorkspace().settings().loadOperationalSettings().load().imageGeneration();
         } catch (IOException ex) {
             imageSettings = ImageGenerationSettings.defaults();
         }
@@ -1945,7 +1945,7 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
 
     private TheatreImageGenerationPreset currentPreset() {
         try {
-            ImageGenerationSettings imageSettings = viewModel.applicationServices().settings().loadOperationalSettings().load().imageGeneration();
+            ImageGenerationSettings imageSettings = viewModel.administrationWorkspace().settings().loadOperationalSettings().load().imageGeneration();
             return TheatreImageGenerationPreset.valueOf(imageSettings.preset());
         } catch (IOException | RuntimeException ex) {
             return TheatreImageGenerationPreset.TEST_4GB_SD15;
@@ -1954,7 +1954,7 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
 
     private ImageGenerationMemoryProfile currentMemoryProfile() {
         try {
-            return viewModel.applicationServices().settings().loadOperationalSettings().load().imageGeneration().memoryProfileValue();
+            return viewModel.administrationWorkspace().settings().loadOperationalSettings().load().imageGeneration().memoryProfileValue();
         } catch (IOException | RuntimeException ex) {
             return ImageGenerationMemoryProfile.SAFE_LOW_VRAM;
         }
@@ -1984,7 +1984,7 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
 
     private String imageEngineSummary() {
         try {
-            return viewModel.applicationServices().settings().inspectLocalTheatreImageEngine()
+            return viewModel.administrationWorkspace().settings().inspectLocalTheatreImageEngine()
                     .inspect(operationalSettingsForEngineTest(), RuntimePathResolver.defaultResolver().resolve().applicationRoot())
                     .statusLabel();
         } catch (RuntimeException ex) {
@@ -1994,7 +1994,7 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
 
     private OperationalSettings operationalSettings() {
         try {
-            return viewModel.applicationServices().settings().loadOperationalSettings().load();
+            return viewModel.administrationWorkspace().settings().loadOperationalSettings().load();
         } catch (IOException ex) {
             return OperationalSettings.defaults();
         }

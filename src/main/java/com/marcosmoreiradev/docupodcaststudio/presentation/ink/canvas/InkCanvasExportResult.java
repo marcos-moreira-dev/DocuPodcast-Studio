@@ -1,11 +1,11 @@
-package com.marcosmoreiradev.docupodcaststudio.presentation.document;
+package com.marcosmoreiradev.docupodcaststudio.presentation.ink.canvas;
 
 import javafx.scene.image.WritableImage;
 
 import java.util.List;
 
 /** Composed PNG-ready canvas image plus export diagnostics. */
-public record StudyProblemCanvasExportResult(
+public record InkCanvasExportResult(
         WritableImage image,
         int scale,
         boolean cropped,
@@ -13,7 +13,7 @@ public record StudyProblemCanvasExportResult(
         int logicalHeight,
         List<String> warnings
 ) {
-    public StudyProblemCanvasExportResult {
+    public InkCanvasExportResult {
         scale = Math.max(1, scale);
         logicalWidth = Math.max(1, logicalWidth);
         logicalHeight = Math.max(1, logicalHeight);

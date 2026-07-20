@@ -852,7 +852,7 @@ public final class TheatreCharactersPanel extends BorderPane {
         String currentVoiceId = selectedVoiceChoice(character)
                 .map(TheatreProjectLayer.VoiceRoleAlias::voiceProfileId)
                 .orElse("");
-        return viewModel.applicationServices().voice().buildVoiceAssignmentOptions()
+        return viewModel.administrationWorkspace().voice().buildVoiceAssignmentOptions()
                 .build(viewModel.activeVoiceLibraryProperty().get(), viewModel.audioEngineDescriptor(), usedByOthers, currentVoiceId);
     }
 

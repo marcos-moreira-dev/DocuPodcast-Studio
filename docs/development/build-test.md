@@ -11,7 +11,8 @@
 ```powershell
 mvn -q test
 mvn clean package
-mvn javafx:run
+mvn -pl studio-launcher -am -DskipTests install
+mvn -f studio-launcher/pom.xml javafx:run
 ```
 
 `mvn clean package` resolves the LectureStudio Stylus native classifier and copies it to `target/native`; no user-specific Maven path is required.
@@ -25,4 +26,3 @@ mvn javafx:run
 - Packaging and an application smoke test are required before merging changes that affect runtime wiring.
 
 Generated output belongs in `target`, `generated` or project-specific media folders, never in source directories.
-

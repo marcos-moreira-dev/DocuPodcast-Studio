@@ -1,5 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell;
 
+import com.marcosmoreiradev.docupodcaststudio.ink.DrawingFeatureCatalog;
 import com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy;
 import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentTextVideoOptions;
 import com.marcosmoreiradev.docupodcaststudio.application.examples.ExampleProjectDescriptor;
@@ -158,7 +159,7 @@ public final class DocuPodcastShellView extends BorderPane {
         this.viewModel = viewModel;
         this.recentProjectsStore = new RecentProjectsStore((projectFile, storedType) -> {
             try {
-                return new ProjectModePolicy().resolve(viewModel.applicationServices().project().openProject().open(projectFile)).displayName();
+                return new ProjectModePolicy().resolve(viewModel.projectWorkspace().project().openProject().open(projectFile)).displayName();
             } catch (IOException | RuntimeException ex) {
                 return storedType;
             }
@@ -202,7 +203,7 @@ public final class DocuPodcastShellView extends BorderPane {
     }
 
     public void runStartupDependencyPreflight() {
-        dependencySetupAssistant.runStartupPreflight(owner(), viewModel.applicationServices().settings());
+        dependencySetupAssistant.runStartupPreflight(owner(), viewModel.administrationWorkspace().settings());
     }
 
     private void initialiseWorkspaces() {
@@ -220,12 +221,14 @@ public final class DocuPodcastShellView extends BorderPane {
                 .register(WorkspaceKind.DOCUMENT_READER, () -> new DocumentWorkspaceView(viewModel, this::handleSaveProject,
                         () -> ensureProjectSavedForDocumentAudio("preparar o reproducir la lectura desde la barra flotante"),
                         () -> confirmAudioEngineReadyForDocumentAction(false)))
+                .registerAlias(WorkspaceKind.NARRATIVE_VISUAL_PRODUCTION, WorkspaceKind.DOCUMENT_READER)
                 .register(WorkspaceKind.THEATRE_SCRIPT, () -> new DocumentWorkspaceView(viewModel, this::handleSaveProject,
                         () -> ensureProjectSavedForDocumentAudio("preparar o reproducir la lectura desde el guión teatral"),
                         () -> confirmAudioEngineReadyForDocumentAction(false),
                         DocumentWorkspaceMode.THEATRE_SCRIPT))
                 .register(WorkspaceKind.VOICE_LIBRARY, () -> new VoiceLibraryWorkspaceView(viewModel))
                 .register(WorkspaceKind.THEATRE_IMAGE_GENERATION, () -> new TheatreImageGenerationWorkspaceView(viewModel));
+        workspaceRegistry.validateRegistrations();
     }
 
     private Node buildTop() {
@@ -696,7 +699,8 @@ public final class DocuPodcastShellView extends BorderPane {
     }
 
     private void showDocumentAudioDefensiveDecisions() {
-        List<UserVisibleDecision> decisions = new DocumentAudioDefensiveDecisionGuard(viewModel.applicationServices())
+        List<UserVisibleDecision> decisions = new DocumentAudioDefensiveDecisionGuard(
+                viewModel.administrationWorkspace().settings())
                 .decisionsBeforeDocumentGeneration();
         List<UserVisibleDecision> unseen = decisions.stream()
                 .filter(UserVisibleDecision::requiresDialog)
@@ -758,8 +762,8 @@ public final class DocuPodcastShellView extends BorderPane {
             return;
         }
         ExampleProjectDialog dialog = new ExampleProjectDialog(
-                viewModel.applicationServices().examples().catalog().listExamples(),
-                viewModel.applicationServices().examples().inspectReadiness());
+                viewModel.administrationWorkspace().examples().catalog().listExamples(),
+                viewModel.administrationWorkspace().examples().inspectReadiness());
         dialog.show(owner()).ifPresent(this::createExampleProjectFromDescriptor);
     }
 
@@ -859,7 +863,8 @@ public final class DocuPodcastShellView extends BorderPane {
     }
 
     private void handleOpenTechnicalProblemExpress() {
-        TechnicalProblemDialog.showExpress(owner())
+        TechnicalProblemDialog.showExpress(owner(),
+                        viewModel.inkInputProviders().create(DrawingFeatureCatalog.DOCUMENT_PROBLEM))
                 .ifPresentOrElse(
                         result -> {
                             if (result.externalPngTarget() != null) {
@@ -1366,7 +1371,7 @@ public final class DocuPodcastShellView extends BorderPane {
             return;
         }
         viewModel.updateStatusMessage(statusMessage);
-        if (dependencySetupAssistant.offerVideoLocalSetupIfMissing(owner(), viewModel.applicationServices().settings(),
+        if (dependencySetupAssistant.offerVideoLocalSetupIfMissing(owner(), viewModel.administrationWorkspace().settings(),
                 () -> exportDocumentStudyTextAudioVideoInBackground(file, options, textOptions))) {
             return;
         }
@@ -1402,7 +1407,7 @@ public final class DocuPodcastShellView extends BorderPane {
             return;
         }
         viewModel.updateStatusMessage(statusMessage);
-        if (dependencySetupAssistant.offerVideoLocalSetupIfMissing(owner(), viewModel.applicationServices().settings(),
+        if (dependencySetupAssistant.offerVideoLocalSetupIfMissing(owner(), viewModel.administrationWorkspace().settings(),
                 () -> exportTheatreWorkInBackground(file, options))) {
             return;
         }
@@ -1439,7 +1444,7 @@ public final class DocuPodcastShellView extends BorderPane {
             return;
         }
         viewModel.updateStatusMessage(statusMessage);
-        if (dependencySetupAssistant.offerVideoLocalSetupIfMissing(owner(), viewModel.applicationServices().settings(),
+        if (dependencySetupAssistant.offerVideoLocalSetupIfMissing(owner(), viewModel.administrationWorkspace().settings(),
                 () -> exportTheatreSpatialVideoInBackground(file, options))) {
             return;
         }
@@ -1475,7 +1480,7 @@ public final class DocuPodcastShellView extends BorderPane {
                 return;
             }
             viewModel.updateStatusMessage(status);
-            if (dependencySetupAssistant.offerVideoLocalSetupIfMissing(owner(), viewModel.applicationServices().settings(),
+            if (dependencySetupAssistant.offerVideoLocalSetupIfMissing(owner(), viewModel.administrationWorkspace().settings(),
                     () -> exportTheatrePortionInBackground(file, options))) {
                 return;
             }
@@ -1507,7 +1512,7 @@ public final class DocuPodcastShellView extends BorderPane {
         if (statusMessage != null && !statusMessage.isBlank()) {
             viewModel.updateStatusMessage(statusMessage);
         }
-        if (dependencySetupAssistant.offerVideoLocalSetupIfMissing(owner(), viewModel.applicationServices().settings(),
+        if (dependencySetupAssistant.offerVideoLocalSetupIfMissing(owner(), viewModel.administrationWorkspace().settings(),
                 () -> exportFinalVideoInBackground(file, options))) {
             return;
         }
@@ -1668,7 +1673,7 @@ public final class DocuPodcastShellView extends BorderPane {
 
     private OperationalSettings currentOperationalSettings() {
         try {
-            return viewModel.applicationServices().settings().loadOperationalSettings().load();
+            return viewModel.administrationWorkspace().settings().loadOperationalSettings().load();
         } catch (IOException | RuntimeException ex) {
             return OperationalSettings.defaults();
         }
@@ -1678,7 +1683,7 @@ public final class DocuPodcastShellView extends BorderPane {
         java.util.LinkedHashSet<VideoEncoderPolicy> policies = new java.util.LinkedHashSet<>();
         policies.add(VideoEncoderPolicy.CPU_X264);
         try {
-            var report = viewModel.applicationServices().settings().inspectComputeEnvironment().inspect(settings);
+            var report = viewModel.administrationWorkspace().settings().inspectComputeEnvironment().inspect(settings);
             for (var device : report.devices()) {
                 addVideoEncoderForDevice(policies, device.id(), device.vendor(), device.displayName());
             }
@@ -1738,16 +1743,16 @@ public final class DocuPodcastShellView extends BorderPane {
     }
 
     public void handleOpenSettings() {
-        settingsDialog.show(owner(), viewModel.applicationServices().settings(),
+        settingsDialog.show(owner(), viewModel.administrationWorkspace().settings(),
                 SettingsSupportActions.of(commandDispatcher::canDispatch, this::dispatchCommand));
     }
 
     public void handleOpenVoiceEngineSettings() {
-        settingsDialog.showVoiceEngines(owner(), viewModel.applicationServices().settings());
+        settingsDialog.showVoiceEngines(owner(), viewModel.administrationWorkspace().settings());
     }
 
     public void handleOpenOcrSettings() {
-        settingsDialog.showVoiceEngines(owner(), viewModel.applicationServices().settings());
+        settingsDialog.showVoiceEngines(owner(), viewModel.administrationWorkspace().settings());
         retryVisiblePdfTextPreparation();
     }
 
@@ -1759,15 +1764,15 @@ public final class DocuPodcastShellView extends BorderPane {
     }
 
     public void handleOpenFirstUseSetup() {
-        settingsDialog.showFirstUseSetup(owner(), viewModel.applicationServices().settings());
+        settingsDialog.showFirstUseSetup(owner(), viewModel.administrationWorkspace().settings());
     }
 
     public void handleOpenGuide() {
-        new GuideDialog(viewModel.applicationServices().guide()).show(owner());
+        new GuideDialog(viewModel.administrationWorkspace().guide()).show(owner());
     }
 
     public void handleOpenGuideTopic(GuideTopicId topicId) {
-        new GuideDialog(viewModel.applicationServices().guide()).showTopic(owner(), topicId);
+        new GuideDialog(viewModel.administrationWorkspace().guide()).showTopic(owner(), topicId);
     }
 
     public void handleExportAiResources() {
@@ -1778,7 +1783,7 @@ public final class DocuPodcastShellView extends BorderPane {
             return;
         }
         try {
-            var result = viewModel.applicationServices().resources().exportAiResources().export(folder.toPath());
+            var result = viewModel.administrationWorkspace().resources().exportAiResources().export(folder.toPath());
             exportAiResourcesResultDialog.show(owner(), result);
         } catch (IOException | RuntimeException ex) {
             showError("No se pudieron exportar los recursos IA", ex);

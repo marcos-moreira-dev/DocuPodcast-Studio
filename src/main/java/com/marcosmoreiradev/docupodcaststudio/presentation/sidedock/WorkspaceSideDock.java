@@ -128,42 +128,6 @@ public final class WorkspaceSideDock extends BorderPane {
         render();
     }
 
-    private static AppIcon iconFor(SideDockModule module) {
-        String key = ((module == null ? "" : module.iconText()) + " " + (module == null ? "" : module.title()))
-                .toLowerCase(java.util.Locale.ROOT);
-        if (key.contains("audio")) {
-            return AppIcon.AUDIO;
-        }
-        if (key.contains("imagen")) {
-            return AppIcon.IMAGE;
-        }
-        if (key.contains("ajuste") || key.contains("configuracion") || key.contains("configuraciÃ³n")) {
-            return AppIcon.SETTINGS;
-        }
-        if (key.contains("video")) {
-            return AppIcon.VIDEO;
-        }
-        if (key.contains("personaje")) {
-            return AppIcon.VOICE;
-        }
-        if (key.contains("mapa")) {
-            return AppIcon.STORYBOARD;
-        }
-        if (key.contains("accion") || key.contains("acción")) {
-            return AppIcon.PREPARE;
-        }
-        if (key.contains("objeto")) {
-            return AppIcon.BUNDLE;
-        }
-        if (key.contains("indice") || key.contains("índice") || key.contains("seccion") || key.contains("sección")) {
-            return AppIcon.INDEX_TREE;
-        }
-        if (key.contains("texto") || key.contains("fragmento")) {
-            return AppIcon.TEXT;
-        }
-        return AppIcon.DEFAULT;
-    }
-
     private void render() {
         VBox rail = new VBox(4);
         getStyleClass().remove("workspace-side-dock-collapsed");
@@ -174,7 +138,7 @@ public final class WorkspaceSideDock extends BorderPane {
         rail.setMinWidth(72);
         boolean hasRailFooter = false;
         for (SideDockModule module : modules) {
-            Button button = ActionButtonFactory.sideDockRail(iconFor(module), () -> activate(module.id()));
+            Button button = ActionButtonFactory.sideDockRail(module.icon(), () -> activate(module.id()));
             button.setMinWidth(64);
             button.setPrefWidth(68);
             button.setMaxWidth(68);

@@ -1,7 +1,7 @@
-package com.marcosmoreiradev.docupodcaststudio.presentation.document;
+package com.marcosmoreiradev.docupodcaststudio.presentation.ink.canvas;
 
 /** Export policy for a technical-problem canvas snapshot. */
-public record StudyProblemCanvasExportOptions(
+public record InkCanvasExportOptions(
         int preferredScale,
         long maxPixelCount,
         boolean cropToContent,
@@ -10,7 +10,7 @@ public record StudyProblemCanvasExportOptions(
         double minWidth,
         double minHeight
 ) {
-    public StudyProblemCanvasExportOptions(
+    public InkCanvasExportOptions(
             int preferredScale,
             long maxPixelCount,
             boolean cropToContent,
@@ -21,7 +21,7 @@ public record StudyProblemCanvasExportOptions(
         this(preferredScale, maxPixelCount, cropToContent, false, margin, minWidth, minHeight);
     }
 
-    public StudyProblemCanvasExportOptions {
+    public InkCanvasExportOptions {
         preferredScale = Math.max(1, preferredScale);
         maxPixelCount = Math.max(1_000_000L, maxPixelCount);
         fullLogicalCanvas = fullLogicalCanvas && !cropToContent;
@@ -30,16 +30,16 @@ public record StudyProblemCanvasExportOptions(
         minHeight = Math.max(1.0, finiteOrDefault(minHeight, 1.0));
     }
 
-    public static StudyProblemCanvasExportOptions internalPersistence() {
-        return new StudyProblemCanvasExportOptions(1, 24_000_000L, true, 100, 720, 520);
+    public static InkCanvasExportOptions internalPersistence() {
+        return new InkCanvasExportOptions(1, 24_000_000L, true, 100, 720, 520);
     }
 
-    public static StudyProblemCanvasExportOptions premiumExternal() {
-        return new StudyProblemCanvasExportOptions(4, 128_000_000L, false, true, 0, 720, 520);
+    public static InkCanvasExportOptions premiumExternal() {
+        return new InkCanvasExportOptions(4, 128_000_000L, false, true, 0, 720, 520);
     }
 
-    public static StudyProblemCanvasExportOptions undoSnapshot() {
-        return new StudyProblemCanvasExportOptions(1, 48_000_000L, false, 100, 720, 520);
+    public static InkCanvasExportOptions undoSnapshot() {
+        return new InkCanvasExportOptions(1, 48_000_000L, false, 100, 720, 520);
     }
 
     private static double finiteOrDefault(double value, double fallback) {

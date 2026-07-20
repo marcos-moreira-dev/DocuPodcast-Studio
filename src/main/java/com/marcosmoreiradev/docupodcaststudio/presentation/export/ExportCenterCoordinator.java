@@ -94,7 +94,7 @@ public final class ExportCenterCoordinator {
                 .map(project -> {
                     try {
                         StoryboardDocument storyboard = viewModel.currentStoryboardProperty().get();
-                        return viewModel.applicationServices().export().inspectExportReadiness().inspect(
+                        return viewModel.exportWorkspace().export().inspectExportReadiness().inspect(
                                 project,
                                 viewModel.currentProjectFile().orElse(null),
                                 viewModel.currentScriptProperty().get(),
@@ -121,7 +121,7 @@ public final class ExportCenterCoordinator {
             if (projectDirectory == null) {
                 return List.of();
             }
-            return viewModel.applicationServices().audio().listPersistedAudioJobs().list(projectDirectory);
+            return viewModel.playbackWorkspace().audio().listPersistedAudioJobs().list(projectDirectory);
         } catch (IOException | RuntimeException ex) {
             return List.of();
         }
@@ -133,7 +133,7 @@ public final class ExportCenterCoordinator {
             if (projectDirectory == null) {
                 return List.of();
             }
-            return viewModel.applicationServices().process().listProcessJobs().listPersisted(projectDirectory);
+            return viewModel.exportWorkspace().process().listProcessJobs().listPersisted(projectDirectory);
         } catch (IOException | RuntimeException ex) {
             return List.of();
         }

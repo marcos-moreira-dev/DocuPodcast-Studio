@@ -1,0 +1,4 @@
+# Lista de audio para FFmpeg concat. Las imágenes se resuelven desde frames.csv.
+file 'jobs/JOB-20260719-210820-001/audio/SEG-001.wav'
+file 'jobs/JOB-20260719-210820-001/audio/SEG-002.wav'
+file 'jobs/JOB-20260719-210820-001/audio/SEG-003.wav'

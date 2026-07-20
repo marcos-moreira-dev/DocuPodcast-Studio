@@ -1,5 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.document;
 
+import com.marcosmoreiradev.docupodcaststudio.ink.DrawingFeatureCatalog;
 import com.marcosmoreiradev.docupodcaststudio.application.storyboard.TheatreVisualVariant;
 import com.marcosmoreiradev.docupodcaststudio.domain.playback.PlaybackCue;
 import com.marcosmoreiradev.docupodcaststudio.domain.playback.PlaybackCursor;
@@ -317,7 +318,8 @@ public final class DocumentMediaRailView extends VBox {
         TheatreFrameSketchDialog dialog = new TheatreFrameSketchDialog(
                 getScene() == null ? null : getScene().getWindow(),
                 context.get(),
-                this::openStoryboardOverview);
+                this::openStoryboardOverview,
+                viewModel.inkInputProviders().create(DrawingFeatureCatalog.THEATRE_FRAME));
         try {
             dialog.showAndWait().ifPresent(result -> {
                 try {

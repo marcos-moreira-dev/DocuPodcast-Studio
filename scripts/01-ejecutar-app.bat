@@ -9,7 +9,13 @@ if errorlevel 1 (
 if not defined DOCUPODCAST_APP_HEAP set "DOCUPODCAST_APP_HEAP=-Xmx2048m"
 echo [DocuPodcast Studio] Ejecutando app desde: %CD%
 echo [DocuPodcast Studio] Heap de app: %DOCUPODCAST_APP_HEAP%
-call mvn -q javafx:run -Ddocupodcast.app.heap=%DOCUPODCAST_APP_HEAP%
+call mvn -q -pl studio-launcher -am -DskipTests install
+if errorlevel 1 (
+  set "EXIT_CODE=!ERRORLEVEL!"
+  popd >nul
+  exit /b !EXIT_CODE!
+)
+call mvn -q -f studio-launcher/pom.xml javafx:run -Ddocupodcast.app.heap=%DOCUPODCAST_APP_HEAP%
 set "EXIT_CODE=%ERRORLEVEL%"
 popd >nul
 exit /b %EXIT_CODE%

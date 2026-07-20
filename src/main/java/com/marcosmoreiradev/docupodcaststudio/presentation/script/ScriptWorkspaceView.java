@@ -325,7 +325,7 @@ public final class ScriptWorkspaceView extends BorderPane {
     }
 
     private List<ScriptValidationIssue> validationIssues(NarrationScriptDocument script) {
-        return viewModel.applicationServices().script().validateNarrationScript().validate(script);
+        return viewModel.projectWorkspace().script().validateNarrationScript().validate(script);
     }
 
     private Label stepLabel(String text) {

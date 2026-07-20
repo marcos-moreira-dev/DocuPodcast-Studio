@@ -1,0 +1,20 @@
+{
+  "contract": "docupodcast-simple-video-render-v1",
+  "renderMode": "PACKAGE_NEEDS_REVIEW",
+  "outputFile": "video-simple.mp4",
+  "resolution": "2K — 2560x1440",
+  "renderDevicePolicy": "AUTO",
+  "requestedEncoder": "AUTO",
+  "effectiveEncoder": "FFMPEG_DEFAULT",
+  "hardwareAccelerationRequested": false,
+  "hardwareAccelerationReady": false,
+  "fallbackReason": "FFmpeg no disponible; paquete auditable hasta configurar herramienta.",
+  "framesPerSecond": 30,
+  "mainWorkspaceBlockedDuringRender": true,
+  "ffmpegReady": false,
+  "frameCount": 3,
+  "totalDurationSeconds": 4.514,
+  "framesMissingImage": 2,
+  "framesMissingAudio": 0,
+  "warnings": ["Hay frames sin imagen; el video renderizable solo debe incluir unidades visuales asignadas.", "FFmpeg no está disponible; el paquete queda auditable y renderizable cuando se configure tools/ffmpeg o una ruta externa."]
+}

@@ -1,5 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.document;
 
+import com.marcosmoreiradev.docupodcaststudio.ink.DrawingFeatureCatalog;
 import com.marcosmoreiradev.docupodcaststudio.application.document.DocumentOutlineEntry;
 import com.marcosmoreiradev.docupodcaststudio.application.document.DocumentOutlineProjection;
 import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.StudyProblemDetail;
@@ -355,7 +356,7 @@ public final class DocumentTechnicalProblemPanel extends VBox {
 
     private void refreshSavedProblems() {
         String selected = selectedProblemId();
-        projection = viewModel.applicationServices().documentStudy().buildStudyProblemsProjection()
+        projection = viewModel.projectWorkspace().documentStudy().buildStudyProblemsProjection()
                 .build(viewModel.currentProject().orElse(null), viewModel.currentProjectDirectory().orElse(null), currentFilter());
         savedProblems.setItems(FXCollections.observableArrayList(projection.problems()));
         boolean hasProblems = !projection.problems().isEmpty();
@@ -430,7 +431,7 @@ public final class DocumentTechnicalProblemPanel extends VBox {
         if (document == null) {
             return options;
         }
-        DocumentOutlineProjection outline = viewModel.applicationServices().document().buildDocumentOutline().build(document);
+        DocumentOutlineProjection outline = viewModel.projectWorkspace().document().buildDocumentOutline().build(document);
         List<ChapterAnchor> anchors = new ArrayList<>();
         collectChapterAnchors(outline.entries(), anchors);
         anchors = anchors.stream()
@@ -464,7 +465,8 @@ public final class DocumentTechnicalProblemPanel extends VBox {
         if (detail == null) {
             return;
         }
-        TechnicalProblemDialog.showForEdit(getScene() == null ? null : getScene().getWindow(), detail)
+        TechnicalProblemDialog.showForEdit(getScene() == null ? null : getScene().getWindow(), detail,
+                        viewModel.inkInputProviders().create(DrawingFeatureCatalog.DOCUMENT_PROBLEM))
                 .ifPresent(result -> runAction(() -> {
                     viewModel.updateTechnicalProblemSolution(detail.id(), result.solutionText(), result.canvasSnapshot(), result.notes(), result.canvasStateJson());
                     refreshSavedProblems();

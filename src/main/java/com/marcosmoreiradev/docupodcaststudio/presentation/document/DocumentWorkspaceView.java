@@ -1,5 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.document;
 
+import com.marcosmoreiradev.docupodcaststudio.ink.DrawingFeatureCatalog;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PdfRegionCaptureRequest;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PdfRegionCaptureResult;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PdfVisualReadingProjection;
@@ -19,6 +20,7 @@ import com.marcosmoreiradev.docupodcaststudio.domain.playback.PlaybackManifest;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.ProjectMode;
 import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationScriptDocument;
 import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationSegment;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.AppIcon;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.EmptyStateView;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.FloatingReadingControlBar;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.RailReadingControlBar;
@@ -188,8 +190,8 @@ public final class DocumentWorkspaceView extends BorderPane {
             }
         });
         this.pdfVisualView = new PdfVisualDocumentView(
-                viewModel.applicationServices().document().buildPdfVisualDocument(),
-                viewModel.applicationServices().document().renderPdfVisualPage(),
+                viewModel.projectWorkspace().document().buildPdfVisualDocument(),
+                viewModel.projectWorkspace().document().renderPdfVisualPage(),
                 viewModel::readingZoomPercent,
                 this::capturePdfRegionSelection);
         pdfVisualView.setTextTargetSelectionHandler(this::selectPdfTextTarget);
@@ -388,30 +390,30 @@ public final class DocumentWorkspaceView extends BorderPane {
                         SideDockModuleId.DOCUMENT_CONTEXT_DETAILS,
                         "Fragmento",
                         "Seleccion seleccionado y acciones basicas.",
-                        "Texto",
+                        AppIcon.TEXT,
                         () -> new DocumentContextDetailsPanel(viewModel)))
                 .register(StaticSideDockModule.of(
                         SideDockModuleId.DOCUMENT_INDEX,
                         "Índice",
                         "Árbol del documento: raíz, secciones y hojas para saltar sin modificar la fuente.",
-                        "Árbol",
+                        AppIcon.INDEX_TREE,
                     () -> new DocumentIndexPanel(
                             viewModel.currentDocumentProperty(),
                             selectedBlockId,
                             this::selectBlock,
-                            viewModel.applicationServices().document().buildDocumentOutline(),
-                            viewModel.applicationServices().document().buildPdfEnhancedOutline(),
-                            viewModel.applicationServices().document().searchPdfText(),
+                            viewModel.projectWorkspace().document().buildDocumentOutline(),
+                            viewModel.projectWorkspace().document().buildPdfEnhancedOutline(),
+                            viewModel.projectWorkspace().document().searchPdfText(),
                             this::showPdfSearchHighlight,
                             this::scrollPdfVisualToPage,
                             this::pdfOcrCacheDirectory,
-                            viewModel.applicationServices().document().resolvePdfNarratableDocument(),
+                            viewModel.projectWorkspace().document().resolvePdfNarratableDocument(),
                             document -> viewModel.replaceCurrentDocumentFromApplication(document, "Texto OCR del PDF guardado como fragmentos narrables."))))
                 .register(StaticSideDockModule.of(
                         SideDockModuleId.DOCUMENT_AUDIO_NARRATION,
                         "Audio",
                         "Origen de audio usable para la selección: voz local/probada o archivo del computador.",
-                        "Audio",
+                        AppIcon.AUDIO,
                         () -> new DocumentAudioNarrationPanel(viewModel)));
         return new WorkspaceSideDock(
                 new SideDockContext(WorkspaceKind.DOCUMENT_READER, "Documento"),
@@ -876,8 +878,10 @@ public final class DocumentWorkspaceView extends BorderPane {
             viewModel.updateStatusMessage("Marca bloques del documento antes de generar un problema tecnico.");
             return;
         }
-        Map<String, Path> sourceCropPreviews = viewModel.applicationServices().document().prepareStudySourceCrops().prepare(document, selectedBlocks);
-        TechnicalProblemDialog.show(getScene() == null ? null : getScene().getWindow(), selectedBlocks, sourceCropPreviews)
+        Map<String, Path> sourceCropPreviews = viewModel.projectWorkspace().document().prepareStudySourceCrops().prepare(document, selectedBlocks);
+        TechnicalProblemDialog.show(getScene() == null ? null : getScene().getWindow(), selectedBlocks,
+                        sourceCropPreviews,
+                        viewModel.inkInputProviders().create(DrawingFeatureCatalog.DOCUMENT_PROBLEM))
                 .ifPresent(result -> {
                     try {
                         List<StudyProblemSourceDraft> sources = new java.util.ArrayList<>(selectedBlocks.stream()
@@ -909,7 +913,8 @@ public final class DocumentWorkspaceView extends BorderPane {
         List<StudyProblemSourceDraft> sourceDrafts = regions.stream()
                 .map(PdfRegionCaptureDraft::toStudySourceDraft)
                 .toList();
-        TechnicalProblemDialog.showForDrafts(getScene() == null ? null : getScene().getWindow(), sourceDrafts)
+        TechnicalProblemDialog.showForDrafts(getScene() == null ? null : getScene().getWindow(), sourceDrafts,
+                        viewModel.inkInputProviders().create(DrawingFeatureCatalog.DOCUMENT_PROBLEM))
                 .ifPresent(result -> {
                     try {
                         List<StudyProblemSourceDraft> sources = new java.util.ArrayList<>(sourceDrafts);
@@ -953,7 +958,7 @@ public final class DocumentWorkspaceView extends BorderPane {
         Task<PdfRegionCaptureResult> task = new Task<>() {
             @Override
             protected PdfRegionCaptureResult call() throws Exception {
-                return viewModel.applicationServices().document().capturePdfVisualRegion().capture(new PdfRegionCaptureRequest(
+                return viewModel.projectWorkspace().document().capturePdfVisualRegion().capture(new PdfRegionCaptureRequest(
                         sourcePath,
                         selection,
                         null,
@@ -1410,7 +1415,7 @@ public final class DocumentWorkspaceView extends BorderPane {
     }
 
     private PdfVisualReadingProjection pdfProjection(ReadableDocument document) {
-        return viewModel.applicationServices().document().buildPdfVisualReadingProjection().build(document);
+        return viewModel.projectWorkspace().document().buildPdfVisualReadingProjection().build(document);
     }
 
     private void updatePdfPinnedSelection() {

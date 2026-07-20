@@ -1,13 +1,12 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.ink.canvas;
 
-import com.marcosmoreiradev.docupodcaststudio.presentation.document.StudyProblemCanvasSurface;
 import javafx.scene.Node;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 
 /** Shared ink canvas surface for document study and theatre storyboard sketches. */
-public class InkCanvasSurface extends StudyProblemCanvasSurface {
+public class InkCanvasSurface extends TiledInkCanvasSurface {
     private double fixedLogicalWidth = Double.NaN;
     private double fixedLogicalHeight = Double.NaN;
     private boolean fixedLogicalViewport;

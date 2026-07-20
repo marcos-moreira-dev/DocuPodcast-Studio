@@ -1,0 +1,8 @@
+{"event":"job_preparing","jobId":"JOB-20260719-210820-001","message":"Preparando carpeta de audio mock."}
+{"event":"segment_started","jobId":"JOB-20260719-210820-001","message":"SEG-001"}
+{"event":"segment_completed","jobId":"JOB-20260719-210820-001","message":"SEG-001"}
+{"event":"segment_started","jobId":"JOB-20260719-210820-001","message":"SEG-002"}
+{"event":"segment_completed","jobId":"JOB-20260719-210820-001","message":"SEG-002"}
+{"event":"segment_started","jobId":"JOB-20260719-210820-001","message":"SEG-003"}
+{"event":"segment_completed","jobId":"JOB-20260719-210820-001","message":"SEG-003"}
+{"event":"mock_audio_completed","jobId":"JOB-20260719-210820-001","message":"Audio mock completado."}

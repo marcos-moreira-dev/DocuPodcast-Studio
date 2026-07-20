@@ -1,0 +1,17 @@
+{
+  "id": "STORYBOARD-001",
+  "title": "Secuencia visual — Documento Smoke T79",
+  "sourceScriptId": "SCRIPT-001",
+  "createdAt": "2026-07-20T02:08:20.922315700Z",
+  "updatedAt": "2026-07-20T02:08:20.922315700Z",
+  "notes": "Panel visual básico. Asocia imágenes del usuario a fragmentos del documento.",
+  "bindings": [
+    {
+      "id": "STB-001",
+      "segmentId": "SEG-001",
+      "imageAssetId": "IMG-SMOKE-001",
+      "displayMode": "FIT_CONTAIN",
+      "caption": "Escena de apoyo"
+    }
+  ]
+}

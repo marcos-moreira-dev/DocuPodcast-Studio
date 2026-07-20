@@ -1,0 +1,63 @@
+{
+    "id": "SCRIPT-001",
+    "title": "Documento Smoke T79",
+    "language": "es",
+    "sourceDocumentTitle": "Documento Smoke T79",
+    "segmentCount": 3,
+    "narratableSegmentCount": 3,
+    "estimatedCharacters": 168,
+    "wordCount": 23,
+    "createdAt": "2026-07-20T02:08:20.913317400Z",
+    "updatedAt": "2026-07-20T02:08:20.913317400Z",
+    "notes": "Lectura preparada desde el documento importado. Revisa fragmentos antes de generar audio.",
+    "segments": [
+        {
+            "id": "SEG-001",
+            "type": "HEADING",
+            "title": "Documento Smoke T79",
+            "narrationText": "Nuevo tema: Documento Smoke T79.",
+            "sourceBlockIds": ["B0001"],
+            "characterId": "CHR-NARRATOR",
+            "voiceProfileId": "VOC-NARRATOR",
+            "performanceStyleId": "STY-NEUTRAL",
+            "metadata": {
+                "sourceBlockType": "HEADING",
+                "sourceBlockId": "B0001",
+                "fragmentId": "FRG-B0001",
+                "generationSource": "document-workspace"
+            }
+        },
+        {
+            "id": "SEG-002",
+            "type": "PARAGRAPH",
+            "title": "Primera oración narrable para validar el cerebro de DocuPodc…",
+            "narrationText": "Primera oración narrable para validar el cerebro de DocuPodcast.",
+            "sourceBlockIds": ["B0002"],
+            "characterId": "CHR-NARRATOR",
+            "voiceProfileId": "VOC-NARRATOR",
+            "performanceStyleId": "STY-NEUTRAL",
+            "metadata": {
+                "sourceBlockType": "PARAGRAPH",
+                "sourceBlockId": "B0002",
+                "fragmentId": "FRG-B0002",
+                "generationSource": "document-workspace"
+            }
+        },
+        {
+            "id": "SEG-003",
+            "type": "PARAGRAPH",
+            "title": "Segunda oración narrable para audio, playback, exportación e…",
+            "narrationText": "Segunda oración narrable para audio, playback, exportación e integridad.",
+            "sourceBlockIds": ["B0003"],
+            "characterId": "CHR-NARRATOR",
+            "voiceProfileId": "VOC-NARRATOR",
+            "performanceStyleId": "STY-NEUTRAL",
+            "metadata": {
+                "sourceBlockType": "PARAGRAPH",
+                "sourceBlockId": "B0003",
+                "fragmentId": "FRG-B0003",
+                "generationSource": "document-workspace"
+            }
+        }
+    ]
+}

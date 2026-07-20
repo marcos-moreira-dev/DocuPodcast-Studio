@@ -1,10 +1,13 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.document;
 
 import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlock;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.AppIcon;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.DocuPodcastShellViewModel;
 import com.marcosmoreiradev.docupodcaststudio.presentation.sidedock.SideDockContext;
 import com.marcosmoreiradev.docupodcaststudio.presentation.sidedock.SideDockModuleId;
 import com.marcosmoreiradev.docupodcaststudio.presentation.sidedock.SideDockModuleRegistry;
+import com.marcosmoreiradev.docupodcaststudio.presentation.sidedock.SideDockHost;
+import com.marcosmoreiradev.docupodcaststudio.presentation.sidedock.SideDockLayoutPolicy;
 import com.marcosmoreiradev.docupodcaststudio.presentation.sidedock.StaticSideDockModule;
 import com.marcosmoreiradev.docupodcaststudio.presentation.sidedock.WorkspaceSideDock;
 import com.marcosmoreiradev.docupodcaststudio.presentation.workspace.WorkspaceKind;
@@ -20,14 +23,9 @@ import java.util.function.Supplier;
 
 /** Right dock for document-study tools. Mirrors the theatre dock shell without theatre modules. */
 public final class DocumentStudySideDock extends BorderPane {
-    private static final double COLLAPSED_WIDTH = 84.0;
-    private static final double EXPANDED_WIDTH = 720.0;
-    private static final double EXPANDED_MIN_WIDTH = 560.0;
-
-    private final WorkspaceSideDock dock;
+    private final SideDockHost dock;
     private final SideDockContext dockContext;
     private final SideDockModuleRegistry dockRegistry;
-    private boolean dockExpanded;
 
     public DocumentStudySideDock(
             DocuPodcastShellViewModel viewModel,
@@ -37,27 +35,16 @@ public final class DocumentStudySideDock extends BorderPane {
             Supplier<List<PdfRegionCaptureDraft>> selectedPdfRegions,
             Runnable clearSelection,
             Runnable generateProblem) {
-        getStyleClass().add("document-study-side-dock");
         this.dockContext = new SideDockContext(WorkspaceKind.DOCUMENT_READER, "Estudio documental");
         this.dockRegistry = registry(viewModel, selection, pdfRegionSelection, selectedBlocks,
                 selectedPdfRegions, clearSelection, generateProblem);
-        this.dock = new WorkspaceSideDock(
+        this.dock = new SideDockHost(
+                "document-study-side-dock",
                 dockContext,
                 dockRegistry,
-                false,
+                viewModel.documentRightRailVisibleProperty(),
+                SideDockLayoutPolicy.of(84.0, 560.0, 720.0),
                 WorkspaceSideDock.RailPlacement.RIGHT);
-        dockExpanded = viewModel.documentRightRailVisibleProperty().get();
-        dock.setCollapsed(!dockExpanded);
-        applyDockWidth();
-        viewModel.documentRightRailVisibleProperty().addListener((obs, oldValue, visible) ->
-                dock.setCollapsed(!Boolean.TRUE.equals(visible)));
-        dock.expandedProperty().addListener((obs, oldValue, visible) -> {
-            dockExpanded = Boolean.TRUE.equals(visible);
-            applyDockWidth();
-            if (viewModel.documentRightRailVisibleProperty().get() != dockExpanded) {
-                viewModel.documentRightRailVisibleProperty().set(dockExpanded);
-            }
-        });
         viewModel.currentDocumentProperty().addListener((obs, oldValue, newValue) ->
                 dock.refresh(dockContext, dockRegistry));
         viewModel.currentProjectModeProperty().addListener((obs, oldValue, newValue) ->
@@ -67,18 +54,6 @@ public final class DocumentStudySideDock extends BorderPane {
 
     public ReadOnlyBooleanProperty expandedProperty() {
         return dock.expandedProperty();
-    }
-
-    private void applyDockWidth() {
-        if (!dockExpanded) {
-            setMinWidth(COLLAPSED_WIDTH);
-            setPrefWidth(COLLAPSED_WIDTH);
-            setMaxWidth(COLLAPSED_WIDTH);
-            return;
-        }
-        setMinWidth(EXPANDED_MIN_WIDTH);
-        setPrefWidth(EXPANDED_WIDTH);
-        setMaxWidth(Double.MAX_VALUE);
     }
 
     private SideDockModuleRegistry registry(
@@ -94,14 +69,14 @@ public final class DocumentStudySideDock extends BorderPane {
                         SideDockModuleId.DOCUMENT_STUDY_VIDEO,
                         "Contenido del video",
                         "Edita cada parrafo, tabla y diapositiva final del video documental.",
-                        "Video",
+                        AppIcon.VIDEO,
                         () -> new DocumentStudyVideoPanel(viewModel),
                         context -> viewModel.documentaryVideoConfigurationAvailable()))
                 .register(StaticSideDockModule.of(
                         SideDockModuleId.DOCUMENT_TECHNICAL_PROBLEM,
                         "Problema",
                         "Selecciona bloques del documento para preparar y resolver un problema tecnico.",
-                        "Problema",
+                        AppIcon.PREPARE,
                         () -> scrollableProblemPanel(new DocumentTechnicalProblemPanel(
                                 viewModel,
                                 selection,

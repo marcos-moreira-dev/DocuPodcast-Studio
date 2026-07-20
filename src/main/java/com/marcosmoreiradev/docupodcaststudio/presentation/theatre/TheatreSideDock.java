@@ -1,5 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.theatre;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.AppIcon;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.CollapsibleModuleSplitPane;
 import com.marcosmoreiradev.docupodcaststudio.presentation.document.DocumentImageContextPanel;
 import com.marcosmoreiradev.docupodcaststudio.presentation.document.DocumentMediaRailView;
@@ -7,6 +8,8 @@ import com.marcosmoreiradev.docupodcaststudio.presentation.shell.DocuPodcastShel
 import com.marcosmoreiradev.docupodcaststudio.presentation.sidedock.SideDockContext;
 import com.marcosmoreiradev.docupodcaststudio.presentation.sidedock.SideDockModuleId;
 import com.marcosmoreiradev.docupodcaststudio.presentation.sidedock.SideDockModuleRegistry;
+import com.marcosmoreiradev.docupodcaststudio.presentation.sidedock.SideDockHost;
+import com.marcosmoreiradev.docupodcaststudio.presentation.sidedock.SideDockLayoutPolicy;
 import com.marcosmoreiradev.docupodcaststudio.presentation.sidedock.StaticSideDockModule;
 import com.marcosmoreiradev.docupodcaststudio.presentation.sidedock.WorkspaceSideDock;
 import com.marcosmoreiradev.docupodcaststudio.presentation.workspace.WorkspaceKind;
@@ -19,16 +22,8 @@ import java.util.function.BooleanSupplier;
 
 /** Right dock for theatre/script modules that complement the shared document reader. */
 public final class TheatreSideDock extends BorderPane {
-    private static final double COLLAPSED_WIDTH = 84.0;
-    private static final double COMPACT_WIDTH = 700.0;
-    private static final double EXPANDED_WIDTH = 980.0;
-    private static final double COMPACT_MIN_WIDTH = 520.0;
-    private static final double EXPANDED_MIN_WIDTH = 680.0;
-
-    private final WorkspaceSideDock dock;
+    private final SideDockHost dock;
     private final IntervencionBoundaryStore sceneBoundaryStore;
-    private boolean dockExpanded;
-    private boolean compactContent;
 
     public TheatreSideDock(DocuPodcastShellViewModel viewModel, BooleanSupplier saveProjectRequest) {
         this(viewModel, saveProjectRequest, new IntervencionBoundaryStore());
@@ -37,31 +32,20 @@ public final class TheatreSideDock extends BorderPane {
     public TheatreSideDock(DocuPodcastShellViewModel viewModel, BooleanSupplier saveProjectRequest,
                            IntervencionBoundaryStore sceneBoundaryStore) {
         this.sceneBoundaryStore = sceneBoundaryStore == null ? new IntervencionBoundaryStore() : sceneBoundaryStore;
-        getStyleClass().add("theatre-side-dock");
-        this.dock = new WorkspaceSideDock(
+        this.dock = new SideDockHost(
+                "theatre-side-dock",
                 new SideDockContext(WorkspaceKind.THEATRE_SCRIPT, "Teatro"),
                 registry(viewModel, saveProjectRequest),
-                false,
-                WorkspaceSideDock.RailPlacement.RIGHT);
-        dockExpanded = viewModel.documentRightRailVisibleProperty().get();
-        dock.setCollapsed(!dockExpanded);
-        applyDockWidth();
-        viewModel.documentRightRailVisibleProperty().addListener((obs, oldValue, visible) -> {
-            boolean nextExpanded = Boolean.TRUE.equals(visible);
-            dock.setCollapsed(!nextExpanded);
-        });
-        dock.expandedProperty().addListener((obs, oldValue, visible) -> {
-            dockExpanded = Boolean.TRUE.equals(visible);
-            applyDockWidth();
-            if (viewModel.documentRightRailVisibleProperty().get() != dockExpanded) {
-                viewModel.documentRightRailVisibleProperty().set(dockExpanded);
-            }
-        });
+                viewModel.documentRightRailVisibleProperty(),
+                SideDockLayoutPolicy.withCompact(84.0, 680.0, 980.0, 520.0, 700.0),
+                WorkspaceSideDock.RailPlacement.RIGHT,
+                "theatre-side-dock-compact",
+                null);
         dock.activeModuleIdProperty().addListener((obs, oldValue, moduleId) -> {
             if (moduleId != SideDockModuleId.THEATRE_FRAGMENT_IMAGES
                     && moduleId != SideDockModuleId.THEATRE_CHARACTERS
                     && moduleId != SideDockModuleId.THEATRE_OBJECTS) {
-                setCompactContent(false);
+                dock.setCompact(false);
             }
         });
         setCenter(dock);
@@ -71,64 +55,38 @@ public final class TheatreSideDock extends BorderPane {
         return dock.expandedProperty();
     }
 
-    private void applyDockWidth() {
-        getStyleClass().remove("theatre-side-dock-compact");
-        if (!dockExpanded) {
-            setMinWidth(COLLAPSED_WIDTH);
-            setPrefWidth(COLLAPSED_WIDTH);
-            setMaxWidth(COLLAPSED_WIDTH);
-            return;
-        }
-
-        double width = compactContent ? COMPACT_WIDTH : EXPANDED_WIDTH;
-        setMinWidth(compactContent ? COMPACT_MIN_WIDTH : EXPANDED_MIN_WIDTH);
-        setPrefWidth(width);
-        setMaxWidth(Double.MAX_VALUE);
-        if (compactContent) {
-            getStyleClass().add("theatre-side-dock-compact");
-        }
-    }
-
-    private void setCompactContent(boolean compactContent) {
-        if (this.compactContent == compactContent) {
-            return;
-        }
-        this.compactContent = compactContent;
-        applyDockWidth();
-    }
-
     private SideDockModuleRegistry registry(DocuPodcastShellViewModel viewModel, BooleanSupplier saveProjectRequest) {
         return new SideDockModuleRegistry()
                 .register(StaticSideDockModule.of(
                         SideDockModuleId.THEATRE_FRAGMENT_IMAGES,
                         "Capas multimedia",
                         "Imagenes y pistas de audio asignadas a las intervenciones.",
-                        "Multimedia",
+                        AppIcon.IMAGE,
                         () -> multimediaLayers(viewModel, saveProjectRequest)))
                 .register(StaticSideDockModule.of(
                         SideDockModuleId.THEATRE_CHARACTERS,
                         "Personajes",
                         "Personajes detectados y referencias visuales por personaje.",
-                        "Personajes",
+                        AppIcon.VOICE,
                         () -> characters(viewModel)))
                 .register(StaticSideDockModule.of(
                         SideDockModuleId.THEATRE_TEXTUAL_MAP,
                         "Mapa textual",
                         "Intervenciones 1, 2, 3... como identificadores de fragmentos.",
-                        "Mapa textual",
+                        AppIcon.TEXT,
                         () -> new TheatreTextualMapPanel(viewModel, sceneBoundaryStore)))
                 .register(StaticSideDockModule.of(
                         SideDockModuleId.THEATRE_SPATIAL_MAP,
                         "Mapa espacial y acciones",
                         "Escenarios, posiciones y desplazamientos por fragmento.",
-                        "Mapa",
+                        AppIcon.STORYBOARD,
                         () -> new TheatreSpatialActionMapPanel(viewModel, sceneBoundaryStore)))
                 // THEATRE_ACTIONS is kept as a legacy id but is now fused into THEATRE_SPATIAL_MAP.
                 .register(StaticSideDockModule.of(
                         SideDockModuleId.THEATRE_OBJECTS,
                         "Objetos",
                         "Utileria, escenografia y referencias visuales de escena.",
-                        "Objetos",
+                        AppIcon.BUNDLE,
                         () -> objects(viewModel)));
     }
 
@@ -181,9 +139,9 @@ public final class TheatreSideDock extends BorderPane {
             ReadOnlyBooleanProperty primaryVisible,
             ReadOnlyBooleanProperty secondaryVisible) {
         primaryVisible.addListener((obs, oldValue, visible) ->
-                setCompactContent(!primaryVisible.get() || !secondaryVisible.get()));
+                dock.setCompact(!primaryVisible.get() || !secondaryVisible.get()));
         secondaryVisible.addListener((obs, oldValue, visible) ->
-                setCompactContent(!primaryVisible.get() || !secondaryVisible.get()));
+                dock.setCompact(!primaryVisible.get() || !secondaryVisible.get()));
     }
 
     private static void allowFlexibleWidth(Parent parent) {

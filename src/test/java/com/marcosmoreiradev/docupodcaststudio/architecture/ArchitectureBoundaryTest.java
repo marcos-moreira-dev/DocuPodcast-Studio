@@ -100,4 +100,22 @@ final class ArchitectureBoundaryTest {
                     "..domain.study..",
                     "..application.narrative.."
             );
+
+    @ArchTest
+    static final ArchRule desktop_layers_do_not_depend_on_local_media_adapters = noClasses()
+            .that().resideInAnyPackage("..domain..", "..application..", "..presentation..")
+            .should().dependOnClassesThat().resideInAPackage("..localmedia..");
+
+    @ArchTest
+    static final ArchRule transversal_ink_does_not_depend_on_document_product = noClasses()
+            .that().resideInAPackage("..presentation.ink..")
+            .should().dependOnClassesThat().resideInAPackage("..presentation.document..");
+
+    @ArchTest
+    static final ArchRule administrative_shell_does_not_know_product_modules = noClasses()
+            .that().resideInAPackage("..presentation.components.admin..")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "..presentation.voice..",
+                    "..presentation.theatre..",
+                    "..presentation.settings..");
 }

@@ -1,0 +1,8 @@
+com\marcosmoreiradev\docupodcaststudio\ink\InkInputPolicy.class
+module-info.class
+com\marcosmoreiradev\docupodcaststudio\ink\DrawingFeatureCatalog.class
+com\marcosmoreiradev\docupodcaststudio\ink\DrawingExportProfile.class
+com\marcosmoreiradev\docupodcaststudio\ink\DrawingProfile.class
+com\marcosmoreiradev\docupodcaststudio\ink\DrawingToolId.class
+com\marcosmoreiradev\docupodcaststudio\ink\ViewportMode.class
+com\marcosmoreiradev\docupodcaststudio\ink\InkEditorController.class

@@ -76,8 +76,8 @@ public final class PropertiesOperationalSettingsRepository implements Operationa
                         intValue(p, "playback.lookaheadSegments", 10),
                         boolValue(p, "playback.pauseWhenBufferMissing", true)),
                 new OperationalSettings.TtsEngineSettings(
-                        p.getProperty("tts.engineMode", "mock"),
-                        p.getProperty("tts.commandTemplate", ""),
+                        p.getProperty("capability.voice.engine", p.getProperty("tts.engineMode", "piper")),
+                        engineProperty(p, "voice", "commandTemplate", p.getProperty("tts.commandTemplate", "")),
                         p.getProperty("tts.displayName", "Motor TTS local"),
                         p.getProperty("tts.language", "es"),
                         p.getProperty("tts.voiceProfileId", "VOC-NARRATOR"),
@@ -88,14 +88,16 @@ public final class PropertiesOperationalSettingsRepository implements Operationa
                         p.getProperty("download.piper.defaultVoiceUrl", ""),
                         p.getProperty("download.piper.defaultVoiceMetadataUrl", "")),
                 new OperationalSettings.VideoRenderSettings(
-                        p.getProperty("video.ffmpegExecutable", ""),
+                        p.getProperty("engine.ffmpeg.executable", p.getProperty("video.ffmpegExecutable", "")),
                         p.getProperty("video.resolutionPreset", "2K"),
                         boolValue(p, "video.preferEmbeddedFfmpeg", true),
                         doubleValue(p, "video.silentVisualBlockSeconds", 5.0),
                         p.getProperty("download.ffmpeg.runtimeZipUrl", "")),
                 new ImageGenerationSettings(
-                        p.getProperty("image.engineMode", "managed-local"),
-                        p.getProperty("image.baseUrl", "http://127.0.0.1:8188"),
+                        legacyImageMode(p.getProperty("capability.image.engine",
+                                p.getProperty("image.engineMode", "managed-local"))),
+                        engineProperty(p, "image", "baseUrl",
+                                p.getProperty("image.baseUrl", "http://127.0.0.1:8188")),
                         p.getProperty("image.devicePolicy", "AUTO"),
                         p.getProperty("image.preset", "PRODUCTION_SDXL_REFERENCE"),
                         p.getProperty("image.modelName", "v1-5-pruned-emaonly-fp16.safetensors"),
@@ -143,6 +145,8 @@ public final class PropertiesOperationalSettingsRepository implements Operationa
         p.setProperty("playback.lookaheadSegments", Integer.toString(current.playbackBuffer().lookaheadSegments()));
         p.setProperty("playback.pauseWhenBufferMissing", Boolean.toString(current.playbackBuffer().pauseWhenBufferMissing()));
         p.setProperty("tts.engineMode", current.tts().engineMode());
+        p.setProperty("capability.voice.engine", current.tts().engineMode());
+        p.setProperty("engine." + current.tts().engineMode() + ".commandTemplate", current.tts().commandTemplate());
         p.setProperty("tts.commandTemplate", current.tts().commandTemplate());
         p.setProperty("tts.displayName", current.tts().displayName());
         p.setProperty("tts.language", current.tts().language());
@@ -154,11 +158,16 @@ public final class PropertiesOperationalSettingsRepository implements Operationa
         p.setProperty("download.piper.defaultVoiceUrl", current.tts().piperDefaultVoiceUrl());
         p.setProperty("download.piper.defaultVoiceMetadataUrl", current.tts().piperDefaultVoiceMetadataUrl());
         p.setProperty("video.ffmpegExecutable", current.video().ffmpegExecutable());
+        p.setProperty("capability.video.render.engine", "ffmpeg");
+        p.setProperty("engine.ffmpeg.executable", current.video().ffmpegExecutable());
         p.setProperty("video.resolutionPreset", current.video().resolutionPreset());
         p.setProperty("video.preferEmbeddedFfmpeg", Boolean.toString(current.video().preferEmbeddedFfmpeg()));
         p.setProperty("video.silentVisualBlockSeconds", Double.toString(current.video().silentVisualBlockSeconds()));
         p.setProperty("download.ffmpeg.runtimeZipUrl", current.video().ffmpegDownloadUrl());
         p.setProperty("image.engineMode", current.imageGeneration().engineMode());
+        p.setProperty("capability.image.engine", canonicalImageEngine(current.imageGeneration().engineMode()));
+        p.setProperty("engine." + canonicalImageEngine(current.imageGeneration().engineMode()) + ".baseUrl",
+                current.imageGeneration().baseUrl());
         p.setProperty("image.baseUrl", current.imageGeneration().baseUrl());
         p.setProperty("image.devicePolicy", current.imageGeneration().devicePolicy());
         p.setProperty("image.preset", current.imageGeneration().preset());
@@ -198,6 +207,20 @@ public final class PropertiesOperationalSettingsRepository implements Operationa
         } catch (RuntimeException ex) {
             return fallback;
         }
+    }
+
+    private static String engineProperty(Properties properties, String capability, String field, String fallback) {
+        String engineId = properties.getProperty("capability." + capability + ".engine", "").strip();
+        if (engineId.isBlank()) return fallback;
+        return properties.getProperty("engine." + engineId + "." + field, fallback);
+    }
+
+    private static String canonicalImageEngine(String legacyMode) {
+        return "managed-local".equalsIgnoreCase(legacyMode) ? "comfyui" : legacyMode;
+    }
+
+    private static String legacyImageMode(String engineId) {
+        return "comfyui".equalsIgnoreCase(engineId) ? "managed-local" : engineId;
     }
 
     private static double doubleValue(Properties p, String key, double fallback) {

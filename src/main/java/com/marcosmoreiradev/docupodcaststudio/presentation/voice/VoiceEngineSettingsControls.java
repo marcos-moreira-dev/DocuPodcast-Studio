@@ -5,6 +5,7 @@ import com.marcosmoreiradev.docupodcaststudio.application.compute.ComputeDeviceP
 import com.marcosmoreiradev.docupodcaststudio.application.compute.ComputeEnvironmentReport;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.OperationalSettings;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.TtsEngineModes;
+import com.marcosmoreiradev.docupodcaststudio.media.api.EngineDescriptor;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.DocuPodcastShellViewModel;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -56,16 +57,14 @@ final class VoiceEngineSettingsControls {
 
     void refresh() {
         OperationalSettings settings = loadOperationalSettingsSafely();
-        ComputeEnvironmentReport compute = viewModel.applicationServices().settings().inspectComputeEnvironment().inspect(settings);
+        ComputeEnvironmentReport compute = viewModel.administrationWorkspace().settings().inspectComputeEnvironment().inspect(settings);
         refreshingEngineControls = true;
         try {
             engineModeSelector.setValue(engineModeSelector.getItems().stream()
                     .filter(choice -> choice.mode().equalsIgnoreCase(settings.tts().engineMode()))
                     .findFirst()
-                    .orElseGet(() -> engineModeSelector.getItems().stream()
-                            .filter(choice -> choice.mode().equals(TtsEngineModes.TEST))
-                            .findFirst()
-                            .orElse(null)));
+                    .orElseGet(() -> engineModeSelector.getItems().isEmpty()
+                            ? null : engineModeSelector.getItems().getFirst()));
             computeDeviceSelector.getItems().setAll(computeDeviceChoices(compute));
             computeDeviceSelector.setValue(selectedComputeChoice(compute, settings));
             engineConfigurationStatus.setText(engineStatusText(settings, compute));
@@ -76,10 +75,7 @@ final class VoiceEngineSettingsControls {
 
     private void configure() {
         engineModeSelector.getStyleClass().add("voice-library-combo");
-        engineModeSelector.getItems().setAll(
-                new EngineModeChoice(TtsEngineModes.ADVANCED_AI, "Voz IA avanzada", "Voces por muestra y muchas emociones."),
-                new EngineModeChoice(TtsEngineModes.LOCAL_SIMPLE, "Voz local simple", "Lectura neutral liviana."),
-                new EngineModeChoice(TtsEngineModes.TEST, "Modo de prueba", "Valida el flujo sin motor real."));
+        engineModeSelector.getItems().setAll(engineChoices());
         engineModeSelector.valueProperty().addListener((obs, oldValue, newValue) -> {
             if (!refreshingEngineControls && newValue != null) {
                 saveEngineModeSelection(newValue);
@@ -140,15 +136,25 @@ final class VoiceEngineSettingsControls {
         OperationalSettings current = loadOperationalSettingsSafely();
         OperationalSettings updated;
         if (TtsEngineModes.ADVANCED_AI.equals(selection.mode())) {
-            updated = viewModel.applicationServices().settings().selectXttsAsEngine().select(current);
+            updated = viewModel.administrationWorkspace().settings().selectXttsAsEngine().select(current);
         } else if (TtsEngineModes.LOCAL_SIMPLE.equals(selection.mode())) {
-            updated = viewModel.applicationServices().settings().selectPiperAsEngine().select(current);
-        } else {
+            updated = viewModel.administrationWorkspace().settings().selectPiperAsEngine().select(current);
+        } else if (TtsEngineModes.TEST.equals(selection.mode())
+                && Boolean.getBoolean("docupodcast.diagnostics.mockAudio")) {
             updated = new OperationalSettings(current.readingDocument(), current.playbackBuffer(),
                     new OperationalSettings.TtsEngineSettings(TtsEngineModes.TEST, "", "Modo de prueba", current.tts().language(),
                             current.tts().voiceProfileId(), current.tts().timeoutSeconds(), current.tts().maxRetries(),
                             current.tts().xttsDownloadBaseUrl(), current.tts().piperRuntimeZipUrl(),
                             current.tts().piperDefaultVoiceUrl(), current.tts().piperDefaultVoiceMetadataUrl()),
+                    current.video(), current.imageGeneration(), current.frameGeneration(), current.compute(),
+                    current.ocr(), current.storage(), current.diagnostics());
+        } else {
+            updated = new OperationalSettings(current.readingDocument(), current.playbackBuffer(),
+                    new OperationalSettings.TtsEngineSettings(selection.mode(), current.tts().commandTemplate(),
+                            selection.label(), current.tts().language(), current.tts().voiceProfileId(),
+                            current.tts().timeoutSeconds(), current.tts().maxRetries(), current.tts().xttsDownloadBaseUrl(),
+                            current.tts().piperRuntimeZipUrl(), current.tts().piperDefaultVoiceUrl(),
+                            current.tts().piperDefaultVoiceMetadataUrl()),
                     current.video(), current.imageGeneration(), current.frameGeneration(), current.compute(),
                     current.ocr(), current.storage(), current.diagnostics());
         }
@@ -171,15 +177,38 @@ final class VoiceEngineSettingsControls {
 
     private OperationalSettings loadOperationalSettingsSafely() {
         try {
-            return viewModel.applicationServices().settings().loadOperationalSettings().load();
+            return viewModel.administrationWorkspace().settings().loadOperationalSettings().load();
         } catch (IOException | RuntimeException ex) {
             return OperationalSettings.defaults();
         }
     }
 
+    private List<EngineModeChoice> engineChoices() {
+        List<EngineDescriptor> descriptors = viewModel.administrationWorkspace().mediaEngines()
+                .voiceEngines().descriptors();
+        ArrayList<EngineModeChoice> choices = new ArrayList<>();
+        for (EngineDescriptor descriptor : descriptors) {
+            String features = descriptor.features().isEmpty() ? descriptor.runtimeKind()
+                    : descriptor.features().stream().map(feature -> feature.value()).sorted()
+                    .collect(java.util.stream.Collectors.joining(", "));
+            choices.add(new EngineModeChoice(descriptor.id().value(), descriptor.displayName(), features));
+        }
+        if (choices.isEmpty()) {
+            choices.add(new EngineModeChoice(TtsEngineModes.ADVANCED_AI, "Voz IA avanzada",
+                    "Voces por muestra y muchas emociones."));
+            choices.add(new EngineModeChoice(TtsEngineModes.LOCAL_SIMPLE, "Voz local simple",
+                    "Lectura neutral liviana."));
+        }
+        if (Boolean.getBoolean("docupodcast.diagnostics.mockAudio")) {
+            choices.add(new EngineModeChoice(TtsEngineModes.TEST, "Modo de prueba",
+                    "Diagnóstico explícito; no produce voz real."));
+        }
+        return List.copyOf(choices);
+    }
+
     private void saveOperationalSettings(OperationalSettings settings, String message) {
         try {
-            viewModel.applicationServices().settings().saveOperationalSettings().save(settings);
+            viewModel.administrationWorkspace().settings().saveOperationalSettings().save(settings);
             summarySink.accept(List.of(message, "La misma configuración queda sincronizada con la ventana Configuración."));
             refresh();
         } catch (IOException | RuntimeException ex) {

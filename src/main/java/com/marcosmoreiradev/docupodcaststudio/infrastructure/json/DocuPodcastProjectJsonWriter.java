@@ -105,7 +105,8 @@ public final class DocuPodcastProjectJsonWriter {
             field(out, 4, "id", quote(voice.id())); out.append(",\n");
             field(out, 4, "displayName", quote(voice.displayName())); out.append(",\n");
             field(out, 4, "type", quote(voice.type().name())); out.append(",\n");
-            field(out, 4, "engineType", quote(voice.engineType().name())); out.append(",\n");
+            field(out, 4, "engineId", quote(voice.engineId().value())); out.append(",\n");
+            field(out, 4, "engineType", quote(VoiceProfile.engineTypeFor(voice.engineId().value()).name())); out.append(",\n");
             field(out, 4, "language", quote(voice.language())); out.append(",\n");
             field(out, 4, "sampleAssetId", quote(voice.sampleAssetId())); out.append(",\n");
             field(out, 4, "modelAssetId", quote(voice.modelAssetId())); out.append(",\n");

@@ -146,7 +146,7 @@ public record OperationalSettings(
         public static final String DEFAULT_PIPER_DEFAULT_VOICE_METADATA_URL = "https://huggingface.co/rhasspy/piper-voices/resolve/main/es/es_ES/sharvard/medium/es_ES-sharvard-medium.onnx.json?download=1";
 
         public TtsEngineSettings {
-            engineMode = normalize(engineMode).isBlank() ? "mock" : normalize(engineMode).toLowerCase(Locale.ROOT);
+            engineMode = normalize(engineMode).isBlank() ? "piper" : normalize(engineMode).toLowerCase(Locale.ROOT);
             commandTemplate = normalize(commandTemplate);
             displayName = normalize(displayName).isBlank() ? "Motor TTS local" : normalize(displayName);
             language = normalize(language).isBlank() ? "es" : normalize(language).toLowerCase(Locale.ROOT);
@@ -166,7 +166,7 @@ public record OperationalSettings(
         }
 
         public static TtsEngineSettings defaults() {
-            return new TtsEngineSettings("mock", "", "Motor TTS local", "es", "VOC-NARRATOR", 180, 3,
+            return new TtsEngineSettings("piper", "", "Motor TTS local", "es", "VOC-NARRATOR", 180, 3,
                     "", "", "", "");
         }
 

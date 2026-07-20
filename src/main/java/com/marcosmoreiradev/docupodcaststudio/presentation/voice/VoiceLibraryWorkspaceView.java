@@ -896,7 +896,7 @@ public final class VoiceLibraryWorkspaceView extends BorderPane {
     }
 
     private VoiceEngineCapabilityProfile activeEngineProfile() {
-        return viewModel.applicationServices().voice().voiceCapabilityPolicy().activeEngineProfile(viewModel.audioEngineDescriptor());
+        return viewModel.administrationWorkspace().voice().voiceCapabilityPolicy().activeEngineProfile(viewModel.audioEngineDescriptor());
     }
 
     private boolean localSimpleMode() {
@@ -984,7 +984,7 @@ public final class VoiceLibraryWorkspaceView extends BorderPane {
     }
 
     private void openVoiceEngineSettings() {
-        new SettingsDialog().showVoiceEngines(getScene() == null ? null : getScene().getWindow(), viewModel.applicationServices().settings());
+        new SettingsDialog().showVoiceEngines(getScene() == null ? null : getScene().getWindow(), viewModel.administrationWorkspace().settings());
         summaryList.getItems().setAll("Configuración cerrada. Vuelve a verificar o actualizar la biblioteca si cambiaste el motor de voz.");
     }
 

@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
+import com.marcosmoreiradev.docupodcaststudio.application.services.SettingsApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.application.compute.InspectXttsGpuFallbackDecisionUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.compute.XttsCudaSmokeReport;
 import com.marcosmoreiradev.docupodcaststudio.application.decisions.UserVisibleDecision;
@@ -19,17 +19,17 @@ import java.util.Objects;
  * whether to show a message box.</p>
  */
 public final class DocumentAudioDefensiveDecisionGuard {
-    private final ApplicationServices services;
+    private final SettingsApplicationServices settingsServices;
     private final InspectXttsGpuFallbackDecisionUseCase gpuFallbackDecision = new InspectXttsGpuFallbackDecisionUseCase();
 
-    public DocumentAudioDefensiveDecisionGuard(ApplicationServices services) {
-        this.services = Objects.requireNonNull(services, "services");
+    public DocumentAudioDefensiveDecisionGuard(SettingsApplicationServices settingsServices) {
+        this.settingsServices = Objects.requireNonNull(settingsServices, "settingsServices");
     }
 
     public List<UserVisibleDecision> decisionsBeforeDocumentGeneration() {
         OperationalSettings settings = loadSettings();
         Path applicationRoot = RuntimePathResolver.defaultResolver().resolve().layout().applicationRoot();
-        XttsCudaSmokeReport cudaSmoke = services.settings().inspectXttsCudaSmoke().inspect(applicationRoot);
+        XttsCudaSmokeReport cudaSmoke = settingsServices.inspectXttsCudaSmoke().inspect(applicationRoot);
         return gpuFallbackDecision.inspect(settings, cudaSmoke)
                 .map(List::of)
                 .orElseGet(List::of);
@@ -37,7 +37,7 @@ public final class DocumentAudioDefensiveDecisionGuard {
 
     private OperationalSettings loadSettings() {
         try {
-            return services.settings().loadOperationalSettings().load();
+            return settingsServices.loadOperationalSettings().load();
         } catch (IOException ex) {
             return OperationalSettings.defaults();
         }

@@ -5,7 +5,7 @@ import com.marcosmoreiradev.docupodcaststudio.application.ink.InkPlacedImage;
 import com.marcosmoreiradev.docupodcaststudio.application.ink.InkWorkspaceState;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionButtonFactory;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
-import com.marcosmoreiradev.docupodcaststudio.presentation.document.StudyProblemCanvasExportOptions;
+import com.marcosmoreiradev.docupodcaststudio.presentation.ink.canvas.InkCanvasExportOptions;
 import com.marcosmoreiradev.docupodcaststudio.presentation.ink.InkRealtimeStrokeEngine;
 import com.marcosmoreiradev.docupodcaststudio.presentation.ink.canvas.InkCanvasSurface;
 import com.marcosmoreiradev.docupodcaststudio.presentation.ink.canvas.InkCanvasViewportCoordinateMapper;
@@ -631,7 +631,7 @@ public final class InkCompositionWorkspace extends BorderPane implements AutoClo
     public InkCompositionResult result() {
         InkWorkspaceState state = currentState();
         WritableImage image = surface.exportWithImages(images.stream().map(PlacedImageItem::view).toList(),
-                new StudyProblemCanvasExportOptions(1, 24_000_000L, false, true, 0,
+                new InkCanvasExportOptions(1, 24_000_000L, false, true, 0,
                         profile.logicalWidth(), profile.logicalHeight())).image();
         return new InkCompositionResult(image, state, stagedSources);
     }

@@ -51,7 +51,7 @@ public final class GrammarWorkflowCoordinator {
     public void exportTemplate(ProjectGrammarKind kind, Path target) {
         Path resolvedTarget = ensureMarkdownExtension(target);
         try {
-            String markdown = viewModel.applicationServices().grammar().buildGrammarTemplate().templateFor(kind).markdown();
+            String markdown = viewModel.projectWorkspace().grammar().buildGrammarTemplate().templateFor(kind).markdown();
             Files.writeString(resolvedTarget, markdown, StandardCharsets.UTF_8);
             viewModel.updateStatusMessage("Plantilla " + kind.displayName().toLowerCase(java.util.Locale.ROOT)
                     + " exportada: " + resolvedTarget.getFileName() + ".");
@@ -67,7 +67,7 @@ public final class GrammarWorkflowCoordinator {
             protected TheatreGrammarImportBundle call() throws Exception {
                 updateMessage("Leyendo gramatica teatral Markdown...");
                 ImportProjectGrammarMarkdownUseCase.TheatreParseResult parsed =
-                        viewModel.applicationServices().grammar().importProjectGrammarMarkdown().parseTheatre(sourceFile);
+                        viewModel.projectWorkspace().grammar().importProjectGrammarMarkdown().parseTheatre(sourceFile);
                 updateMessage("Importando obra como documento teatral...");
                 ReadableDocument document = viewModel.importAndClassifySourceDocument(sourceFile);
                 return new TheatreGrammarImportBundle(document, parsed.plan(), parsed.report());
@@ -96,7 +96,7 @@ public final class GrammarWorkflowCoordinator {
             protected NarrativeVideoGrammarImportBundle call() throws Exception {
                 updateMessage("Leyendo gramatica narrativa Markdown...");
                 ImportProjectGrammarMarkdownUseCase.NarrativeParseResult parsed =
-                        viewModel.applicationServices().grammar().importProjectGrammarMarkdown().parseNarrative(sourceFile);
+                        viewModel.projectWorkspace().grammar().importProjectGrammarMarkdown().parseNarrative(sourceFile);
                 updateMessage("Importando guion narrativo como documento...");
                 ReadableDocument document = viewModel.importAndClassifySourceDocument(sourceFile);
                 return new NarrativeVideoGrammarImportBundle(document, parsed.plan(), parsed.report());
@@ -152,7 +152,7 @@ public final class GrammarWorkflowCoordinator {
             return report.withAdditionalDiagnostics(List.of(GrammarDiagnostic.warning(
                     "SEMANTICS_NOT_MATERIALIZED", "No hay proyecto activo para escribir project-semantics.json.")));
         }
-        return viewModel.applicationServices().grammar().importProjectGrammarMarkdown().materializeNarrative(
+        return viewModel.projectWorkspace().grammar().importProjectGrammarMarkdown().materializeNarrative(
                 project.get(), viewModel.currentProjectFile().orElse(null), sourceFile, plan,
                 viewModel.currentScriptProperty().get(), report);
     }
@@ -163,7 +163,7 @@ public final class GrammarWorkflowCoordinator {
             return report.withAdditionalDiagnostics(List.of(GrammarDiagnostic.warning(
                     "SEMANTICS_NOT_MATERIALIZED", "No hay proyecto activo para escribir project-semantics.json.")));
         }
-        return viewModel.applicationServices().grammar().importProjectGrammarMarkdown().materializeTheatre(
+        return viewModel.projectWorkspace().grammar().importProjectGrammarMarkdown().materializeTheatre(
                 project.get(), viewModel.currentProjectFile().orElse(null), sourceFile, plan,
                 viewModel.currentScriptProperty().get(), report);
     }

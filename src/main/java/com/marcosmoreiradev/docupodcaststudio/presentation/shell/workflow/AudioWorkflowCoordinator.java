@@ -368,7 +368,7 @@ public final class AudioWorkflowCoordinator {
                 status.jobId(), status.documentName(), AudioJobState.CANCELLED, AudioGenerationStage.CANCELLED,
                 status.completedSegments(), status.totalSegments(), status.failedSegments(), status.progress(),
                 status.currentSegmentId(), status.currentSegmentTitle(), 0L,
-                "Job encontrado como activo al reabrir. Se marca como interrumpido y podrá reanudarse en una tanda posterior.",
+                "Job encontrado como activo al reabrir. Se marca como interrumpido y puede reanudarse desde Procesos.",
                 status.outputDirectory(), status.finalAudioPath(), status.manifestPath());
     }
 

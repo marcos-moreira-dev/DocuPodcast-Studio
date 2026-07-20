@@ -210,7 +210,7 @@ public final class DocumentAudioNarrationPanel extends VBox {
                 updateSourceStatus(choices);
                 return;
             }
-            String active = voiceSourceLabel(viewModel.applicationServices().voice().voiceCapabilityPolicy()
+            String active = voiceSourceLabel(viewModel.administrationWorkspace().voice().voiceCapabilityPolicy()
                     .activeEngineProfile(viewModel.audioEngineDescriptor()));
             sourceSelector.setValue(choices.contains(active) ? active : choices.get(0));
             updateSourceStatus(choices);
@@ -263,7 +263,7 @@ public final class DocumentAudioNarrationPanel extends VBox {
         if (MOCK_VOICE.equals(selected)) {
             return VoiceEngineCapabilityProfile.mock();
         }
-        return viewModel.applicationServices().voice().voiceCapabilityPolicy()
+        return viewModel.administrationWorkspace().voice().voiceCapabilityPolicy()
                 .activeEngineProfile(viewModel.audioEngineDescriptor());
     }
 
@@ -430,7 +430,7 @@ public final class DocumentAudioNarrationPanel extends VBox {
     }
 
     private List<VoiceAssignmentOption> assignmentOptionsForCurrentSource(VoiceLibrary library, String currentVoiceId) {
-        return viewModel.applicationServices().voice().buildVoiceAssignmentOptions()
+        return viewModel.administrationWorkspace().voice().buildVoiceAssignmentOptions()
                 .build(library, descriptorForCurrentSource(), List.of(), currentVoiceId);
     }
 

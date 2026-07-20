@@ -1,23 +1,14 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.workspace;
 
-import javafx.geometry.Insets;
-import javafx.scene.control.Label;
-import javafx.scene.layout.VBox;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.UiState;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.UiStateView;
 
-/** Placeholder used until a real workspace is implemented. */
-public final class PlaceholderWorkspaceView extends VBox {
+/** Legacy compatibility surface. New registrations use explicit operational states. */
+@Deprecated(forRemoval = false)
+public final class PlaceholderWorkspaceView extends UiStateView {
     public PlaceholderWorkspaceView(WorkspaceKind kind) {
+        super(UiState.CAPABILITY_UNAVAILABLE, "NO DISPONIBLE", kind.displayName(),
+                "Esta capacidad no está disponible en la configuración actual.");
         getStyleClass().add("placeholder-workspace");
-        setPadding(new Insets(32));
-        setSpacing(12);
-
-        Label title = new Label(kind.displayName());
-        title.getStyleClass().add("workspace-title");
-
-        Label message = new Label("Workspace planificado. Se implementará en una tanda posterior siguiendo el onboarding técnico.");
-        message.getStyleClass().add("workspace-subtitle");
-        message.setWrapText(true);
-
-        getChildren().addAll(title, message);
     }
 }

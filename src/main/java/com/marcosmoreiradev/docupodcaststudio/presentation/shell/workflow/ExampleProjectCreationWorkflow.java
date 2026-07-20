@@ -25,7 +25,7 @@ public final class ExampleProjectCreationWorkflow {
         Objects.requireNonNull(viewModel, "viewModel");
         Objects.requireNonNull(example, "example");
         Objects.requireNonNull(targetProjectFile, "targetProjectFile");
-        ExampleProjectMaterialization materialized = viewModel.applicationServices()
+        ExampleProjectMaterialization materialized = viewModel.administrationWorkspace()
                 .examples()
                 .createExampleProject()
                 .materialize(example, targetProjectFile);
@@ -61,7 +61,7 @@ public final class ExampleProjectCreationWorkflow {
         ExampleProjectMaterialization materialized = null;
         boolean projectFileExistedBefore = false;
         try {
-            materialized = viewModel.applicationServices()
+            materialized = viewModel.administrationWorkspace()
                     .examples()
                     .createExampleProject()
                     .materializeInDirectory(example, targetDirectory);

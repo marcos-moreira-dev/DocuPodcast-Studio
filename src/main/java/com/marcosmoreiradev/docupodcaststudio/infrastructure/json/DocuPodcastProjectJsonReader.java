@@ -186,17 +186,29 @@ public final class DocuPodcastProjectJsonReader {
                     string(voice.get("id"), "voice.id"),
                     string(voice.get("displayName"), "voice.displayName"),
                     enumValue(VoiceProfileType.class, stringOrDefault(voice.get("type"), VoiceProfileType.UNKNOWN.name()), "voice.type"),
-                    enumValue(VoiceEngineType.class, stringOrDefault(voice.get("engineType"), VoiceEngineType.UNKNOWN.name()), "voice.engineType"),
+                    resolveVoiceEngineType(voice),
                     stringOrDefault(voice.get("language"), "es"),
                     stringOrDefault(voice.get("sampleAssetId"), ""),
                     stringOrDefault(voice.get("modelAssetId"), ""),
                     enumValue(VoiceQualityPreset.class, stringOrDefault(voice.get("qualityPreset"), VoiceQualityPreset.BALANCED.name()), "voice.qualityPreset"),
                     booleanOrDefault(voice.get("supportsStyleTransfer"), false),
                     stringOrDefault(voice.get("consentNote"), ""),
-                    Map.of()
+                    voiceEngineMetadata(voice)
             ));
         }
         return List.copyOf(result);
+    }
+
+    private static VoiceEngineType resolveVoiceEngineType(Map<String, Object> voice) throws IOException {
+        String engineId = stringOrDefault(voice.get("engineId"), "");
+        if (!engineId.isBlank()) return VoiceProfile.engineTypeFor(engineId);
+        return enumValue(VoiceEngineType.class,
+                stringOrDefault(voice.get("engineType"), VoiceEngineType.UNKNOWN.name()), "voice.engineType");
+    }
+
+    private static Map<String, String> voiceEngineMetadata(Map<String, Object> voice) throws IOException {
+        String engineId = stringOrDefault(voice.get("engineId"), "");
+        return engineId.isBlank() ? Map.of() : Map.of("engineId", engineId);
     }
 
     @SuppressWarnings("unchecked")

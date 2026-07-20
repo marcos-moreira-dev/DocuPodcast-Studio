@@ -71,7 +71,7 @@ public final class TheatreAudioTrackPanel extends VBox {
 
     public TheatreAudioTrackPanel(DocuPodcastShellViewModel viewModel) {
         this.viewModel = viewModel;
-        this.previewPlayer = viewModel.applicationServices().playback().previewAudioPlayer();
+        this.previewPlayer = viewModel.playbackWorkspace().playback().previewAudioPlayer();
         getStyleClass().add("theatre-audio-track-panel");
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
@@ -252,9 +252,9 @@ public final class TheatreAudioTrackPanel extends VBox {
             @Override protected PreparedAudioAsset call() throws Exception {
                 discardPendingAudioNow();
                 Path projectFile = viewModel.currentProjectFile().orElseThrow(() -> new IOException("Guarda el proyecto antes de elegir audio."));
-                PreparedAudioAsset prepared = viewModel.applicationServices().media().importUserMediaAsset().prepareAudio(projectFile, chosen);
+                PreparedAudioAsset prepared = viewModel.generationWorkspace().media().importUserMediaAsset().prepareAudio(projectFile, chosen);
                 if (isCancelled()) {
-                    viewModel.applicationServices().media().importUserMediaAsset().discardPreparedAudio(projectFile, prepared);
+                    viewModel.generationWorkspace().media().importUserMediaAsset().discardPreparedAudio(projectFile, prepared);
                     return null;
                 }
                 return prepared;
@@ -454,7 +454,7 @@ public final class TheatreAudioTrackPanel extends VBox {
         pendingAudio = null;
         if (discarded == null) return;
         Thread thread = new Thread(() -> {
-            try { viewModel.currentProjectFile().ifPresent(file -> { try { viewModel.applicationServices().media().importUserMediaAsset().discardPreparedAudio(file, discarded); } catch (IOException ignored) { } }); }
+            try { viewModel.currentProjectFile().ifPresent(file -> { try { viewModel.generationWorkspace().media().importUserMediaAsset().discardPreparedAudio(file, discarded); } catch (IOException ignored) { } }); }
             catch (RuntimeException ignored) { }
         }, "theatre-audio-discard");
         thread.setDaemon(true);
@@ -465,7 +465,7 @@ public final class TheatreAudioTrackPanel extends VBox {
         PreparedAudioAsset discarded = pendingAudio;
         pendingAudio = null;
         if (discarded != null && viewModel.currentProjectFile().isPresent()) {
-            viewModel.applicationServices().media().importUserMediaAsset().discardPreparedAudio(viewModel.currentProjectFile().get(), discarded);
+            viewModel.generationWorkspace().media().importUserMediaAsset().discardPreparedAudio(viewModel.currentProjectFile().get(), discarded);
         }
     }
 

@@ -1,6 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition;
 
-import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentStudySlideLayout;
+import com.marcosmoreiradev.docupodcaststudio.ink.DrawingFeatureCatalog;
+import com.marcosmoreiradev.docupodcaststudio.ink.DrawingProfile;
 import javafx.scene.paint.Color;
 
 /** Product-level capabilities for a reusable ink and image composition workspace. */
@@ -19,8 +20,15 @@ public record InkCompositionProfile(
     }
 
     public static InkCompositionProfile documentaryIllustration() {
-        return new InkCompositionProfile(DocumentStudySlideLayout.ILLUSTRATION_WIDTH,
-                DocumentStudySlideLayout.ILLUSTRATION_HEIGHT, Color.WHITE, true, 20);
+        DrawingProfile profile = DrawingFeatureCatalog.official()
+                .require(DrawingFeatureCatalog.DOCUMENTARY_ILLUSTRATION);
+        return from(profile, Color.WHITE, true);
+    }
+
+    public static InkCompositionProfile from(DrawingProfile profile, Color background, boolean multipleImages) {
+        if (profile == null) throw new IllegalArgumentException("drawing profile is required");
+        return new InkCompositionProfile(profile.logicalWidth(), profile.logicalHeight(), background,
+                multipleImages, profile.historyLimit());
     }
 
     public double aspectRatio() {

@@ -1,5 +1,9 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.document;
 
+import com.marcosmoreiradev.docupodcaststudio.ink.DrawingFeatureCatalog;
+import com.marcosmoreiradev.docupodcaststudio.ink.DrawingProfile;
+import com.marcosmoreiradev.docupodcaststudio.presentation.ink.canvas.InkCanvasExportOptions;
+import com.marcosmoreiradev.docupodcaststudio.presentation.ink.canvas.InkCanvasExportResult;
 import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.StudyProblemDetail;
 import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.StudyProblemSourceDraft;
 import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.StudyProblemSourceProjection;
@@ -12,13 +16,12 @@ import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionButt
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.LucideIconView;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
 import com.marcosmoreiradev.docupodcaststudio.presentation.ink.InkRealtimeStrokeEngine;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.canvas.InkCanvasSurface;
 import com.marcosmoreiradev.docupodcaststudio.presentation.ink.canvas.InkCanvasViewportCoordinateMapper;
 import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputCapabilities;
 import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputCursor;
 import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputListener;
 import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputProvider;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputProviderFactory;
+import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.NoopInkInputProvider;
 import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputSample;
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
@@ -95,7 +98,9 @@ import java.util.Optional;
 
 /** Modal resolver for technical problems. */
 public final class TechnicalProblemDialog {
-    private static final int MAX_UNDO_SNAPSHOTS = 50;
+    private static final DrawingProfile DRAWING_PROFILE = DrawingFeatureCatalog.official()
+            .require(DrawingFeatureCatalog.DOCUMENT_PROBLEM);
+    private static final int MAX_UNDO_SNAPSHOTS = DRAWING_PROFILE.historyLimit();
     private static final double DIALOG_PREF_WIDTH = 1220;
     private static final double DIALOG_PREF_HEIGHT = 760;
     private static final double CANVAS_TITLE_BAND_HEIGHT = 64.0;
@@ -122,8 +127,8 @@ public final class TechnicalProblemDialog {
     private final TextField title = new TextField();
     private final TextArea solutionText = new TextArea();
     private final TextArea notes = new TextArea();
-    private final InkCanvasSurface drawingSurface = new InkCanvasSurface();
-    private final InkInputProvider inkInputProvider = InkInputProviderFactory.createLectureStudioOnly();
+    private final StudyProblemCanvasSurface drawingSurface = new StudyProblemCanvasSurface();
+    private final InkInputProvider inkInputProvider;
     private final ColorPicker penColor = new ColorPicker(Color.BLACK);
     private final ColorPicker backgroundColor = new ColorPicker(Color.WHITE);
     private final Slider penWidth = new Slider(1, 24, 3);
@@ -207,6 +212,12 @@ public final class TechnicalProblemDialog {
     private Path externalPngTarget;
 
     private TechnicalProblemDialog(Window owner, List<DocumentBlock> sourceBlocks, Map<String, Path> sourceCropPaths) {
+        this(owner, sourceBlocks, sourceCropPaths, NoopInkInputProvider.INSTANCE);
+    }
+
+    private TechnicalProblemDialog(Window owner, List<DocumentBlock> sourceBlocks, Map<String, Path> sourceCropPaths,
+                                   InkInputProvider inkInputProvider) {
+        this.inkInputProvider = inkInputProvider == null ? NoopInkInputProvider.INSTANCE : inkInputProvider;
         this.statementSources = new ArrayList<>(statementSources(sourceBlocks, sourceCropPaths));
         this.sourceCropPaths = sourceCropPaths == null ? Map.of() : Map.copyOf(sourceCropPaths);
         this.existingSolutionImagePath = null;
@@ -217,6 +228,12 @@ public final class TechnicalProblemDialog {
     }
 
     private TechnicalProblemDialog(Window owner, List<StudyProblemSourceDraft> sourceDrafts, boolean draftMode) {
+        this(owner, sourceDrafts, draftMode, NoopInkInputProvider.INSTANCE);
+    }
+
+    private TechnicalProblemDialog(Window owner, List<StudyProblemSourceDraft> sourceDrafts, boolean draftMode,
+                                   InkInputProvider inkInputProvider) {
+        this.inkInputProvider = inkInputProvider == null ? NoopInkInputProvider.INSTANCE : inkInputProvider;
         this.statementSources = new ArrayList<>(statementSourcesFromDrafts(sourceDrafts));
         this.sourceCropPaths = sourceCropPathsFromDrafts(sourceDrafts);
         this.existingSolutionImagePath = null;
@@ -227,6 +244,11 @@ public final class TechnicalProblemDialog {
     }
 
     private TechnicalProblemDialog(Window owner, StudyProblemDetail detail) {
+        this(owner, detail, NoopInkInputProvider.INSTANCE);
+    }
+
+    private TechnicalProblemDialog(Window owner, StudyProblemDetail detail, InkInputProvider inkInputProvider) {
+        this.inkInputProvider = inkInputProvider == null ? NoopInkInputProvider.INSTANCE : inkInputProvider;
         this.statementSources = new ArrayList<>(statementSources(detail));
         this.sourceCropPaths = Map.of();
         this.existingSolutionImagePath = detail == null ? null : detail.solutionImagePath();
@@ -243,6 +265,11 @@ public final class TechnicalProblemDialog {
     }
 
     private TechnicalProblemDialog(Window owner, boolean expressMode) {
+        this(owner, expressMode, NoopInkInputProvider.INSTANCE);
+    }
+
+    private TechnicalProblemDialog(Window owner, boolean expressMode, InkInputProvider inkInputProvider) {
+        this.inkInputProvider = inkInputProvider == null ? NoopInkInputProvider.INSTANCE : inkInputProvider;
         this.statementSources = new ArrayList<>();
         this.sourceCropPaths = Map.of();
         this.existingSolutionImagePath = null;
@@ -299,16 +326,37 @@ public final class TechnicalProblemDialog {
         return new TechnicalProblemDialog(owner, sourceBlocks, sourceCropPaths).dialog.showAndWait();
     }
 
+    public static Optional<TechnicalProblemResult> show(Window owner, List<DocumentBlock> sourceBlocks,
+                                                        Map<String, Path> sourceCropPaths,
+                                                        InkInputProvider inputProvider) {
+        return new TechnicalProblemDialog(owner, sourceBlocks, sourceCropPaths, inputProvider).dialog.showAndWait();
+    }
+
     public static Optional<TechnicalProblemResult> showForDrafts(Window owner, List<StudyProblemSourceDraft> sourceDrafts) {
         return new TechnicalProblemDialog(owner, sourceDrafts, true).dialog.showAndWait();
+    }
+
+    public static Optional<TechnicalProblemResult> showForDrafts(Window owner,
+                                                                 List<StudyProblemSourceDraft> sourceDrafts,
+                                                                 InkInputProvider inputProvider) {
+        return new TechnicalProblemDialog(owner, sourceDrafts, true, inputProvider).dialog.showAndWait();
     }
 
     public static Optional<TechnicalProblemResult> showForEdit(Window owner, StudyProblemDetail detail) {
         return new TechnicalProblemDialog(owner, detail).dialog.showAndWait();
     }
 
+    public static Optional<TechnicalProblemResult> showForEdit(Window owner, StudyProblemDetail detail,
+                                                               InkInputProvider inputProvider) {
+        return new TechnicalProblemDialog(owner, detail, inputProvider).dialog.showAndWait();
+    }
+
     public static Optional<TechnicalProblemResult> showExpress(Window owner) {
         return new TechnicalProblemDialog(owner, true).dialog.showAndWait();
+    }
+
+    public static Optional<TechnicalProblemResult> showExpress(Window owner, InkInputProvider inputProvider) {
+        return new TechnicalProblemDialog(owner, true, inputProvider).dialog.showAndWait();
     }
 
     private boolean shouldExportCanvas(ButtonType button) {
@@ -320,8 +368,8 @@ public final class TechnicalProblemDialog {
         markTitleContentBounds();
         boolean needsCanvas = shouldExportCanvas(button);
         boolean externalRequested = saveAndExportButtonType != null && button == saveAndExportButtonType && externalPngTarget != null;
-        StudyProblemCanvasExportResult internalExport = needsCanvas ? exportCanvas(StudyProblemCanvasExportOptions.internalPersistence()) : null;
-        StudyProblemCanvasExportResult externalExport = externalRequested ? exportCanvas(StudyProblemCanvasExportOptions.premiumExternal()) : null;
+        InkCanvasExportResult internalExport = needsCanvas ? exportCanvas(InkCanvasExportOptions.internalPersistence()) : null;
+        InkCanvasExportResult externalExport = externalRequested ? exportCanvas(InkCanvasExportOptions.premiumExternal()) : null;
         String canvasStateJson = shouldPersistCanvasState(needsCanvas) ? canvasStateJson() : "";
         List<String> warnings = new ArrayList<>();
         if (internalExport != null) {
@@ -1406,8 +1454,8 @@ public final class TechnicalProblemDialog {
         }
         double zoom = Math.max(0.1, canvasZoom.getValue() / 100.0);
         drawingSurface.ensureLogicalSize(
-                Math.max(StudyProblemCanvasSurface.DEFAULT_WIDTH, (canvasScroll.getViewportBounds().getWidth() - 36) / zoom),
-                Math.max(StudyProblemCanvasSurface.DEFAULT_HEIGHT, (canvasScroll.getViewportBounds().getHeight() - 36) / zoom));
+                Math.max(DRAWING_PROFILE.logicalWidth(), (canvasScroll.getViewportBounds().getWidth() - 36) / zoom),
+                Math.max(DRAWING_PROFILE.logicalHeight(), (canvasScroll.getViewportBounds().getHeight() - 36) / zoom));
     }
 
     private void installCanvasRegionSelectionOverlay() {
@@ -1659,13 +1707,13 @@ public final class TechnicalProblemDialog {
         return drawingSurface.snapshotWithImages(canvasImageViews());
     }
 
-    private StudyProblemCanvasExportResult exportCanvas(StudyProblemCanvasExportOptions options) {
+    private InkCanvasExportResult exportCanvas(InkCanvasExportOptions options) {
         flushInk();
         markTitleContentBounds();
         return burnTitleIntoCanvas(drawingSurface.exportWithImages(canvasImageViews(), options), title.getText());
     }
 
-    private StudyProblemCanvasExportResult burnTitleIntoCanvas(StudyProblemCanvasExportResult base, String titleText) {
+    private InkCanvasExportResult burnTitleIntoCanvas(InkCanvasExportResult base, String titleText) {
         String normalizedTitle = titleText == null ? "" : titleText.strip();
         if (base == null || base.image() == null || normalizedTitle.isBlank()) {
             return base;
@@ -1690,7 +1738,7 @@ public final class TechnicalProblemDialog {
             graphics.dispose();
         }
         WritableImage output = bufferedToWritable(outputImage);
-        return new StudyProblemCanvasExportResult(
+        return new InkCanvasExportResult(
                 output,
                 scale,
                 base.cropped(),
@@ -1844,8 +1892,8 @@ public final class TechnicalProblemDialog {
             if (json == null || json.isBlank()) {
                 return false;
             }
-            double width = jsonDoubleValue(json, "width", StudyProblemCanvasSurface.DEFAULT_WIDTH);
-            double height = jsonDoubleValue(json, "height", StudyProblemCanvasSurface.DEFAULT_HEIGHT);
+            double width = jsonDoubleValue(json, "width", DRAWING_PROFILE.logicalWidth());
+            double height = jsonDoubleValue(json, "height", DRAWING_PROFILE.logicalHeight());
             Color restoredBackground = parseColorValue(jsonStringValue(json, "background", "#ffffffff"));
             drawingSurface.resetForEditableState(width, height, restoredBackground);
             backgroundColor.setValue(restoredBackground);

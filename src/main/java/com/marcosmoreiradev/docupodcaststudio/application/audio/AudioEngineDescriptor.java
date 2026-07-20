@@ -41,8 +41,12 @@ public record AudioEngineDescriptor(
         return new AudioEngineDescriptor("local-process", displayName, "process", configured, true, commandPreview, message);
     }
 
+    public static AudioEngineDescriptor unavailable(String engineId, String displayName, String message) {
+        return new AudioEngineDescriptor(engineId, displayName, "unavailable", false, false, "", message);
+    }
+
     public String statusLabel() {
-        String real = realTts ? "TTS real" : "mock";
+        String real = "unavailable".equals(mode) ? "no disponible" : realTts ? "TTS real" : "mock";
         String state = configured ? "configurado" : "no configurado";
         return displayName + " · " + real + " · " + state;
     }

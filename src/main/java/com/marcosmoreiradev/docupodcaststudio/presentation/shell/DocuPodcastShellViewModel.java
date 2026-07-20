@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell;
 import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
+import com.marcosmoreiradev.docupodcaststudio.application.WorkspaceApplicationServices;
+import com.marcosmoreiradev.docupodcaststudio.media.api.MediaEnginePlatform;
 import com.marcosmoreiradev.docupodcaststudio.application.recording.AudioInputDevice;
 import com.marcosmoreiradev.docupodcaststudio.application.examples.ExampleVisualBindingDescriptor;
 import com.marcosmoreiradev.docupodcaststudio.application.recording.RecordingActionPlan;
@@ -86,6 +88,7 @@ import com.marcosmoreiradev.docupodcaststudio.presentation.document.DocumentVisu
 import com.marcosmoreiradev.docupodcaststudio.application.document.ListeningSessionState;
 import com.marcosmoreiradev.docupodcaststudio.presentation.storyboard.StoryboardScenePresentation;
 import com.marcosmoreiradev.docupodcaststudio.presentation.workspace.WorkspaceKind;
+import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputProviderRegistry;
 import javafx.application.Platform;
 import javafx.beans.property.*;
 import javafx.animation.KeyFrame;
@@ -107,6 +110,8 @@ public final class DocuPodcastShellViewModel {
     public static final int DEFAULT_READING_FONT_SIZE = 18;
     public static final int MAX_READING_FONT_SIZE = 28;
     private final ApplicationServices applicationServices;
+    private final WorkspaceApplicationServices workspaceServices;
+    private final InkInputProviderRegistry inkInputProviders;
     private final ProjectSessionCoordinator sessions = new ProjectSessionCoordinator();
     private final ProjectWorkflowCoordinator projectWorkflow;
     private final DocumentIntakeCoordinator documentIntake;
@@ -214,7 +219,20 @@ public final class DocuPodcastShellViewModel {
     private final ObjectProperty<TheatreProjectLayer.TextActionPlacement> activeTextActionPlacement =
             new SimpleObjectProperty<>(TheatreProjectLayer.TextActionPlacement.empty());
     public DocuPodcastShellViewModel(ApplicationServices applicationServices) {
+        this(applicationServices, InkInputProviderRegistry.localDefaults(), MediaEnginePlatform.empty());
+    }
+
+    public DocuPodcastShellViewModel(ApplicationServices applicationServices,
+                                     InkInputProviderRegistry inkInputProviders) {
+        this(applicationServices, inkInputProviders, MediaEnginePlatform.empty());
+    }
+
+    public DocuPodcastShellViewModel(ApplicationServices applicationServices,
+                                     InkInputProviderRegistry inkInputProviders,
+                                     MediaEnginePlatform mediaEngines) {
         this.applicationServices = Objects.requireNonNull(applicationServices, "applicationServices");
+        this.workspaceServices = WorkspaceApplicationServices.from(this.applicationServices, mediaEngines);
+        this.inkInputProviders = Objects.requireNonNull(inkInputProviders, "inkInputProviders");
         this.projectWorkflow = new ProjectWorkflowCoordinator(this.applicationServices, sessions);
         this.documentIntake = new DocumentIntakeCoordinator(this.applicationServices);
         this.sourceDocumentRefresh = new SourceDocumentRefreshCoordinator(this.applicationServices);
@@ -247,7 +265,18 @@ public final class DocuPodcastShellViewModel {
         selectedDocumentBlockId.addListener((obs, oldValue, newValue) -> actualizarFrameActivo());
     }
 
+    /** Compatibility seam for coordinators not migrated yet; views use narrow workspace bundles. */
+    @Deprecated(forRemoval = false)
     public ApplicationServices applicationServices() { return applicationServices; }
+
+    public WorkspaceApplicationServices.ProjectWorkspace projectWorkspace() { return workspaceServices.project(); }
+    public WorkspaceApplicationServices.PlaybackWorkspace playbackWorkspace() { return workspaceServices.playback(); }
+    public WorkspaceApplicationServices.GenerationWorkspace generationWorkspace() { return workspaceServices.generation(); }
+    public WorkspaceApplicationServices.ExportWorkspace exportWorkspace() { return workspaceServices.exports(); }
+    public WorkspaceApplicationServices.AdministrationWorkspace administrationWorkspace() {
+        return workspaceServices.administration();
+    }
+    public InkInputProviderRegistry inkInputProviders() { return inkInputProviders; }
 
     public ReadOnlyStringProperty windowTitleProperty() { return windowTitle.getReadOnlyProperty(); }
 

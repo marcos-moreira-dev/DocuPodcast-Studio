@@ -129,7 +129,13 @@ public final class SettingsAwareAudioGenerationGateway implements AudioGeneratio
             }
             return new LocalTtsProcessAudioGenerationGateway(queue, jobRepository, diagnosticsRepository, configuration, processRunner);
         }
-        return new MockAudioGenerationGateway(queue, jobRepository, 120L);
+        if (Boolean.getBoolean("docupodcast.diagnostics.mockAudio")) {
+            return new MockAudioGenerationGateway(queue, jobRepository, 120L);
+        }
+        return new UnavailableAudioGenerationGateway(
+                settings.tts().engineMode(),
+                settings.tts().displayName(),
+                "El motor seleccionado no tiene un comando o runtime utilizable. Configura Piper o Voz IA avanzada.");
     }
 
 
