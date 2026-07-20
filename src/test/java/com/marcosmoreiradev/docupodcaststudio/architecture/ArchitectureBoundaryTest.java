@@ -45,6 +45,7 @@ final class ArchitectureBoundaryTest {
             .that().resideOutsideOfPackages(
                     "..presentation..",
                     "..bootstrap..",
+                    "..ink..",
                     BASE_PACKAGE
             )
             .should().dependOnClassesThat().resideInAnyPackage("javafx..");
@@ -118,4 +119,16 @@ final class ArchitectureBoundaryTest {
                     "..presentation.voice..",
                     "..presentation.theatre..",
                     "..presentation.settings..");
+
+    @ArchTest
+    static final ArchRule presentation_does_not_use_root_application_locator = noClasses()
+            .that().resideInAPackage("..presentation..")
+            .should().dependOnClassesThat().haveFullyQualifiedName(
+                    "com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices");
+
+    @ArchTest
+    static final ArchRule neutral_media_service_does_not_know_process_or_http_protocols = noClasses()
+            .that().resideInAPackage("..application.media..")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "..application.process..", "java.net.http..");
 }

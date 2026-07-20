@@ -1,7 +1,8 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.document;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ink.InkWorkspaceState;
-import com.marcosmoreiradev.docupodcaststudio.application.ink.InkWorkspaceStateSerializer;
+import com.marcosmoreiradev.docupodcaststudio.ink.model.InkWorkspaceState;
+import com.marcosmoreiradev.docupodcaststudio.ink.model.InkWorkspaceStateSerializer;
+import com.marcosmoreiradev.docupodcaststudio.ink.DrawingProfile;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.CollapsibleSection;
 import com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.InkCompositionProfile;
 import com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.InkCompositionResult;
@@ -36,14 +37,15 @@ public final class DocumentParagraphSketchDialog extends Dialog<DocumentParagrap
     private final InkCompositionWorkspace workspace;
     private boolean saved;
 
-    public DocumentParagraphSketchDialog(Window owner, String paragraphText, Path existingState) {
+    public DocumentParagraphSketchDialog(Window owner, String paragraphText, Path existingState,
+                                         DrawingProfile drawingProfile) {
         initOwner(owner);
         setTitle("Ilustrar parrafo");
         setResizable(true);
         getDialogPane().getButtonTypes().addAll(saveType, ButtonType.CANCEL);
 
         workspace = new InkCompositionWorkspace(
-                InkCompositionProfile.documentaryIllustration(), readState(existingState));
+                InkCompositionProfile.documentaryIllustration(drawingProfile), readState(existingState));
         Label reference = new Label(paragraphText == null ? "" : paragraphText);
         reference.setWrapText(true);
         reference.setMaxWidth(Double.MAX_VALUE);

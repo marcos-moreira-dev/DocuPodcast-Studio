@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
+import com.marcosmoreiradev.docupodcaststudio.application.WorkspaceApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.ReadableDocument;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.DocuPodcastProject;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.ProjectKind;
@@ -21,16 +21,16 @@ import java.util.Objects;
  * narrated document to the active project.</p>
  */
 public final class DocumentIntakeCoordinator {
-    private final ApplicationServices applicationServices;
+    private final WorkspaceApplicationServices applicationServices;
 
-    public DocumentIntakeCoordinator(ApplicationServices applicationServices) {
+    public DocumentIntakeCoordinator(WorkspaceApplicationServices applicationServices) {
         this.applicationServices = Objects.requireNonNull(applicationServices, "applicationServices");
     }
 
     public ReadableDocument importAndClassify(Path sourceFile, ReadingProfile profile) throws IOException {
         Objects.requireNonNull(profile, "profile");
-        ReadableDocument document = applicationServices.document().documentSourceImport().importSource(sourceFile);
-        return applicationServices.readingProfile().applyReadingProfile().apply(document, profile);
+        ReadableDocument document = applicationServices.project().document().documentSourceImport().importSource(sourceFile);
+        return applicationServices.project().readingProfile().applyReadingProfile().apply(document, profile);
     }
 
     public void attachImportedDocument(ProjectSession session, ReadableDocument classified, ReadingProfile profile) {

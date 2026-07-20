@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
+import com.marcosmoreiradev.docupodcaststudio.application.WorkspaceApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.ReadableDocument;
 import com.marcosmoreiradev.docupodcaststudio.application.document.DocumentListenPlan;
 import com.marcosmoreiradev.docupodcaststudio.application.document.ListeningSessionReadiness;
@@ -28,9 +28,9 @@ import java.util.Optional;
  * TTS, playback, render and project round-trip code.</p>
  */
 public final class DocumentNarrationCoordinator {
-    private final ApplicationServices applicationServices;
+    private final WorkspaceApplicationServices applicationServices;
 
-    public DocumentNarrationCoordinator(ApplicationServices applicationServices) {
+    public DocumentNarrationCoordinator(WorkspaceApplicationServices applicationServices) {
         this.applicationServices = Objects.requireNonNull(applicationServices, "applicationServices");
     }
 
@@ -41,7 +41,7 @@ public final class DocumentNarrationCoordinator {
                                                        boolean projectSaved,
                                                        AudioJobStatusDto audioJobStatus,
                                                        PlaybackBufferPolicy bufferPolicy) {
-        return applicationServices.document().prepareListeningSession().prepare(
+        return applicationServices.project().document().prepareListeningSession().prepare(
                 new PrepareListeningSessionRequest(document, projection, manifest, audioJobRunning, projectSaved, audioJobStatus, bufferPolicy));
     }
 
@@ -80,7 +80,7 @@ public final class DocumentNarrationCoordinator {
     public NarrationScriptDocument buildNarrationProjection(ProjectSession session, ReadableDocument document, boolean readAfterColon) {
         Objects.requireNonNull(session, "session");
         Objects.requireNonNull(document, "document");
-        return applicationServices.script()
+        return applicationServices.project().script()
                 .buildPreparedReadingProjection()
                 .build(document, session.project().metadata().language(), readAfterColon, session.project().readingProfile())
                 .narrationScript();
@@ -88,7 +88,7 @@ public final class DocumentNarrationCoordinator {
 
     public List<ScriptValidationIssue> validate(NarrationScriptDocument projection) {
         Objects.requireNonNull(projection, "projection");
-        return applicationServices.script().validateNarrationScript().validate(projection);
+        return applicationServices.project().script().validateNarrationScript().validate(projection);
     }
 
     public String projectionReadyMessage(NarrationScriptDocument projection, List<ScriptValidationIssue> issues) {

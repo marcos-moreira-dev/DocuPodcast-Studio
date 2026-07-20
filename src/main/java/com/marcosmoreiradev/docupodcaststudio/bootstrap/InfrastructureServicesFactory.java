@@ -3,9 +3,10 @@ package com.marcosmoreiradev.docupodcaststudio.bootstrap;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.audio.AudioJobFileRepository;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.audio.AudioProcessDiagnosticsFileRepository;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.audio.InMemoryAudioJobQueue;
-import com.marcosmoreiradev.docupodcaststudio.infrastructure.audio.LocalTtsProcessAudioGenerationGateway;
-import com.marcosmoreiradev.docupodcaststudio.infrastructure.audio.SettingsAwareAudioGenerationGateway;
-import com.marcosmoreiradev.docupodcaststudio.infrastructure.audio.SettingsAwareVoiceTestSynthesisGateway;
+import com.marcosmoreiradev.docupodcaststudio.infrastructure.audio.VoiceEngineAudioGenerationGateway;
+import com.marcosmoreiradev.docupodcaststudio.infrastructure.audio.VoiceCapabilityTestSynthesisGateway;
+import com.marcosmoreiradev.docupodcaststudio.application.media.MediaCapabilityService;
+import com.marcosmoreiradev.docupodcaststudio.application.settings.LoadOperationalSettingsUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.OperationalSettings;
 import com.marcosmoreiradev.docupodcaststudio.application.runtime.ApplicationRuntimeLayout;
 import com.marcosmoreiradev.docupodcaststudio.application.runtime.RuntimePathResolver;
@@ -47,7 +48,8 @@ import java.util.function.Supplier;
 
 /** Wires concrete infrastructure adapters. */
 public final class InfrastructureServicesFactory {
-    public InfrastructureServices create() {
+    public InfrastructureServices create(MediaCapabilityService mediaCapabilities) {
+        java.util.Objects.requireNonNull(mediaCapabilities, "media capabilities");
         AudioJobFileRepository audioJobRepository = new AudioJobFileRepository();
         AudioProcessDiagnosticsFileRepository processDiagnosticsRepository = new AudioProcessDiagnosticsFileRepository();
         PropertiesOperationalSettingsRepository settingsRepository = PropertiesOperationalSettingsRepository.defaultRepository();
@@ -56,8 +58,9 @@ public final class InfrastructureServicesFactory {
         Path applicationRoot = runtimeLayout.applicationRoot();
         DefaultExternalProcessRunner processRunner = new DefaultExternalProcessRunner();
         InMemoryAudioJobQueue audioQueue = new InMemoryAudioJobQueue();
-        AudioGenerationGateway audioGateway = new SettingsAwareAudioGenerationGateway(
-                settingsRepository, applicationRoot, audioQueue, audioJobRepository, processDiagnosticsRepository, processRunner);
+        LoadOperationalSettingsUseCase loadSettings = new LoadOperationalSettingsUseCase(settingsRepository);
+        AudioGenerationGateway audioGateway = new VoiceEngineAudioGenerationGateway(
+                mediaCapabilities, loadSettings, audioQueue, audioJobRepository);
         OfficialAiResourceCatalog aiResourceCatalog = new OfficialAiResourceCatalog();
         Path configuredFfmpeg = runtimeLayout.resolveConfiguredPath(operationalSettings.video().ffmpegExecutable());
         FfmpegToolDiscovery ffmpegDiscovery = new EmbeddedFfmpegLocator().locate(applicationRoot, configuredFfmpeg);
@@ -80,7 +83,7 @@ public final class InfrastructureServicesFactory {
                 processDiagnosticsRepository,
                 new VoiceLibraryWorkspaceFileRepository(),
                 new LocalVoiceSampleFileRepository(runtimeLayout.applicationRoot()),
-                new SettingsAwareVoiceTestSynthesisGateway(settingsRepository, applicationRoot, processRunner),
+                new VoiceCapabilityTestSynthesisGateway(mediaCapabilities, loadSettings),
                 new JavaSoundAudioRecordingGateway(),
                 new LocalImageAssetFileRepository(),
                 new StoryboardWorkspaceFileRepository(),

@@ -319,7 +319,8 @@ public final class DocumentMediaRailView extends VBox {
                 getScene() == null ? null : getScene().getWindow(),
                 context.get(),
                 this::openStoryboardOverview,
-                viewModel.inkInputProviders().create(DrawingFeatureCatalog.THEATRE_FRAME));
+                viewModel.inkInputProviders().create(DrawingFeatureCatalog.THEATRE_FRAME),
+                viewModel.drawingFeatures().require(DrawingFeatureCatalog.THEATRE_FRAME));
         try {
             dialog.showAndWait().ifPresent(result -> {
                 try {

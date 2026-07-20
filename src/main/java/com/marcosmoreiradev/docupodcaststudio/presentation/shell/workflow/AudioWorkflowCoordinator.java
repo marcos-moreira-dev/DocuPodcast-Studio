@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
+import com.marcosmoreiradev.docupodcaststudio.application.WorkspaceApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.application.audio.AudioEngineDescriptor;
 import com.marcosmoreiradev.docupodcaststudio.application.audio.AudioGenerationRequest;
 import com.marcosmoreiradev.docupodcaststudio.application.audio.AudioEngineAvailability;
@@ -51,26 +51,26 @@ import java.util.concurrent.CompletionException;
  */
 public final class AudioWorkflowCoordinator {
     private static final String DEFAULT_NARRATOR_VOICE_ID = "VOC-NARRATOR";
-    private final ApplicationServices applicationServices;
+    private final WorkspaceApplicationServices applicationServices;
 
-    public AudioWorkflowCoordinator(ApplicationServices applicationServices) {
+    public AudioWorkflowCoordinator(WorkspaceApplicationServices applicationServices) {
         this.applicationServices = Objects.requireNonNull(applicationServices, "applicationServices");
     }
 
     public AudioEngineDescriptor engineDescriptor() {
-        return applicationServices.audio().getAudioEngineDescriptor().get();
+        return applicationServices.playback().audio().getAudioEngineDescriptor().get();
     }
 
     public List<AudioEngineAvailability> engineAvailability() {
-        return applicationServices.audio().listAudioEngineAvailability().list();
+        return applicationServices.playback().audio().listAudioEngineAvailability().list();
     }
 
     public List<AudioEngineReadinessUiItem> engineReadinessUi() {
-        return applicationServices.audio().inspectAudioEngineReadinessUi().inspect();
+        return applicationServices.playback().audio().inspectAudioEngineReadinessUi().inspect();
     }
 
     public List<String> engineReadinessLines() {
-        return applicationServices.audio().inspectAudioEngineReadinessUi().compactLines();
+        return applicationServices.playback().audio().inspectAudioEngineReadinessUi().compactLines();
     }
 
 
@@ -79,12 +79,12 @@ public final class AudioWorkflowCoordinator {
         if (label.isBlank() || "Audio del computador".equals(label)) {
             return "Audio del computador seleccionado para el fragmento.";
         }
-        OperationalSettings current = applicationServices.settings().loadOperationalSettings().load();
+        OperationalSettings current = applicationServices.administration().settings().loadOperationalSettings().load();
         OperationalSettings updated;
         if ("Voz local simple".equals(label)) {
-            updated = applicationServices.settings().selectPiperAsEngine().select(current);
+            updated = applicationServices.administration().settings().selectPiperAsEngine().select(current);
         } else if ("Voz IA avanzada".equals(label)) {
-            updated = applicationServices.settings().selectXttsAsEngine().select(current);
+            updated = applicationServices.administration().settings().selectXttsAsEngine().select(current);
         } else if ("Modo de prueba".equals(label)) {
             updated = new OperationalSettings(current.readingDocument(), current.playbackBuffer(),
                     new OperationalSettings.TtsEngineSettings("mock", "", "Modo de prueba", current.tts().language(),
@@ -94,14 +94,14 @@ public final class AudioWorkflowCoordinator {
         } else {
             return "Origen de voz no reconocido: " + label + ".";
         }
-        applicationServices.settings().saveOperationalSettings().save(updated);
+        applicationServices.administration().settings().saveOperationalSettings().save(updated);
         return "Origen de voz seleccionado: " + label + ".";
     }
 
     public String useVoiceForDocument(VoiceProfile voice) throws IOException {
         Objects.requireNonNull(voice, "voice");
         selectDocumentAudioSource(sourceLabelForVoice(voice));
-        OperationalSettings current = applicationServices.settings().loadOperationalSettings().load();
+        OperationalSettings current = applicationServices.administration().settings().loadOperationalSettings().load();
         OperationalSettings.TtsEngineSettings tts = current.tts();
         OperationalSettings updated = new OperationalSettings(current.readingDocument(), current.playbackBuffer(),
                 new OperationalSettings.TtsEngineSettings(tts.engineMode(), tts.commandTemplate(), tts.displayName(),
@@ -109,12 +109,12 @@ public final class AudioWorkflowCoordinator {
                         tts.piperRuntimeZipUrl(), tts.piperDefaultVoiceUrl(), tts.piperDefaultVoiceMetadataUrl()),
                 current.video(), current.imageGeneration(), current.frameGeneration(), current.compute(),
                 current.ocr(), current.storage(), current.diagnostics());
-        applicationServices.settings().saveOperationalSettings().save(updated);
+        applicationServices.administration().settings().saveOperationalSettings().save(updated);
         return "Voz del documento seleccionada: " + voice.displayName() + ".";
     }
 
     public String configuredVoiceProfileId() {
-        try { return applicationServices.settings().loadOperationalSettings().load().tts().voiceProfileId(); }
+        try { return applicationServices.administration().settings().loadOperationalSettings().load().tts().voiceProfileId(); }
         catch (IOException | RuntimeException ex) { return ""; }
     }
 
@@ -152,23 +152,23 @@ public final class AudioWorkflowCoordinator {
     }
 
     public String submit(AudioGenerationRequest request, Consumer<AudioJobStatusDto> statusConsumer) {
-        return applicationServices.audio().submitAudioGenerationJob().submit(request, statusConsumer);
+        return applicationServices.playback().audio().submitAudioGenerationJob().submit(request, statusConsumer);
     }
 
     public String resume(AudioGenerationRequest request, AudioJobSnapshot snapshot, Consumer<AudioJobStatusDto> statusConsumer) {
-        return applicationServices.audio().resumePersistedAudioJob().resume(request, snapshot, statusConsumer);
+        return applicationServices.playback().audio().resumePersistedAudioJob().resume(request, snapshot, statusConsumer);
     }
 
     public boolean cancel(String jobId) {
-        return applicationServices.audio().cancelAudioGenerationJob().cancel(jobId);
+        return applicationServices.playback().audio().cancelAudioGenerationJob().cancel(jobId);
     }
 
     public List<AudioJobSnapshot> persistedJobs(Path projectDirectory) throws IOException {
-        return applicationServices.audio().listPersistedAudioJobs().list(projectDirectory);
+        return applicationServices.playback().audio().listPersistedAudioJobs().list(projectDirectory);
     }
 
     public void deletePersistedJobs(Path projectDirectory) throws IOException {
-        applicationServices.audio().deletePersistedAudioJobs().delete(projectDirectory);
+        applicationServices.playback().audio().deletePersistedAudioJobs().delete(projectDirectory);
     }
 
     public CompletableFuture<String> replaceAndSubmitAsync(Path projectDirectory,
@@ -188,7 +188,7 @@ public final class AudioWorkflowCoordinator {
             try {
                 if (!jobId.isBlank()) {
                     cancelActiveAudioJobSilently(activeStatus, onCancelled);
-                    if (!applicationServices.audio().cancelAudioGenerationJob().cancelAndAwait(jobId, Duration.ofSeconds(30))) {
+                    if (!applicationServices.playback().audio().cancelAudioGenerationJob().cancelAndAwait(jobId, Duration.ofSeconds(30))) {
                         throw new IOException("El trabajo de audio activo no termino en 30 segundos. Se conservaron jobs/ y no se inicio otro render.");
                     }
                 }
@@ -224,11 +224,11 @@ public final class AudioWorkflowCoordinator {
 
 
     public AudioJobMaintenanceReport maintenanceReport(Path projectDirectory, AudioJobSnapshot snapshot) {
-        return applicationServices.audio().inspectAudioJobMaintenance().inspect(projectDirectory, snapshot);
+        return applicationServices.playback().audio().inspectAudioJobMaintenance().inspect(projectDirectory, snapshot);
     }
 
     public AudioJobMaintenanceReport maintenanceReport(Path projectDirectory, AudioJobSnapshot snapshot, SourceDocumentChangeReport sourceReport) {
-        return applicationServices.audio().inspectAudioJobMaintenance().inspect(projectDirectory, snapshot, sourceReport);
+        return applicationServices.playback().audio().inspectAudioJobMaintenance().inspect(projectDirectory, snapshot, sourceReport);
     }
 
     public List<String> jobDetailLines(AudioJobSnapshot selected) {
@@ -245,9 +245,9 @@ public final class AudioWorkflowCoordinator {
 
     public AudioGenerationRequest buildGenerationRequest(ProjectSession session, NarrationScriptDocument script, Path projectDirectory, String jobName) {
         try {
-            var narrationPlan = applicationServices.render().buildNarrationRenderPlan()
+            var narrationPlan = applicationServices.generation().render().buildNarrationRenderPlan()
                     .build(script, session.project());
-            var renderUnitPlan = applicationServices.render().buildRenderUnitPlan().build(narrationPlan);
+            var renderUnitPlan = applicationServices.generation().render().buildRenderUnitPlan().build(narrationPlan);
             return request(script, renderUnitPlan, projectDirectory, jobName, session.project().voiceLibrary());
         } catch (RuntimeException ex) {
             if (requiresRenderUnitPlan(session)) throw ex;
@@ -263,9 +263,9 @@ public final class AudioWorkflowCoordinator {
             String jobName,
             String startSegmentId) {
         try {
-            var narrationPlan = applicationServices.render().buildNarrationRenderPlan()
+            var narrationPlan = applicationServices.generation().render().buildNarrationRenderPlan()
                     .build(fullScript, session.project());
-            RenderUnitPlan fullPlan = applicationServices.render().buildRenderUnitPlan().build(narrationPlan);
+            RenderUnitPlan fullPlan = applicationServices.generation().render().buildRenderUnitPlan().build(narrationPlan);
             RenderUnitPlan suffixPlan = renderUnitPlanStartingAt(fullPlan, suffixScript, startSegmentId);
             if (suffixPlan == null || suffixPlan.audioUnits().isEmpty()) {
                 return request(suffixScript, projectDirectory, jobName + " desde " + startSegmentId, session.project().voiceLibrary());
@@ -284,8 +284,8 @@ public final class AudioWorkflowCoordinator {
                                                                         String segmentId) {
         NarrationSegment segment = script.segmentById(segmentId)
                 .orElseThrow(() -> new IllegalArgumentException("No se encontro la intervencion " + segmentId + "."));
-        var narrationPlan = applicationServices.render().buildNarrationRenderPlan().build(script, session.project());
-        RenderUnitPlan fullPlan = applicationServices.render().buildRenderUnitPlan().build(narrationPlan);
+        var narrationPlan = applicationServices.generation().render().buildNarrationRenderPlan().build(script, session.project());
+        RenderUnitPlan fullPlan = applicationServices.generation().render().buildRenderUnitPlan().build(narrationPlan);
         var units = fullPlan.units().stream().filter(unit -> unit.segmentId().equals(segment.id())).toList();
         if (units.isEmpty()) throw new IllegalStateException("La intervencion no contiene unidades de audio regenerables.");
         if (units.stream().anyMatch(com.marcosmoreiradev.docupodcaststudio.domain.render.RenderUnit::usesExternalAudio))
@@ -374,7 +374,7 @@ public final class AudioWorkflowCoordinator {
 
     public List<String> diagnosticLabels(Path projectDirectory, AudioJobSnapshot selected) throws IOException {
         Objects.requireNonNull(selected, "selected");
-        List<AudioProcessDiagnosticEvent> events = applicationServices.audio()
+        List<AudioProcessDiagnosticEvent> events = applicationServices.playback().audio()
                 .listAudioProcessDiagnostics()
                 .list(projectDirectory, selected.jobId());
         if (events.isEmpty()) {
@@ -442,13 +442,13 @@ public final class AudioWorkflowCoordinator {
         com.marcosmoreiradev.docupodcaststudio.domain.project.DocuPodcastProject project = session.project();
         if (status == null) { onUpdated.run(); return; }
         if (!status.finalAudioPath().isBlank()) {
-            project = applicationServices.assets().registerProjectAsset().register(project, new ProjectAssetReference(
+            project = applicationServices.project().assets().registerProjectAsset().register(project, new ProjectAssetReference(
                     "AUD-FINAL-" + status.jobId(), ProjectAssetKind.AUDIO_FINAL,
                     "Podcast " + status.jobId(), status.finalAudioPath(), "audio/wav",
                     "Audio final generado desde la lectura preparada del documento", "", ""));
         }
         if (!status.manifestPath().isBlank()) {
-            project = applicationServices.assets().registerProjectAsset().register(project, new ProjectAssetReference(
+            project = applicationServices.project().assets().registerProjectAsset().register(project, new ProjectAssetReference(
                     "AUD-MANIFEST-" + status.jobId(), ProjectAssetKind.AUDIO_MANIFEST,
                     "Manifest de audio " + status.jobId(), status.manifestPath(), "application/json",
                     "Manifest de audio por segmentos", "", ""));

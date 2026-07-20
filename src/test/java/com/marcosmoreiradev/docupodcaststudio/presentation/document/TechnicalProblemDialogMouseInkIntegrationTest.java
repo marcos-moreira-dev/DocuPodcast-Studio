@@ -1,8 +1,12 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.document;
 
 import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlock;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputCursor;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputSample;
+import com.marcosmoreiradev.docupodcaststudio.ink.DrawingFeatureCatalog;
+import com.marcosmoreiradev.docupodcaststudio.ink.DrawingProfile;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputCursor;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputProvider;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.NoopInkInputProvider;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputSample;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.geometry.Point2D;
@@ -122,9 +126,11 @@ final class TechnicalProblemDialogMouseInkIntegrationTest {
 
     private static TechnicalProblemDialog newDialog() throws Exception {
         Constructor<TechnicalProblemDialog> constructor = TechnicalProblemDialog.class
-                .getDeclaredConstructor(Window.class, List.class, Map.class);
+                .getDeclaredConstructor(Window.class, List.class, Map.class,
+                        InkInputProvider.class, DrawingProfile.class);
         constructor.setAccessible(true);
-        return constructor.newInstance(null, List.<DocumentBlock>of(), Map.of());
+        return constructor.newInstance(null, List.<DocumentBlock>of(), Map.of(), NoopInkInputProvider.INSTANCE,
+                DrawingFeatureCatalog.official().require(DrawingFeatureCatalog.DOCUMENT_PROBLEM));
     }
 
     private static void attachDialogPaneToScene(TechnicalProblemDialog owner) throws Exception {

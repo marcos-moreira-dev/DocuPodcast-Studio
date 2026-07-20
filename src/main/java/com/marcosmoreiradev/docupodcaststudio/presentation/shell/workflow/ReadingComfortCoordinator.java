@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
+import com.marcosmoreiradev.docupodcaststudio.application.WorkspaceApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.OperationalSettings;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.OperationalSettingsValidationReport;
 
@@ -19,15 +19,15 @@ public final class ReadingComfortCoordinator {
     public static final int DEFAULT_FONT_SIZE = 18;
     public static final int MAX_FONT_SIZE = 28;
 
-    private final ApplicationServices applicationServices;
+    private final WorkspaceApplicationServices applicationServices;
 
-    public ReadingComfortCoordinator(ApplicationServices applicationServices) {
+    public ReadingComfortCoordinator(WorkspaceApplicationServices applicationServices) {
         this.applicationServices = Objects.requireNonNull(applicationServices, "applicationServices");
     }
 
     public int loadInitialFontSize() {
         try {
-            OperationalSettings settings = applicationServices.settings().loadOperationalSettings().load();
+            OperationalSettings settings = applicationServices.administration().settings().loadOperationalSettings().load();
             return clampFontSize(settings.readingDocument().baseFontSize());
         } catch (IOException ex) {
             return DEFAULT_FONT_SIZE;
@@ -52,7 +52,7 @@ public final class ReadingComfortCoordinator {
 
     public PersistedReadingFontSize persistFontSize(int nextSize) {
         try {
-            OperationalSettings current = applicationServices.settings().loadOperationalSettings().load();
+            OperationalSettings current = applicationServices.administration().settings().loadOperationalSettings().load();
             OperationalSettings.ReadingDocumentSettings reading = current.readingDocument();
             OperationalSettings updated = new OperationalSettings(
                     new OperationalSettings.ReadingDocumentSettings(
@@ -68,7 +68,7 @@ public final class ReadingComfortCoordinator {
                     current.ocr(),
                     current.storage(),
                     current.diagnostics());
-            OperationalSettingsValidationReport report = applicationServices.settings().saveOperationalSettings().save(updated);
+            OperationalSettingsValidationReport report = applicationServices.administration().settings().saveOperationalSettings().save(updated);
             if (!report.errors().isEmpty()) {
                 return PersistedReadingFontSize.failed("No se pudo guardar el tamaño de lectura: "
                         + String.join("; ", report.errors()) + ".");

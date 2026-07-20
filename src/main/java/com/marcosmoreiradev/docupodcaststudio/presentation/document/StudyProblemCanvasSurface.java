@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.document;
 
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.canvas.InkCanvasSurface;
+import com.marcosmoreiradev.docupodcaststudio.ink.canvas.InkCanvasSurface;
 
 /**
  * Compatibility name for the documentary problem profile. The reusable canvas

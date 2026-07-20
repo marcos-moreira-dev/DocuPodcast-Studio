@@ -466,7 +466,8 @@ public final class DocumentTechnicalProblemPanel extends VBox {
             return;
         }
         TechnicalProblemDialog.showForEdit(getScene() == null ? null : getScene().getWindow(), detail,
-                        viewModel.inkInputProviders().create(DrawingFeatureCatalog.DOCUMENT_PROBLEM))
+                        viewModel.inkInputProviders().create(DrawingFeatureCatalog.DOCUMENT_PROBLEM),
+                        viewModel.drawingFeatures().require(DrawingFeatureCatalog.DOCUMENT_PROBLEM))
                 .ifPresent(result -> runAction(() -> {
                     viewModel.updateTechnicalProblemSolution(detail.id(), result.solutionText(), result.canvasSnapshot(), result.notes(), result.canvasStateJson());
                     refreshSavedProblems();

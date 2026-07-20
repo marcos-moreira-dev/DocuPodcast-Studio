@@ -1,10 +1,8 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
+import com.marcosmoreiradev.docupodcaststudio.application.WorkspaceApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.application.image.ImageAspectStrategy;
 import com.marcosmoreiradev.docupodcaststudio.application.image.ImageEnhancementOutputProfile;
-import com.marcosmoreiradev.docupodcaststudio.application.process.AiModelResourceGuard;
-import com.marcosmoreiradev.docupodcaststudio.application.process.AiModelResourceGuard.AiModelResourceKind;
 import com.marcosmoreiradev.docupodcaststudio.application.process.GenerationAttemptPolicy;
 import com.marcosmoreiradev.docupodcaststudio.application.process.GenerationTaskKind;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.ComfyUiConnectionSettings;
@@ -21,6 +19,11 @@ import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualEngineReq
 import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualEngineResult;
 import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationScriptDocument;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.ProjectSession;
+import com.marcosmoreiradev.docupodcaststudio.media.api.ResourceId;
+import com.marcosmoreiradev.docupodcaststudio.media.api.ResourceLease;
+import com.marcosmoreiradev.docupodcaststudio.media.api.ResourceRequirement;
+import com.marcosmoreiradev.docupodcaststudio.media.api.ResourceScheduler;
+import com.marcosmoreiradev.docupodcaststudio.media.api.CancellationToken;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -36,21 +39,23 @@ import java.util.function.Consumer;
 
 /** Generates reviewable theatrical still frames from intervention context. */
 public final class TheatreFrameGenerationWorkflow {
-    private final ApplicationServices services;
+    private final WorkspaceApplicationServices services;
     private final TheatreGenerationUnitPlanner planner = new TheatreGenerationUnitPlanner();
     private final TheatreImageGenerationWorkflow imageWorkflow;
     private final ComfyUiVisualEngineClient visualEngineClient;
-    private final AiModelResourceGuard resourceGuard;
+    private final ResourceScheduler resourceScheduler;
 
-    public TheatreFrameGenerationWorkflow(ApplicationServices services) {
-        this(services, visualClientFrom(services));
+    public TheatreFrameGenerationWorkflow(WorkspaceApplicationServices services, ResourceScheduler resourceScheduler) {
+        this(services, visualClientFrom(services), resourceScheduler);
     }
 
-    public TheatreFrameGenerationWorkflow(ApplicationServices services, ComfyUiVisualEngineClient visualEngineClient) {
+    public TheatreFrameGenerationWorkflow(WorkspaceApplicationServices services,
+                                          ComfyUiVisualEngineClient visualEngineClient,
+                                          ResourceScheduler resourceScheduler) {
         this.services = Objects.requireNonNull(services, "services");
         this.visualEngineClient = Objects.requireNonNull(visualEngineClient, "visualEngineClient");
-        this.imageWorkflow = new TheatreImageGenerationWorkflow(services, visualEngineClient);
-        this.resourceGuard = AiModelResourceGuard.global();
+        this.resourceScheduler = Objects.requireNonNull(resourceScheduler, "resource scheduler");
+        this.imageWorkflow = new TheatreImageGenerationWorkflow(services, visualEngineClient, resourceScheduler);
     }
 
     public Estimate estimate(ProjectSession session, NarrationScriptDocument script, TheatreFrameGenerationRequest request) {
@@ -87,7 +92,7 @@ public final class TheatreFrameGenerationWorkflow {
         ArrayList<TheatreGeneratedFrameCandidate> candidates = new ArrayList<>();
         ArrayList<String> warnings = new ArrayList<>();
         int pending = 0;
-        try (AiModelResourceGuard.Lease ignored = resourceGuard.acquire(AiModelResourceKind.IMAGE,
+        try (ResourceLease ignored = acquireResources(
                 "frames " + request.scope().kind().name().toLowerCase(Locale.ROOT))) {
             boolean needsIntermediates = request.mode() == FrameGenerationMode.DOUBLE_STOP_MOTION;
             boolean supportsIntermediates = !needsIntermediates || supportsIntermediateGeneration(request.preset());
@@ -154,6 +159,16 @@ public final class TheatreFrameGenerationWorkflow {
         return new TheatreFrameGenerationResult(root, units.size(), candidates.size(), pending, warnings, candidates, manifest);
     }
 
+    private ResourceLease acquireResources(String operation) throws IOException {
+        try {
+            return resourceScheduler.acquire(ResourceRequirement.of(ResourceId.MODEL_MEMORY, ResourceId.GPU),
+                    CancellationToken.NONE);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new IOException("La generación se interrumpió mientras esperaba recursos locales.", exception);
+        }
+    }
+
     private List<TheatreImageGenerationUnit> units(ProjectSession session, NarrationScriptDocument script, TheatreFrameGenerationRequest request) {
         if (request == null) {
             return List.of();
@@ -200,7 +215,7 @@ public final class TheatreFrameGenerationWorkflow {
         Path generated = result.outputPath();
         Path framePath = interventionDir.resolve("frame-" + String.format(Locale.ROOT, "%03d", frameIndex) + ".png");
         Files.move(generated, framePath, StandardCopyOption.REPLACE_EXISTING);
-        var imported = services.storyboard().importImageAsset().importImage(session.project(), projectFile, framePath);
+        var imported = services.generation().storyboard().importImageAsset().importImage(session.project(), projectFile, framePath);
         session.replaceProject(imported.project(), true);
         return new TheatreGeneratedFrameCandidate(
                 unit.interventionId() + "#frame-" + frameIndex,
@@ -323,7 +338,7 @@ public final class TheatreFrameGenerationWorkflow {
     }
 
     private GenerationAttemptPolicy attemptPolicy() throws IOException {
-        return GenerationAttemptPolicy.fromSettings(services.settings().loadOperationalSettings().load());
+        return GenerationAttemptPolicy.fromSettings(services.administration().settings().loadOperationalSettings().load());
     }
 
     private static void progress(Consumer<String> progress, String message) {
@@ -360,10 +375,10 @@ public final class TheatreFrameGenerationWorkflow {
     public record Estimate(int interventions, int frames, int pending) {
     }
 
-    private static ComfyUiVisualEngineClient visualClientFrom(ApplicationServices services) {
-        if (services == null || services.visual() == null) {
+    private static ComfyUiVisualEngineClient visualClientFrom(WorkspaceApplicationServices services) {
+        if (services == null || services.generation().visual() == null) {
             return new ComfyUiVisualEngineClient();
         }
-        return services.visual().comfyUiVisualEngineClient();
+        return services.generation().visual().comfyUiVisualEngineClient();
     }
 }

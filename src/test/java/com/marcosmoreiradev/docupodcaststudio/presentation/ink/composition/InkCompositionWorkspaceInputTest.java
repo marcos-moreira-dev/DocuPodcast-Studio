@@ -1,11 +1,11 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition;
 
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputCapabilities;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputCursor;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputListener;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputProvider;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputSample;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.JavaFxMouseInputProvider;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputCapabilities;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputCursor;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputListener;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputProvider;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputSample;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.JavaFxMouseInputProvider;
 import javafx.application.Platform;
 import javafx.event.Event;
 import javafx.scene.Node;

@@ -134,7 +134,7 @@ public final class DocuPodcastShellView extends BorderPane {
     private final UnsavedChangesDialog unsavedChangesDialog = new UnsavedChangesDialog();
     private final ExportAiResourcesResultDialog exportAiResourcesResultDialog = new ExportAiResourcesResultDialog();
     private final EmbeddedDependencySetupAssistant dependencySetupAssistant = new EmbeddedDependencySetupAssistant();
-    private final SettingsDialog settingsDialog = new SettingsDialog();
+    private final SettingsDialog settingsDialog;
     private final FxBackgroundTaskRunner backgroundTaskRunner = new FxBackgroundTaskRunner();
     private final VideoExportOptionsDialog videoExportOptionsDialog = new VideoExportOptionsDialog();
     private final TheatrePortionExportOptionsDialog theatrePortionExportOptionsDialog = new TheatrePortionExportOptionsDialog();
@@ -157,6 +157,7 @@ public final class DocuPodcastShellView extends BorderPane {
 
     public DocuPodcastShellView(DocuPodcastShellViewModel viewModel) {
         this.viewModel = viewModel;
+        this.settingsDialog = new SettingsDialog(viewModel.administrationWorkspace().mediaEngines());
         this.recentProjectsStore = new RecentProjectsStore((projectFile, storedType) -> {
             try {
                 return new ProjectModePolicy().resolve(viewModel.projectWorkspace().project().openProject().open(projectFile)).displayName();
@@ -864,7 +865,8 @@ public final class DocuPodcastShellView extends BorderPane {
 
     private void handleOpenTechnicalProblemExpress() {
         TechnicalProblemDialog.showExpress(owner(),
-                        viewModel.inkInputProviders().create(DrawingFeatureCatalog.DOCUMENT_PROBLEM))
+                        viewModel.inkInputProviders().create(DrawingFeatureCatalog.DOCUMENT_PROBLEM),
+                        viewModel.drawingFeatures().require(DrawingFeatureCatalog.DOCUMENT_PROBLEM))
                 .ifPresentOrElse(
                         result -> {
                             if (result.externalPngTarget() != null) {

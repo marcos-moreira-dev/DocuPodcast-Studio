@@ -1,5 +1,6 @@
 # Build outputs
 /target/
+**/target/
 /generated/
 
 # Local runtime and smoke-test output

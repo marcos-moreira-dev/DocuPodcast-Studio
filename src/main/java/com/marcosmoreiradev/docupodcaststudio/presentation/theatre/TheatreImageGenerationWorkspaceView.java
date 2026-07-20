@@ -910,11 +910,13 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
     }
 
     private void openEngineSettings() {
-        new SettingsDialog().showVoiceEngines(getScene() == null ? null : getScene().getWindow(), viewModel.administrationWorkspace().settings());
+        new SettingsDialog(viewModel.administrationWorkspace().mediaEngines()).showVoiceEngines(
+                getScene() == null ? null : getScene().getWindow(), viewModel.administrationWorkspace().settings());
     }
 
     private void openPerformanceSettings() {
-        new SettingsDialog().showPerformance(getScene() == null ? null : getScene().getWindow(), viewModel.administrationWorkspace().settings());
+        new SettingsDialog(viewModel.administrationWorkspace().mediaEngines()).showPerformance(
+                getScene() == null ? null : getScene().getWindow(), viewModel.administrationWorkspace().settings());
     }
 
     private void testLocalEngine() {

@@ -8,4 +8,8 @@ public interface GenerationJobRepository {
     void save(GenerationJobSnapshot snapshot);
     Optional<GenerationJobSnapshot> find(GenerationJobId id);
     List<GenerationJobSnapshot> list();
+
+    default GenerationArtifactStaging openStaging(GenerationJobRequest request, int attempt) {
+        return GenerationArtifactStaging.NONE;
+    }
 }

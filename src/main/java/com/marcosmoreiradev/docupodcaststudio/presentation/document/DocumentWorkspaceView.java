@@ -881,7 +881,8 @@ public final class DocumentWorkspaceView extends BorderPane {
         Map<String, Path> sourceCropPreviews = viewModel.projectWorkspace().document().prepareStudySourceCrops().prepare(document, selectedBlocks);
         TechnicalProblemDialog.show(getScene() == null ? null : getScene().getWindow(), selectedBlocks,
                         sourceCropPreviews,
-                        viewModel.inkInputProviders().create(DrawingFeatureCatalog.DOCUMENT_PROBLEM))
+                        viewModel.inkInputProviders().create(DrawingFeatureCatalog.DOCUMENT_PROBLEM),
+                        viewModel.drawingFeatures().require(DrawingFeatureCatalog.DOCUMENT_PROBLEM))
                 .ifPresent(result -> {
                     try {
                         List<StudyProblemSourceDraft> sources = new java.util.ArrayList<>(selectedBlocks.stream()
@@ -914,7 +915,8 @@ public final class DocumentWorkspaceView extends BorderPane {
                 .map(PdfRegionCaptureDraft::toStudySourceDraft)
                 .toList();
         TechnicalProblemDialog.showForDrafts(getScene() == null ? null : getScene().getWindow(), sourceDrafts,
-                        viewModel.inkInputProviders().create(DrawingFeatureCatalog.DOCUMENT_PROBLEM))
+                        viewModel.inkInputProviders().create(DrawingFeatureCatalog.DOCUMENT_PROBLEM),
+                        viewModel.drawingFeatures().require(DrawingFeatureCatalog.DOCUMENT_PROBLEM))
                 .ifPresent(result -> {
                     try {
                         List<StudyProblemSourceDraft> sources = new java.util.ArrayList<>(sourceDrafts);

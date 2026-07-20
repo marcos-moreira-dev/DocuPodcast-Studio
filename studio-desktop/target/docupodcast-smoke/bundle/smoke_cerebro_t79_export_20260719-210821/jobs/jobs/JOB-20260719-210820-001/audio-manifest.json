@@ -1,9 +1,0 @@
-{
-  "jobId": "JOB-20260719-210820-001",
-  "finalAudio": "final/podcast-mock.wav",
-  "clips": [
-    {"segmentId":"SEG-001","audio":"audio/SEG-001.wav","durationSeconds":0.40},
-    {"segmentId":"SEG-002","audio":"audio/SEG-002.wav","durationSeconds":0.54},
-    {"segmentId":"SEG-003","audio":"audio/SEG-003.wav","durationSeconds":0.58}
-  ]
-}

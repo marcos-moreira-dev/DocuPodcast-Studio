@@ -2,13 +2,16 @@
 
 DocuPodcast Studio follows a layered local application architecture.
 
+The capability cutover and the deliberately deferred third tranche are recorded in the [refactoring roadmap](refactoring-roadmap.md).
+
 ```mermaid
 flowchart LR
-    UI["JavaFX presentation"] --> APP["Application use cases and ports"]
-    BOOT["Bootstrap and composition"] --> UI
-    BOOT --> APP
-    INFRA["Infrastructure adapters"] --> APP
-    APP --> DOMAIN["Domain model"]
+    API["studio-media-api"] --> DESKTOP["studio-desktop"]
+    INK["studio-ink"] --> DESKTOP
+    DESKTOP --> LAUNCHER["studio-launcher"]
+    ADAPTERS["studio-local-media-adapters"] --> LAUNCHER
+    API --> ADAPTERS
+    INK --> LAUNCHER
 ```
 
 ## Boundaries
@@ -25,9 +28,8 @@ Project persistence is backward compatible. Refactors must preserve `.docupodcas
 
 ## Long-running work
 
-TTS, image generation and video rendering use local process abstractions with progress, cancellation and diagnostics. Views do not invoke operating-system processes directly.
+Voice synthesis, image generation, generative video and deterministic rendering use neutral contracts, shared resource scheduling, progress, cancellation and diagnostics. Views and application use cases do not invoke operating-system processes directly.
 
 ## Presentation
 
 Reusable controls live under `presentation.components`, `presentation.ink`, `presentation.sidedock`, `presentation.ribbon` and related transversal packages. Category workspaces consume those controls instead of implementing parallel visual systems.
-

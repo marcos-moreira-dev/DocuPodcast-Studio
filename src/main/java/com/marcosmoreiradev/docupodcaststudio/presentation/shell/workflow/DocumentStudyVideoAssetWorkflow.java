@@ -1,9 +1,9 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
-import com.marcosmoreiradev.docupodcaststudio.application.ink.InkPlacedImage;
-import com.marcosmoreiradev.docupodcaststudio.application.ink.InkWorkspaceState;
-import com.marcosmoreiradev.docupodcaststudio.application.ink.InkWorkspaceStateSerializer;
+import com.marcosmoreiradev.docupodcaststudio.application.WorkspaceApplicationServices;
+import com.marcosmoreiradev.docupodcaststudio.ink.model.InkPlacedImage;
+import com.marcosmoreiradev.docupodcaststudio.ink.model.InkWorkspaceState;
+import com.marcosmoreiradev.docupodcaststudio.ink.model.InkWorkspaceStateSerializer;
 import com.marcosmoreiradev.docupodcaststudio.application.media.PreparedAudioAsset;
 import com.marcosmoreiradev.docupodcaststudio.domain.assets.ProjectAssetKind;
 import com.marcosmoreiradev.docupodcaststudio.domain.assets.ProjectAssetReference;
@@ -33,10 +33,10 @@ public final class DocumentStudyVideoAssetWorkflow {
                 session.project().study().withDocumentaryVideoConfiguration(configuration)), true);
     }
 
-    public ProjectAssetReference importImage(ApplicationServices services, ProjectSession session, Path sourceFile)
+    public ProjectAssetReference importImage(WorkspaceApplicationServices services, ProjectSession session, Path sourceFile)
             throws IOException {
         Path projectFile = requireProjectFile(session, "importar imagenes documentales");
-        var result = services.storyboard().importImageAsset().importImage(session.project(), projectFile, sourceFile);
+        var result = services.generation().storyboard().importImageAsset().importImage(session.project(), projectFile, sourceFile);
         session.replaceProject(result.project(), true);
         return result.imageAsset();
     }
@@ -179,10 +179,10 @@ public final class DocumentStudyVideoAssetWorkflow {
         } catch (IOException ignored) { }
     }
 
-    public MusicImport importMusic(ApplicationServices services, ProjectSession session, Path sourceFile)
+    public MusicImport importMusic(WorkspaceApplicationServices services, ProjectSession session, Path sourceFile)
             throws IOException {
         Path projectFile = requireProjectFile(session, "importar musica documental");
-        var importer = services.media().importUserMediaAsset();
+        var importer = services.generation().media().importUserMediaAsset();
         PreparedAudioAsset prepared = importer.prepareAudio(projectFile, sourceFile);
         try {
             var result = importer.commitPreparedAudio(session.project(), projectFile, prepared);

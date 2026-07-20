@@ -18,12 +18,34 @@ public final class GenerationJobService implements AutoCloseable {
     private final GenerationJobRepository repository;
     private final ExecutorService workers;
     private final ScheduledExecutorService timers;
+    private final ResourceScheduler scheduler;
     private final Map<GenerationJobId, Control> running = new ConcurrentHashMap<>();
 
     public GenerationJobService(GenerationJobRepository repository, int concurrency) {
+        this(repository, concurrency, LocalResourceScheduler.safeDefaults());
+    }
+
+    public GenerationJobService(GenerationJobRepository repository, int concurrency,
+                                ResourceScheduler scheduler) {
         this.repository = Objects.requireNonNull(repository, "repository");
         this.workers = Executors.newFixedThreadPool(Math.max(1, concurrency));
         this.timers = Executors.newSingleThreadScheduledExecutor();
+        this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
+    }
+
+    /** Acquires scarce resources inside the worker so presentation never blocks. */
+    public GenerationJobSnapshot submit(GenerationJobRequest request,
+                                        GenerationJobOperation operation,
+                                        ExecutionPolicy policy,
+                                        ResourceRequirement requirement) {
+        GenerationJobOperation scheduled = context -> {
+            try (ResourceLease lease = scheduler.acquire(requirement, context.cancellation())) {
+                ExecutionContext leased = new ExecutionContext(context.operationId(), context.cancellation(),
+                        context.progress(), context.policy(), lease, context.staging());
+                return operation.execute(leased);
+            }
+        };
+        return submit(request, scheduled, policy, ResourceLease.NONE);
     }
 
     public GenerationJobSnapshot submit(GenerationJobRequest request,
@@ -60,7 +82,29 @@ public final class GenerationJobService implements AutoCloseable {
                                         ResourceLease lease) {
         GenerationJobSnapshot previous = repository.find(id)
                 .orElseThrow(() -> new IllegalArgumentException("unknown job: " + id));
+        if (previous.request().schemaVersion() < 2) {
+            throw new IllegalArgumentException("legacy jobs must be reconstructed as a new neutral job");
+        }
         return submit(previous.request(), operation, policy, lease);
+    }
+
+    public GenerationJobSnapshot retryLegacyAsNew(GenerationJobId legacyId,
+                                                   GenerationJobRequest reconstructedRequest,
+                                                   GenerationJobOperation operation,
+                                                   ExecutionPolicy policy,
+                                                   ResourceRequirement requirement) {
+        GenerationJobSnapshot legacy = repository.find(legacyId)
+                .orElseThrow(() -> new IllegalArgumentException("unknown legacy job: " + legacyId));
+        if (legacy.request().schemaVersion() >= 2) {
+            throw new IllegalArgumentException("job is already neutral: " + legacyId);
+        }
+        if (reconstructedRequest.jobId().equals(legacyId)) {
+            throw new IllegalArgumentException("a legacy retry must use a new job id");
+        }
+        if (!reconstructedRequest.capabilityId().equals(legacy.request().capabilityId())) {
+            throw new IllegalArgumentException("reconstructed job capability differs from legacy job");
+        }
+        return submit(reconstructedRequest, operation, policy, requirement);
     }
 
     public boolean cancel(GenerationJobId id) {
@@ -89,11 +133,12 @@ public final class GenerationJobService implements AutoCloseable {
                 int currentAttempt = attempt;
                 ProgressSink progress = (stage, amount, message) -> update(current,
                         GenerationJobStatus.RUNNING, stage, amount, message, List.of(), "", currentAttempt);
-                ExecutionContext context = new ExecutionContext(queued.request().jobId().value(),
-                        control.cancelled::get, progress, policy, lease);
-                try {
+                try (GenerationArtifactStaging staging = repository.openStaging(queued.request(), attempt)) {
+                    ExecutionContext context = new ExecutionContext(queued.request().jobId().value(),
+                            control.cancelled::get, progress, policy, lease, staging);
                     List<GenerationArtifact> artifacts = operation.execute(context);
                     if (!control.cancelled.get()) {
+                        artifacts = staging.promote(artifacts);
                         update(current, GenerationJobStatus.SUCCEEDED, "completed", 1, "",
                                 artifacts, "", attempt);
                         return;

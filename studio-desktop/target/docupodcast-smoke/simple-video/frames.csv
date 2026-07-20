@@ -1,4 +1,0 @@
-frameId,segmentId,image,audio,audioSeconds,silenceAfterSeconds,frameSeconds,text
-"FRAME-001","SEG-001","imagen-audio","media/images/escena-001.png","jobs/JOB-20260719-210820-001/audio/SEG-001.wav",0.396,1.000,1.396,"Nuevo tema: Documento Smoke T79."
-"FRAME-002","SEG-002","imagen-audio","","jobs/JOB-20260719-210820-001/audio/SEG-002.wav",0.541,1.000,1.541,"Primera oración narrable para validar el cerebro de DocuPodcast."
-"FRAME-003","SEG-003","imagen-audio","","jobs/JOB-20260719-210820-001/audio/SEG-003.wav",0.577,1.000,1.577,"Segunda oración narrable para audio, playback, exportación e integridad."

@@ -2,27 +2,27 @@ package com.marcosmoreiradev.docupodcaststudio.presentation.document;
 
 import com.marcosmoreiradev.docupodcaststudio.ink.DrawingFeatureCatalog;
 import com.marcosmoreiradev.docupodcaststudio.ink.DrawingProfile;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.canvas.InkCanvasExportOptions;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.canvas.InkCanvasExportResult;
+import com.marcosmoreiradev.docupodcaststudio.ink.canvas.InkCanvasExportOptions;
+import com.marcosmoreiradev.docupodcaststudio.ink.canvas.InkCanvasExportResult;
 import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.StudyProblemDetail;
 import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.StudyProblemSourceDraft;
 import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.StudyProblemSourceProjection;
-import com.marcosmoreiradev.docupodcaststudio.application.ink.InkImageCrop;
-import com.marcosmoreiradev.docupodcaststudio.application.ink.InkPlacedImage;
-import com.marcosmoreiradev.docupodcaststudio.application.ink.InkWorkspaceState;
-import com.marcosmoreiradev.docupodcaststudio.application.ink.InkWorkspaceStateSerializer;
+import com.marcosmoreiradev.docupodcaststudio.ink.model.InkImageCrop;
+import com.marcosmoreiradev.docupodcaststudio.ink.model.InkPlacedImage;
+import com.marcosmoreiradev.docupodcaststudio.ink.model.InkWorkspaceState;
+import com.marcosmoreiradev.docupodcaststudio.ink.model.InkWorkspaceStateSerializer;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlock;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionButtonFactory;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.LucideIconView;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.InkRealtimeStrokeEngine;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.canvas.InkCanvasViewportCoordinateMapper;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputCapabilities;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputCursor;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputListener;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputProvider;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.NoopInkInputProvider;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputSample;
+import com.marcosmoreiradev.docupodcaststudio.ink.InkRealtimeStrokeEngine;
+import com.marcosmoreiradev.docupodcaststudio.ink.canvas.InkCanvasViewportCoordinateMapper;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputCapabilities;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputCursor;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputListener;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputProvider;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.NoopInkInputProvider;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputSample;
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
@@ -98,9 +98,6 @@ import java.util.Optional;
 
 /** Modal resolver for technical problems. */
 public final class TechnicalProblemDialog {
-    private static final DrawingProfile DRAWING_PROFILE = DrawingFeatureCatalog.official()
-            .require(DrawingFeatureCatalog.DOCUMENT_PROBLEM);
-    private static final int MAX_UNDO_SNAPSHOTS = DRAWING_PROFILE.historyLimit();
     private static final double DIALOG_PREF_WIDTH = 1220;
     private static final double DIALOG_PREF_HEIGHT = 760;
     private static final double CANVAS_TITLE_BAND_HEIGHT = 64.0;
@@ -117,6 +114,7 @@ public final class TechnicalProblemDialog {
     }
 
     private final Dialog<TechnicalProblemResult> dialog = new Dialog<>();
+    private final DrawingProfile drawingProfile;
     private final List<StatementSource> statementSources;
     private final List<StudyProblemSourceDraft> additionalSourceDrafts = new ArrayList<>();
     private final Map<String, Path> sourceCropPaths;
@@ -211,12 +209,9 @@ public final class TechnicalProblemDialog {
     private ButtonType saveAndExportButtonType;
     private Path externalPngTarget;
 
-    private TechnicalProblemDialog(Window owner, List<DocumentBlock> sourceBlocks, Map<String, Path> sourceCropPaths) {
-        this(owner, sourceBlocks, sourceCropPaths, NoopInkInputProvider.INSTANCE);
-    }
-
     private TechnicalProblemDialog(Window owner, List<DocumentBlock> sourceBlocks, Map<String, Path> sourceCropPaths,
-                                   InkInputProvider inkInputProvider) {
+                                   InkInputProvider inkInputProvider, DrawingProfile drawingProfile) {
+        this.drawingProfile = java.util.Objects.requireNonNull(drawingProfile, "drawing profile");
         this.inkInputProvider = inkInputProvider == null ? NoopInkInputProvider.INSTANCE : inkInputProvider;
         this.statementSources = new ArrayList<>(statementSources(sourceBlocks, sourceCropPaths));
         this.sourceCropPaths = sourceCropPaths == null ? Map.of() : Map.copyOf(sourceCropPaths);
@@ -227,12 +222,9 @@ public final class TechnicalProblemDialog {
         initialize(owner, "Problema tecnico", "Problema tecnico", "Guardar");
     }
 
-    private TechnicalProblemDialog(Window owner, List<StudyProblemSourceDraft> sourceDrafts, boolean draftMode) {
-        this(owner, sourceDrafts, draftMode, NoopInkInputProvider.INSTANCE);
-    }
-
     private TechnicalProblemDialog(Window owner, List<StudyProblemSourceDraft> sourceDrafts, boolean draftMode,
-                                   InkInputProvider inkInputProvider) {
+                                   InkInputProvider inkInputProvider, DrawingProfile drawingProfile) {
+        this.drawingProfile = java.util.Objects.requireNonNull(drawingProfile, "drawing profile");
         this.inkInputProvider = inkInputProvider == null ? NoopInkInputProvider.INSTANCE : inkInputProvider;
         this.statementSources = new ArrayList<>(statementSourcesFromDrafts(sourceDrafts));
         this.sourceCropPaths = sourceCropPathsFromDrafts(sourceDrafts);
@@ -243,11 +235,9 @@ public final class TechnicalProblemDialog {
         initialize(owner, "Problema tecnico", "Problema tecnico", "Guardar");
     }
 
-    private TechnicalProblemDialog(Window owner, StudyProblemDetail detail) {
-        this(owner, detail, NoopInkInputProvider.INSTANCE);
-    }
-
-    private TechnicalProblemDialog(Window owner, StudyProblemDetail detail, InkInputProvider inkInputProvider) {
+    private TechnicalProblemDialog(Window owner, StudyProblemDetail detail, InkInputProvider inkInputProvider,
+                                   DrawingProfile drawingProfile) {
+        this.drawingProfile = java.util.Objects.requireNonNull(drawingProfile, "drawing profile");
         this.inkInputProvider = inkInputProvider == null ? NoopInkInputProvider.INSTANCE : inkInputProvider;
         this.statementSources = new ArrayList<>(statementSources(detail));
         this.sourceCropPaths = Map.of();
@@ -264,11 +254,9 @@ public final class TechnicalProblemDialog {
         }
     }
 
-    private TechnicalProblemDialog(Window owner, boolean expressMode) {
-        this(owner, expressMode, NoopInkInputProvider.INSTANCE);
-    }
-
-    private TechnicalProblemDialog(Window owner, boolean expressMode, InkInputProvider inkInputProvider) {
+    private TechnicalProblemDialog(Window owner, boolean expressMode, InkInputProvider inkInputProvider,
+                                   DrawingProfile drawingProfile) {
+        this.drawingProfile = java.util.Objects.requireNonNull(drawingProfile, "drawing profile");
         this.inkInputProvider = inkInputProvider == null ? NoopInkInputProvider.INSTANCE : inkInputProvider;
         this.statementSources = new ArrayList<>();
         this.sourceCropPaths = Map.of();
@@ -318,45 +306,29 @@ public final class TechnicalProblemDialog {
         initializeCanvas();
     }
 
-    public static Optional<TechnicalProblemResult> show(Window owner, List<DocumentBlock> sourceBlocks) {
-        return show(owner, sourceBlocks, Map.of());
-    }
-
-    public static Optional<TechnicalProblemResult> show(Window owner, List<DocumentBlock> sourceBlocks, Map<String, Path> sourceCropPaths) {
-        return new TechnicalProblemDialog(owner, sourceBlocks, sourceCropPaths).dialog.showAndWait();
-    }
-
     public static Optional<TechnicalProblemResult> show(Window owner, List<DocumentBlock> sourceBlocks,
                                                         Map<String, Path> sourceCropPaths,
-                                                        InkInputProvider inputProvider) {
-        return new TechnicalProblemDialog(owner, sourceBlocks, sourceCropPaths, inputProvider).dialog.showAndWait();
-    }
-
-    public static Optional<TechnicalProblemResult> showForDrafts(Window owner, List<StudyProblemSourceDraft> sourceDrafts) {
-        return new TechnicalProblemDialog(owner, sourceDrafts, true).dialog.showAndWait();
+                                                        InkInputProvider inputProvider,
+                                                        DrawingProfile drawingProfile) {
+        return new TechnicalProblemDialog(owner, sourceBlocks, sourceCropPaths, inputProvider, drawingProfile).dialog.showAndWait();
     }
 
     public static Optional<TechnicalProblemResult> showForDrafts(Window owner,
                                                                  List<StudyProblemSourceDraft> sourceDrafts,
-                                                                 InkInputProvider inputProvider) {
-        return new TechnicalProblemDialog(owner, sourceDrafts, true, inputProvider).dialog.showAndWait();
-    }
-
-    public static Optional<TechnicalProblemResult> showForEdit(Window owner, StudyProblemDetail detail) {
-        return new TechnicalProblemDialog(owner, detail).dialog.showAndWait();
+                                                                 InkInputProvider inputProvider,
+                                                                 DrawingProfile drawingProfile) {
+        return new TechnicalProblemDialog(owner, sourceDrafts, true, inputProvider, drawingProfile).dialog.showAndWait();
     }
 
     public static Optional<TechnicalProblemResult> showForEdit(Window owner, StudyProblemDetail detail,
-                                                               InkInputProvider inputProvider) {
-        return new TechnicalProblemDialog(owner, detail, inputProvider).dialog.showAndWait();
+                                                               InkInputProvider inputProvider,
+                                                               DrawingProfile drawingProfile) {
+        return new TechnicalProblemDialog(owner, detail, inputProvider, drawingProfile).dialog.showAndWait();
     }
 
-    public static Optional<TechnicalProblemResult> showExpress(Window owner) {
-        return new TechnicalProblemDialog(owner, true).dialog.showAndWait();
-    }
-
-    public static Optional<TechnicalProblemResult> showExpress(Window owner, InkInputProvider inputProvider) {
-        return new TechnicalProblemDialog(owner, true, inputProvider).dialog.showAndWait();
+    public static Optional<TechnicalProblemResult> showExpress(Window owner, InkInputProvider inputProvider,
+                                                               DrawingProfile drawingProfile) {
+        return new TechnicalProblemDialog(owner, true, inputProvider, drawingProfile).dialog.showAndWait();
     }
 
     private boolean shouldExportCanvas(ButtonType button) {
@@ -1281,7 +1253,7 @@ public final class TechnicalProblemDialog {
     }
 
     private double effectiveStrokeWidth(double pressure) {
-        return com.marcosmoreiradev.docupodcaststudio.presentation.ink.InkBrushMath
+        return com.marcosmoreiradev.docupodcaststudio.ink.InkBrushMath
                 .pressureWidth(penStrokeWidth(), pressure);
     }
 
@@ -1454,8 +1426,8 @@ public final class TechnicalProblemDialog {
         }
         double zoom = Math.max(0.1, canvasZoom.getValue() / 100.0);
         drawingSurface.ensureLogicalSize(
-                Math.max(DRAWING_PROFILE.logicalWidth(), (canvasScroll.getViewportBounds().getWidth() - 36) / zoom),
-                Math.max(DRAWING_PROFILE.logicalHeight(), (canvasScroll.getViewportBounds().getHeight() - 36) / zoom));
+                Math.max(drawingProfile.logicalWidth(), (canvasScroll.getViewportBounds().getWidth() - 36) / zoom),
+                Math.max(drawingProfile.logicalHeight(), (canvasScroll.getViewportBounds().getHeight() - 36) / zoom));
     }
 
     private void installCanvasRegionSelectionOverlay() {
@@ -1656,7 +1628,7 @@ public final class TechnicalProblemDialog {
 
     private void rememberUndoSnapshot(CanvasUndoSnapshot snapshot) {
         undo.push(snapshot);
-        while (undo.size() > MAX_UNDO_SNAPSHOTS) {
+        while (undo.size() > drawingProfile.historyLimit()) {
             undo.removeLast();
         }
     }
@@ -1892,8 +1864,8 @@ public final class TechnicalProblemDialog {
             if (json == null || json.isBlank()) {
                 return false;
             }
-            double width = jsonDoubleValue(json, "width", DRAWING_PROFILE.logicalWidth());
-            double height = jsonDoubleValue(json, "height", DRAWING_PROFILE.logicalHeight());
+            double width = jsonDoubleValue(json, "width", drawingProfile.logicalWidth());
+            double height = jsonDoubleValue(json, "height", drawingProfile.logicalHeight());
             Color restoredBackground = parseColorValue(jsonStringValue(json, "background", "#ffffffff"));
             drawingSurface.resetForEditableState(width, height, restoredBackground);
             backgroundColor.setValue(restoredBackground);

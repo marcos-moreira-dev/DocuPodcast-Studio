@@ -5,6 +5,7 @@ This directory is the only current documentation source for DocuPodcast Studio. 
 ## Architecture
 
 - [Overview](architecture/overview.md)
+- [Refactoring roadmap](architecture/refactoring-roadmap.md)
 - [Runtime layout](architecture/runtime-layout.md)
 - [Local-first runtime decision](adr/0001-local-first-runtimes.md)
 
@@ -22,4 +23,3 @@ This directory is the only current documentation source for DocuPodcast Studio. 
 - [Current status](product/current-status.md)
 
 Documentation describes current behavior. Commit history and tags provide implementation chronology.
-

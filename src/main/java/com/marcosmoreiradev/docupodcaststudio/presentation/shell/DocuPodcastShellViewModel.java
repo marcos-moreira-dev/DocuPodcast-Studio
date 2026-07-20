@@ -1,7 +1,8 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell;
-import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.application.WorkspaceApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.media.api.MediaEnginePlatform;
+import com.marcosmoreiradev.docupodcaststudio.media.api.LocalResourceScheduler;
+import com.marcosmoreiradev.docupodcaststudio.application.media.MediaCapabilityService;
 import com.marcosmoreiradev.docupodcaststudio.application.recording.AudioInputDevice;
 import com.marcosmoreiradev.docupodcaststudio.application.examples.ExampleVisualBindingDescriptor;
 import com.marcosmoreiradev.docupodcaststudio.application.recording.RecordingActionPlan;
@@ -88,7 +89,8 @@ import com.marcosmoreiradev.docupodcaststudio.presentation.document.DocumentVisu
 import com.marcosmoreiradev.docupodcaststudio.application.document.ListeningSessionState;
 import com.marcosmoreiradev.docupodcaststudio.presentation.storyboard.StoryboardScenePresentation;
 import com.marcosmoreiradev.docupodcaststudio.presentation.workspace.WorkspaceKind;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputProviderRegistry;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputProviderRegistry;
+import com.marcosmoreiradev.docupodcaststudio.ink.DrawingFeatureCatalog;
 import javafx.application.Platform;
 import javafx.beans.property.*;
 import javafx.animation.KeyFrame;
@@ -109,9 +111,10 @@ public final class DocuPodcastShellViewModel {
     public static final int MIN_READING_FONT_SIZE = 14;
     public static final int DEFAULT_READING_FONT_SIZE = 18;
     public static final int MAX_READING_FONT_SIZE = 28;
-    private final ApplicationServices applicationServices;
     private final WorkspaceApplicationServices workspaceServices;
     private final InkInputProviderRegistry inkInputProviders;
+    private final DrawingFeatureCatalog drawingFeatures;
+    private final MediaCapabilityService mediaCapabilities;
     private final ProjectSessionCoordinator sessions = new ProjectSessionCoordinator();
     private final ProjectWorkflowCoordinator projectWorkflow;
     private final DocumentIntakeCoordinator documentIntake;
@@ -152,6 +155,7 @@ public final class DocuPodcastShellViewModel {
     private final NarrativeDocumentContextCompiler narrativeDocumentContextCompiler =
             new NarrativeDocumentContextCompiler();
     private final NarrativeVideoGenerationCoordinator narrativeVideoGenerationWorkflow;
+    private final NarrativeImageGenerationWorkflow narrativeImageGenerationWorkflow;
     private final TheatreFrameGenerationWorkflow theatreFrameGenerationWorkflow;
     private final TheatreImageAssetWorkflow theatreImageAssetWorkflow;
     private final ProjectImageManagementWorkflow projectImageWorkflow;
@@ -218,56 +222,51 @@ public final class DocuPodcastShellViewModel {
     private final StringProperty activePlacementAlias = new SimpleStringProperty("");
     private final ObjectProperty<TheatreProjectLayer.TextActionPlacement> activeTextActionPlacement =
             new SimpleObjectProperty<>(TheatreProjectLayer.TextActionPlacement.empty());
-    public DocuPodcastShellViewModel(ApplicationServices applicationServices) {
-        this(applicationServices, InkInputProviderRegistry.localDefaults(), MediaEnginePlatform.empty());
-    }
-
-    public DocuPodcastShellViewModel(ApplicationServices applicationServices,
-                                     InkInputProviderRegistry inkInputProviders) {
-        this(applicationServices, inkInputProviders, MediaEnginePlatform.empty());
-    }
-
-    public DocuPodcastShellViewModel(ApplicationServices applicationServices,
+    public DocuPodcastShellViewModel(WorkspaceApplicationServices workspaceServices,
                                      InkInputProviderRegistry inkInputProviders,
-                                     MediaEnginePlatform mediaEngines) {
-        this.applicationServices = Objects.requireNonNull(applicationServices, "applicationServices");
-        this.workspaceServices = WorkspaceApplicationServices.from(this.applicationServices, mediaEngines);
+                                     MediaEnginePlatform mediaEngines,
+                                     DrawingFeatureCatalog drawingFeatures,
+                                     MediaCapabilityService mediaCapabilities) {
+        this.workspaceServices = Objects.requireNonNull(workspaceServices, "workspaceServices");
         this.inkInputProviders = Objects.requireNonNull(inkInputProviders, "inkInputProviders");
-        this.projectWorkflow = new ProjectWorkflowCoordinator(this.applicationServices, sessions);
-        this.documentIntake = new DocumentIntakeCoordinator(this.applicationServices);
-        this.sourceDocumentRefresh = new SourceDocumentRefreshCoordinator(this.applicationServices);
+        this.drawingFeatures = Objects.requireNonNull(drawingFeatures, "drawingFeatures");
+        this.mediaCapabilities = Objects.requireNonNull(mediaCapabilities, "mediaCapabilities");
+        this.projectWorkflow = new ProjectWorkflowCoordinator(this.workspaceServices, sessions);
+        this.documentIntake = new DocumentIntakeCoordinator(this.workspaceServices);
+        this.sourceDocumentRefresh = new SourceDocumentRefreshCoordinator(this.workspaceServices);
         this.workspaceNavigation = new WorkspaceNavigationCoordinator(sessions);
-        this.documentNarration = new DocumentNarrationCoordinator(this.applicationServices);
+        this.documentNarration = new DocumentNarrationCoordinator(this.workspaceServices);
         this.playbackWorkflow = new PlaybackWorkflowCoordinator();
-        this.audioWorkflow = new AudioWorkflowCoordinator(this.applicationServices);
-        this.exportWorkflow = new ExportWorkflowCoordinator(this.applicationServices, this.audioWorkflow);
+        this.audioWorkflow = new AudioWorkflowCoordinator(this.workspaceServices);
+        this.exportWorkflow = new ExportWorkflowCoordinator(this.workspaceServices, this.audioWorkflow);
         this.narrativeLayerWorkflow = new NarrativeLayerCoordinator();
-        this.voiceSampleWorkflow = new VoiceSampleWorkflowCoordinator(this.applicationServices);
-        this.readingComfortWorkflow = new ReadingComfortCoordinator(this.applicationServices);
-        this.projectImageWorkflow = new ProjectImageManagementWorkflow(this.applicationServices);
-        this.theatreDemoManifestWorkflow = new TheatreDemoManifestWorkflow(this.applicationServices);
-        this.studyProblemWorkflow = new StudyProblemWorkflow(this.applicationServices.documentStudy().studyProblemPdfExporter());
-        this.theatreImageGenerationWorkflow = new TheatreImageGenerationWorkflow(this.applicationServices);
-        this.theatreFrameGenerationWorkflow = new TheatreFrameGenerationWorkflow(this.applicationServices);
+        this.voiceSampleWorkflow = new VoiceSampleWorkflowCoordinator(this.workspaceServices);
+        this.readingComfortWorkflow = new ReadingComfortCoordinator(this.workspaceServices);
+        this.projectImageWorkflow = new ProjectImageManagementWorkflow(this.workspaceServices);
+        this.narrativeImageGenerationWorkflow = new NarrativeImageGenerationWorkflow(
+                this.workspaceServices.generation().storyboard(), this.mediaCapabilities);
+        this.theatreDemoManifestWorkflow = new TheatreDemoManifestWorkflow(this.workspaceServices);
+        this.studyProblemWorkflow = new StudyProblemWorkflow(this.workspaceServices.project().documentStudy().studyProblemPdfExporter());
+        this.theatreImageGenerationWorkflow = new TheatreImageGenerationWorkflow(
+                this.workspaceServices, mediaCapabilities.resourceScheduler());
+        this.theatreFrameGenerationWorkflow = new TheatreFrameGenerationWorkflow(
+                this.workspaceServices, mediaCapabilities.resourceScheduler());
         this.theatreImageAssetWorkflow = new TheatreImageAssetWorkflow(
-                this.applicationServices, theatreCharacterImageWorkflow, theatreObjectImageWorkflow);
+                this.workspaceServices, theatreCharacterImageWorkflow, theatreObjectImageWorkflow);
         this.narrativeVideoGenerationWorkflow = new NarrativeVideoGenerationCoordinator(
-                this.applicationServices,
+                this.workspaceServices.administration().settings().loadOperationalSettings(),
+                this.mediaCapabilities,
                 this.narrativeVideoAssetWorkflow,
                 this.narrativeDocumentContextCompiler);
-        this.playbackTransport = new PlaybackTransportCoordinator(this.applicationServices.playback().segmentAudioPlayer()); this.theatreAudioPlayback = new TheatreAudioTrackPlaybackCoordinator(this.applicationServices.playback().backgroundAudioPlayer());
-        activeReadingProfile.set(applicationServices.readingProfile().createDefaultProfile().create());
-        activeVoiceLibrary.set(applicationServices.voice().createDefaultVoiceLibrary().create());
+        this.playbackTransport = new PlaybackTransportCoordinator(this.workspaceServices.playback().playback().segmentAudioPlayer()); this.theatreAudioPlayback = new TheatreAudioTrackPlaybackCoordinator(this.workspaceServices.playback().playback().backgroundAudioPlayer());
+        activeReadingProfile.set(workspaceServices.project().readingProfile().createDefaultProfile().create());
+        activeVoiceLibrary.set(workspaceServices.administration().voice().createDefaultVoiceLibrary().create());
         loadReadingComfortSettings();
         playbackTimer = new Timeline(new KeyFrame(Duration.millis(250), event -> tickPlayback()));
         playbackTimer.setCycleCount(Timeline.INDEFINITE);
         playbackTransport.setOnPlaybackFinished(this::handlePlaybackFinishedOnFxThread);
         selectedDocumentBlockId.addListener((obs, oldValue, newValue) -> actualizarFrameActivo());
     }
-
-    /** Compatibility seam for coordinators not migrated yet; views use narrow workspace bundles. */
-    @Deprecated(forRemoval = false)
-    public ApplicationServices applicationServices() { return applicationServices; }
 
     public WorkspaceApplicationServices.ProjectWorkspace projectWorkspace() { return workspaceServices.project(); }
     public WorkspaceApplicationServices.PlaybackWorkspace playbackWorkspace() { return workspaceServices.playback(); }
@@ -277,6 +276,7 @@ public final class DocuPodcastShellViewModel {
         return workspaceServices.administration();
     }
     public InkInputProviderRegistry inkInputProviders() { return inkInputProviders; }
+    public DrawingFeatureCatalog drawingFeatures() { return drawingFeatures; }
 
     public ReadOnlyStringProperty windowTitleProperty() { return windowTitle.getReadOnlyProperty(); }
 
@@ -459,12 +459,12 @@ public final class DocuPodcastShellViewModel {
 
     public void updateDocumentaryVideoConfiguration(DocumentStudyVideoConfiguration value) { documentaryVideoAssetWorkflow.update(requireSession(), value); documentaryVideoChanged("Configuracion de video documental actualizada."); }
 
-    public ProjectAssetReference importDocumentaryVideoImage(Path source) throws IOException { ProjectAssetReference asset = documentaryVideoAssetWorkflow.importImage(applicationServices, requireSession(), source); documentaryVideoChanged("Imagen copiada dentro del proyecto: " + asset.displayName()); return asset; }
+    public ProjectAssetReference importDocumentaryVideoImage(Path source) throws IOException { ProjectAssetReference asset = documentaryVideoAssetWorkflow.importImage(workspaceServices, requireSession(), source); documentaryVideoChanged("Imagen copiada dentro del proyecto: " + asset.displayName()); return asset; }
 
     public DocumentStudyVideoAssetWorkflow.DrawingAsset saveDocumentaryDrawing(String blockId, Path png, String state) throws IOException { var asset = documentaryVideoAssetWorkflow.saveDrawing(requireSession(), blockId, png, state); documentaryVideoChanged("Dibujo guardado dentro del proyecto."); return asset; }
     public DocumentStudyVideoAssetWorkflow.DrawingAsset saveDocumentaryDrawing(String blockId, Path png, String state, Map<String, Path> stagedSources) throws IOException { var asset = documentaryVideoAssetWorkflow.saveDrawing(requireSession(), blockId, png, state, stagedSources); documentaryVideoChanged("Ilustracion guardada dentro del proyecto."); return asset; }
 
-    public DocumentStudyMusicTrack importDocumentaryMusic(Path source) throws IOException { var imported = documentaryVideoAssetWorkflow.importMusic(applicationServices, requireSession(), source); documentaryVideoChanged("Musica copiada dentro del proyecto: " + imported.displayName()); return imported.track(); }
+    public DocumentStudyMusicTrack importDocumentaryMusic(Path source) throws IOException { var imported = documentaryVideoAssetWorkflow.importMusic(workspaceServices, requireSession(), source); documentaryVideoChanged("Musica copiada dentro del proyecto: " + imported.displayName()); return imported.track(); }
 
     public Optional<Path> resolveCurrentProjectAsset(String assetId) { return documentaryVideoAssetWorkflow.resolveAsset(currentProject(), currentProjectFile(), assetId); }
 
@@ -786,7 +786,7 @@ public final class DocuPodcastShellViewModel {
 
     public TheatreVisualSetupCoordinator.StageBackdropPreview selectedTheatreStageBackdropPreview() { ProjectSession session = requireSession(); String id = selectedTheatreInterventionId(session).orElse(""); String sceneId = new TheatreFragmentLinkPolicy().sceneIdForIntervention(session.project().theatre(), id).orElse(""); return theatreVisualSetupWorkflow.stageBackdropPreview(sessions.activeSession(), currentProjectDirectory(), id, sceneId); }
 
-    public void assignStageBackdropForSelectedSegment(Path imageFile, boolean fragmentOverride) throws IOException { ProjectSession session = requireSession(); String id = selectedTheatreInterventionId(session).orElse(""); String sceneId = new TheatreFragmentLinkPolicy().sceneIdForIntervention(session.project().theatre(), id).orElse(""); statusMessage.set(theatreVisualSetupWorkflow.assignStageBackdrop(applicationServices, session, id, sceneId, imageFile, fragmentOverride).message()); bumpDocumentMediaRevision(); refreshProjectState(); }
+    public void assignStageBackdropForSelectedSegment(Path imageFile, boolean fragmentOverride) throws IOException { ProjectSession session = requireSession(); String id = selectedTheatreInterventionId(session).orElse(""); String sceneId = new TheatreFragmentLinkPolicy().sceneIdForIntervention(session.project().theatre(), id).orElse(""); statusMessage.set(theatreVisualSetupWorkflow.assignStageBackdrop(workspaceServices, session, id, sceneId, imageFile, fragmentOverride).message()); bumpDocumentMediaRevision(); refreshProjectState(); }
 
     public void clearStageBackdropFromSelectedSegment() { ProjectSession session = requireSession(); String id = selectedTheatreInterventionId(session).orElse(""); statusMessage.set(theatreVisualSetupWorkflow.clearStageBackdropFromIntervention(session, id).message()); bumpDocumentMediaRevision(); refreshProjectState(); }
 
@@ -814,7 +814,7 @@ public final class DocuPodcastShellViewModel {
 
     public TechnicalProblem saveTechnicalProblemFromSources(java.util.List<com.marcosmoreiradev.docupodcaststudio.application.documentstudy.StudyProblemSourceDraft> sourceDrafts, String requestedTitle, String solutionText, WritableImage solutionImage, String canvasStateJson) throws IOException { TechnicalProblem problem = studyProblemWorkflow.saveFromSources(requireSession(), currentProjectDirectory(), sourceDrafts, requestedTitle, solutionText, solutionImage, canvasStateJson); statusMessage.set("Problema tecnico guardado: " + problem.id() + (problem.solutionImageAssetId().isBlank() ? "." : ". Lienzo exportado como PNG.")); bumpDocumentMediaRevision(); refreshProjectState(); return problem; }
 
-    public com.marcosmoreiradev.docupodcaststudio.application.documentstudy.StudyProblemsProjection studyProblemsProjection() { return applicationServices.documentStudy().buildStudyProblemsProjection().build(currentProject().orElse(null), currentProjectDirectory().orElse(null)); }
+    public com.marcosmoreiradev.docupodcaststudio.application.documentstudy.StudyProblemsProjection studyProblemsProjection() { return workspaceServices.project().documentStudy().buildStudyProblemsProjection().build(currentProject().orElse(null), currentProjectDirectory().orElse(null)); }
 
     public TechnicalProblem updateTechnicalProblemSolution(String problemId, String solutionText, WritableImage solutionImage, String notes) throws IOException { return updateTechnicalProblemSolution(problemId, solutionText, solutionImage, notes, null); }
 
@@ -871,7 +871,7 @@ public final class DocuPodcastShellViewModel {
     }
 
     public TheatreGeneratedImageCandidate enhanceTheatreImageCandidate(TheatreGeneratedImageCandidate c, ImageEnhancementOutputProfile p, ImageAspectStrategy s) throws IOException {
-        var e = new ImageEnhancementWorkflow(applicationServices).enhanceCandidate(requireSession(), c, p, s);
+        var e = new ImageEnhancementWorkflow(workspaceServices).enhanceCandidate(requireSession(), c, p, s);
         updateProjectStatusOnFxThread("Imagen mejorada para " + e.interventionId() + " a " + p.displayName() + ".", true);
         return e;
     }
@@ -902,7 +902,7 @@ public final class DocuPodcastShellViewModel {
 
     public List<TheatreProjectLayer.IntervencionVisual> theatreIntervencionesVisuales() { return sessions.activeSession().map(session -> session.project().theatre().intervencionesVisuales()).orElseGet(List::of); }
 
-    public TheatreAudioTrackTimeline theatreAudioTrackTimeline() { return theatreAudioTrackWorkflow.timeline(applicationServices, sessions.activeSession(), currentScript.get(), currentPlaybackManifest.get()); }
+    public TheatreAudioTrackTimeline theatreAudioTrackTimeline() { return theatreAudioTrackWorkflow.timeline(workspaceServices, sessions.activeSession(), currentScript.get(), currentPlaybackManifest.get()); }
 
     public Optional<String> selectedTheatreAudioInterventionId() { return theatreAudioTrackWorkflow.interventionForSelection(sessions.activeSession(), currentScript.get(), selectedScriptSegmentId.get(), selectedDocumentBlockId.get()); }
 
@@ -916,7 +916,7 @@ public final class DocuPodcastShellViewModel {
 
     public boolean canRenderSelectedTheatreChoralVoices(List<String> ids) { return theatreChoralVoiceRenderWorkflow.canRender(selectedTheatreChoralVoiceOptions(), ids, currentProjectMode.get() == ProjectMode.THEATRE_PRODUCTION, selectedTheatreAudioInterventionId().isPresent(), audioJobRunning.get() || choralVoiceRenderingProperty().get()); }
 
-    public void renderSelectedTheatreChoralVoices(List<String> characterIds) { try { if (currentProjectMode.get() != ProjectMode.THEATRE_PRODUCTION) throw new IOException("Las voces simultaneas solo estan disponibles en modo Teatro."); if (audioJobRunning.get() || choralVoiceRenderingProperty().get()) throw new IOException("Espera a que termine el trabajo de audio actual."); if (currentScript.get() == null || currentScript.get().empty()) buildNarrationScriptFromDocument(); ProjectSession session = requireSession(); Path projectFile = session.projectFile().orElseThrow(() -> new IOException("Guarda el proyecto antes de renderizar voces simultaneas.")); String interventionId = selectedTheatreAudioInterventionId().orElseThrow(() -> new IOException("Selecciona una intervencion teatral narrable.")); List<String> participants = TheatreChoralVoiceRenderCoordinator.normalize(characterIds); if (!canRenderSelectedTheatreChoralVoices(participants)) throw new IOException("Selecciona al menos dos personajes con voz local disponible."); RenderTheatreChoralVoiceUseCase useCase = applicationServices.theatre().renderChoralVoice(); if (useCase == null) throw new IOException("El render multipersona no esta disponible en esta configuracion de la aplicacion."); saveCurrentProjectAs(projectFile); var request = new TheatreChoralVoiceRenderRequest(session.project(), projectFile, currentScript.get(), interventionId, participants, audioEngineDescriptor()); theatreChoralVoiceRenderWorkflow.start(useCase, request, result -> applyTheatreChoralVoiceResult(session, projectFile, result), statusMessage::set); } catch (Exception ex) { theatreChoralVoiceRenderWorkflow.fail("No se pudo iniciar la voz multipersona: " + rootCauseMessage(ex), statusMessage::set); refreshProjectState(); } }
+    public void renderSelectedTheatreChoralVoices(List<String> characterIds) { try { if (currentProjectMode.get() != ProjectMode.THEATRE_PRODUCTION) throw new IOException("Las voces simultaneas solo estan disponibles en modo Teatro."); if (audioJobRunning.get() || choralVoiceRenderingProperty().get()) throw new IOException("Espera a que termine el trabajo de audio actual."); if (currentScript.get() == null || currentScript.get().empty()) buildNarrationScriptFromDocument(); ProjectSession session = requireSession(); Path projectFile = session.projectFile().orElseThrow(() -> new IOException("Guarda el proyecto antes de renderizar voces simultaneas.")); String interventionId = selectedTheatreAudioInterventionId().orElseThrow(() -> new IOException("Selecciona una intervencion teatral narrable.")); List<String> participants = TheatreChoralVoiceRenderCoordinator.normalize(characterIds); if (!canRenderSelectedTheatreChoralVoices(participants)) throw new IOException("Selecciona al menos dos personajes con voz local disponible."); RenderTheatreChoralVoiceUseCase useCase = workspaceServices.project().theatre().renderChoralVoice(); if (useCase == null) throw new IOException("El render multipersona no esta disponible en esta configuracion de la aplicacion."); saveCurrentProjectAs(projectFile); var request = new TheatreChoralVoiceRenderRequest(session.project(), projectFile, currentScript.get(), interventionId, participants, audioEngineDescriptor()); theatreChoralVoiceRenderWorkflow.start(useCase, request, result -> applyTheatreChoralVoiceResult(session, projectFile, result), statusMessage::set); } catch (Exception ex) { theatreChoralVoiceRenderWorkflow.fail("No se pudo iniciar la voz multipersona: " + rootCauseMessage(ex), statusMessage::set); refreshProjectState(); } }
     private void applyTheatreChoralVoiceResult(ProjectSession session, Path projectFile, TheatreChoralVoiceRenderResult result) { try { session.replaceProject(result.project(), true); activeVoiceLibrary.set(result.project().voiceLibrary()); saveCurrentProjectAs(projectFile); rebuildPlaybackManifestFromLatestJob(); bumpDocumentMediaRevision(); theatreChoralVoiceRenderWorkflow.complete(result.message(), statusMessage::set); } catch (Exception ex) { theatreChoralVoiceRenderWorkflow.fail("La mezcla se genero, pero no se pudo guardar el proyecto: " + rootCauseMessage(ex), statusMessage::set); } finally { refreshProjectState(); } }
 
     public void clearSelectedTheatreChoralVoices() { try { var result = new TheatreChoralVoiceWorkflow().clear(requireSession(), selectedTheatreAudioInterventionId().orElse("")); if (result.saved() && currentProjectFile().isPresent()) saveCurrentProjectAs(currentProjectFile().get()); theatreChoralVoiceRenderWorkflow.complete(result.message(), statusMessage::set); rebuildPlaybackManifestFromLatestJob(); bumpDocumentMediaRevision(); refreshProjectState(); } catch (IOException ex) { theatreChoralVoiceRenderWorkflow.fail("No se pudo restaurar la voz simple: " + rootCauseMessage(ex), statusMessage::set); refreshProjectState(); } }
@@ -1036,8 +1036,8 @@ public final class DocuPodcastShellViewModel {
         resetPlaybackState();
         activeAudioJobStatus.set(AudioJobStatusDto.idle());
         audioJobRunning.set(false);
-        activeReadingProfile.set(applicationServices.readingProfile().createDefaultProfile().create());
-        activeVoiceLibrary.set(applicationServices.voice().createDefaultVoiceLibrary().create());
+        activeReadingProfile.set(workspaceServices.project().readingProfile().createDefaultProfile().create());
+        activeVoiceLibrary.set(workspaceServices.administration().voice().createDefaultVoiceLibrary().create());
         loadReadingComfortSettings();
         activeWorkspace.set(WorkspaceKind.WELCOME_HOME);
         statusMessage.set("Proyecto cerrado.");
@@ -1061,7 +1061,7 @@ public final class DocuPodcastShellViewModel {
         refreshProjectState();
     }
 
-    public Path createPdfSourceFromImageFolder(Path sourceFolder) throws IOException { Path projectDirectory = currentProjectDirectory().orElseThrow(() -> new IOException("Guarda el proyecto antes de crear una fuente PDF desde carpeta.")); String folderName = sourceFolder == null || sourceFolder.getFileName() == null ? "imagenes" : sourceFolder.getFileName().toString(); Path outputDirectory = projectDirectory.resolve("source").resolve("generated-pdf-from-images"); Files.createDirectories(outputDirectory); Path createdPdf = applicationServices.document().createPdfFromImageFolder().create(sourceFolder, uniqueGeneratedPdfPath(outputDirectory, safeGeneratedPdfStem(folderName))); attachImportedDocument(importAndClassifySourceDocument(createdPdf)); statusMessage.set("Fuente PDF creada desde carpeta de imagenes: " + createdPdf.getFileName() + "."); refreshProjectState(); return createdPdf; }
+    public Path createPdfSourceFromImageFolder(Path sourceFolder) throws IOException { Path projectDirectory = currentProjectDirectory().orElseThrow(() -> new IOException("Guarda el proyecto antes de crear una fuente PDF desde carpeta.")); String folderName = sourceFolder == null || sourceFolder.getFileName() == null ? "imagenes" : sourceFolder.getFileName().toString(); Path outputDirectory = projectDirectory.resolve("source").resolve("generated-pdf-from-images"); Files.createDirectories(outputDirectory); Path createdPdf = workspaceServices.project().document().createPdfFromImageFolder().create(sourceFolder, uniqueGeneratedPdfPath(outputDirectory, safeGeneratedPdfStem(folderName))); attachImportedDocument(importAndClassifySourceDocument(createdPdf)); statusMessage.set("Fuente PDF creada desde carpeta de imagenes: " + createdPdf.getFileName() + "."); refreshProjectState(); return createdPdf; }
     private void resetDocumentSideDocksForProjectStart() { documentRightRailVisible.set(false); documentPlaybarDocked.set(false); }
     private static String safeGeneratedPdfStem(String value) { String safe = value == null ? "" : value.replaceAll("[^A-Za-z0-9._-]+", "-").replaceAll("-{2,}", "-").replaceAll("^[-.]+|[-.]+$", ""); return safe.isBlank() ? "imagenes" : safe; }
     private static Path uniqueGeneratedPdfPath(Path directory, String stem) { Path candidate = directory.resolve(stem + ".pdf"); for (int index = 2; Files.exists(candidate); index++) { candidate = directory.resolve(stem + "-" + index + ".pdf"); } return candidate; }
@@ -1119,7 +1119,7 @@ public final class DocuPodcastShellViewModel {
             statusMessage.set("No hay documento activo para reclasificar.");
             return;
         }
-        ReadableDocument updated = applicationServices.document().updateDocumentBlockType().update(document, blockId, type);
+        ReadableDocument updated = workspaceServices.project().document().updateDocumentBlockType().update(document, blockId, type);
         currentDocument.set(updated);
         sessions.activeSession().ifPresent(session -> session.setImportedDocument(updated));
         statusMessage.set("Bloque " + blockId + " marcado como " + type.displayName() + ".");
@@ -1141,7 +1141,7 @@ public final class DocuPodcastShellViewModel {
             statusMessage.set("Perfil de lectura guardado. No hay documento activo para aplicar.");
             return;
         }
-        ReadableDocument updated = applicationServices.readingProfile().applyReadingProfile().apply(document, profile);
+        ReadableDocument updated = workspaceServices.project().readingProfile().applyReadingProfile().apply(document, profile);
         currentDocument.set(updated);
         sessions.activeSession().ifPresent(session -> session.setImportedDocument(updated));
         currentScript.set(null); resetPlaybackState(); activeAudioJobStatus.set(AudioJobStatusDto.idle()); audioJobRunning.set(false);
@@ -1185,7 +1185,7 @@ public final class DocuPodcastShellViewModel {
         if (document == null) {
             return new ReadingProfilePreview(java.util.List.of());
         }
-        return applicationServices.readingProfile().previewReadingProfile().preview(document, profile);
+        return workspaceServices.project().readingProfile().previewReadingProfile().preview(document, profile);
     }
 
     public void buildNarrationScriptFromDocument() {
@@ -1242,7 +1242,7 @@ public final class DocuPodcastShellViewModel {
             selectedScriptSegmentId.set(linked.get().id());
             PlaybackManifest manifest = ensurePlaybackManifestLoaded();
             if (manifest != null && !manifest.emptyManifest() && manifest.cueForSegment(linked.get().id()).isPresent()) {
-                playbackCursor.set(applicationServices.playback().seekPlayback().seek(playbackCursor.get(), manifest, linked.get().id()));
+                playbackCursor.set(workspaceServices.playback().playback().seekPlayback().seek(playbackCursor.get(), manifest, linked.get().id()));
             }
             statusMessage.set("Bloque seleccionado: " + normalized + ". Reproducir desde aquí usará " + linked.get().id() + ".");
         } else {
@@ -1314,7 +1314,7 @@ public final class DocuPodcastShellViewModel {
         String voiceId = voiceProfileId == null ? "" : voiceProfileId.strip();
         VoiceReferenceTone requested = requestedTone == null ? VoiceReferenceTone.NEUTRAL : requestedTone;
         if (voiceId.isBlank()) { documentVoiceToneStatus.set("Selecciona una voz antes de elegir tono."); statusMessage.set("Selecciona una voz antes de elegir tono."); refreshProjectState(); return; }
-        VoiceToneReferenceResolution resolution = applicationServices.voice().resolveVoiceToneReference().resolve(activeVoiceLibrary.get(), voiceId, requested);
+        VoiceToneReferenceResolution resolution = workspaceServices.administration().voice().resolveVoiceToneReference().resolve(activeVoiceLibrary.get(), voiceId, requested);
         documentVoiceToneStatus.set(toneStatus(resolution));
         if (!resolution.available()) { statusMessage.set(resolution.userMessage()); refreshProjectState(); return; }
         removeExistingLayerOfKindSilently(NarrativeLayerKind.VOICE);
@@ -1355,7 +1355,7 @@ public final class DocuPodcastShellViewModel {
         Path projectFile = session.projectFile().orElseThrow(() ->
                 new IOException("Guarda el proyecto antes de importar imagenes para mantener rutas relativas."));
         if (selectedDocumentBlockId.get() == null || selectedDocumentBlockId.get().isBlank()) { statusMessage.set("Selecciona una oracion o bloque del documento antes de importar una imagen."); refreshProjectState(); return; }
-        var result = applicationServices.storyboard().importImageAsset().importImage(session.project(), projectFile, imageFile);
+        var result = workspaceServices.generation().storyboard().importImageAsset().importImage(session.project(), projectFile, imageFile);
         session.replaceProject(result.project(), true);
         if (normalizedKind == NarrativeLayerKind.IMAGE) lastStoryboardImageAssetId.set(result.imageAsset().id());
         removeExistingLayerOfKindSilently(normalizedKind); Optional<NarrativeLayerCoordinator.AssignmentOutcome> assignment = assignDocumentLayerTarget(normalizedKind, result.imageAsset().id());
@@ -1377,7 +1377,7 @@ public final class DocuPodcastShellViewModel {
 
     public void importImageForSegment(String segmentId, Path imageFile, NarrativeLayerKind imageKind) throws IOException { selectNarrativeVisualFragment(segmentId); importImageForSelectedDocumentRange(imageFile, imageKind); openNarrativeVideoProduction(); }
 
-    public void generateNarrativeImageForSegment(String segmentId) throws IOException { ProjectSession session = requireSession(); NarrationSegment segment = findSegment(segmentId).orElseThrow(() -> new IOException("No se encontro el fragmento narrativo solicitado.")); var generated = new NarrativeImageGenerationWorkflow(applicationServices).generate(session, segment, applicationServices.settings().loadOperationalSettings().load(), message -> statusMessage.set(message == null || message.isBlank() ? "Generando imagen narrativa." : message)); selectNarrativeVisualFragment(segment.id()); lastStoryboardImageAssetId.set(generated.importResult().imageAsset().id()); removeExistingLayerOfKindSilently(NarrativeLayerKind.IMAGE); Optional<NarrativeLayerCoordinator.AssignmentOutcome> assignment = assignDocumentLayerTarget(NarrativeLayerKind.IMAGE, generated.importResult().imageAsset().id()); assignment.ifPresent(outcome -> { refreshStoryboardFromImageLayers(session); statusMessage.set(generated.message() + " " + outcome.message()); }); openNarrativeVideoProduction(); bumpDocumentMediaRevision(); }
+    public void generateNarrativeImageForSegment(String segmentId) throws IOException { ProjectSession session = requireSession(); NarrationSegment segment = findSegment(segmentId).orElseThrow(() -> new IOException("No se encontro el fragmento narrativo solicitado.")); var generated = narrativeImageGenerationWorkflow.generate(session, segment, workspaceServices.administration().settings().loadOperationalSettings().load(), message -> statusMessage.set(message == null || message.isBlank() ? "Generando imagen narrativa." : message)); selectNarrativeVisualFragment(segment.id()); lastStoryboardImageAssetId.set(generated.importResult().imageAsset().id()); removeExistingLayerOfKindSilently(NarrativeLayerKind.IMAGE); Optional<NarrativeLayerCoordinator.AssignmentOutcome> assignment = assignDocumentLayerTarget(NarrativeLayerKind.IMAGE, generated.importResult().imageAsset().id()); assignment.ifPresent(outcome -> { refreshStoryboardFromImageLayers(session); statusMessage.set(generated.message() + " " + outcome.message()); }); openNarrativeVideoProduction(); bumpDocumentMediaRevision(); }
 
     public void removeImageAssignmentForSegment(String segmentId, NarrativeLayerKind imageKind) { selectNarrativeVisualFragment(segmentId); if (imageKind == NarrativeLayerKind.BRIDGE_IMAGE) removeAssignmentOfKindForSelectedDocumentRange(NarrativeLayerKind.BRIDGE_IMAGE); else removeImageAssignmentForSelectedDocumentRange(); openNarrativeVideoProduction(); }
 
@@ -1421,7 +1421,7 @@ public final class DocuPodcastShellViewModel {
         ProjectSession session = maybeSession.get();
         Path projectFile = session.projectFile().orElseThrow(() -> new IOException("Guarda el proyecto antes de importar audio o video para mantener rutas relativas."));
         if (selectedDocumentBlockId.get() == null || selectedDocumentBlockId.get().isBlank()) { statusMessage.set("Selecciona una oración o bloque del documento antes de importar audio."); refreshProjectState(); return; }
-        var importResult = applicationServices.media().importUserMediaAsset().importMedia(session.project(), projectFile, mediaFile);
+        var importResult = workspaceServices.generation().media().importUserMediaAsset().importMedia(session.project(), projectFile, mediaFile);
         session.replaceProject(importResult.project(), true);
         Optional<NarrativeLayerCoordinator.AssignmentOutcome> assignment = assignDocumentLayerTarget(NarrativeLayerKind.HUMAN_AUDIO, importResult.audioAsset().id());
         String prefix = (actionLabel == null || actionLabel.isBlank() ? "Audio" : actionLabel.strip()) + ": " + importResult.message();
@@ -1688,7 +1688,7 @@ public final class DocuPodcastShellViewModel {
         }
         selectedScriptSegmentId.set(segment.get().id());
         ensurePlaybackManifestLoaded();
-        playbackCursor.set(applicationServices.playback().seekPlayback().seek(playbackCursor.get(), currentPlaybackManifest.get(), segment.get().id()));
+        playbackCursor.set(workspaceServices.playback().playback().seekPlayback().seek(playbackCursor.get(), currentPlaybackManifest.get(), segment.get().id()));
         statusMessage.set("Segmento seleccionado: " + segment.get().id() + ". Playback preparado desde esta línea/segmento.");
         refreshProjectState();
     }
@@ -1887,33 +1887,33 @@ public final class DocuPodcastShellViewModel {
     public void prepareHumanVoiceForSelectedText() {
         Optional<ScriptTextRange> range = selectedRangeForWholeSegment();
         if (range.isEmpty()) { statusMessage.set("Selecciona un fragmento u oración del documento antes de asociar voz humana."); activeWorkspace.set(WorkspaceKind.DOCUMENT_READER); return; }
-        RecordingActionPlan plan = applicationServices.recording().prepareRecordingAction().prepare(RecordingPurpose.HUMAN_VOICE_FOR_TEXT, range.get());
+        RecordingActionPlan plan = workspaceServices.playback().recording().prepareRecordingAction().prepare(RecordingPurpose.HUMAN_VOICE_FOR_TEXT, range.get());
         statusMessage.set(plan.userMessage() + " Archivo sugerido: " + plan.suggestedFileName() + "."); refreshProjectState();
     }
 
-    public java.util.List<AudioInputDevice> audioInputDevices() { return manualInterventionAudioWorkflow.inputDevices(applicationServices); }
+    public java.util.List<AudioInputDevice> audioInputDevices() { return manualInterventionAudioWorkflow.inputDevices(workspaceServices); }
 
-    public void startManualInterventionRecording(String blockId, String displayName, String preview, String inputDeviceId) throws IOException { if (voiceRecordingRunning.get() || manualAudioRecordingRunning.get() || applicationServices.recording().stopAudioRecording().recording()) { statusMessage.set("Ya hay una grabacion activa. Detenla o cancelala antes de iniciar otra."); return; } NarrationSegment segment = manualRecordingSegment(blockId).orElseThrow(() -> new IOException("No se encontro un segmento narrable para esa intervencion.")); Path output = manualInterventionAudioWorkflow.startRecording(applicationServices, requireSession(), segment, inputDeviceId); activeManualAudioSegmentId = segment.id(); manualAudioRecordingRunning.set(true); selectedScriptSegmentId.set(segment.id()); if (blockId != null && !blockId.isBlank()) selectedDocumentBlockId.set(blockId.strip()); statusMessage.set("Grabando audio manual para " + ManualInterventionAudioWorkflow.displayName(displayName, segment) + ": " + output.getFileName() + "."); refreshProjectState(); }
+    public void startManualInterventionRecording(String blockId, String displayName, String preview, String inputDeviceId) throws IOException { if (voiceRecordingRunning.get() || manualAudioRecordingRunning.get() || workspaceServices.playback().recording().stopAudioRecording().recording()) { statusMessage.set("Ya hay una grabacion activa. Detenla o cancelala antes de iniciar otra."); return; } NarrationSegment segment = manualRecordingSegment(blockId).orElseThrow(() -> new IOException("No se encontro un segmento narrable para esa intervencion.")); Path output = manualInterventionAudioWorkflow.startRecording(workspaceServices, requireSession(), segment, inputDeviceId); activeManualAudioSegmentId = segment.id(); manualAudioRecordingRunning.set(true); selectedScriptSegmentId.set(segment.id()); if (blockId != null && !blockId.isBlank()) selectedDocumentBlockId.set(blockId.strip()); statusMessage.set("Grabando audio manual para " + ManualInterventionAudioWorkflow.displayName(displayName, segment) + ": " + output.getFileName() + "."); refreshProjectState(); }
 
-    public Path stopManualInterventionRecordingDraft(String blockId, String displayName) throws IOException { if (!manualAudioRecordingRunning.get() && !applicationServices.recording().stopAudioRecording().recording()) { statusMessage.set("No hay una grabacion manual activa."); throw new IOException("No hay una grabacion manual activa."); } NarrationSegment segment = manualRecordingSegment(blockId).or(() -> findSegment(activeManualAudioSegmentId)).orElseThrow(() -> new IOException("No se encontro el segmento de la grabacion manual.")); Path recorded; try { recorded = applicationServices.recording().stopAudioRecording().stop(); } finally { manualAudioRecordingRunning.set(false); activeManualAudioSegmentId = ""; } statusMessage.set("Borrador grabado para " + ManualInterventionAudioWorkflow.displayName(displayName, segment) + ": " + recorded.getFileName() + "."); refreshProjectState(); return recorded; }
+    public Path stopManualInterventionRecordingDraft(String blockId, String displayName) throws IOException { if (!manualAudioRecordingRunning.get() && !workspaceServices.playback().recording().stopAudioRecording().recording()) { statusMessage.set("No hay una grabacion manual activa."); throw new IOException("No hay una grabacion manual activa."); } NarrationSegment segment = manualRecordingSegment(blockId).or(() -> findSegment(activeManualAudioSegmentId)).orElseThrow(() -> new IOException("No se encontro el segmento de la grabacion manual.")); Path recorded; try { recorded = workspaceServices.playback().recording().stopAudioRecording().stop(); } finally { manualAudioRecordingRunning.set(false); activeManualAudioSegmentId = ""; } statusMessage.set("Borrador grabado para " + ManualInterventionAudioWorkflow.displayName(displayName, segment) + ": " + recorded.getFileName() + "."); refreshProjectState(); return recorded; }
 
-    public void assignManualInterventionRecording(String blockId, String displayName, Path recorded) throws IOException { if (recorded == null || !java.nio.file.Files.isRegularFile(recorded)) { throw new IOException("No hay borrador WAV valido para asignar."); } NarrationSegment segment = manualRecordingSegment(blockId).or(() -> findSegment(activeManualAudioSegmentId)).orElseThrow(() -> new IOException("No se encontro el segmento para asignar audio manual.")); applyManualAudioSnapshot(manualInterventionAudioWorkflow.applyRecording(applicationServices, audioWorkflow, playableAudioJobSelector, requireSession(), currentScript.get(), activeAudioJobStatus.get().jobId(), segment, displayName, recorded), "Audio manual aplicado a " + segment.id() + ". Playback y exportacion usaran " + segment.id() + "-manual.wav."); }
+    public void assignManualInterventionRecording(String blockId, String displayName, Path recorded) throws IOException { if (recorded == null || !java.nio.file.Files.isRegularFile(recorded)) { throw new IOException("No hay borrador WAV valido para asignar."); } NarrationSegment segment = manualRecordingSegment(blockId).or(() -> findSegment(activeManualAudioSegmentId)).orElseThrow(() -> new IOException("No se encontro el segmento para asignar audio manual.")); applyManualAudioSnapshot(manualInterventionAudioWorkflow.applyRecording(workspaceServices, audioWorkflow, playableAudioJobSelector, requireSession(), currentScript.get(), activeAudioJobStatus.get().jobId(), segment, displayName, recorded), "Audio manual aplicado a " + segment.id() + ". Playback y exportacion usaran " + segment.id() + "-manual.wav."); }
 
     public void stopManualInterventionRecording(String blockId, String displayName, String preview) throws IOException { Path recorded = stopManualInterventionRecordingDraft(blockId, displayName); assignManualInterventionRecording(blockId, displayName, recorded); }
 
-    public void cancelManualInterventionRecording() throws IOException { if (!manualAudioRecordingRunning.get() && !applicationServices.recording().stopAudioRecording().recording()) { statusMessage.set("No hay grabacion manual para cancelar."); return; } applicationServices.recording().cancelAudioRecording().cancel(); manualAudioRecordingRunning.set(false); activeManualAudioSegmentId = ""; statusMessage.set("Grabacion manual cancelada. No se reemplazo ningun fragmento de audio."); refreshProjectState(); }
+    public void cancelManualInterventionRecording() throws IOException { if (!manualAudioRecordingRunning.get() && !workspaceServices.playback().recording().stopAudioRecording().recording()) { statusMessage.set("No hay grabacion manual para cancelar."); return; } workspaceServices.playback().recording().cancelAudioRecording().cancel(); manualAudioRecordingRunning.set(false); activeManualAudioSegmentId = ""; statusMessage.set("Grabacion manual cancelada. No se reemplazo ningun fragmento de audio."); refreshProjectState(); }
 
     public void playManualInterventionAudio(String blockId) throws IOException { NarrationSegment segment = manualRecordingSegment(blockId).orElseThrow(() -> new IOException("No se encontro un segmento narrable para esa intervencion.")); Path projectDirectory = currentProjectDirectory().orElseThrow(() -> new IOException("Guarda el proyecto antes de escuchar audio manual.")); Path audio = manualInterventionAudioWorkflow.playableAudioForSegment(audioWorkflow, playableAudioJobSelector, projectDirectory, currentScript.get(), activeAudioJobStatus.get().jobId(), segment.id()); playbackTransport.playStandalone(audio, 0.0); statusMessage.set("Reproduciendo audio de " + segment.id() + ": " + audio.getFileName() + "."); }
 
     public void playStandaloneAudio(Path audio) throws IOException { if (audio == null || !java.nio.file.Files.isRegularFile(audio)) { throw new IOException("No existe el audio para reproducir."); } playbackTransport.playStandalone(audio, 0.0); statusMessage.set("Reproduciendo " + audio.getFileName() + "."); }
 
-    public void deleteManualInterventionAudio(String blockId, String displayName) throws IOException { NarrationSegment segment = manualRecordingSegment(blockId).orElseThrow(() -> new IOException("No se encontro un segmento narrable para esa intervencion.")); applyManualAudioSnapshot(manualInterventionAudioWorkflow.deleteManualAudio(applicationServices, audioWorkflow, playableAudioJobSelector, requireSession(), currentScript.get(), activeAudioJobStatus.get().jobId(), segment, displayName), "Audio manual eliminado de " + segment.id() + ". Se restauro el WAV generado si existia; si no, quedo pendiente."); }
+    public void deleteManualInterventionAudio(String blockId, String displayName) throws IOException { NarrationSegment segment = manualRecordingSegment(blockId).orElseThrow(() -> new IOException("No se encontro un segmento narrable para esa intervencion.")); applyManualAudioSnapshot(manualInterventionAudioWorkflow.deleteManualAudio(workspaceServices, audioWorkflow, playableAudioJobSelector, requireSession(), currentScript.get(), activeAudioJobStatus.get().jobId(), segment, displayName), "Audio manual eliminado de " + segment.id() + ". Se restauro el WAV generado si existia; si no, quedo pendiente."); }
 
     public boolean canRegenerateSelectedTheatreInterventionAudio() { return currentProjectMode.get() == ProjectMode.THEATRE_PRODUCTION && !audioJobRunning.get() && !choralVoiceRenderingProperty().get() && !selectedDocumentBlockId.get().isBlank() && currentDocument.get() != null; }
 
     public void regenerateSelectedTheatreInterventionAudio() {
         try { if (currentScript.get() == null || currentScript.get().empty()) buildNarrationScriptFromDocument(); NarrationSegment segment = manualRecordingSegment(selectedDocumentBlockId.get()).orElseThrow(() -> new IOException("Selecciona una intervencion narrable antes de regenerar su audio.")); ProjectSession session = requireSession(); Path file = session.projectFile().orElseThrow(() -> new IOException("Guarda el proyecto antes de regenerar audio.")); if (audioEngineUnavailableForGeneration()) throw new IOException(audioEngineUnavailableMessage()); saveCurrentProjectAs(file); audioJobRunning.set(true); statusMessage.set("Renderizando de nuevo el audio de " + segment.id() + "...");
-            theatreInterventionAudioRegenerationWorkflow.start(applicationServices, audioWorkflow, playableAudioJobSelector, session, currentScript.get(), activeAudioJobStatus.get().jobId(), segment,
+            theatreInterventionAudioRegenerationWorkflow.start(workspaceServices, audioWorkflow, playableAudioJobSelector, session, currentScript.get(), activeAudioJobStatus.get().jobId(), segment,
                     status -> Platform.runLater(() -> { activeAudioJobStatus.set(status); audioJobRunning.set(status.running()); statusMessage.set(status.running() ? "Renderizando de nuevo " + segment.id() + ": " + status.statusLine() : "Validando audio nuevo de " + segment.id() + "..."); refreshProjectState(); }),
                     updated -> Platform.runLater(() -> applyManualAudioSnapshot(updated, "Audio actualizado para " + segment.id() + ".")),
                     failure -> Platform.runLater(() -> { audioJobRunning.set(false); statusMessage.set("No se pudo actualizar " + segment.id() + ": " + rootCauseMessage(failure)); refreshProjectState(); }));
@@ -2014,7 +2014,7 @@ public final class DocuPodcastShellViewModel {
     private Path voiceLibraryProjectFileOrNull() throws IOException {
         Optional<ProjectSession> session = sessions.activeSession();
         return session.isPresent() && session.get().projectFile().isPresent() ? session.get().projectFile().get()
-                : applicationServices.voice().importVoiceSample().storesSamplesOutsideProject() ? applicationServices.voice().importVoiceSample().effectiveProjectFile(null) : null;
+                : workspaceServices.administration().voice().importVoiceSample().storesSamplesOutsideProject() ? workspaceServices.administration().voice().importVoiceSample().effectiveProjectFile(null) : null;
     }
     private void importVoiceSampleInternal(Path sourceAudioFile, String displayName, VoiceToneRecordingPlan recordingPlan, boolean recordedInJava) throws IOException {
         Optional<ProjectSession> maybeSession = sessions.activeSession();
@@ -2035,7 +2035,7 @@ public final class DocuPodcastShellViewModel {
     public void startVoiceRecording(VoiceProfile voice, VoiceReferenceTone tone) throws IOException { startVoiceRecording(voice, tone, ""); }
 
     public void startVoiceRecording(VoiceProfile voice, VoiceReferenceTone tone, String inputDeviceId) throws IOException {
-        if (voiceRecordingRunning.get() || manualAudioRecordingRunning.get() || applicationServices.recording().stopAudioRecording().recording()) { statusMessage.set("Ya hay una grabacion activa. Detenla antes de iniciar otra."); return; }
+        if (voiceRecordingRunning.get() || manualAudioRecordingRunning.get() || workspaceServices.playback().recording().stopAudioRecording().recording()) { statusMessage.set("Ya hay una grabacion activa. Detenla antes de iniciar otra."); return; }
         VoiceReferenceTone targetTone = tone == null ? VoiceReferenceTone.NEUTRAL : tone;
         VoiceProfile targetVoice = voice == null ? activeVoiceLibrary.get().voiceById("VOC-OWN-PLACEHOLDER").orElse(null) : voice;
         VoiceToneRecordingPlan tonePlan = voiceToneRecordingPlan(targetVoice, targetTone);
@@ -2045,18 +2045,18 @@ public final class DocuPodcastShellViewModel {
     }
 
     public void stopOwnVoiceRecording() throws IOException {
-        if (!voiceRecordingRunning.get() && !applicationServices.recording().stopAudioRecording().recording()) { statusMessage.set("No hay una grabación de voz activa."); return; }
+        if (!voiceRecordingRunning.get() && !workspaceServices.playback().recording().stopAudioRecording().recording()) { statusMessage.set("No hay una grabación de voz activa."); return; }
         VoiceReferenceTone completedTone = activeVoiceRecordingTone == null ? VoiceReferenceTone.NEUTRAL : activeVoiceRecordingTone;
         Path recorded;
-        try { recorded = applicationServices.recording().stopAudioRecording().stop(); } finally { voiceRecordingRunning.set(false); activeVoiceRecordingFile = null; activeVoiceRecordingTone = VoiceReferenceTone.NEUTRAL; }
+        try { recorded = workspaceServices.playback().recording().stopAudioRecording().stop(); } finally { voiceRecordingRunning.set(false); activeVoiceRecordingFile = null; activeVoiceRecordingTone = VoiceReferenceTone.NEUTRAL; }
         VoiceProfile recordedVoice = activeVoiceLibrary.get().voiceById(activeVoiceRecordingVoiceId).orElseGet(() -> activeVoiceLibrary.get().voiceById("VOC-OWN-PLACEHOLDER").orElse(null)); activeVoiceRecordingVoiceId = "";
         importVoiceSampleInternal(recorded, (recordedVoice == null ? "Voz avanzada" : recordedVoice.displayName()) + " — muestra " + completedTone.displayName().toLowerCase(java.util.Locale.ROOT), voiceToneRecordingPlan(recordedVoice, completedTone), true);
         statusMessage.set("Grabación detenida y registrada como muestra de voz · tono " + completedTone.displayName() + ": " + recorded.getFileName() + "."); refreshProjectState();
     }
 
     public void cancelOwnVoiceRecording() throws IOException {
-        if (!voiceRecordingRunning.get() && !applicationServices.recording().stopAudioRecording().recording()) { statusMessage.set("No hay una grabación de voz activa para cancelar."); return; }
-        applicationServices.recording().cancelAudioRecording().cancel();
+        if (!voiceRecordingRunning.get() && !workspaceServices.playback().recording().stopAudioRecording().recording()) { statusMessage.set("No hay una grabación de voz activa para cancelar."); return; }
+        workspaceServices.playback().recording().cancelAudioRecording().cancel();
         voiceRecordingRunning.set(false); activeVoiceRecordingFile = null; activeVoiceRecordingVoiceId = ""; activeVoiceRecordingTone = VoiceReferenceTone.NEUTRAL; activeWorkspace.set(WorkspaceKind.VOICE_LIBRARY);
         statusMessage.set("Grabación cancelada. La muestra anterior se conserva."); refreshProjectState();
     }
@@ -2147,7 +2147,7 @@ public final class DocuPodcastShellViewModel {
             return;
         }
         try {
-            NarrationScriptDocument updated = applicationServices.voice().assignVoiceToSegment()
+            NarrationScriptDocument updated = workspaceServices.administration().voice().assignVoiceToSegment()
                     .assign(script, activeVoiceLibrary.get(), selected.get().id(), characterId, voiceProfileId, performanceStyleId);
             currentScript.set(updated);
             selectedScriptSegmentId.set(selected.get().id());
@@ -2160,7 +2160,7 @@ public final class DocuPodcastShellViewModel {
     }
 
     public VoiceLibraryCapabilityReport voiceCapabilityReport() {
-        return applicationServices.voice().voiceCapabilityPolicy()
+        return workspaceServices.administration().voice().voiceCapabilityPolicy()
                 .evaluate(activeVoiceLibrary.get(), audioEngineDescriptor());
     }
 
@@ -2185,7 +2185,7 @@ public final class DocuPodcastShellViewModel {
     }
 
     public java.util.List<String> voiceLibraryValidationLabels() {
-        java.util.List<String> issues = applicationServices.voice().validateVoiceLibrary().validate(activeVoiceLibrary.get());
+        java.util.List<String> issues = workspaceServices.administration().voice().validateVoiceLibrary().validate(activeVoiceLibrary.get());
         if (issues.isEmpty()) {
             return java.util.List.of("Biblioteca válida para el MVP. Las voces humanas reales y clonación avanzada quedan sujetas a muestras/autorización.");
         }
@@ -2200,7 +2200,7 @@ public final class DocuPodcastShellViewModel {
             return;
         }
         ProjectSession session = requireSession();
-        StoryboardDocument storyboard = applicationServices.storyboard().buildStoryboardFromScript().build(script);
+        StoryboardDocument storyboard = workspaceServices.generation().storyboard().buildStoryboardFromScript().build(script);
         ProjectMetadata metadata = session.project().metadata()
                 .withKind(ProjectKind.STORYBOARD)
                 .withStatus(ProjectStatus.STORYBOARD_READY);
@@ -2219,7 +2219,7 @@ public final class DocuPodcastShellViewModel {
         ProjectSession session = requireSession();
         Path projectFile = session.projectFile().orElseThrow(() ->
                 new IOException("Guarda el proyecto antes de importar imágenes para mantener rutas relativas."));
-        var result = applicationServices.storyboard().importImageAsset().importImage(session.project(), projectFile, imageFile);
+        var result = workspaceServices.generation().storyboard().importImageAsset().importImage(session.project(), projectFile, imageFile);
         session.replaceProject(result.project(), true);
         lastStoryboardImageAssetId.set(result.imageAsset().id());
         activeWorkspace.set(WorkspaceKind.DOCUMENT_READER);
@@ -2232,7 +2232,7 @@ public final class DocuPodcastShellViewModel {
         if (bindings == null || bindings.isEmpty()) { int imported = 0; for (Path asset : visualAssets == null ? List.<Path>of() : visualAssets) { importStoryboardImage(asset); imported++; } return new ExampleVisualBindingWorkflow.Result(imported, 0, 0); }
         if (currentScript.get() == null || currentScript.get().empty()) { buildNarrationScriptFromDocument(); }
         ProjectSession session = requireSession(); Path projectFile = session.projectFile().orElseThrow(() -> new IOException("Guarda el proyecto antes de asociar visuales demo."));
-        ExampleVisualBindingWorkflow.Result result = exampleVisualBindingWorkflow.bind(applicationServices, session, projectFile, currentDocument.get(), currentScript.get(), visualAssets, bindings);
+        ExampleVisualBindingWorkflow.Result result = exampleVisualBindingWorkflow.bind(workspaceServices, session, projectFile, currentDocument.get(), currentScript.get(), visualAssets, bindings);
         refreshStoryboardFromImageLayers(session); bumpDocumentMediaRevision(); activeWorkspace.set(WorkspaceKind.DOCUMENT_READER); statusMessage.set(result.message()); refreshProjectState(); return result;
     }
 
@@ -2272,9 +2272,9 @@ public final class DocuPodcastShellViewModel {
         if (imageAssetId == null || imageAssetId.isBlank()) imageAssetId = session.project().assets().byKind(ProjectAssetKind.IMAGE).stream().findFirst().map(ProjectAssetReference::id).orElse("");
         if (imageAssetId.isBlank()) { statusMessage.set("Importa una imagen antes de asociarla al panel visual."); activeWorkspace.set(WorkspaceKind.DOCUMENT_READER); return; }
         StoryboardDocument storyboard = currentStoryboard.get();
-        if (storyboard == null) storyboard = applicationServices.storyboard().buildStoryboardFromScript().build(script);
+        if (storyboard == null) storyboard = workspaceServices.generation().storyboard().buildStoryboardFromScript().build(script);
         try {
-            StoryboardDocument updatedStoryboard = applicationServices.storyboard().bindImageToSegment().bind(
+            StoryboardDocument updatedStoryboard = workspaceServices.generation().storyboard().bindImageToSegment().bind(
                     storyboard, script, session.project().assets(), selected.get().id(), imageAssetId, "Imagen asociada a " + selected.get().id(), StoryboardDisplayMode.FIT_CONTAIN);
             ProjectMetadata metadata = session.project().metadata()
                     .withKind(ProjectKind.STORYBOARD)
@@ -2370,11 +2370,11 @@ public final class DocuPodcastShellViewModel {
         Optional<Path> projectDirectory = currentProjectFile()
                 .map(file -> file.toAbsolutePath().normalize().getParent());
         java.util.List<StoryboardValidationIssue> issues = active.isPresent() && currentStoryboard.get() != null
-                ? applicationServices.storyboard().validateStoryboard().validate(storyboard, script, assets)
+                ? workspaceServices.generation().storyboard().validateStoryboard().validate(storyboard, script, assets)
                 : java.util.List.of();
         final StoryboardDocument storyboardForImageLayers = storyboard;
         StoryboardDocument effectiveStoryboard = active
-                .map(session -> applicationServices.storyboard().buildStoryboardFromImageLayers().build(
+                .map(session -> workspaceServices.generation().storyboard().buildStoryboardFromImageLayers().build(
                         script, storyboardForImageLayers, session.project().assets(), session.project().narrativeLayerAssignments()))
                 .orElse(storyboardForImageLayers);
         return effectiveStoryboard.scenesFor(script).stream()
@@ -2433,17 +2433,17 @@ public final class DocuPodcastShellViewModel {
 
     public Optional<TheatreFrameSketchContext> selectedTheatreStoryboardFrameContext() { return sessions.activeSession().flatMap(session -> theatreStoryboardFrameWorkflow.context(session, currentStoryboard.get(), currentScript.get(), selectedScriptSegmentId.get(), currentProjectDirectory())); }
 
-    public void saveTheatreStoryboardFrame(String segmentId, Path framePng, String inkStateJson, boolean activateDrawn) throws IOException { applyTheatreFrameResult(theatreStoryboardFrameWorkflow.save(applicationServices, requireSession(), currentStoryboard.get(), currentScript.get(), segmentId, framePng, inkStateJson, activateDrawn, currentProjectDirectory())); }
+    public void saveTheatreStoryboardFrame(String segmentId, Path framePng, String inkStateJson, boolean activateDrawn) throws IOException { applyTheatreFrameResult(theatreStoryboardFrameWorkflow.save(workspaceServices, requireSession(), currentStoryboard.get(), currentScript.get(), segmentId, framePng, inkStateJson, activateDrawn, currentProjectDirectory())); }
 
-    public void toggleTheatreStoryboardFrameVariant(String segmentId) { try { applyTheatreFrameResult(theatreStoryboardFrameWorkflow.toggle(applicationServices, requireSession(), currentStoryboard.get(), currentScript.get(), segmentId, currentProjectDirectory())); } catch (IOException | RuntimeException ex) { statusMessage.set("No se pudo alternar variante visual: " + ex.getMessage()); } }
+    public void toggleTheatreStoryboardFrameVariant(String segmentId) { try { applyTheatreFrameResult(theatreStoryboardFrameWorkflow.toggle(workspaceServices, requireSession(), currentStoryboard.get(), currentScript.get(), segmentId, currentProjectDirectory())); } catch (IOException | RuntimeException ex) { statusMessage.set("No se pudo alternar variante visual: " + ex.getMessage()); } }
 
-    public TheatreAudioTrackWorkflow.Result saveTheatreAudioTrack(String trackId, String segmentId, String interventionId, PreparedAudioAsset source, double from, TheatreProjectLayer.AudioTrackEndMode endMode, double to, double volume, boolean fade, boolean replace) throws IOException { var result = theatreAudioTrackWorkflow.save(applicationServices, requireSession(), currentScript.get(), currentPlaybackManifest.get(), trackId, segmentId, interventionId, source, from, endMode, to, volume, fade, replace); if (result.saved()) saveCurrentProjectAs(currentProjectFile().orElseThrow()); statusMessage.set(result.message()); bumpDocumentMediaRevision(); refreshProjectState(); return result; }
+    public TheatreAudioTrackWorkflow.Result saveTheatreAudioTrack(String trackId, String segmentId, String interventionId, PreparedAudioAsset source, double from, TheatreProjectLayer.AudioTrackEndMode endMode, double to, double volume, boolean fade, boolean replace) throws IOException { var result = theatreAudioTrackWorkflow.save(workspaceServices, requireSession(), currentScript.get(), currentPlaybackManifest.get(), trackId, segmentId, interventionId, source, from, endMode, to, volume, fade, replace); if (result.saved()) saveCurrentProjectAs(currentProjectFile().orElseThrow()); statusMessage.set(result.message()); bumpDocumentMediaRevision(); refreshProjectState(); return result; }
 
-    public TheatreAudioTrackWorkflow.Result confirmTheatreAudioTrackReplacement(TheatreProjectLayer.TheatreAudioTrack track) { var result = theatreAudioTrackWorkflow.saveCandidate(applicationServices, requireSession(), currentScript.get(), currentPlaybackManifest.get(), track, true); statusMessage.set(result.message()); bumpDocumentMediaRevision(); refreshProjectState(); return result; }
+    public TheatreAudioTrackWorkflow.Result confirmTheatreAudioTrackReplacement(TheatreProjectLayer.TheatreAudioTrack track) { var result = theatreAudioTrackWorkflow.saveCandidate(workspaceServices, requireSession(), currentScript.get(), currentPlaybackManifest.get(), track, true); statusMessage.set(result.message()); bumpDocumentMediaRevision(); refreshProjectState(); return result; }
 
-    public void removeTheatreAudioTrack(String trackId) { try { statusMessage.set(theatreAudioTrackWorkflow.remove(applicationServices, requireSession(), trackId).message()); saveCurrentProjectAs(currentProjectFile().orElseThrow()); } catch (IOException ex) { throw new IllegalStateException(ex.getMessage(), ex); } bumpDocumentMediaRevision(); refreshProjectState(); }
+    public void removeTheatreAudioTrack(String trackId) { try { statusMessage.set(theatreAudioTrackWorkflow.remove(workspaceServices, requireSession(), trackId).message()); saveCurrentProjectAs(currentProjectFile().orElseThrow()); } catch (IOException ex) { throw new IllegalStateException(ex.getMessage(), ex); } bumpDocumentMediaRevision(); refreshProjectState(); }
 
-    public void activateTheatreStoryboardVisualVariant(String segmentId, String variant) { try { applyTheatreFrameResult(theatreStoryboardFrameWorkflow.activate(applicationServices, requireSession(), currentStoryboard.get(), currentScript.get(), segmentId, variant, currentProjectDirectory())); } catch (IOException | RuntimeException ex) { statusMessage.set("No se pudo activar la variante visual: " + ex.getMessage()); } }
+    public void activateTheatreStoryboardVisualVariant(String segmentId, String variant) { try { applyTheatreFrameResult(theatreStoryboardFrameWorkflow.activate(workspaceServices, requireSession(), currentStoryboard.get(), currentScript.get(), segmentId, variant, currentProjectDirectory())); } catch (IOException | RuntimeException ex) { statusMessage.set("No se pudo activar la variante visual: " + ex.getMessage()); } }
     private void applyTheatreFrameResult(TheatreStoryboardFrameWorkflow.FrameResult result) { currentStoryboard.set(result.storyboard()); lastStoryboardImageAssetId.set(result.activeAsset().id()); pinVisualFragment(result.segmentId(), result.activeUri()); bumpDocumentMediaRevision(); statusMessage.set(result.message()); refreshProjectState(); }
     private void pinVisualFragment(DocumentFragmentRailPresentation fragment) { if (fragment == null) { clearVisualFragmentSelection(); return; } selectedVisualFragmentSegmentId.set(fragment.segmentId()); selectedVisualFragmentImageUri.set(fragment.imageFileUri()); selectedVisualFragmentKey.set(DocumentVisualFragmentKey.from(fragment)); }
     private void pinVisualFragment(String segmentId, String imageUri) { String normalizedSegment = segmentId == null ? "" : segmentId.strip(); DocumentVisualFragmentKey current = selectedVisualFragmentKey.get(); DocumentVisualFragmentKey key = current != null && normalizedSegment.equals(current.segmentId()) ? current : documentFragmentRailPresentations().stream().filter(fragment -> normalizedSegment.equals(fragment.segmentId())).findFirst().map(DocumentVisualFragmentKey::from).orElse(DocumentVisualFragmentKey.empty()); selectedVisualFragmentSegmentId.set(normalizedSegment); String normalizedUri = imageUri == null ? "" : imageUri.strip(); selectedVisualFragmentImageUri.set(!normalizedUri.isBlank() ? normalizedUri : visualFragmentImageUri(normalizedSegment).orElse("")); selectedVisualFragmentKey.set(key); }
@@ -2479,7 +2479,7 @@ public final class DocuPodcastShellViewModel {
         if (script == null || storyboard == null || active.isEmpty()) {
             return java.util.List.of("Crea la secuencia visual desde el documento preparado para ver validación.");
         }
-        java.util.List<StoryboardValidationIssue> issues = applicationServices.storyboard().validateStoryboard()
+        java.util.List<StoryboardValidationIssue> issues = workspaceServices.generation().storyboard().validateStoryboard()
                 .validate(storyboard, script, active.get().project().assets());
         if (issues.isEmpty()) {
             return java.util.List.of("Secuencia visual válida: las imágenes asociadas apuntan a segmentos y assets existentes.");
@@ -2839,12 +2839,12 @@ public final class DocuPodcastShellViewModel {
             }
             PlaybackManifest manifest = sessions.activeSession()
                     .map(session -> {
-                        var plan = applicationServices.render().buildNarrationRenderPlan()
+                        var plan = workspaceServices.generation().render().buildNarrationRenderPlan()
                                 .build(script, session.project());
-                        return applicationServices.playback().buildPlaybackManifest()
+                        return workspaceServices.playback().playback().buildPlaybackManifest()
                                 .build(script, playable.get(), currentStoryboard.get(), plan, session.project());
                     })
-                    .orElseGet(() -> applicationServices.playback().buildPlaybackManifest()
+                    .orElseGet(() -> workspaceServices.playback().playback().buildPlaybackManifest()
                             .build(script, playable.get(), currentStoryboard.get()));
             currentPlaybackManifest.set(manifest);
             return manifest;
@@ -3156,14 +3156,14 @@ public final class DocuPodcastShellViewModel {
     }
     private OperationalSettings loadOperationalSettingsSafely() {
         try {
-            return applicationServices.settings().loadOperationalSettings().load();
+            return workspaceServices.administration().settings().loadOperationalSettings().load();
         } catch (IOException ex) {
             return OperationalSettings.defaults();
         }
     }
     private java.util.List<AudioJobSnapshot> listPersistedJobsSafely() {
         Optional<Path> file = currentProjectFile();
-        try { return file.isEmpty() ? java.util.List.of() : applicationServices.audio().listPersistedAudioJobs().list(file.get().toAbsolutePath().normalize().getParent()); }
+        try { return file.isEmpty() ? java.util.List.of() : workspaceServices.playback().audio().listPersistedAudioJobs().list(file.get().toAbsolutePath().normalize().getParent()); }
         catch (IOException ex) { return java.util.List.of(); }
     }
 
@@ -3204,7 +3204,7 @@ public final class DocuPodcastShellViewModel {
         Optional<ProjectSession> session = sessions.activeSession();
         if (session.isEmpty()) { UserVisibleDecision decision = UserVisibleDecision.warning("No se puede revisar exportación", "Abre o crea un proyecto antes de revisar exportaciones."); statusMessage.set(decision.headline() + ": " + decision.message()); return Optional.of(decision); }
         try {
-            var report = applicationServices.export().inspectExportReadiness().inspect(session.get().project(), currentProjectFile().orElse(null), currentScript.get(), currentStoryboard.get(), listPersistedJobsSafely());
+            var report = workspaceServices.exports().export().inspectExportReadiness().inspect(session.get().project(), currentProjectFile().orElse(null), currentScript.get(), currentStoryboard.get(), listPersistedJobsSafely());
             statusMessage.set("Estado de exportación: " + report.status().displayName() + " · exportables " + report.exportableCount() + " · bloqueadas " + report.blockedCount() + ".");
             if (!report.hasBlockedOutput()) return Optional.empty();
             StringBuilder detail = new StringBuilder();

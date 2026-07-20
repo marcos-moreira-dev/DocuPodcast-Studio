@@ -559,7 +559,8 @@ public final class DocumentStudyVideoPanel extends BorderPane {
         DocumentParagraphVisualAssignment current = assignment(block);
         Path state = viewModel.resolveCurrentProjectRelativePath(current.drawnStateRelativePath()).orElse(null);
         DocumentParagraphSketchDialog dialog = new DocumentParagraphSketchDialog(
-                getScene() == null ? null : getScene().getWindow(), block.text(), state);
+                getScene() == null ? null : getScene().getWindow(), block.text(), state,
+                viewModel.drawingFeatures().require(com.marcosmoreiradev.docupodcaststudio.ink.DrawingFeatureCatalog.DOCUMENTARY_ILLUSTRATION));
         Optional<DocumentParagraphSketchDialog.Result> result = dialog.showAndWait();
         if (result.isEmpty()) return;
         try {

@@ -5,6 +5,8 @@ import com.marcosmoreiradev.docupodcaststudio.application.settings.FrameGenerati
 import com.marcosmoreiradev.docupodcaststudio.application.settings.ImageGenerationSettings;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.OperationalSettingsRepository;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.OperationalSettingsMigrationPolicy;
+import com.marcosmoreiradev.docupodcaststudio.application.settings.SelectedMediaEngines;
+import com.marcosmoreiradev.docupodcaststudio.application.compatibility.media.LegacyEngineAliases;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -106,6 +108,14 @@ public final class PropertiesOperationalSettingsRepository implements Operationa
                         boolValue(p, "image.lowVram", true),
                         p.getProperty("image.memoryProfile", ""),
                         intValue(p, "image.maxAttempts", 2)),
+                new OperationalSettings.MediaEngineSelectionSettings(
+                        p.getProperty("capability.voice.engine", p.getProperty("tts.engineMode", "piper")),
+                        p.getProperty("capability.image.engine",
+                                canonicalImageEngine(p.getProperty("image.engineMode", "managed-local"))),
+                        p.getProperty("capability.video.generation.engine",
+                                LegacyEngineAliases.videoGenerationEngine()),
+                        p.getProperty("capability.video.render.engine",
+                                LegacyEngineAliases.videoRenderEngine())),
                 new FrameGenerationSettings(
                         p.getProperty("frames.mode", "SINGLE"),
                         p.getProperty("frames.scope", "ALL"),
@@ -137,6 +147,7 @@ public final class PropertiesOperationalSettingsRepository implements Operationa
 
     static Properties toProperties(OperationalSettings settings) {
         OperationalSettings current = settings == null ? OperationalSettings.defaults() : settings;
+        SelectedMediaEngines selected = SelectedMediaEngines.from(current);
         Properties p = new Properties();
         p.setProperty("reading.fontSize", Integer.toString(current.readingDocument().baseFontSize()));
         p.setProperty("reading.lineSpacing", Double.toString(current.readingDocument().lineSpacing()));
@@ -145,8 +156,8 @@ public final class PropertiesOperationalSettingsRepository implements Operationa
         p.setProperty("playback.lookaheadSegments", Integer.toString(current.playbackBuffer().lookaheadSegments()));
         p.setProperty("playback.pauseWhenBufferMissing", Boolean.toString(current.playbackBuffer().pauseWhenBufferMissing()));
         p.setProperty("tts.engineMode", current.tts().engineMode());
-        p.setProperty("capability.voice.engine", current.tts().engineMode());
-        p.setProperty("engine." + current.tts().engineMode() + ".commandTemplate", current.tts().commandTemplate());
+        p.setProperty("capability.voice.engine", selected.voice().value());
+        p.setProperty("engine." + selected.voice().value() + ".commandTemplate", current.tts().commandTemplate());
         p.setProperty("tts.commandTemplate", current.tts().commandTemplate());
         p.setProperty("tts.displayName", current.tts().displayName());
         p.setProperty("tts.language", current.tts().language());
@@ -158,15 +169,16 @@ public final class PropertiesOperationalSettingsRepository implements Operationa
         p.setProperty("download.piper.defaultVoiceUrl", current.tts().piperDefaultVoiceUrl());
         p.setProperty("download.piper.defaultVoiceMetadataUrl", current.tts().piperDefaultVoiceMetadataUrl());
         p.setProperty("video.ffmpegExecutable", current.video().ffmpegExecutable());
-        p.setProperty("capability.video.render.engine", "ffmpeg");
+        p.setProperty("capability.video.render.engine", selected.videoRender().value());
+        p.setProperty("capability.video.generation.engine", selected.videoGeneration().value());
         p.setProperty("engine.ffmpeg.executable", current.video().ffmpegExecutable());
         p.setProperty("video.resolutionPreset", current.video().resolutionPreset());
         p.setProperty("video.preferEmbeddedFfmpeg", Boolean.toString(current.video().preferEmbeddedFfmpeg()));
         p.setProperty("video.silentVisualBlockSeconds", Double.toString(current.video().silentVisualBlockSeconds()));
         p.setProperty("download.ffmpeg.runtimeZipUrl", current.video().ffmpegDownloadUrl());
         p.setProperty("image.engineMode", current.imageGeneration().engineMode());
-        p.setProperty("capability.image.engine", canonicalImageEngine(current.imageGeneration().engineMode()));
-        p.setProperty("engine." + canonicalImageEngine(current.imageGeneration().engineMode()) + ".baseUrl",
+        p.setProperty("capability.image.engine", selected.image().value());
+        p.setProperty("engine." + selected.image().value() + ".baseUrl",
                 current.imageGeneration().baseUrl());
         p.setProperty("image.baseUrl", current.imageGeneration().baseUrl());
         p.setProperty("image.devicePolicy", current.imageGeneration().devicePolicy());

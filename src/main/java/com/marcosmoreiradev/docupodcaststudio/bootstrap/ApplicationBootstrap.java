@@ -1,12 +1,14 @@
 package com.marcosmoreiradev.docupodcaststudio.bootstrap;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
+import com.marcosmoreiradev.docupodcaststudio.application.WorkspaceApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.ImageEngineSmokeImageStore;
 import com.marcosmoreiradev.docupodcaststudio.presentation.PresentationCompositionRoot;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.DocuPodcastShellView;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.DocuPodcastShellViewModel;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputProviderRegistry;
+import com.marcosmoreiradev.docupodcaststudio.ink.StudioInkPlatform;
 import com.marcosmoreiradev.docupodcaststudio.media.api.MediaEnginePlatform;
+import com.marcosmoreiradev.docupodcaststudio.media.api.LocalResourceScheduler;
+import com.marcosmoreiradev.docupodcaststudio.application.media.MediaCapabilityService;
 
 /**
  * Manual composition root for the first onboarding build.
@@ -17,24 +19,34 @@ import com.marcosmoreiradev.docupodcaststudio.media.api.MediaEnginePlatform;
  */
 public final class ApplicationBootstrap {
     private final MediaEnginePlatform mediaEngines;
+    private final StudioInkPlatform inkPlatform;
 
-    private ApplicationBootstrap(MediaEnginePlatform mediaEngines) {
+    private ApplicationBootstrap(MediaEnginePlatform mediaEngines, StudioInkPlatform inkPlatform) {
         this.mediaEngines = mediaEngines == null ? MediaEnginePlatform.empty() : mediaEngines;
+        this.inkPlatform = java.util.Objects.requireNonNull(inkPlatform, "ink platform");
     }
 
     public static ApplicationBootstrap createDefault() {
-        return createDefault(MediaEnginePlatform.empty());
+        return createDefault(MediaEnginePlatform.empty(), StudioInkPlatform.local());
     }
 
     public static ApplicationBootstrap createDefault(MediaEnginePlatform mediaEngines) {
-        return new ApplicationBootstrap(mediaEngines);
+        return createDefault(mediaEngines, StudioInkPlatform.local());
+    }
+
+    public static ApplicationBootstrap createDefault(MediaEnginePlatform mediaEngines, StudioInkPlatform inkPlatform) {
+        return new ApplicationBootstrap(mediaEngines, inkPlatform);
     }
 
     public ApplicationRuntime bootstrap() {
-        InfrastructureServices infrastructureServices = new InfrastructureServicesFactory().create();
-        ApplicationServices applicationServices = new ApplicationServicesFactory().create(infrastructureServices);
+        MediaCapabilityService mediaCapabilities = new MediaCapabilityService(mediaEngines,
+                LocalResourceScheduler.safeDefaults());
+        InfrastructureServices infrastructureServices = new InfrastructureServicesFactory().create(mediaCapabilities);
+        WorkspaceApplicationServices workspaces = new WorkspaceCompositionFactory().create(
+                infrastructureServices, mediaCapabilities);
         DocuPodcastShellViewModel shellViewModel = new DocuPodcastShellViewModel(
-                applicationServices, InkInputProviderRegistry.localDefaults(), mediaEngines);
+                workspaces, inkPlatform.inputProviders(), mediaEngines, inkPlatform.drawingFeatures(),
+                mediaCapabilities);
         DocuPodcastShellView shellView = new PresentationCompositionRoot().createMainShell(shellViewModel);
 
         return new ApplicationRuntime(

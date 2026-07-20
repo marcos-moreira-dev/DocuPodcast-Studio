@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
+import com.marcosmoreiradev.docupodcaststudio.application.WorkspaceApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreAviadoresConfigurator;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreExampleSetupService;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreFragmentVisualAssignmentService;
@@ -38,9 +38,9 @@ import java.util.Set;
 public final class TheatreDemoManifestWorkflow {
     private static final String NARRATOR_RESOURCE = "/examples/aviadores-comicos/assets/personajes/narrador/narrador_01_frontal.png";
     private static final String EMPTY_THEATRE_RESOURCE = "/examples/aviadores-comicos/assets/mapas/teatro-vacio.png";
-    private final ApplicationServices applicationServices;
+    private final WorkspaceApplicationServices applicationServices;
 
-    public TheatreDemoManifestWorkflow(ApplicationServices applicationServices) {
+    public TheatreDemoManifestWorkflow(WorkspaceApplicationServices applicationServices) {
         this.applicationServices = applicationServices;
     }
 
@@ -160,7 +160,7 @@ public final class TheatreDemoManifestWorkflow {
             Path projectFile,
             Path asset,
             Map<String, String> assetIds) throws IOException {
-        var imported = applicationServices.storyboard().importImageAsset()
+        var imported = applicationServices.generation().storyboard().importImageAsset()
                 .importImage(session.project(), projectFile, asset);
         session.replaceProject(imported.project(), true);
         indexTheatreAsset(assetIds, imported.imageAsset().displayName(), imported.imageAsset().id());

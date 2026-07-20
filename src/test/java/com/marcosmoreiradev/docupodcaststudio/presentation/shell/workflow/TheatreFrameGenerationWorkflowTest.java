@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
+import com.marcosmoreiradev.docupodcaststudio.application.visual.ComfyUiVisualEngineClient;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.ComfyUiConnectionSettings;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.FrameGenerationMode;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreFrameGenerationRequest;
@@ -12,6 +12,7 @@ import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationSegment;
 import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationSegmentType;
 import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreProjectLayer;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.ProjectSession;
+import com.marcosmoreiradev.docupodcaststudio.media.api.LocalResourceScheduler;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -24,7 +25,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 final class TheatreFrameGenerationWorkflowTest {
     @Test
     void singleModePlansOneFramePerIntervention() {
-        TheatreFrameGenerationWorkflow workflow = new TheatreFrameGenerationWorkflow(applicationServices());
+        TheatreFrameGenerationWorkflow workflow = new TheatreFrameGenerationWorkflow(
+                WorkspaceTestServices.empty(), new ComfyUiVisualEngineClient(),
+                LocalResourceScheduler.safeDefaults());
 
         TheatreFrameGenerationWorkflow.Estimate estimate = workflow.estimate(session(), script(),
                 request(FrameGenerationMode.SINGLE, TheatreFrameGenerationScope.all()));
@@ -36,7 +39,9 @@ final class TheatreFrameGenerationWorkflowTest {
 
     @Test
     void stopMotionPlansIntermediateFramesBetweenConsecutiveInterventions() {
-        TheatreFrameGenerationWorkflow workflow = new TheatreFrameGenerationWorkflow(applicationServices());
+        TheatreFrameGenerationWorkflow workflow = new TheatreFrameGenerationWorkflow(
+                WorkspaceTestServices.empty(), new ComfyUiVisualEngineClient(),
+                LocalResourceScheduler.safeDefaults());
 
         TheatreFrameGenerationWorkflow.Estimate estimate = workflow.estimate(session(), script(),
                 request(FrameGenerationMode.DOUBLE_STOP_MOTION, TheatreFrameGenerationScope.all()));
@@ -48,7 +53,9 @@ final class TheatreFrameGenerationWorkflowTest {
 
     @Test
     void sceneScopeFiltersFrameUnits() {
-        TheatreFrameGenerationWorkflow workflow = new TheatreFrameGenerationWorkflow(applicationServices());
+        TheatreFrameGenerationWorkflow workflow = new TheatreFrameGenerationWorkflow(
+                WorkspaceTestServices.empty(), new ComfyUiVisualEngineClient(),
+                LocalResourceScheduler.safeDefaults());
 
         TheatreFrameGenerationWorkflow.Estimate estimate = workflow.estimate(session(), script(),
                 request(FrameGenerationMode.SINGLE, TheatreFrameGenerationScope.scene("SC-2")));
@@ -87,7 +94,4 @@ final class TheatreFrameGenerationWorkflowTest {
                 NarrationSegment.of("SEG-2", NarrationSegmentType.PARAGRAPH, "Dos", "NARRADOR: Segundo texto.", List.of("B0002"))));
     }
 
-    private static ApplicationServices applicationServices() {
-        return new ApplicationServices(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
-    }
 }

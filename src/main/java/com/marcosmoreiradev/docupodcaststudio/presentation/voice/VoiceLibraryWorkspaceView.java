@@ -984,7 +984,8 @@ public final class VoiceLibraryWorkspaceView extends BorderPane {
     }
 
     private void openVoiceEngineSettings() {
-        new SettingsDialog().showVoiceEngines(getScene() == null ? null : getScene().getWindow(), viewModel.administrationWorkspace().settings());
+        new SettingsDialog(viewModel.administrationWorkspace().mediaEngines()).showVoiceEngines(
+                getScene() == null ? null : getScene().getWindow(), viewModel.administrationWorkspace().settings());
         summaryList.getItems().setAll("Configuración cerrada. Vuelve a verificar o actualizar la biblioteca si cambiaste el motor de voz.");
     }
 

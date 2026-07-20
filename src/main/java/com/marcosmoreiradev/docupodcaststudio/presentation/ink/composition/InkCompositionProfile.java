@@ -1,6 +1,5 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition;
 
-import com.marcosmoreiradev.docupodcaststudio.ink.DrawingFeatureCatalog;
 import com.marcosmoreiradev.docupodcaststudio.ink.DrawingProfile;
 import javafx.scene.paint.Color;
 
@@ -19,9 +18,13 @@ public record InkCompositionProfile(
         undoLimit = Math.max(1, undoLimit);
     }
 
+    /** Compatibility helper for isolated tests; productive composition injects a DrawingProfile. */
+    @Deprecated(forRemoval = false)
     public static InkCompositionProfile documentaryIllustration() {
-        DrawingProfile profile = DrawingFeatureCatalog.official()
-                .require(DrawingFeatureCatalog.DOCUMENTARY_ILLUSTRATION);
+        return new InkCompositionProfile(1344, 432, Color.WHITE, true, 20);
+    }
+
+    public static InkCompositionProfile documentaryIllustration(DrawingProfile profile) {
         return from(profile, Color.WHITE, true);
     }
 

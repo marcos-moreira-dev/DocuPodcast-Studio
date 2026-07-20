@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
+import com.marcosmoreiradev.docupodcaststudio.application.WorkspaceApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.application.audio.AudioEngineDescriptor;
 import com.marcosmoreiradev.docupodcaststudio.application.recording.RecordingActionPlan;
 import com.marcosmoreiradev.docupodcaststudio.application.voice.VoiceGeneratedTestRequest;
@@ -30,20 +30,20 @@ import java.util.Objects;
 /** Coordinates voice sample and generated-test workflows outside the shell view-model. */
 public final class VoiceSampleWorkflowCoordinator {
     private static final String OWN_VOICE_ID = "VOC-OWN-PLACEHOLDER";
-    private final ApplicationServices applicationServices;
+    private final WorkspaceApplicationServices applicationServices;
 
-    public VoiceSampleWorkflowCoordinator(ApplicationServices applicationServices) {
+    public VoiceSampleWorkflowCoordinator(WorkspaceApplicationServices applicationServices) {
         this.applicationServices = Objects.requireNonNull(applicationServices, "applicationServices");
     }
 
     public VoiceRegistrationWizardPlan registrationPlan(VoiceLibrary library, VoiceProfile voice) {
         VoiceProfile target = targetVoice(library, voice);
-        return applicationServices.voice().buildVoiceRegistrationWizardPlan().build(target == null ? "Voz avanzada" : target.displayName(), true);
+        return applicationServices.administration().voice().buildVoiceRegistrationWizardPlan().build(target == null ? "Voz avanzada" : target.displayName(), true);
     }
 
     public VoiceToneRecordingPlan toneRecordingPlan(VoiceLibrary library, VoiceProfile voice, VoiceReferenceTone tone) {
         VoiceProfile target = targetVoice(library, voice);
-        return applicationServices.voice().buildVoiceToneRecordingPlan().build(
+        return applicationServices.administration().voice().buildVoiceToneRecordingPlan().build(
                 target == null ? OWN_VOICE_ID : target.id(),
                 target == null ? "Voz avanzada" : target.displayName(),
                 normalizeTone(tone));
@@ -67,8 +67,8 @@ public final class VoiceSampleWorkflowCoordinator {
         VoiceSampleImportRequest request = recordedInJava
                 ? VoiceSampleImportRequest.forRecordedVoiceTone(voiceId, sourceAudioFile, displayName, tone)
                 : VoiceSampleImportRequest.forOwnVoiceTone(voiceId, sourceAudioFile, displayName, tone);
-        Path effectiveProjectFile = applicationServices.voice().importVoiceSample().effectiveProjectFile(projectFile);
-        return applicationServices.voice().importVoiceSample().importSample(project, library, effectiveProjectFile, request);
+        Path effectiveProjectFile = applicationServices.administration().voice().importVoiceSample().effectiveProjectFile(projectFile);
+        return applicationServices.administration().voice().importVoiceSample().importSample(project, library, effectiveProjectFile, request);
     }
 
 
@@ -77,7 +77,7 @@ public final class VoiceSampleWorkflowCoordinator {
         String fileName = sample.tone().name().toLowerCase(java.util.Locale.ROOT) + "-" + sample.id() + ".wav";
         java.util.Optional<ProjectAssetReference> asset = sampleAssetOptional(project, sample);
         if (asset.isPresent()) {
-            return applicationServices.voice().downloadVoiceReferenceSample()
+            return applicationServices.administration().voice().downloadVoiceReferenceSample()
                     .download(new VoiceSampleDownloadRequest(projectFile, asset.get(), targetDirectory, fileName));
         }
         Path source = resolveSamplePath(projectFile, sample);
@@ -96,7 +96,7 @@ public final class VoiceSampleWorkflowCoordinator {
                                                     VoiceReferenceSample sample) throws IOException {
         java.util.Optional<ProjectAssetReference> asset = sampleAssetOptional(project, sample);
         if (asset.isPresent()) {
-            return applicationServices.voice().deleteVoiceReferenceSample().delete(projectFile, sample, asset.get());
+            return applicationServices.administration().voice().deleteVoiceReferenceSample().delete(projectFile, sample, asset.get());
         }
         if (!sample.canDeleteManagedFile()) {
             return VoiceSampleDeleteResult.skipped("DocuPodcast quitará la referencia, pero no borrará el archivo externo original.");
@@ -122,7 +122,7 @@ public final class VoiceSampleWorkflowCoordinator {
     public Path resolveSamplePath(Path projectFile, VoiceReferenceSample sample) throws IOException {
         Path raw = Path.of(sample.fileUri());
         if (!raw.isAbsolute()) {
-            Path effectiveProjectFile = applicationServices.voice().importVoiceSample().effectiveProjectFile(projectFile);
+            Path effectiveProjectFile = applicationServices.administration().voice().importVoiceSample().effectiveProjectFile(projectFile);
             Path root = effectiveProjectFile.toAbsolutePath().normalize().getParent();
             if (root == null) {
                 throw new IOException("La ruta de la biblioteca de voces no tiene carpeta contenedora.");
@@ -177,10 +177,10 @@ public final class VoiceSampleWorkflowCoordinator {
     public Path startRecording(Path projectFile, VoiceToneRecordingPlan plan, String inputDeviceId) throws IOException {
         VoiceReferenceTone tone = plan == null ? VoiceReferenceTone.NEUTRAL : plan.tone();
         String voiceId = plan == null ? OWN_VOICE_ID : plan.voiceProfileId();
-        RecordingActionPlan actionPlan = applicationServices.recording().prepareRecordingAction()
+        RecordingActionPlan actionPlan = applicationServices.playback().recording().prepareRecordingAction()
                 .prepare(RecordingPurpose.VOICE_SAMPLE_FOR_TTS, new ScriptTextRange(voiceId + "-" + tone.name(), 0, 0));
-        Path recordingDirectory = applicationServices.voice().importVoiceSample().temporaryRecordingDirectory(projectFile);
-        return applicationServices.recording().startAudioRecording().startInDirectory(recordingDirectory, actionPlan, inputDeviceId);
+        Path recordingDirectory = applicationServices.administration().voice().importVoiceSample().temporaryRecordingDirectory(projectFile);
+        return applicationServices.playback().recording().startAudioRecording().startInDirectory(recordingDirectory, actionPlan, inputDeviceId);
     }
 
     public VoiceGeneratedTestResult generateTest(Path projectFile, VoiceLibrary library, VoiceProfile voice,
@@ -188,7 +188,7 @@ public final class VoiceSampleWorkflowCoordinator {
         if (voice == null) {
             throw new IOException("Selecciona una voz antes de generar una prueba.");
         }
-        return applicationServices.voice().generateVoiceTest()
+        return applicationServices.administration().voice().generateVoiceTest()
                 .generate(projectFile, library, new VoiceGeneratedTestRequest(voice.id(), tone, phrase, engine));
     }
 

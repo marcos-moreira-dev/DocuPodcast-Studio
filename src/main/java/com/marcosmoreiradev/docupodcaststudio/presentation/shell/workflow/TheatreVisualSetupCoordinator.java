@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
+import com.marcosmoreiradev.docupodcaststudio.application.WorkspaceApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreBuiltInCameraCatalog;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreCameraReferenceResolver;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreStageBackdropResolver;
@@ -74,7 +74,7 @@ public final class TheatreVisualSetupCoordinator {
         return new SaveResult("Tipo de plano aplicado desde " + interventionId + ": " + normalizedCameraId + ".");
     }
 
-    public SaveResult assignStageBackdrop(ApplicationServices services,
+    public SaveResult assignStageBackdrop(WorkspaceApplicationServices services,
                                           ProjectSession session,
                                           String interventionId,
                                           String sceneId,
@@ -91,7 +91,7 @@ public final class TheatreVisualSetupCoordinator {
         if (scopeId.isBlank()) {
             throw new IOException("La intervencion seleccionada no tiene escena asignada.");
         }
-        var imported = services.storyboard().importImageAsset().importImage(session.project(), projectFile, imageFile);
+        var imported = services.generation().storyboard().importImageAsset().importImage(session.project(), projectFile, imageFile);
         DocuPodcastProject project = imported.project();
         String backdropId = "BACKDROP-" + safeTheatreToken(stripExtension(imageFile.getFileName().toString()));
         ArrayList<TheatreProjectLayer.StageBackdrop> backdrops = new ArrayList<>(project.theatre().stageBackdrops().stream()

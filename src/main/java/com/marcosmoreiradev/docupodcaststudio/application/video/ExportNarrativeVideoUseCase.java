@@ -1,6 +1,5 @@
 package com.marcosmoreiradev.docupodcaststudio.application.video;
 
-import com.marcosmoreiradev.docupodcaststudio.application.process.ExternalProcessRunner;
 import com.marcosmoreiradev.docupodcaststudio.domain.assets.ProjectAssetCatalog;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.DocuPodcastProject;
 
@@ -14,26 +13,6 @@ public final class ExportNarrativeVideoUseCase {
     private final BuildSimpleVideoPlanUseCase buildSimpleVideoPlan;
     private final BuildNarrativeVideoPlanUseCase buildNarrativeVideoPlan;
     private final RenderFinalVideoPlanUseCase renderer;
-
-    public ExportNarrativeVideoUseCase() {
-        this(new BuildSimpleVideoPlanUseCase(),
-                new FfmpegRuntimeProbeUseCase(ExternalProcessRunner.unavailable("ExportNarrativeVideoUseCase")),
-                new EmbeddedFfmpegLocator(),
-                ExternalProcessRunner.unavailable("ExportNarrativeVideoUseCase"));
-    }
-
-    public ExportNarrativeVideoUseCase(BuildSimpleVideoPlanUseCase buildSimpleVideoPlan,
-                                       FfmpegRuntimeProbeUseCase probe,
-                                       EmbeddedFfmpegLocator locator) {
-        this(buildSimpleVideoPlan, probe, locator, ExternalProcessRunner.unavailable("ExportNarrativeVideoUseCase"));
-    }
-
-    public ExportNarrativeVideoUseCase(BuildSimpleVideoPlanUseCase buildSimpleVideoPlan,
-                                       FfmpegRuntimeProbeUseCase probe,
-                                       EmbeddedFfmpegLocator locator,
-                                       ExternalProcessRunner runner) {
-        this(buildSimpleVideoPlan, new RenderFinalVideoPlanUseCase(probe, locator, runner));
-    }
 
     public ExportNarrativeVideoUseCase(BuildSimpleVideoPlanUseCase buildSimpleVideoPlan,
                                        RenderFinalVideoPlanUseCase renderer) {

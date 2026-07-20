@@ -132,7 +132,7 @@ bootstrap     -> composición de servicios y arranque
 
 Las categorías comparten contratos transversales de audio, imagen y video, pero mantienen workflows explícitos. Documentary y Narrative no dependen de implementaciones internas de Theatre.
 
-Consulta la [visión de arquitectura](docs/architecture/overview.md) y la [decisión local-first](docs/adr/0001-local-first-runtimes.md).
+Consulta la [visión de arquitectura](docs/architecture/overview.md), el [roadmap del refactoring](docs/architecture/refactoring-roadmap.md) y la [decisión local-first](docs/adr/0001-local-first-runtimes.md).
 
 ## Mapa del repositorio
 
@@ -166,6 +166,7 @@ Consulta la guía de [smoke y release](docs/operations/smoke-and-release.md) par
 - [Índice general](docs/README.md)
 - [Estado actual del producto](docs/product/current-status.md)
 - [Arquitectura](docs/architecture/overview.md)
+- [Roadmap del refactoring](docs/architecture/refactoring-roadmap.md)
 - [Distribución de runtimes](docs/architecture/runtime-layout.md)
 - [Motores locales](docs/operations/local-engines.md)
 - [Build y pruebas](docs/development/build-test.md)

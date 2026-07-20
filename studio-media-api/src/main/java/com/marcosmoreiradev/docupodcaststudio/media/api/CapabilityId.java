@@ -6,6 +6,7 @@ import java.util.Locale;
 public record CapabilityId(String value) {
     public static final CapabilityId VOICE_SYNTHESIS = new CapabilityId("voice-synthesis");
     public static final CapabilityId IMAGE_GENERATION = new CapabilityId("image-generation");
+    public static final CapabilityId VIDEO_GENERATION = new CapabilityId("video-generation");
     public static final CapabilityId VIDEO_RENDERING = new CapabilityId("video-rendering");
 
     public CapabilityId {

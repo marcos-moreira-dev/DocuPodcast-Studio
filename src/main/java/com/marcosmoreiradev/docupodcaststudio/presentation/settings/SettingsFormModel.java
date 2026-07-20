@@ -66,6 +66,8 @@ final class SettingsFormModel {
     final CheckBox writeLogs = checkBox(true);
     final CheckBox exportManifests = checkBox(true);
     private OperationalSettings.OcrSettings ocrSettings = OperationalSettings.OcrSettings.defaults();
+    private OperationalSettings.MediaEngineSelectionSettings mediaEngines =
+            OperationalSettings.MediaEngineSelectionSettings.defaults();
     private com.marcosmoreiradev.docupodcaststudio.application.settings.FrameGenerationSettings frameGeneration =
             com.marcosmoreiradev.docupodcaststudio.application.settings.FrameGenerationSettings.defaults();
 
@@ -117,6 +119,7 @@ final class SettingsFormModel {
         imageLowVram.setSelected(current.imageGeneration().lowVram());
         imageMemoryProfile.setValue(current.imageGeneration().memoryProfile());
         frameGeneration = current.frameGeneration();
+        mediaEngines = current.mediaEngines();
         ocrSettings = current.ocr();
         computePolicy.setValue(current.compute().policy().name());
         computeSelectedDeviceId.setValue(current.compute().selectedDeviceId().isBlank() ? "auto" : current.compute().selectedDeviceId());
@@ -213,6 +216,11 @@ final class SettingsFormModel {
                         imageLowVram.isSelected(),
                         comboValue(imageMemoryProfile, "SAFE_LOW_VRAM"),
                         intValue(imageMaxAttempts, 2)),
+                new OperationalSettings.MediaEngineSelectionSettings(
+                        comboValue(ttsEngineMode, mediaEngines.voiceEngineId()),
+                        mediaEngines.imageEngineId(),
+                        mediaEngines.videoGenerationEngineId(),
+                        mediaEngines.videoRenderEngineId()),
                 frameGeneration,
                 new OperationalSettings.ComputeSettings(
                         comboValue(computePolicy, "AUTO"),

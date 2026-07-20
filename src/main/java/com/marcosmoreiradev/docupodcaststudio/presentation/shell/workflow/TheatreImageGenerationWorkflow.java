@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
+import com.marcosmoreiradev.docupodcaststudio.application.WorkspaceApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.application.image.ImageEnhancementOutputProfile;
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.ImageEnginePresetSupport;
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.ImageEnginePresetSupportPolicy;
@@ -8,8 +8,6 @@ import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.FluxLicense
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.FluxMemoryPreflight;
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.FluxModelBundle;
 import com.marcosmoreiradev.docupodcaststudio.application.runtime.RuntimePathResolver;
-import com.marcosmoreiradev.docupodcaststudio.application.process.AiModelResourceGuard;
-import com.marcosmoreiradev.docupodcaststudio.application.process.AiModelResourceGuard.AiModelResourceKind;
 import com.marcosmoreiradev.docupodcaststudio.application.process.GenerationAttemptPolicy;
 import com.marcosmoreiradev.docupodcaststudio.application.process.GenerationTaskKind;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.ImageGenerationSettings;
@@ -31,6 +29,7 @@ import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualCondition
 import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualEngineRequest;
 import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualEngineResult;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.ProjectSession;
+import com.marcosmoreiradev.docupodcaststudio.media.api.*;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -40,20 +39,22 @@ import java.util.function.Consumer;
 
 /** Coordinates local ComfyUI generation and reviewable theatre image candidates. */
 public final class TheatreImageGenerationWorkflow {
-    private final ApplicationServices services;
+    private final WorkspaceApplicationServices services;
     private final TheatreGenerationUnitPlanner planner = new TheatreGenerationUnitPlanner();
     private final BuildTheatreVisualGenerationContextUseCase contextBuilder = new BuildTheatreVisualGenerationContextUseCase();
     private final ComfyUiVisualEngineClient visualEngineClient;
-    private final AiModelResourceGuard resourceGuard;
+    private final ResourceScheduler resourceScheduler;
 
-    public TheatreImageGenerationWorkflow(ApplicationServices services) {
-        this(services, visualClientFrom(services));
+    public TheatreImageGenerationWorkflow(WorkspaceApplicationServices services, ResourceScheduler resourceScheduler) {
+        this(services, visualClientFrom(services), resourceScheduler);
     }
 
-    public TheatreImageGenerationWorkflow(ApplicationServices services, ComfyUiVisualEngineClient visualEngineClient) {
+    public TheatreImageGenerationWorkflow(WorkspaceApplicationServices services,
+                                          ComfyUiVisualEngineClient visualEngineClient,
+                                          ResourceScheduler resourceScheduler) {
         this.services = Objects.requireNonNull(services, "services");
         this.visualEngineClient = Objects.requireNonNull(visualEngineClient, "visualEngineClient");
-        this.resourceGuard = AiModelResourceGuard.global();
+        this.resourceScheduler = Objects.requireNonNull(resourceScheduler, "resource scheduler");
     }
 
     public List<TheatreImageGenerationUnit> queue(ProjectSession session, com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationScriptDocument script, TheatreContextExportScope scope) {
@@ -107,7 +108,7 @@ public final class TheatreImageGenerationWorkflow {
                 : settings.outputDirectory();
         progress(progress, "En cola.");
         Path output;
-        try (AiModelResourceGuard.Lease ignored = resourceGuard.acquire(AiModelResourceKind.IMAGE, unit.interventionId())) {
+        try (ResourceLease ignored = acquireResources(unit.interventionId())) {
             Path outputDirectory = outputRoot.resolve(safe(unit.sceneId()))
                     .resolve(safe(unit.interventionId()))
                     .resolve(safe(unit.segmentId()));
@@ -118,7 +119,7 @@ public final class TheatreImageGenerationWorkflow {
                     attemptPolicy(), GenerationTaskKind.IMAGE_CANDIDATE, progress);
             output = result.outputPath();
         }
-        var imported = services.storyboard().importImageAsset().importImage(session.project(), projectFile, output);
+        var imported = services.generation().storyboard().importImageAsset().importImage(session.project(), projectFile, output);
         session.replaceProject(imported.project(), true);
         TheatreGeneratedImageCandidate candidate = new TheatreGeneratedImageCandidate(unit.interventionId(), unit.sceneId(), unit.interventionId(),
                 unit.segmentId(), imported.imageAsset().id(), output, false);
@@ -161,13 +162,13 @@ public final class TheatreImageGenerationWorkflow {
                         new VisualConditioningReference(nextAssetId, "Frame siguiente", next,
                                 VisualConditioningRole.NEXT_FRAME, 1.0)));
         Path output;
-        try (AiModelResourceGuard.Lease ignored = resourceGuard.acquire(AiModelResourceKind.IMAGE, unit.interventionId())) {
+        try (ResourceLease ignored = acquireResources(unit.interventionId())) {
             ComfyUiWorkflowSpec workflow = workflowSpec(preset, request);
             VisualEngineResult result = visualEngineClient.generate(settings.baseUrl(), fluxTimeout(settings, preset), request, workflow,
                     attemptPolicy(), GenerationTaskKind.IMAGE_CANDIDATE, progress);
             output = result.outputPath();
         }
-        var imported = services.storyboard().importImageAsset().importImage(session.project(), projectFile, output);
+        var imported = services.generation().storyboard().importImageAsset().importImage(session.project(), projectFile, output);
         session.replaceProject(imported.project(), true);
         return new TheatreGeneratedImageCandidate(unit.interventionId(), unit.sceneId(), unit.interventionId(),
                 unit.segmentId(), imported.imageAsset().id(), output, false);
@@ -190,7 +191,7 @@ public final class TheatreImageGenerationWorkflow {
         String from = current.interventionId();
         String to = next.interventionId();
         Path output;
-        try (AiModelResourceGuard.Lease ignored = resourceGuard.acquire(AiModelResourceKind.IMAGE, from + "->" + to)) {
+        try (ResourceLease ignored = acquireResources(from + "->" + to)) {
             VisualEngineResult result = visualEngineClient.interpolateMiddleFrame(
                     settings.baseUrl(),
                     settings.timeout(),
@@ -201,7 +202,7 @@ public final class TheatreImageGenerationWorkflow {
                     progress);
             output = result.outputPath();
         }
-        var imported = services.storyboard().importImageAsset().importImage(session.project(), projectFile, output);
+        var imported = services.generation().storyboard().importImageAsset().importImage(session.project(), projectFile, output);
         session.replaceProject(imported.project(), true);
         return new TheatreGeneratedFrameCandidate(
                 from + "#rife-intermediate",
@@ -222,7 +223,7 @@ public final class TheatreImageGenerationWorkflow {
                     .orElseThrow(() -> new IOException("Prepara la lectura antes de asignar una imagen IA."));
             var generatedAsset = session.project().assets().byId(candidate.assetId())
                     .orElseThrow(() -> new IOException("No existe el asset generado: " + candidate.assetId()));
-            var result = services.storyboard().upsertTheatreGeneratedFrameVariant().execute(
+            var result = services.generation().storyboard().upsertTheatreGeneratedFrameVariant().execute(
                     session.project(), session.storyboard().orElse(null), script,
                     candidate.segmentId(), generatedAsset, true);
             session.replaceProject(result.project(), true);
@@ -237,7 +238,17 @@ public final class TheatreImageGenerationWorkflow {
     private static String safe(String value) { return (value == null ? "unidad" : value.toLowerCase().replaceAll("[^a-z0-9._-]+", "-")).replaceAll("-+", "-"); }
 
     private GenerationAttemptPolicy attemptPolicy() throws IOException {
-        return GenerationAttemptPolicy.fromSettings(services.settings().loadOperationalSettings().load());
+        return GenerationAttemptPolicy.fromSettings(services.administration().settings().loadOperationalSettings().load());
+    }
+
+    private ResourceLease acquireResources(String operation) throws IOException {
+        try {
+            return resourceScheduler.acquire(ResourceRequirement.of(ResourceId.MODEL_MEMORY, ResourceId.GPU),
+                    CancellationToken.NONE);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Generación de imagen cancelada: " + operation, ex);
+        }
     }
 
     static VisualEngineRequest visualEngineRequest(TheatreImageGenerationUnit unit,
@@ -338,11 +349,11 @@ public final class TheatreImageGenerationWorkflow {
                 + ", consistent characters, vintage stage photography, warm cinematic light";
     }
 
-    private static ComfyUiVisualEngineClient visualClientFrom(ApplicationServices services) {
-        if (services == null || services.visual() == null) {
+    private static ComfyUiVisualEngineClient visualClientFrom(WorkspaceApplicationServices services) {
+        if (services == null || services.generation().visual() == null) {
             return new ComfyUiVisualEngineClient();
         }
-        return services.visual().comfyUiVisualEngineClient();
+        return services.generation().visual().comfyUiVisualEngineClient();
     }
 
     private static void progress(Consumer<String> progress, String message) {

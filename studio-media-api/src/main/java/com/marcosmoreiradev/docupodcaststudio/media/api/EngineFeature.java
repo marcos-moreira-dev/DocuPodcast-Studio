@@ -10,6 +10,8 @@ public record EngineFeature(String value) {
     public static final EngineFeature CONDITIONING_IMAGE = new EngineFeature("conditioning-image");
     public static final EngineFeature FRAME_INTERPOLATION = new EngineFeature("frame-interpolation");
     public static final EngineFeature HARDWARE_ACCELERATION = new EngineFeature("hardware-acceleration");
+    public static final EngineFeature TEXT_TO_VIDEO = new EngineFeature("text-to-video");
+    public static final EngineFeature IMAGE_TO_VIDEO = new EngineFeature("image-to-video");
 
     public EngineFeature {
         value = value == null ? "" : value.strip().toLowerCase(Locale.ROOT).replace('_', '-');

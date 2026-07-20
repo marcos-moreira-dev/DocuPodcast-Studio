@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
+import com.marcosmoreiradev.docupodcaststudio.application.WorkspaceApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.domain.assets.ProjectAssetReference;
 import com.marcosmoreiradev.docupodcaststudio.domain.storyboard.StoryboardDocument;
 import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreProjectLayer;
@@ -13,12 +13,12 @@ import java.util.Optional;
 
 /** Imports, replaces and removes theatre character/object image assets. */
 public final class TheatreImageAssetWorkflow {
-    private final ApplicationServices applicationServices;
+    private final WorkspaceApplicationServices applicationServices;
     private final TheatreCharacterImageCoordinator characterImages;
     private final TheatreObjectImageCoordinator objectImages;
 
     public TheatreImageAssetWorkflow(
-            ApplicationServices applicationServices,
+            WorkspaceApplicationServices applicationServices,
             TheatreCharacterImageCoordinator characterImages,
             TheatreObjectImageCoordinator objectImages) {
         this.applicationServices = Objects.requireNonNull(applicationServices, "applicationServices");
@@ -99,7 +99,7 @@ public final class TheatreImageAssetWorkflow {
     private ImportedImage importImage(ProjectSession session, Path imageFile, String saveMessage) throws IOException {
         Objects.requireNonNull(imageFile, "imageFile");
         Path projectFile = session.projectFile().orElseThrow(() -> new IOException(saveMessage));
-        var imported = applicationServices.storyboard().importImageAsset().importImage(session.project(), projectFile, imageFile);
+        var imported = applicationServices.generation().storyboard().importImageAsset().importImage(session.project(), projectFile, imageFile);
         session.replaceProject(imported.project(), true);
         return new ImportedImage(imported.imageAsset());
     }
@@ -111,7 +111,7 @@ public final class TheatreImageAssetWorkflow {
         }
         session.project().assets().byId(assetId)
                 .ifPresent(asset -> ProjectImageManagementWorkflow.deleteAssetFileIfPresent(asset, session.projectFile()));
-        session.replaceProject(applicationServices.assets().removeProjectAsset().remove(session.project(), assetId), true);
+        session.replaceProject(applicationServices.project().assets().removeProjectAsset().remove(session.project(), assetId), true);
     }
 
     private static Optional<TheatreProjectLayer.CharacterImage> characterImageById(ProjectSession session, String imageId) {

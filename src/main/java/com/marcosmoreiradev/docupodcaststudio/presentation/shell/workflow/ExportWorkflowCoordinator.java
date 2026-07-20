@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
+import com.marcosmoreiradev.docupodcaststudio.application.WorkspaceApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.application.errors.ApplicationPreconditionException;
 import com.marcosmoreiradev.docupodcaststudio.application.export.ExportReadinessItem;
 import com.marcosmoreiradev.docupodcaststudio.application.export.ExportableArtifactKind;
@@ -44,10 +44,10 @@ import java.util.Objects;
  * export orchestration here.</p>
  */
 public final class ExportWorkflowCoordinator {
-    private final ApplicationServices applicationServices;
+    private final WorkspaceApplicationServices applicationServices;
     private final AudioWorkflowCoordinator audioWorkflow;
 
-    public ExportWorkflowCoordinator(ApplicationServices applicationServices, AudioWorkflowCoordinator audioWorkflow) {
+    public ExportWorkflowCoordinator(WorkspaceApplicationServices applicationServices, AudioWorkflowCoordinator audioWorkflow) {
         this.applicationServices = Objects.requireNonNull(applicationServices, "applicationServices");
         this.audioWorkflow = Objects.requireNonNull(audioWorkflow, "audioWorkflow");
     }
@@ -63,9 +63,9 @@ public final class ExportWorkflowCoordinator {
         OperationalSettings operational = loadOperationalSettings();
         ensureFinalAudioReady(jobs, manifest, targetFile, operational);
         PodcastFinalAudioExportResult result = unitLevelAudio
-                ? applicationServices.export().exportPodcastAudio().exportPlaybackManifest(
+                ? applicationServices.exports().export().exportPodcastAudio().exportPlaybackManifest(
                         manifest, projectDirectory, targetFile, Path.of("."), configuredFfmpeg(operational), playbackRate)
-                : applicationServices.export().exportPodcastAudio().exportLatest(
+                : applicationServices.exports().export().exportPodcastAudio().exportLatest(
                         jobs, projectDirectory, targetFile, Path.of("."), configuredFfmpeg(operational));
         return result.humanSummary() + " · reporte " + result.reportFile().getFileName() + ".";
     }
@@ -75,7 +75,7 @@ public final class ExportWorkflowCoordinator {
                                          StoryboardDocument storyboard,
                                          List<AudioJobSnapshot> jobs,
                                          Path targetFile) throws IOException {
-        Path exported = applicationServices.export().exportDiagnosticReport()
+        Path exported = applicationServices.exports().export().exportDiagnosticReport()
                 .export(session.project(), script, storyboard, jobs, targetFile);
         return "Reporte diagnóstico exportado: " + exported + ".";
     }
@@ -90,7 +90,7 @@ public final class ExportWorkflowCoordinator {
         saveProject.save(projectFile);
         ProjectBundleExportRequest request = new ProjectBundleExportRequest(
                 session.project(), projectFile, script, storyboard, jobs, targetDirectory);
-        ProjectBundleExportResult result = applicationServices.export().exportProjectBundle().export(request);
+        ProjectBundleExportResult result = applicationServices.exports().export().exportProjectBundle().export(request);
         return "Paquete exportado: " + result.rootDirectory()
                 + " · inputs " + result.copiedInputs()
                 + " · outputs " + result.copiedOutputs()
@@ -115,14 +115,14 @@ public final class ExportWorkflowCoordinator {
         ensureExportable(session, projectFile, script, storyboard, jobs, ExportableArtifactKind.SIMPLE_VIDEO_PACKAGE, "paquete de video simple");
         SimpleVideoPackageExportResult result;
         try {
-            var narrationPlan = applicationServices.render().buildNarrationRenderPlan()
+            var narrationPlan = applicationServices.generation().render().buildNarrationRenderPlan()
                     .build(script, session.project());
-            var renderUnitPlan = applicationServices.render().buildRenderUnitPlan()
+            var renderUnitPlan = applicationServices.generation().render().buildRenderUnitPlan()
                     .build(narrationPlan, silentVisualBlockSeconds);
-            result = applicationServices.export().exportSimpleVideoPackage()
+            result = applicationServices.exports().export().exportSimpleVideoPackage()
                     .export(session.project(), renderUnitPlan, jobs, targetDirectory);
         } catch (RuntimeException ex) {
-            result = applicationServices.export().exportSimpleVideoPackage()
+            result = applicationServices.exports().export().exportSimpleVideoPackage()
                     .export(session.project(), script, storyboard, jobs, targetDirectory);
         }
         return "Paquete de video simple preparado: " + result.rootDirectory()
@@ -182,8 +182,8 @@ public final class ExportWorkflowCoordinator {
                 true,
                 operational.compute().policy(),
                 effectiveVideoEncoderPolicy(operational, requestedEncoder));
-        var renderUnitPlan = narrativeVideo ? null : applicationServices.render().buildRenderUnitPlan().build(
-                applicationServices.render().buildNarrationRenderPlan().build(script, session.project()),
+        var renderUnitPlan = narrativeVideo ? null : applicationServices.generation().render().buildRenderUnitPlan().build(
+                applicationServices.generation().render().buildNarrationRenderPlan().build(script, session.project()),
                 silentVisualBlockSeconds);
         FinalVideoExportRequest request = new FinalVideoExportRequest(
                 session.project(),
@@ -196,7 +196,7 @@ public final class ExportWorkflowCoordinator {
                 settings,
                 Path.of("."),
                 configuredFfmpeg(operational));
-        FinalVideoExportResult result = applicationServices.export().exportNarrativeVideo()
+        FinalVideoExportResult result = applicationServices.exports().export().exportNarrativeVideo()
                 .export(request, progress, cancellationRequested);
         return result.humanSummary() + ".";
     }
@@ -245,10 +245,10 @@ public final class ExportWorkflowCoordinator {
                 != com.marcosmoreiradev.docupodcaststudio.domain.document.SourceDocumentFormat.DOCX) {
             throw new IOException("Video documental por parrafos y tablas requiere un Word/DOCX abierto.");
         }
-        SimpleVideoPlan plan = applicationServices.documentStudy().buildDocumentStudyVideoPlan()
+        SimpleVideoPlan plan = applicationServices.project().documentStudy().buildDocumentStudyVideoPlan()
                 .build(session.project(), document, script, jobs, projectDirectory, effectiveTextOptions);
         com.marcosmoreiradev.docupodcaststudio.application.video.VideoAudioOverlayPlan overlays =
-                applicationServices.documentStudy().buildDocumentStudyVideoAudioOverlayPlan()
+                applicationServices.project().documentStudy().buildDocumentStudyVideoAudioOverlayPlan()
                         .build(session.project(), projectDirectory, plan);
         FinalVideoExportRequest request = new FinalVideoExportRequest(
                 session.project(),
@@ -261,7 +261,7 @@ public final class ExportWorkflowCoordinator {
                 settings,
                 Path.of("."),
                 configuredFfmpeg(operational));
-        FinalVideoExportResult result = applicationServices.export().exportDocumentStudyVideo()
+        FinalVideoExportResult result = applicationServices.exports().export().exportDocumentStudyVideo()
                 .export(request, plan, overlays, progress, cancellationRequested);
         return result.humanSummary() + ".";
     }
@@ -329,7 +329,7 @@ public final class ExportWorkflowCoordinator {
                 settings,
                 Path.of("."),
                 configuredFfmpeg(operational));
-        FinalVideoExportResult result = applicationServices.export().exportTheatreVideo()
+        FinalVideoExportResult result = applicationServices.exports().export().exportTheatreVideo()
                 .exportWork(request, progress, cancellationRequested);
         return result.humanSummary() + ".";
     }
@@ -479,7 +479,7 @@ public final class ExportWorkflowCoordinator {
                 settings,
                 Path.of("."),
                 configuredFfmpeg(operational));
-        FinalVideoExportResult result = applicationServices.export().exportTheatreVideo()
+        FinalVideoExportResult result = applicationServices.exports().export().exportTheatreVideo()
                 .exportSpatialMap(request, spatialFrameMode, scope, progress, cancellationRequested);
         return result.humanSummary() + ".";
     }
@@ -489,7 +489,7 @@ public final class ExportWorkflowCoordinator {
                                        PlaybackManifest manifest,
                                        Path targetFile,
                                        OperationalSettings operational) {
-        ExportReadinessItem item = applicationServices.export().inspectFinalAudioExportReadiness()
+        ExportReadinessItem item = applicationServices.exports().export().inspectFinalAudioExportReadiness()
                 .inspect(jobs, manifest, targetFile, Path.of("."), configuredFfmpeg(operational));
         if (item.blocked()) {
             throw new ApplicationPreconditionException(
@@ -507,7 +507,7 @@ public final class ExportWorkflowCoordinator {
                                   List<AudioJobSnapshot> jobs,
                                   ExportableArtifactKind kind,
                                   String label) {
-        var report = applicationServices.export().inspectExportReadiness()
+        var report = applicationServices.exports().export().inspectExportReadiness()
                 .inspect(session.project(), projectFile, script, storyboard, jobs);
         ExportReadinessItem item = report.items().stream()
                 .filter(candidate -> candidate.kind() == kind)
@@ -528,7 +528,7 @@ public final class ExportWorkflowCoordinator {
                                        NarrationScriptDocument script,
                                        StoryboardDocument storyboard,
                                        List<AudioJobSnapshot> jobs) throws IOException {
-        var report = applicationServices.export().inspectExportReadiness()
+        var report = applicationServices.exports().export().inspectExportReadiness()
                 .inspect(session.project(), projectFile, script, storyboard, jobs);
         ExportReadinessItem finalVideo = report.items().stream()
                 .filter(item -> item.kind() == ExportableArtifactKind.FINAL_VIDEO_MP4)
@@ -541,7 +541,7 @@ public final class ExportWorkflowCoordinator {
 
     private OperationalSettings loadOperationalSettings() {
         try {
-            return applicationServices.settings().loadOperationalSettings().load();
+            return applicationServices.administration().settings().loadOperationalSettings().load();
         } catch (IOException ex) {
             return OperationalSettings.defaults();
         }

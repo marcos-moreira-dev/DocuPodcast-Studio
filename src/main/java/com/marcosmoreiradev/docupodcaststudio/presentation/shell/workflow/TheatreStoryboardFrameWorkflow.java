@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
+import com.marcosmoreiradev.docupodcaststudio.application.WorkspaceApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.application.storyboard.UpsertTheatreStoryboardFrameVariantUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.storyboard.TheatreVisualVariant;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreCameraApplicationPolicy;
@@ -68,7 +68,7 @@ public final class TheatreStoryboardFrameWorkflow {
                 sceneObjectPreviews(project, projectDirectory, sceneId)));
     }
 
-    public FrameResult save(ApplicationServices services,
+    public FrameResult save(WorkspaceApplicationServices services,
                             ProjectSession session,
                             StoryboardDocument storyboard,
                             NarrationScriptDocument script,
@@ -78,7 +78,7 @@ public final class TheatreStoryboardFrameWorkflow {
                             boolean activateDrawn,
                             Optional<Path> projectDirectory) throws IOException {
         Path projectFile = session.projectFile().orElseThrow(() -> new IOException("Guarda el proyecto antes de guardar frames dibujados."));
-        var result = services.storyboard().upsertTheatreStoryboardFrameVariant().upsertDrawnFrame(
+        var result = services.generation().storyboard().upsertTheatreStoryboardFrameVariant().upsertDrawnFrame(
                 session.project(), projectFile, storyboard, script, segmentId, framePng, inkStateJson, activateDrawn);
         session.replaceProject(result.project(), true);
         session.setStoryboard(result.storyboard());
@@ -86,7 +86,7 @@ public final class TheatreStoryboardFrameWorkflow {
                 "Frame dibujado guardado para " + segmentId + ". Variante activa: " + result.activeVariant() + ".");
     }
 
-    public FrameResult toggle(ApplicationServices services,
+    public FrameResult toggle(WorkspaceApplicationServices services,
                               ProjectSession session,
                               StoryboardDocument storyboard,
                               NarrationScriptDocument script,
@@ -104,7 +104,7 @@ public final class TheatreStoryboardFrameWorkflow {
         TheatreVisualVariant current = TheatreVisualVariant.fromMetadata(currentVariant);
         int currentIndex = available.indexOf(current);
         String nextVariant = available.get((currentIndex < 0 ? 0 : currentIndex + 1) % available.size()).metadataValue();
-        var result = services.storyboard().upsertTheatreStoryboardFrameVariant().activateVariant(
+        var result = services.generation().storyboard().upsertTheatreStoryboardFrameVariant().activateVariant(
                 session.project(), storyboard, script, segmentId, nextVariant);
         session.replaceProject(result.project(), true);
         session.setStoryboard(result.storyboard());
@@ -112,14 +112,14 @@ public final class TheatreStoryboardFrameWorkflow {
                 "Variante visual activa para " + segmentId + ": " + result.activeVariant() + ".");
     }
 
-    public FrameResult activate(ApplicationServices services,
+    public FrameResult activate(WorkspaceApplicationServices services,
                                 ProjectSession session,
                                 StoryboardDocument storyboard,
                                 NarrationScriptDocument script,
                                 String segmentId,
                                 String variant,
                                 Optional<Path> projectDirectory) throws IOException {
-        var result = services.storyboard().upsertTheatreStoryboardFrameVariant().activateVariant(
+        var result = services.generation().storyboard().upsertTheatreStoryboardFrameVariant().activateVariant(
                 session.project(), storyboard, script, segmentId, variant);
         session.replaceProject(result.project(), true);
         session.setStoryboard(result.storyboard());

@@ -1,9 +1,9 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ink.InkImageCrop;
-import com.marcosmoreiradev.docupodcaststudio.application.ink.InkPlacedImage;
-import com.marcosmoreiradev.docupodcaststudio.application.ink.InkWorkspaceState;
-import com.marcosmoreiradev.docupodcaststudio.application.ink.InkWorkspaceStateSerializer;
+import com.marcosmoreiradev.docupodcaststudio.ink.model.InkImageCrop;
+import com.marcosmoreiradev.docupodcaststudio.ink.model.InkPlacedImage;
+import com.marcosmoreiradev.docupodcaststudio.ink.model.InkWorkspaceState;
+import com.marcosmoreiradev.docupodcaststudio.ink.model.InkWorkspaceStateSerializer;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.DocuPodcastProject;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.ProjectSession;
 import org.junit.jupiter.api.Test;

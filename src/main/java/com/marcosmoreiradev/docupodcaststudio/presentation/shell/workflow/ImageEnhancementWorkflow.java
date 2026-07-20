@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
+import com.marcosmoreiradev.docupodcaststudio.application.WorkspaceApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.application.image.ImageAspectStrategy;
 import com.marcosmoreiradev.docupodcaststudio.application.image.ImageEnhancementOutputProfile;
 import com.marcosmoreiradev.docupodcaststudio.application.image.ImageEnhancementProvider;
@@ -17,14 +17,14 @@ import java.util.Objects;
 
 /** Coordinates enhancement/upscale/adaptation jobs and imports their results as reviewable assets. */
 public final class ImageEnhancementWorkflow {
-    private final ApplicationServices services;
+    private final WorkspaceApplicationServices services;
     private final ImageEnhancementProvider provider;
 
-    public ImageEnhancementWorkflow(ApplicationServices services) {
+    public ImageEnhancementWorkflow(WorkspaceApplicationServices services) {
         this(services, new ComfyUiImageEnhancementProvider());
     }
 
-    ImageEnhancementWorkflow(ApplicationServices services, ImageEnhancementProvider provider) {
+    ImageEnhancementWorkflow(WorkspaceApplicationServices services, ImageEnhancementProvider provider) {
         this.services = Objects.requireNonNull(services, "services");
         this.provider = Objects.requireNonNull(provider, "provider");
     }
@@ -65,7 +65,7 @@ public final class ImageEnhancementWorkflow {
         if (!result.success() || result.finalImage() == null || !Files.isRegularFile(result.finalImage())) {
             throw new IOException(result.message().isBlank() ? "La mejora no genero PNG final." : result.message());
         }
-        var imported = services.storyboard().importImageAsset().importImage(session.project(), projectFile, result.finalImage());
+        var imported = services.generation().storyboard().importImageAsset().importImage(session.project(), projectFile, result.finalImage());
         session.replaceProject(imported.project(), true);
         return new TheatreGeneratedImageCandidate(
                 candidate.unitId() + "-" + profile.workflowId(),

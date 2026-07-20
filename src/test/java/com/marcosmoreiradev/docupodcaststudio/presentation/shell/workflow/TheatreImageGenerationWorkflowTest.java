@@ -1,6 +1,5 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.application.image.ImageEnhancementOutputProfile;
 import com.marcosmoreiradev.docupodcaststudio.application.services.StoryboardApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.application.storyboard.UpsertTheatreGeneratedFrameVariantUseCase;
@@ -18,6 +17,7 @@ import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationSegment;
 import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationSegmentType;
 import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreProjectLayer;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.ProjectSession;
+import com.marcosmoreiradev.docupodcaststudio.media.api.LocalResourceScheduler;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -96,9 +96,9 @@ final class TheatreImageGenerationWorkflowTest {
         UpsertTheatreStoryboardFrameVariantUseCase variants = new UpsertTheatreStoryboardFrameVariantUseCase();
         StoryboardApplicationServices storyboard = new StoryboardApplicationServices(
                 null, null, null, null, variants, new UpsertTheatreGeneratedFrameVariantUseCase(variants), null, null);
-        TheatreImageGenerationWorkflow workflow = new TheatreImageGenerationWorkflow(new ApplicationServices(
-                null, null, null, null, null, null, null, null, null, null, storyboard,
-                null, null, null, null, null, null, null, null, null, null, null));
+        TheatreImageGenerationWorkflow workflow = new TheatreImageGenerationWorkflow(
+                WorkspaceTestServices.withStoryboard(storyboard), new ComfyUiVisualEngineClient(),
+                LocalResourceScheduler.safeDefaults());
         TheatreGeneratedImageCandidate approved = workflow.approve(session, candidate);
 
         assertTrue(approved.approved());
