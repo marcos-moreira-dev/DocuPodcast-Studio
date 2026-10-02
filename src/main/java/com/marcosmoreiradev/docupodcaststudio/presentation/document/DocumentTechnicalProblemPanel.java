@@ -1,5 +1,12 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.document;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeSourceChooser;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeDialogResponse;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioCollectionControls;
+
+import com.marcosmoreiradev.docupodcaststudio.ink.DrawingFeatureCatalog;
 import com.marcosmoreiradev.docupodcaststudio.application.document.DocumentOutlineEntry;
 import com.marcosmoreiradev.docupodcaststudio.application.document.DocumentOutlineProjection;
 import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.StudyProblemDetail;
@@ -10,7 +17,6 @@ import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.StudyPro
 import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.StudyProblemsProjection;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlock;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.ReadableDocument;
-import com.marcosmoreiradev.docupodcaststudio.domain.document.SourceDocumentFormat;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionButtonFactory;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.DocuPodcastShellViewModel;
@@ -57,18 +63,18 @@ public final class DocumentTechnicalProblemPanel extends VBox {
     private final Supplier<List<PdfRegionCaptureDraft>> selectedPdfRegionsSupplier;
     private final Label selectionHint = new Label();
     private final Label savedDetail = new Label();
-    private final TextField search = new TextField();
-    private final TextField pageFrom = new TextField();
-    private final TextField pageTo = new TextField();
-    private final TextField blockQuery = new TextField();
-    private final ComboBox<ChapterOption> chapterFilter = new ComboBox<>();
+    private final TextField search = StudioFormControls.textField();
+    private final TextField pageFrom = StudioFormControls.textField();
+    private final TextField pageTo = StudioFormControls.textField();
+    private final TextField blockQuery = StudioFormControls.textField();
+    private final ComboBox<ChapterOption> chapterFilter = StudioFormControls.comboBox();
     private final ComboBox<StudyProblemStatusFilter> statusFilter =
-            new ComboBox<>(FXCollections.observableArrayList(StudyProblemStatusFilter.values()));
-    private final ComboBox<StudyProblemSourceProjection> sourceSelector = new ComboBox<>();
+            StudioFormControls.comboBox(FXCollections.observableArrayList(StudyProblemStatusFilter.values()));
+    private final ComboBox<StudyProblemSourceProjection> sourceSelector = StudioFormControls.comboBox();
     private final Label status = new Label();
     private final Label count = new Label();
     private final Label savedStatus = new Label();
-    private final ListView<StudyProblemListItem> savedProblems = new ListView<>();
+    private final ListView<StudyProblemListItem> savedProblems = StudioCollectionControls.listView();
     private final Button editSaved = ActionButtonFactory.secondary(
             "Abrir / editar solucion",
             "Abrir el problema guardado para editar solucion textual, notas o lienzo.",
@@ -349,13 +355,12 @@ public final class DocumentTechnicalProblemPanel extends VBox {
     }
 
     private boolean currentDocumentIsPdf() {
-        ReadableDocument document = viewModel.currentDocumentProperty().get();
-        return document != null && document.format() == SourceDocumentFormat.PDF;
+        return viewModel.currentPreparedPdfSourceProperty().get() != null;
     }
 
     private void refreshSavedProblems() {
         String selected = selectedProblemId();
-        projection = viewModel.applicationServices().documentStudy().buildStudyProblemsProjection()
+        projection = viewModel.projectWorkspace().documentStudy().buildStudyProblemsProjection()
                 .build(viewModel.currentProject().orElse(null), viewModel.currentProjectDirectory().orElse(null), currentFilter());
         savedProblems.setItems(FXCollections.observableArrayList(projection.problems()));
         boolean hasProblems = !projection.problems().isEmpty();
@@ -430,7 +435,7 @@ public final class DocumentTechnicalProblemPanel extends VBox {
         if (document == null) {
             return options;
         }
-        DocumentOutlineProjection outline = viewModel.applicationServices().document().buildDocumentOutline().build(document);
+        DocumentOutlineProjection outline = viewModel.projectWorkspace().document().buildDocumentOutline().build(document);
         List<ChapterAnchor> anchors = new ArrayList<>();
         collectChapterAnchors(outline.entries(), anchors);
         anchors = anchors.stream()
@@ -464,7 +469,9 @@ public final class DocumentTechnicalProblemPanel extends VBox {
         if (detail == null) {
             return;
         }
-        TechnicalProblemDialog.showForEdit(getScene() == null ? null : getScene().getWindow(), detail)
+        TechnicalProblemDialog.showForEdit(getScene() == null ? null : getScene().getWindow(), detail,
+                        viewModel.inkInputProviders().create(DrawingFeatureCatalog.DOCUMENT_PROBLEM),
+                        viewModel.drawingFeatures().require(DrawingFeatureCatalog.DOCUMENT_PROBLEM))
                 .ifPresent(result -> runAction(() -> {
                     viewModel.updateTechnicalProblemSolution(detail.id(), result.solutionText(), result.canvasSnapshot(), result.notes(), result.canvasStateJson());
                     refreshSavedProblems();
@@ -476,7 +483,7 @@ public final class DocumentTechnicalProblemPanel extends VBox {
         if (detail == null) {
             return;
         }
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle("Exportar solucion PNG");
         chooser.setInitialFileName(detail.id().toLowerCase(java.util.Locale.ROOT) + "-solucion.png");
         chooser.getExtensionFilters().setAll(new FileChooser.ExtensionFilter("PNG (*.png)", "*.png"));
@@ -491,7 +498,7 @@ public final class DocumentTechnicalProblemPanel extends VBox {
         if (detail == null) {
             return;
         }
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle("Exportar solucion textual");
         chooser.setInitialFileName(detail.id().toLowerCase(java.util.Locale.ROOT) + "-solucion.txt");
         chooser.getExtensionFilters().setAll(new FileChooser.ExtensionFilter("Texto (*.txt)", "*.txt"));
@@ -502,7 +509,7 @@ public final class DocumentTechnicalProblemPanel extends VBox {
     }
 
     private void exportAllProblems() {
-        DirectoryChooser chooser = new DirectoryChooser();
+        DirectoryChooser chooser = NativeSourceChooser.directoryChooser();
         chooser.setTitle("Exportar todos los problemas tecnicos");
         File folder = chooser.showDialog(getScene() == null ? null : getScene().getWindow());
         if (folder != null) {
@@ -511,7 +518,7 @@ public final class DocumentTechnicalProblemPanel extends VBox {
     }
 
     private void exportAllProblemsPdf() {
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle("Exportar ejercicios en PDF");
         chooser.setInitialFileName("ejercicios-tecnicos.pdf");
         chooser.getExtensionFilters().setAll(new FileChooser.ExtensionFilter("PDF (*.pdf)", "*.pdf"));
@@ -522,7 +529,7 @@ public final class DocumentTechnicalProblemPanel extends VBox {
     }
 
     private void createPdfSourceFromImages() {
-        DirectoryChooser chooser = new DirectoryChooser();
+        DirectoryChooser chooser = NativeSourceChooser.directoryChooser();
         chooser.setTitle("Crear fuente PDF desde carpeta de imagenes");
         File folder = chooser.showDialog(getScene() == null ? null : getScene().getWindow());
         if (folder != null) {
@@ -535,7 +542,7 @@ public final class DocumentTechnicalProblemPanel extends VBox {
         if (detail == null) {
             return;
         }
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, "", ButtonType.CANCEL, ButtonType.OK);
+        Alert confirm = NativeDialogResponse.alert(Alert.AlertType.CONFIRMATION, "", ButtonType.CANCEL, ButtonType.OK);
         confirm.setTitle("Eliminar problema tecnico");
         confirm.setHeaderText("Eliminar problema guardado");
         Label message = new Label("Eliminar " + detail.title()

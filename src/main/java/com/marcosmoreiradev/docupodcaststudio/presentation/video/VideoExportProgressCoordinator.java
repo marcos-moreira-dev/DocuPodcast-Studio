@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.video;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioDialogShell;
+
 import com.marcosmoreiradev.docupodcaststudio.application.video.VideoRenderProgress;
 import com.marcosmoreiradev.docupodcaststudio.presentation.notification.DialogStyler;
 import com.marcosmoreiradev.docupodcaststudio.presentation.process.FxBackgroundTaskRunner;
@@ -19,6 +21,7 @@ import java.util.function.Consumer;
 /** Owns the blocking progress dialog and background worker for final MP4 export. */
 public final class VideoExportProgressCoordinator {
     private final FxBackgroundTaskRunner backgroundTaskRunner;
+    private volatile AtomicBoolean backgroundCancelRequested;
 
     public VideoExportProgressCoordinator() {
         this(new FxBackgroundTaskRunner());
@@ -38,7 +41,7 @@ public final class VideoExportProgressCoordinator {
         Objects.requireNonNull(exportAction, "exportAction");
         Consumer<Throwable> onFailure = failurePresenter == null ? ignored -> { } : failurePresenter;
 
-        Dialog<ButtonType> dialog = new Dialog<>();
+        Dialog<ButtonType> dialog = StudioDialogShell.dialog();
         dialog.setTitle("Exportando video");
         dialog.setHeaderText("Renderizando MP4 final");
         DialogStyler.apply(dialog, owner);
@@ -83,6 +86,71 @@ public final class VideoExportProgressCoordinator {
         });
         backgroundTaskRunner.start("docupodcast-final-video-export", task);
         dialog.showAndWait();
+    }
+
+    /** Runs an export using the shared workspace activity panel instead of a second modal. */
+    public void exportInBackground(Path targetFile,
+                                   VideoExportOptions options,
+                                   VideoExportAction exportAction,
+                                   Consumer<VideoRenderProgress> progressPresenter,
+                                   Consumer<Path> successPresenter,
+                                   Consumer<Throwable> failurePresenter,
+                                   Runnable completion) {
+        Objects.requireNonNull(targetFile, "targetFile");
+        Objects.requireNonNull(options, "options");
+        Objects.requireNonNull(exportAction, "exportAction");
+        Consumer<VideoRenderProgress> progress = progressPresenter == null
+                ? ignored -> { } : progressPresenter;
+        Consumer<Path> success = successPresenter == null
+                ? ignored -> { } : successPresenter;
+        Consumer<Throwable> failure = failurePresenter == null
+                ? ignored -> { } : failurePresenter;
+        Runnable finished = completion == null ? () -> { } : completion;
+        AtomicBoolean cancelRequested = new AtomicBoolean(false);
+        backgroundCancelRequested = cancelRequested;
+        Task<Void> task = new Task<>() {
+            @Override
+            protected Void call() throws Exception {
+                exportAction.export(targetFile, options,
+                        state -> Platform.runLater(() -> progress.accept(state)),
+                        cancelRequested::get);
+                return null;
+            }
+        };
+        task.setOnSucceeded(event -> {
+            clearBackgroundCancellation(cancelRequested);
+            progress.accept(VideoRenderProgress.completed(1, targetFile.toString()));
+            finished.run();
+            // Let the shared workspace overlay finish its layout transition before
+            // presenting the terminal notification. Otherwise the alert can open
+            // behind the dimmed process layer on slower JavaFX pulses.
+            Platform.runLater(() -> success.accept(targetFile));
+        });
+        task.setOnFailed(event -> {
+            clearBackgroundCancellation(cancelRequested);
+            Throwable safe = actionableFailure(task.getException());
+            progress.accept(VideoRenderProgress.failed(0, 0, safe.getMessage()));
+            failure.accept(safe);
+            finished.run();
+        });
+        task.setOnCancelled(event -> {
+            clearBackgroundCancellation(cancelRequested);
+            progress.accept(VideoRenderProgress.cancelled(0, 0));
+            finished.run();
+        });
+        backgroundTaskRunner.start("docupodcast-final-video-export", task);
+    }
+
+    /** Requests cancellation of the active non-modal export at its next safe render checkpoint. */
+    public boolean cancelBackgroundExport() {
+        AtomicBoolean active = backgroundCancelRequested;
+        if (active == null) return false;
+        active.set(true);
+        return true;
+    }
+
+    private void clearBackgroundCancellation(AtomicBoolean completed) {
+        if (backgroundCancelRequested == completed) backgroundCancelRequested = null;
     }
 
     static Throwable actionableFailure(Throwable error) {

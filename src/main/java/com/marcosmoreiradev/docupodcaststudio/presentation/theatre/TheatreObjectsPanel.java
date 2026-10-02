@@ -1,9 +1,18 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.theatre;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeSourceChooser;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioCollectionControls;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
+
 import com.marcosmoreiradev.docupodcaststudio.domain.document.ReadableDocument;
 import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationScriptDocument;
 import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreProjectLayer;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionButtonFactory;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.ResponsiveActionGroup;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.AppIcon;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.CollapsibleModuleSplitPane;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ImageFullscreenViewer;
@@ -51,7 +60,7 @@ public final class TheatreObjectsPanel extends BorderPane {
     private final DocuPodcastShellViewModel viewModel;
     private final ObjectProperty<TheatreObjectPresentation> selectedObject = new SimpleObjectProperty<>();
     private final ObjectProperty<TheatreProjectLayer.Scene> selectedScene = new SimpleObjectProperty<>();
-    private final ListView<TheatreObjectPresentation> objects = new ListView<>();
+    private final ListView<TheatreObjectPresentation> objects = StudioCollectionControls.listView();
     private final VBox acts = new VBox(8);
     private final Set<String> expandedActIds = new LinkedHashSet<>();
     private final Set<String> expandedSceneIds = new LinkedHashSet<>();
@@ -104,7 +113,7 @@ public final class TheatreObjectsPanel extends BorderPane {
         body.getStyleClass().add("document-context-body");
         body.setMaxWidth(Double.MAX_VALUE);
 
-        ScrollPane scroll = new ScrollPane(body);
+        ScrollPane scroll = StudioViewportControls.scrollPane(body);
         scroll.setFitToWidth(true);
         scroll.setFitToHeight(true);
         scroll.getStyleClass().add("document-context-scroll");
@@ -441,6 +450,7 @@ public final class TheatreObjectsPanel extends BorderPane {
         HBox actions = new HBox(6, noteButton, replace, viewFull, delete);
         actions.getStyleClass().add("theatre-scene-character-image-actions");
         actions.setAlignment(Pos.CENTER_LEFT);
+        ResponsiveActionGroup.install(actions, 360, noteButton, replace, viewFull, delete);
 
         VBox copy = new VBox(5, note, actions);
         copy.setMinWidth(0);
@@ -538,7 +548,7 @@ public final class TheatreObjectsPanel extends BorderPane {
     }
 
     private File chooseImageFile(String title) {
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle(title);
         chooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("Imagenes compatibles (*.png, *.jpg, *.jpeg, *.webp, *.gif)", "*.png", "*.jpg", "*.jpeg", "*.webp", "*.gif"),
@@ -716,7 +726,7 @@ public final class TheatreObjectsPanel extends BorderPane {
         title.getStyleClass().add("theatre-character-dialog-title");
         title.setWrapText(true);
 
-        TextField name = new TextField(object == null ? "" : object.displayName());
+        TextField name = StudioFormControls.textField(object == null ? "" : object.displayName());
         name.getStyleClass().add("theatre-object-name-field");
         name.setPromptText("Nombre del objeto, utileria o elemento de escenografia");
         name.setMaxWidth(Double.MAX_VALUE);
@@ -782,7 +792,7 @@ public final class TheatreObjectsPanel extends BorderPane {
         title.getStyleClass().add("theatre-character-dialog-title");
         title.setWrapText(true);
 
-        TextField name = new TextField(creating ? "Acto " + (viewModel.theatreActs().size() + 1) : act.displayName());
+        TextField name = StudioFormControls.textField(creating ? "Acto " + (viewModel.theatreActs().size() + 1) : act.displayName());
         name.getStyleClass().add("theatre-object-name-field");
         name.setPromptText("Nombre del acto");
         name.setMaxWidth(Double.MAX_VALUE);
@@ -817,7 +827,7 @@ public final class TheatreObjectsPanel extends BorderPane {
         title.getStyleClass().add("theatre-character-dialog-title");
         title.setWrapText(true);
 
-        TextField name = new TextField(creating ? "" : scene.displayName());
+        TextField name = StudioFormControls.textField(creating ? "" : scene.displayName());
         name.getStyleClass().add("theatre-object-name-field");
         name.setPromptText("Nombre de la escena");
         name.setMaxWidth(Double.MAX_VALUE);

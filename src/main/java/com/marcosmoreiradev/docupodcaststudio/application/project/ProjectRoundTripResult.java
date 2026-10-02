@@ -29,7 +29,7 @@ public record ProjectRoundTripResult(
     }
 
     public boolean documentRecovered() {
-        return hydration.importedDocument().isPresent();
+        return hydration.documentSource().isPresent();
     }
 
     public boolean narrationProjectionRecovered() {

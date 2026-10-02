@@ -63,6 +63,8 @@ public final class DocumentRailProjectionFactory {
                         visual.generatedUri(),
                         visual.drawnFrameAssetId(),
                         visual.drawnFrameUri(),
+                        visual.sceneryAssetId(),
+                        visual.sceneryUri(),
                         visual.activeVariant()));
             }
         }
@@ -137,6 +139,7 @@ public final class DocumentRailProjectionFactory {
                 fallbackImage == null ? "" : fallbackImage.id());
         String drawnAssetId = binding.metadata().getOrDefault(UpsertTheatreStoryboardFrameVariantUseCase.DRAWN_FRAME_ASSET_ID, "");
         String generatedAssetId = binding.metadata().getOrDefault(UpsertTheatreStoryboardFrameVariantUseCase.GENERATED_IMAGE_ASSET_ID, "");
+        String sceneryAssetId = binding.metadata().getOrDefault(UpsertTheatreStoryboardFrameVariantUseCase.SCENERY_IMAGE_ASSET_ID, "");
         String activeVariant = binding.metadata().getOrDefault(UpsertTheatreStoryboardFrameVariantUseCase.ACTIVE_VISUAL_VARIANT,
                 UpsertTheatreStoryboardFrameVariantUseCase.VARIANT_OFFICIAL);
         String activeAssetId = binding.imageAssetId();
@@ -145,12 +148,14 @@ public final class DocumentRailProjectionFactory {
         String officialUri = imageAsset(project, officialAssetId).flatMap(asset -> assetUri(projectDirectory, asset)).orElse("");
         String drawnUri = imageAsset(project, drawnAssetId).flatMap(asset -> assetUri(projectDirectory, asset)).orElse("");
         String generatedUri = imageAsset(project, generatedAssetId).flatMap(asset -> assetUri(projectDirectory, asset)).orElse("");
+        String sceneryUri = imageAsset(project, sceneryAssetId).flatMap(asset -> assetUri(projectDirectory, asset)).orElse("");
         if (active == null && fallbackImage != null) {
             activeAssetId = fallbackImage.id();
             activeUri = assetUri(projectDirectory, fallbackImage).orElse("");
         }
         return new StoryboardVisual(activeAssetId, activeUri, officialAssetId, officialUri,
-                generatedAssetId, generatedUri, drawnAssetId, drawnUri, activeVariant);
+                generatedAssetId, generatedUri, drawnAssetId, drawnUri,
+                sceneryAssetId, sceneryUri, activeVariant);
     }
 
     private static Optional<String> assetUri(Optional<Path> projectDirectory, ProjectAssetReference asset) {
@@ -174,11 +179,13 @@ public final class DocumentRailProjectionFactory {
                                     String generatedUri,
                                     String drawnFrameAssetId,
                                     String drawnFrameUri,
+                                    String sceneryAssetId,
+                                    String sceneryUri,
                                     String activeVariant) {
         private static StoryboardVisual empty(ProjectAssetReference image, Optional<Path> projectDirectory) {
             String assetId = image == null ? "" : image.id();
             String uri = image == null ? "" : assetUri(projectDirectory, image).orElse("");
-            return new StoryboardVisual(assetId, uri, assetId, uri, "", "", "", "",
+            return new StoryboardVisual(assetId, uri, assetId, uri, "", "", "", "", "", "",
                     UpsertTheatreStoryboardFrameVariantUseCase.VARIANT_OFFICIAL);
         }
     }

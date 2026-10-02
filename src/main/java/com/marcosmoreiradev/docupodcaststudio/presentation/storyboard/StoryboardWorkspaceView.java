@@ -1,5 +1,9 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.storyboard;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioCollectionControls;
+
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.DocuPodcastShellViewModel;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionBar;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionButtonFactory;
@@ -24,9 +28,9 @@ import java.util.List;
 /** Live storyboard workspace with visual scene cards, image status, audio cues and validation. */
 public final class StoryboardWorkspaceView extends BorderPane {
     private final DocuPodcastShellViewModel viewModel;
-    private final ListView<String> scenes = new ListView<>();
-    private final ListView<String> images = new ListView<>();
-    private final ListView<String> validation = new ListView<>();
+    private final ListView<String> scenes = StudioCollectionControls.listView();
+    private final ListView<String> images = StudioCollectionControls.listView();
+    private final ListView<String> validation = StudioCollectionControls.listView();
     private final VBox sceneBoard = new VBox(12);
 
     public StoryboardWorkspaceView(DocuPodcastShellViewModel viewModel) {
@@ -115,7 +119,7 @@ public final class StoryboardWorkspaceView extends BorderPane {
     private ScrollPane preview() {
         sceneBoard.getStyleClass().add("storyboard-scene-board");
         sceneBoard.setPadding(new Insets(4, 0, 0, 14));
-        ScrollPane scroll = new ScrollPane(sceneBoard);
+        ScrollPane scroll = StudioViewportControls.scrollPane(sceneBoard);
         scroll.setFitToWidth(true);
         scroll.getStyleClass().add("storyboard-scroll");
         VBox.setVgrow(scroll, Priority.ALWAYS);

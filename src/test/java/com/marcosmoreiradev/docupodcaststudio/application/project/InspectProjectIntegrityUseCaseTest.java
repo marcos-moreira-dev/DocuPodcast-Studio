@@ -165,9 +165,64 @@ final class InspectProjectIntegrityUseCaseTest {
         assertTrue(report.messages().stream().anyMatch(message -> message.contains("AUDIO_JOB_REQUIRES_REPAIR")));
     }
 
+    @Test
+    void supersededFailedAudioJobsDoNotWarnWhileReplacementIsRunning() throws Exception {
+        Path projectFile = tempDir.resolve("demo.docupodcast.json");
+        Files.writeString(projectFile, "{}");
+        AudioSegmentSnapshot pending = AudioSegmentSnapshot.pending("SEG-001", "Inicio");
+        AudioJobSnapshot failed = new AudioJobSnapshot(
+                "JOB-OLD",
+                "Documento",
+                AudioJobState.FAILED,
+                AudioGenerationStage.FAILED,
+                0,
+                1,
+                1,
+                0.0,
+                "SEG-001",
+                "Inicio",
+                0,
+                "Fallo anterior",
+                "jobs/JOB-OLD",
+                "",
+                "",
+                List.of(pending),
+                Instant.parse("2026-01-01T00:00:00Z"),
+                Instant.parse("2026-01-01T00:01:00Z")
+        );
+        AudioJobSnapshot running = new AudioJobSnapshot(
+                "JOB-NEW",
+                "Documento",
+                AudioJobState.GENERATING_AUDIO,
+                AudioGenerationStage.GENERATING_SEGMENTS,
+                0,
+                1,
+                0,
+                0.0,
+                "SEG-001",
+                "Inicio",
+                10,
+                "Generando",
+                "jobs/JOB-NEW",
+                "",
+                "",
+                List.of(pending),
+                Instant.parse("2026-01-01T00:02:00Z"),
+                Instant.parse("2026-01-01T00:03:00Z")
+        );
+
+        ProjectIntegrityReport report = useCase.inspect(
+                DocuPodcastProject.createNew("Audio"),
+                projectFile,
+                ProjectWorkspaceHydration.empty(),
+                List.of(failed, running));
+
+        assertTrue(report.ok());
+    }
+
     private static ProjectWorkspaceHydration hydration() {
         return new ProjectWorkspaceHydration(
-                Optional.of(document()),
+                Optional.of(new com.marcosmoreiradev.docupodcaststudio.application.document.BlockDocumentSource(document())),
                 Optional.of(script()),
                 Optional.of(storyboard())
         );

@@ -6,7 +6,8 @@ import java.util.Locale;
 public enum TheatreVisualVariant {
     OFFICIAL("official", "Imagen asignada"),
     GENERATED("generated", "Imagen generada por IA"),
-    DRAWN("drawn", "Frame dibujado");
+    DRAWN("drawn", "Frame dibujado"),
+    SCENERY("scenery", "Personajes y escenografía");
 
     private final String metadataValue;
     private final String displayName;

@@ -14,7 +14,7 @@ import com.marcosmoreiradev.docupodcaststudio.presentation.shell.ProjectSession;
 import javafx.scene.image.PixelReader;
 import javafx.scene.image.WritableImage;
 
-import javax.imageio.ImageIO;
+import com.marcosmoreiradev.docupodcaststudio.ink.canvas.InkImageFileStore;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -288,10 +288,27 @@ public final class StudyProblemWorkflow {
                 if (!Files.isRegularFile(source)) {
                     throw new IOException("Archivo PNG no existe: " + asset.relativePath());
                 }
-                pages.add(new StudyProblemPdfPage(problem.title(), source));
-                exported++;
+                Path editable = projectDirectory.isPresent() ? canvasStatePath(projectDirectory.get(), problem.id()) : null;
+                if (editable != null && Files.isRegularFile(editable)) {
+                    String json = Files.readString(editable);
+                    var state = com.marcosmoreiradev.docupodcaststudio.ink.model.InkWorkspaceStateSerializer.fromJson(json);
+                    int count = Integer.parseInt(state.metadata().getOrDefault("notebook.count", "1"));
+                    int current = Integer.parseInt(state.metadata().getOrDefault("notebook.current", "0"));
+                    if (count < 1 || count > 10000 || current < 0 || current >= count) throw new IOException("Cuaderno inválido");
+                    java.util.List<StudyProblemPdfPage> notebook = new java.util.ArrayList<>();
+                    for (int i=0; i<count; i++) {
+                        String pageState = i == current ? json : state.metadata().get("notebook.page."+i);
+                        if (pageState == null || pageState.isBlank()) throw new IOException("Falta el estado de la página " + (i+1));
+                        notebook.add(new StudyProblemPdfPage(problem.title(), source, pageState));
+                    }
+                    pages.addAll(notebook);
+                    exported += count;
+                } else {
+                    pages.add(new StudyProblemPdfPage(problem.title(), source));
+                    exported++;
+                }
                 manifest.add("EXPORTADO " + problem.id() + " - " + problem.title());
-            } catch (IOException ex) {
+            } catch (IOException | IllegalArgumentException ex) {
                 failed++;
                 manifest.add("ERROR " + problem.id() + " - " + ex.getMessage());
             }
@@ -366,9 +383,7 @@ public final class StudyProblemWorkflow {
                 output.setRGB(x, y, reader.getArgb(x, y));
             }
         }
-        if (!ImageIO.write(output, "png", target.toFile())) {
-            throw new IOException("No se pudo escribir PNG de solucion.");
-        }
+        InkImageFileStore.writePng(output, target);
     }
 
     private static Path safeProjectPath(Path root, Path relative) throws IOException {

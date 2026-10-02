@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.application.export;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat;
+
 /** Export formats supported by DocuPodcast artifacts. */
 public enum DocuPodcastExportFormat {
     MARKDOWN("Markdown", ".md"),

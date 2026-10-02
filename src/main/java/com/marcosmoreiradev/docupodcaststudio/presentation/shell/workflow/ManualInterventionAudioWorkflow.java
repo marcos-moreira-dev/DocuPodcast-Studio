@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
+import com.marcosmoreiradev.docupodcaststudio.application.WorkspaceApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.application.audio.AudioGenerationRequest;
 import com.marcosmoreiradev.docupodcaststudio.application.recording.AudioInputDevice;
 import com.marcosmoreiradev.docupodcaststudio.application.recording.RecordingActionPlan;
@@ -20,8 +20,8 @@ import java.util.Optional;
 
 /** Coordinates manual intervention recordings without growing the shell view-model. */
 public final class ManualInterventionAudioWorkflow {
-    public List<AudioInputDevice> inputDevices(ApplicationServices services) {
-        try { return services.recording().startAudioRecording().inputDevices(); }
+    public List<AudioInputDevice> inputDevices(WorkspaceApplicationServices services) {
+        try { return services.playback().recording().startAudioRecording().inputDevices(); }
         catch (RuntimeException ex) { return List.of(AudioInputDevice.systemDefault()); }
     }
 
@@ -36,23 +36,23 @@ public final class ManualInterventionAudioWorkflow {
         return fallback == null ? Optional.empty() : fallback;
     }
 
-    public Path startRecording(ApplicationServices services, ProjectSession session, NarrationSegment segment,
+    public Path startRecording(WorkspaceApplicationServices services, ProjectSession session, NarrationSegment segment,
                                String inputDeviceId) throws IOException {
         Path projectFile = session.projectFile().orElseThrow(() -> new IOException("Guarda el proyecto antes de grabar audio manual."));
         ScriptTextRange range = new ScriptTextRange(segment.id(), 0, segment.narrationText().length());
         RecordingActionPlan plan = new RecordingActionPlan(RecordingPurpose.HUMAN_VOICE_FOR_TEXT, range,
                 segment.id() + "-manual.wav", "Grabacion manual para " + segment.id(), true, true);
-        return services.recording().startAudioRecording()
+        return services.playback().recording().startAudioRecording()
                 .startInDirectory(projectFile.toAbsolutePath().normalize().getParent(), plan, inputDeviceId);
     }
 
-    public AudioJobSnapshot applyRecording(ApplicationServices services, AudioWorkflowCoordinator audioWorkflow,
+    public AudioJobSnapshot applyRecording(WorkspaceApplicationServices services, AudioWorkflowCoordinator audioWorkflow,
                                            PlayableAudioJobSelector selector, ProjectSession session,
                                            NarrationScriptDocument script, String activeJobId,
                                            NarrationSegment segment, String displayName, Path recorded) throws IOException {
         Path projectDirectory = projectDirectory(session);
         AudioJobSnapshot target = targetSnapshot(audioWorkflow, selector, projectDirectory, script, activeJobId).orElse(null);
-        return services.audio().manualAudioSegmentJob().apply(projectDirectory, target, session.title(), segment.id(),
+        return services.playback().audio().manualAudioSegmentJob().apply(projectDirectory, target, session.title(), segment.id(),
                 displayName(displayName, segment), recorded, baseline(audioWorkflow, session, script, projectDirectory));
     }
 
@@ -65,7 +65,7 @@ public final class ManualInterventionAudioWorkflow {
                 .orElseThrow(() -> new IOException("No se encontro el WAV aplicado para " + segmentId + "."));
     }
 
-    public AudioJobSnapshot deleteManualAudio(ApplicationServices services, AudioWorkflowCoordinator audioWorkflow,
+    public AudioJobSnapshot deleteManualAudio(WorkspaceApplicationServices services, AudioWorkflowCoordinator audioWorkflow,
                                              PlayableAudioJobSelector selector, ProjectSession session,
                                              NarrationScriptDocument script, String activeJobId,
                                              NarrationSegment segment, String displayName) throws IOException {
@@ -73,7 +73,7 @@ public final class ManualInterventionAudioWorkflow {
         AudioJobSnapshot target = manualSnapshotForSegment(audioWorkflow, selector, projectDirectory, script,
                 activeJobId, segment.id(), true)
                 .orElseThrow(() -> new IOException("No hay audio manual aplicado para " + segment.id() + "."));
-        return services.audio().manualAudioSegmentJob().delete(projectDirectory, target, segment.id(),
+        return services.playback().audio().manualAudioSegmentJob().delete(projectDirectory, target, segment.id(),
                 displayName(displayName, segment), baseline(audioWorkflow, session, script, projectDirectory));
     }
 

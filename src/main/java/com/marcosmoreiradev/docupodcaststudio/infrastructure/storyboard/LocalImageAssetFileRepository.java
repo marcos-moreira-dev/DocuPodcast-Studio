@@ -36,6 +36,9 @@ public final class LocalImageAssetFileRepository implements ImageAssetRepository
             throw new IOException("Image asset not found: " + sourceImageFile);
         }
         String extension = extension(sourceImageFile);
+        if (!java.util.Set.of("png", "jpg", "jpeg", "webp", "gif").contains(extension)) {
+            throw new IOException("El archivo no tiene un formato de imagen admitido: " + extension);
+        }
         String fileName = safeFileStem(assetId + "-" + stripExtension(sourceImageFile.getFileName().toString())) + "." + extension;
         Path target = projectDirectory.resolve(IMAGE_DIR).resolve(fileName).normalize();
         if (!target.startsWith(projectDirectory.resolve(IMAGE_DIR).normalize())) {

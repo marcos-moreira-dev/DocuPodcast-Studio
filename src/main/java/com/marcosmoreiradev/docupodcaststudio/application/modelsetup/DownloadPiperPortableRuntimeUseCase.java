@@ -54,6 +54,11 @@ public final class DownloadPiperPortableRuntimeUseCase {
     }
 
     public PiperRuntimeDownloadReport download(OperationalSettings settings, Path applicationRoot, ModelSetupProgressListener listener) {
+        return download(settings, applicationRoot, listener, false);
+    }
+
+    public PiperRuntimeDownloadReport download(OperationalSettings settings, Path applicationRoot,
+                                               ModelSetupProgressListener listener, boolean forceRedownload) {
         ModelSetupProgressListener progress = listener == null ? ModelSetupProgressListener.noop() : listener;
         Path root = applicationRoot == null ? Path.of(".").toAbsolutePath().normalize() : applicationRoot.toAbsolutePath().normalize();
         RuntimeArtifactPaths paths = RuntimeArtifactPaths.fromRoot(root);
@@ -66,7 +71,7 @@ public final class DownloadPiperPortableRuntimeUseCase {
             Files.createDirectories(piperFolder);
             Files.createDirectories(voiceFolder);
             Path piperExe = piperFolder.resolve("piper.exe");
-            if (Files.isRegularFile(piperExe)) {
+            if (!forceRedownload && Files.isRegularFile(piperExe)) {
                 skipped.add("runtime local");
                 progress.onProgress("Ya existe Voz local simple; se conserva el runtime local.");
             } else {
@@ -87,8 +92,10 @@ public final class DownloadPiperPortableRuntimeUseCase {
 
             Path model = voiceFolder.resolve(PiperVoiceModelPathPolicy.DEFAULT_PIPER_VOICE);
             Path metadata = voiceFolder.resolve(PiperVoiceModelPathPolicy.DEFAULT_PIPER_VOICE + ".json");
-            downloadIfMissing(defaultVoiceUri(settings), model, "voz local simple", downloaded, skipped, failed, progress);
-            downloadIfMissing(defaultVoiceMetadataUri(settings), metadata, "datos de voz local simple", downloaded, skipped, failed, progress);
+            downloadIfMissing(defaultVoiceUri(settings), model, "voz local simple", downloaded, skipped,
+                    failed, progress, forceRedownload);
+            downloadIfMissing(defaultVoiceMetadataUri(settings), metadata, "datos de voz local simple",
+                    downloaded, skipped, failed, progress, forceRedownload);
 
             OperationalSettings effective = settings == null ? OperationalSettings.defaults() : settings;
             OperationalSettings withDefaultVoice = new OperationalSettings(
@@ -150,9 +157,10 @@ public final class DownloadPiperPortableRuntimeUseCase {
     }
 
     private void downloadIfMissing(URI uri, Path destination, String label, ArrayList<String> downloaded,
-                                   ArrayList<String> skipped, ArrayList<String> failed, ModelSetupProgressListener progress)
+                                   ArrayList<String> skipped, ArrayList<String> failed,
+                                   ModelSetupProgressListener progress, boolean forceRedownload)
             throws IOException, InterruptedException {
-        if (Files.isRegularFile(destination) && Files.size(destination) > 0L) {
+        if (!forceRedownload && Files.isRegularFile(destination) && Files.size(destination) > 0L) {
             skipped.add(label);
             progress.onProgress("Ya existe " + label + "; se conserva el archivo local.");
             return;

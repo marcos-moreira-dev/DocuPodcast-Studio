@@ -1,32 +1,35 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.notification;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.StudioMessageDialog;
+
 import com.marcosmoreiradev.docupodcaststudio.application.decisions.UserVisibleDecision;
+import javafx.application.Platform;
 import javafx.scene.control.Alert;
-import javafx.scene.control.TextArea;
 import javafx.stage.Window;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
 /** Presents product notifications and technical errors as consistent JavaFX dialogs. */
 public final class ExceptionAlertPresenter {
+    private static final Logger LOGGER = LoggerFactory.getLogger(
+            ExceptionAlertPresenter.class);
+
     public void show(UserNotification notification, Window owner) {
-        Alert alert = new Alert(alertType(notification.level()));
-        alert.setTitle(notification.title());
-        alert.setHeaderText(notification.headline());
-        alert.setContentText(notification.message());
-        if (!notification.technicalDetail().isBlank()) {
-            TextArea details = new TextArea(notification.technicalDetail());
-            details.setEditable(false);
-            details.setWrapText(true);
-            details.setPrefColumnCount(80);
-            details.setPrefRowCount(8);
-            alert.getDialogPane().setExpandableContent(details);
+        if (notification == null) return;
+        try {
+            // Presentation is deferred to the next JavaFX pulse. This avoids
+            // mutating dialog/layout state from a worker or an active pulse.
+            Platform.runLater(() -> showSafely(notification, owner));
+        } catch (RuntimeException presentationFailure) {
+            LOGGER.error("Could not schedule the JavaFX notification: {}",
+                    notification.headline(), presentationFailure);
         }
-        DialogStyler.apply(alert, owner);
-        alert.showAndWait();
     }
 
     public void showFailure(String headline, Throwable error, Window owner) {
+        LOGGER.error("Application operation failed: {}", headline, error);
         show(UserNotification.failure(headline, error), owner);
     }
 
@@ -51,5 +54,21 @@ public final class ExceptionAlertPresenter {
             case WARNING -> Alert.AlertType.WARNING;
             case ERROR -> Alert.AlertType.ERROR;
         };
+    }
+
+    private static void showSafely(UserNotification notification, Window owner) {
+        try {
+            Alert alert = StudioMessageDialog.create(
+                    owner,
+                    alertType(notification.level()),
+                    notification.title(),
+                    notification.headline(),
+                    notification.message(),
+                    notification.technicalDetail());
+            alert.show();
+        } catch (RuntimeException presentationFailure) {
+            LOGGER.error("Could not present the JavaFX notification: {}",
+                    notification.headline(), presentationFailure);
+        }
     }
 }

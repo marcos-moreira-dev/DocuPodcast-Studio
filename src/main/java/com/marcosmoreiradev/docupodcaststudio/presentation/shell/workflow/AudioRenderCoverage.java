@@ -4,12 +4,11 @@ import com.marcosmoreiradev.docupodcaststudio.domain.audio.AudioJobSnapshot;
 import com.marcosmoreiradev.docupodcaststudio.domain.audio.AudioSegmentSnapshot;
 import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationScriptDocument;
 import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationSegment;
+import com.marcosmoreiradev.docupodcaststudio.application.audio.AudioGenerationUnit;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 /** Checks whether persisted jobs cover the current script, including RenderUnit audio ids. */
 public final class AudioRenderCoverage {
@@ -22,39 +21,41 @@ public final class AudioRenderCoverage {
         if (script == null || script.empty() || jobs == null || jobs.isEmpty()) {
             return false;
         }
-        Set<String> audioIds = completedAudioIds(jobs, projectDirectory);
-        if (audioIds.isEmpty()) {
-            return false;
-        }
-        for (NarrationSegment segment : script.segments()) {
-            if (segment.narratable() && !hasAudioForSegment(audioIds, segment.id())) {
-                return false;
-            }
-        }
-        return true;
+        if (projectDirectory == null) return false;
+        List<AudioGenerationUnit> units = script.segments().stream()
+                .filter(NarrationSegment::narratable)
+                .map(AudioGenerationUnit::fromSegment).toList();
+        return new com.marcosmoreiradev.docupodcaststudio.application.audio.ReusableAudioCoverage()
+                .resolve(units, jobs, projectDirectory).complete();
     }
 
-    private static Set<String> completedAudioIds(List<AudioJobSnapshot> jobs, Path projectDirectory) {
-        LinkedHashSet<String> result = new LinkedHashSet<>();
+    private static List<AudioSegmentSnapshot> completedAudio(List<AudioJobSnapshot> jobs, Path projectDirectory) {
+        java.util.ArrayList<AudioSegmentSnapshot> result = new java.util.ArrayList<>();
         for (AudioJobSnapshot job : jobs) {
             for (AudioSegmentSnapshot segment : job.segments()) {
                 if (usableAudio(projectDirectory, segment)) {
-                    result.add(segment.segmentId());
+                    result.add(segment);
                 }
             }
         }
         return result;
     }
 
-    private static boolean hasAudioForSegment(Set<String> audioIds, String segmentId) {
+    private static boolean hasCurrentAudioForSegment(List<AudioSegmentSnapshot> audio,
+                                                     NarrationSegment narration) {
+        String segmentId = narration.id();
         if (segmentId == null || segmentId.isBlank()) {
             return false;
         }
-        if (audioIds.contains(segmentId)) {
-            return true;
-        }
+        var expected = AudioGenerationUnit.fromSegment(narration).sourceFingerprint();
         String unitPrefix = segmentId + "-";
-        return audioIds.stream().anyMatch(id -> id.startsWith(unitPrefix));
+        return audio.stream().anyMatch(clip -> (clip.segmentId().equals(segmentId)
+                || clip.segmentId().startsWith(unitPrefix))
+                && (manual(clip) || clip.reusableFor(expected)));
+    }
+
+    private static boolean manual(AudioSegmentSnapshot segment) {
+        return segment.audioRelativePath().toLowerCase(java.util.Locale.ROOT).endsWith("-manual.wav");
     }
 
     private static boolean usableAudio(Path projectDirectory, AudioSegmentSnapshot segment) {

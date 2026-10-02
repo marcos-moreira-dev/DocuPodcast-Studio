@@ -169,16 +169,58 @@
     -fx-wrap-text: true;
 }
 
+.technical-problem-mode-section,
+.technical-problem-tools {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-padding: 8;
+}
+
 .technical-problem-mode-flow,
 .technical-problem-tools-flow {
     -fx-alignment: center-left;
     -fx-row-valignment: center;
+    -fx-hgap: 8;
+    -fx-vgap: 6;
+}
+
+.technical-problem-history-tools,
+.technical-problem-image-tools {
+    -fx-border-color: -docu-border-soft transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 7 0 0 0;
+}
+
+.technical-problem-primary-tools {
+    -fx-background-color: -docu-accent-soft;
+    -fx-background-radius: 5;
+    -fx-padding: 7;
 }
 
 .technical-problem-tools-flow .button,
+.technical-problem-tools-flow .toggle-button,
 .technical-problem-mode-flow .button,
 .technical-problem-mode-flow .toggle-button {
     -fx-min-height: 38px;
+}
+
+.technical-problem-primary-tools .toggle-button:selected {
+    -fx-background-color: -docu-accent;
+    -fx-text-fill: -docu-text-on-dark;
+    -fx-border-color: -docu-accent-dark;
+}
+
+.technical-problem-primary-tools .toggle-button:selected .ui-lucide-icon-shape {
+    -fx-stroke: -docu-text-on-dark;
+}
+
+.technical-problem-measurement-status {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-weight: 700;
+    -fx-padding: 0 0 0 8;
 }
 
 .technical-problem-icon-button {
@@ -196,10 +238,12 @@
     -fx-stroke: #9aa3b2;
 }
 
-.technical-problem-input-diagnostic {
+.ink-pressure-indicator {
     -fx-text-fill: #56627a;
     -fx-font-size: 12px;
-    -fx-padding: 8 8 0 4;
+    -fx-font-family: "Consolas";
+    -fx-alignment: center-left;
+    -fx-padding: 8 0 0 0;
 }
 
 .technical-problem-canvas-frame {
@@ -226,6 +270,16 @@
     -fx-font-size: 15px;
     -fx-font-weight: 800;
     -fx-text-fill: #111827;
+}
+
+.theatre-frame-save-feedback {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+}
+
+.theatre-frame-save-feedback.error {
+    -fx-text-fill: -docu-danger;
 }
 
 .theatre-camera-guide-veil {
@@ -267,4 +321,49 @@
 
 .technical-problem-canvas-scroll {
     -fx-background-color: transparent;
+}
+
+.technical-problem-toolbar-shell {
+    -fx-background-color: -docu-bg-card;
+    -fx-border-color: -docu-border-soft;
+    -fx-padding: 4;
+}
+.technical-problem-toolbar-shell .technical-problem-tools {
+    -fx-border-width: 0;
+    -fx-padding: 2;
+}
+.technical-problem-toolbar-shell .technical-problem-primary-tools {
+    -fx-padding: 2;
+}
+
+.technical-problem-toolbar-shell .studio-canvas-toolbar-group-label {
+    -fx-padding: 0 7 0 10;
+}
+
+.technical-notebook-tabs > .tab-header-area > .tab-header-background {
+    -fx-background-color: -docu-bg-card;
+}
+.technical-notebook-tabs > .tab-header-area .tab {
+    -fx-padding: 5 10;
+}
+.technical-notebook-tabs > .tab-header-area {
+    -fx-padding: 2 4 0 4;
+}
+
+.technical-notebook-tabs > .tab-header-area .tab .focus-indicator {
+    -fx-border-color: transparent;
+}
+.technical-notebook-tabs > .tab-header-area .control-buttons-tab {
+    -fx-background-color: -docu-bg-card;
+}
+.technical-notebook-tabs > .tab-header-area .tab-down-button {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 4;
+}
+.technical-notebook-tabs > .tab-header-area .tab-down-button:hover {
+    -fx-background-color: -docu-bg-hover;
+}
+.technical-notebook-tabs > .tab-header-area .tab-down-button .arrow {
+    -fx-background-color: -docu-text-muted;
 }

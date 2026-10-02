@@ -154,7 +154,7 @@ public final class InspectExportReadinessUseCase {
                         DocuPodcastExportFormat.WAV,
                         "audio-final.wav / .mp3 / .aac",
                         missing,
-                        List.of("Solo se exporta audio realmente existente; no se sintetizan fragmentos faltantes durante la exportaciÃ³n."));
+                        List.of("Solo se exporta audio realmente existente; no se sintetizan fragmentos faltantes durante la exportación."));
             }
             return ExportReadinessItem.exportable(
                     ExportableArtifactKind.PODCAST_WAV,

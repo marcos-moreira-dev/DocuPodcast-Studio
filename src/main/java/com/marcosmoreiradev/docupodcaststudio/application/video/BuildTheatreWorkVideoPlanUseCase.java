@@ -127,7 +127,8 @@ public final class BuildTheatreWorkVideoPlanUseCase {
                         visualAsset,
                         mapAsset,
                         characterNames), output);
-                double totalDurationSeconds = audio.durationSeconds() + effective.silenceAfterFrameSeconds();
+                double spokenTailSeconds = TheatreVideoTimingPolicy.spokenTailSeconds();
+                double totalDurationSeconds = audio.durationSeconds() + spokenTailSeconds;
                 List<SimpleVideoFrame.VisualPart> visualParts = List.of();
                 if (inferredVisual != null && totalDurationSeconds > 0.0) {
                     Path inferredOutput = framesDir.resolve("theatre-work-"
@@ -161,7 +162,7 @@ public final class BuildTheatreWorkVideoPlanUseCase {
                         relativeToProject(root, output),
                         audio.audioRelativePath(),
                         audio.durationSeconds(),
-                        effective.silenceAfterFrameSeconds(),
+                        spokenTailSeconds,
                         true,
                         true,
                         false,
@@ -174,7 +175,7 @@ public final class BuildTheatreWorkVideoPlanUseCase {
             throw new IOException("La obra teatral no tiene intervenciones exportables.");
         }
         return new SimpleVideoPlan("Obra teatral - " + script.title(), frames,
-                effective.silenceAfterFrameSeconds(), Instant.now());
+                TheatreVideoTimingPolicy.spokenTailSeconds(), Instant.now());
     }
 
     private static void render(FrameSpec spec, Path output) throws IOException {

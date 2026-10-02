@@ -1,10 +1,10 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.document;
 
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.InkRealtimeStrokeEngine;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputCursor;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputListener;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputSample;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.JavaFxMouseInputProvider;
+import com.marcosmoreiradev.docupodcaststudio.ink.InkRealtimeStrokeEngine;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputCursor;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputListener;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputSample;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.JavaFxMouseInputProvider;
 import javafx.geometry.Point2D;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;

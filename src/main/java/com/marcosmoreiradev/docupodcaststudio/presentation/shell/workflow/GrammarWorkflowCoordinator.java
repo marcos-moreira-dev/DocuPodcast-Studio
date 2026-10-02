@@ -12,6 +12,7 @@ import com.marcosmoreiradev.docupodcaststudio.domain.theatre.plan.ActPlan;
 import com.marcosmoreiradev.docupodcaststudio.domain.theatre.plan.ImportPlan;
 import com.marcosmoreiradev.docupodcaststudio.domain.theatre.plan.ProfilePlan;
 import com.marcosmoreiradev.docupodcaststudio.domain.theatre.plan.ScenePlan;
+import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreImportUseCase;
 import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.DocumentImportProgressDialog;
 import com.marcosmoreiradev.docupodcaststudio.presentation.notification.ExceptionAlertPresenter;
 import com.marcosmoreiradev.docupodcaststudio.presentation.process.FxBackgroundTaskRunner;
@@ -51,7 +52,7 @@ public final class GrammarWorkflowCoordinator {
     public void exportTemplate(ProjectGrammarKind kind, Path target) {
         Path resolvedTarget = ensureMarkdownExtension(target);
         try {
-            String markdown = viewModel.applicationServices().grammar().buildGrammarTemplate().templateFor(kind).markdown();
+            String markdown = viewModel.projectWorkspace().grammar().buildGrammarTemplate().templateFor(kind).markdown();
             Files.writeString(resolvedTarget, markdown, StandardCharsets.UTF_8);
             viewModel.updateStatusMessage("Plantilla " + kind.displayName().toLowerCase(java.util.Locale.ROOT)
                     + " exportada: " + resolvedTarget.getFileName() + ".");
@@ -67,9 +68,10 @@ public final class GrammarWorkflowCoordinator {
             protected TheatreGrammarImportBundle call() throws Exception {
                 updateMessage("Leyendo gramatica teatral Markdown...");
                 ImportProjectGrammarMarkdownUseCase.TheatreParseResult parsed =
-                        viewModel.applicationServices().grammar().importProjectGrammarMarkdown().parseTheatre(sourceFile);
+                        viewModel.projectWorkspace().grammar().importProjectGrammarMarkdown().parseTheatre(sourceFile);
                 updateMessage("Importando obra como documento teatral...");
-                ReadableDocument document = viewModel.importAndClassifySourceDocument(sourceFile);
+                ReadableDocument document = new com.marcosmoreiradev.docupodcaststudio.application.theatre.grammar.TheatreGrammarDocumentBuilder()
+                        .build(parsed.plan(), sourceFile);
                 return new TheatreGrammarImportBundle(document, parsed.plan(), parsed.report());
             }
         };
@@ -96,9 +98,9 @@ public final class GrammarWorkflowCoordinator {
             protected NarrativeVideoGrammarImportBundle call() throws Exception {
                 updateMessage("Leyendo gramatica narrativa Markdown...");
                 ImportProjectGrammarMarkdownUseCase.NarrativeParseResult parsed =
-                        viewModel.applicationServices().grammar().importProjectGrammarMarkdown().parseNarrative(sourceFile);
+                        viewModel.projectWorkspace().grammar().importProjectGrammarMarkdown().parseNarrative(sourceFile);
                 updateMessage("Importando guion narrativo como documento...");
-                ReadableDocument document = viewModel.importAndClassifySourceDocument(sourceFile);
+                ReadableDocument document = viewModel.importAndClassifyBlockSourceDocument(sourceFile);
                 return new NarrativeVideoGrammarImportBundle(document, parsed.plan(), parsed.report());
             }
         };
@@ -121,21 +123,78 @@ public final class GrammarWorkflowCoordinator {
     private void completeTheatreImport(Path sourceFile, TheatreGrammarImportBundle bundle,
                                        Consumer<Path> promptSaveProjectForImportedSourceIfNeeded) {
         try {
-            viewModel.attachImportedDocument(bundle.document());
-            applyTheatreGrammarPlan(bundle.plan());
+            viewModel.attachImportedDocument(
+                    new com.marcosmoreiradev.docupodcaststudio.application.document.BlockDocumentSource(
+                            bundle.document()));
             viewModel.buildNarrationScriptFromDocument();
             promptSaveProjectForImportedSourceIfNeeded.accept(sourceFile);
-            GrammarImportReport report = materializeTheatre(sourceFile, bundle.plan(), bundle.report());
-            viewModel.showTheatreScriptWorkspace(theatreGrammarImportMessage(bundle.plan(), report));
+            if (viewModel.currentProjectFile().isEmpty()) {
+                applyTheatreGrammarPlan(bundle.plan(), java.util.Map.of());
+                viewModel.showTheatreScriptWorkspace("Importación pendiente: guarda y vuelve a importar la gramática para incorporar sus imágenes.");
+                return;
+            }
+            importTheatreAssets(sourceFile, bundle);
         } catch (IOException | RuntimeException ex) {
             showError("No se pudo importar la gramatica teatral", ex);
         }
     }
 
+    private void importTheatreAssets(Path sourceFile, TheatreGrammarImportBundle bundle) {
+        DocuPodcastProject original = viewModel.currentProject().orElseThrow();
+        Path projectFile = viewModel.currentProjectFile().orElseThrow();
+        var imageImporter = viewModel.generationWorkspace().storyboard().importImageAsset();
+        DocumentImportProgressDialog progress = new DocumentImportProgressDialog(owner(), sourceFile.getFileName().toString());
+        Task<TheatreAssetsBundle> task = new Task<>() {
+            @Override protected TheatreAssetsBundle call() throws Exception {
+                DocuPodcastProject[] project = {original};
+                var assets = new com.marcosmoreiradev.docupodcaststudio.application.theatre.grammar.TheatreGrammarAssetImporter()
+                        .importAssets(sourceFile, bundle.plan(), path -> {
+                            updateMessage("Incorporando recurso teatral: " + path.getFileName());
+                            var imported = imageImporter.importImage(project[0], projectFile, path);
+                            project[0] = imported.project();
+                            return imported.imageAsset().id();
+                        });
+                return new TheatreAssetsBundle(project[0], assets);
+            }
+        };
+        progress.bind(task);
+        task.setOnSucceeded(event -> {
+            progress.close();
+            if (viewModel.currentProject().orElse(null) != original
+                    || !viewModel.currentProjectFile().filter(projectFile::equals).isPresent()) {
+                showError("La obra cambió durante la importación", new IllegalStateException(
+                        "Vuelve a importar la gramática en el proyecto que deseas configurar."));
+                return;
+            }
+            try {
+                var result = task.getValue();
+                applyTheatreGrammarPlan(bundle.plan(), result.assets().assetIds(), result.project());
+                viewModel.saveCurrentProject();
+                GrammarImportReport report = materializeTheatre(sourceFile, bundle.plan(),
+                        bundle.report().withAdditionalDiagnostics(result.assets().diagnostics())
+                                .withAdditionalDiagnostics(unresolvedVoiceDiagnostics(bundle.plan())));
+                viewModel.showTheatreScriptWorkspace(theatreGrammarImportMessage(bundle.plan(), report));
+            } catch (IOException | RuntimeException ex) {
+                showError("No se pudo completar la importación teatral", ex);
+            }
+        });
+        task.setOnFailed(event -> {
+            progress.close();
+            showError("No se pudieron incorporar los recursos teatrales", task.getException());
+        });
+        progress.show();
+        backgroundTaskRunner.start("docupodcast-theatre-assets-import", task);
+    }
+
+    private record TheatreAssetsBundle(DocuPodcastProject project,
+            com.marcosmoreiradev.docupodcaststudio.application.theatre.grammar.TheatreGrammarAssetImporter.Result assets) { }
+
     private void completeNarrativeImport(Path sourceFile, NarrativeVideoGrammarImportBundle bundle,
                                          Consumer<Path> promptSaveProjectForImportedSourceIfNeeded) {
         try {
-            viewModel.attachImportedDocument(bundle.document());
+            viewModel.attachImportedDocument(
+                    new com.marcosmoreiradev.docupodcaststudio.application.document.BlockDocumentSource(
+                            bundle.document()));
             viewModel.buildNarrationScriptFromDocument();
             promptSaveProjectForImportedSourceIfNeeded.accept(sourceFile);
             GrammarImportReport report = materializeNarrative(sourceFile, bundle.plan(), bundle.report());
@@ -152,7 +211,7 @@ public final class GrammarWorkflowCoordinator {
             return report.withAdditionalDiagnostics(List.of(GrammarDiagnostic.warning(
                     "SEMANTICS_NOT_MATERIALIZED", "No hay proyecto activo para escribir project-semantics.json.")));
         }
-        return viewModel.applicationServices().grammar().importProjectGrammarMarkdown().materializeNarrative(
+        return viewModel.projectWorkspace().grammar().importProjectGrammarMarkdown().materializeNarrative(
                 project.get(), viewModel.currentProjectFile().orElse(null), sourceFile, plan,
                 viewModel.currentScriptProperty().get(), report);
     }
@@ -163,24 +222,37 @@ public final class GrammarWorkflowCoordinator {
             return report.withAdditionalDiagnostics(List.of(GrammarDiagnostic.warning(
                     "SEMANTICS_NOT_MATERIALIZED", "No hay proyecto activo para escribir project-semantics.json.")));
         }
-        return viewModel.applicationServices().grammar().importProjectGrammarMarkdown().materializeTheatre(
+        return viewModel.projectWorkspace().grammar().importProjectGrammarMarkdown().materializeTheatre(
                 project.get(), viewModel.currentProjectFile().orElse(null), sourceFile, plan,
                 viewModel.currentScriptProperty().get(), report);
     }
 
-    private void applyTheatreGrammarPlan(ImportPlan plan) {
-        for (ProfilePlan character : plan.characters()) {
-            viewModel.saveTheatreCharacterDescription("", character.name(), character.notes());
+    private void applyTheatreGrammarPlan(ImportPlan plan, java.util.Map<String, String> assetIds) {
+        DocuPodcastProject original = viewModel.currentProject()
+                .orElseThrow(() -> new IllegalStateException("No hay proyecto activo."));
+        applyTheatreGrammarPlan(plan, assetIds, original);
+    }
+
+    private void applyTheatreGrammarPlan(ImportPlan plan, java.util.Map<String, String> assetIds, DocuPodcastProject original) {
+        TheatreImportUseCase.ImportResult imported = new TheatreImportUseCase().execute(
+                plan, viewModel.currentScriptProperty().get(), original.voiceLibrary(), assetIds);
+        DocuPodcastProject updated = original.withTheatre(imported.layer());
+        for (var boundary : imported.sceneBoundariesStart().entrySet()) {
+            updated = updated.withViewState("theatre.sceneBoundary." + boundary.getKey(),
+                    boundary.getValue() + "|" + imported.sceneBoundariesEnd().getOrDefault(boundary.getKey(), ""));
         }
-        for (ProfilePlan object : plan.objects()) {
-            viewModel.saveTheatreObjectDescription("", object.name(), object.notes());
-        }
-        for (ActPlan act : plan.acts()) {
-            String actId = ensureTheatreAct(act.name(), act.notes());
-            for (ScenePlan scene : act.scenes()) {
-                ensureTheatreScene(actId, scene.name(), scene.notes());
-            }
-        }
+        for (var assignment : imported.emotionAssignments()) updated = updated.withNarrativeLayerAssignment(assignment);
+        for (var assignment : imported.imageAssignments()) updated = updated.withNarrativeLayerAssignment(assignment);
+        viewModel.applyTheatreGrammarImport(updated,
+                "Gramática " + plan.grammarVersion() + " materializada en el proyecto teatral.");
+    }
+
+    private List<GrammarDiagnostic> unresolvedVoiceDiagnostics(ImportPlan plan) {
+        var library = viewModel.currentProject().orElseThrow().voiceLibrary();
+        return plan.characters().stream().filter(p -> !p.voz().isBlank())
+                .filter(p -> library.voiceById(TheatreImportUseCase.resolveVoiceId(p.voz(), library)).isEmpty())
+                .map(p -> GrammarDiagnostic.warning("THEATRE_VOICE_UNRESOLVED",
+                        "Voz no disponible para " + p.name() + ": " + p.voz())).toList();
     }
 
     private String ensureTheatreAct(String displayName, String notes) {
@@ -220,7 +292,7 @@ public final class GrammarWorkflowCoordinator {
         int sceneCount = plan.acts().stream().mapToInt(act -> act.scenes().size()).sum();
         String links = plan.mediaLinks().isEmpty()
                 ? ""
-                : " Links visuales detectados: " + plan.mediaLinks().size() + " (quedan como referencias en esta importacion).";
+                : " Enlaces adicionales detectados: " + plan.mediaLinks().size() + ".";
         String interventions = plan.interventions().isEmpty()
                 ? ""
                 : " Intervenciones: " + plan.interventions().size() + ".";

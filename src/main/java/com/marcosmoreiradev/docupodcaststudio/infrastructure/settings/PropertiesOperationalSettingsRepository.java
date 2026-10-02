@@ -3,8 +3,11 @@ package com.marcosmoreiradev.docupodcaststudio.infrastructure.settings;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.OperationalSettings;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.FrameGenerationSettings;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.ImageGenerationSettings;
+import com.marcosmoreiradev.docupodcaststudio.application.settings.ImageSuperResolutionSettings;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.OperationalSettingsRepository;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.OperationalSettingsMigrationPolicy;
+import com.marcosmoreiradev.docupodcaststudio.application.settings.SelectedMediaEngines;
+import com.marcosmoreiradev.docupodcaststudio.application.compatibility.media.LegacyEngineAliases;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -76,8 +79,8 @@ public final class PropertiesOperationalSettingsRepository implements Operationa
                         intValue(p, "playback.lookaheadSegments", 10),
                         boolValue(p, "playback.pauseWhenBufferMissing", true)),
                 new OperationalSettings.TtsEngineSettings(
-                        p.getProperty("tts.engineMode", "mock"),
-                        p.getProperty("tts.commandTemplate", ""),
+                        p.getProperty("capability.voice.engine", p.getProperty("tts.engineMode", "piper")),
+                        engineProperty(p, "voice", "commandTemplate", p.getProperty("tts.commandTemplate", "")),
                         p.getProperty("tts.displayName", "Motor TTS local"),
                         p.getProperty("tts.language", "es"),
                         p.getProperty("tts.voiceProfileId", "VOC-NARRATOR"),
@@ -88,14 +91,16 @@ public final class PropertiesOperationalSettingsRepository implements Operationa
                         p.getProperty("download.piper.defaultVoiceUrl", ""),
                         p.getProperty("download.piper.defaultVoiceMetadataUrl", "")),
                 new OperationalSettings.VideoRenderSettings(
-                        p.getProperty("video.ffmpegExecutable", ""),
+                        p.getProperty("engine.ffmpeg.executable", p.getProperty("video.ffmpegExecutable", "")),
                         p.getProperty("video.resolutionPreset", "2K"),
                         boolValue(p, "video.preferEmbeddedFfmpeg", true),
                         doubleValue(p, "video.silentVisualBlockSeconds", 5.0),
                         p.getProperty("download.ffmpeg.runtimeZipUrl", "")),
                 new ImageGenerationSettings(
-                        p.getProperty("image.engineMode", "managed-local"),
-                        p.getProperty("image.baseUrl", "http://127.0.0.1:8188"),
+                        legacyImageMode(p.getProperty("capability.image.engine",
+                                p.getProperty("image.engineMode", "managed-local"))),
+                        engineProperty(p, "image", "baseUrl",
+                                p.getProperty("image.baseUrl", "http://127.0.0.1:8188")),
                         p.getProperty("image.devicePolicy", "AUTO"),
                         p.getProperty("image.preset", "PRODUCTION_SDXL_REFERENCE"),
                         p.getProperty("image.modelName", "v1-5-pruned-emaonly-fp16.safetensors"),
@@ -104,6 +109,23 @@ public final class PropertiesOperationalSettingsRepository implements Operationa
                         boolValue(p, "image.lowVram", true),
                         p.getProperty("image.memoryProfile", ""),
                         intValue(p, "image.maxAttempts", 2)),
+                new ImageSuperResolutionSettings(
+                        p.getProperty("visual.generationProfile", "P1080"),
+                        boolValue(p, "upscale.enabled", false),
+                        p.getProperty("upscale.targetProfile", "QHD_2K"),
+                        p.getProperty("upscale.modelName", "RealESRGAN_x4plus.pth"),
+                        boolValue(p, "refinement.enabled", false),
+                        p.getProperty("refinement.preset", "conservative"),
+                        p.getProperty("refinement.engineId",
+                                ImageSuperResolutionSettings.DEFAULT_REFINEMENT_ENGINE)),
+                new OperationalSettings.MediaEngineSelectionSettings(
+                        p.getProperty("capability.voice.engine", p.getProperty("tts.engineMode", "piper")),
+                        p.getProperty("capability.image.engine",
+                                canonicalImageEngine(p.getProperty("image.engineMode", "managed-local"))),
+                        p.getProperty("capability.video.generation.engine",
+                                LegacyEngineAliases.videoGenerationEngine()),
+                        p.getProperty("capability.video.render.engine",
+                                LegacyEngineAliases.videoRenderEngine())),
                 new FrameGenerationSettings(
                         p.getProperty("frames.mode", "SINGLE"),
                         p.getProperty("frames.scope", "ALL"),
@@ -114,7 +136,9 @@ public final class PropertiesOperationalSettingsRepository implements Operationa
                         p.getProperty("compute.selectedDeviceId", ""),
                         boolValue(p, "compute.allowGpuForTts", true),
                         boolValue(p, "compute.allowGpuForVideo", true),
-                        p.getProperty("video.encoderPolicy", "AUTO")),
+                        p.getProperty("video.encoderPolicy", "AUTO"),
+                        boolValue(p, "compute.allowGpuForContentAnalysis", true),
+                        boolValue(p, "compute.allowRamOffloadForContentAnalysis", true)),
                 new OperationalSettings.OcrSettings(
                         p.getProperty("ocr.engineMode", "managed-local"),
                         p.getProperty("ocr.tesseractExecutable", ""),
@@ -135,6 +159,7 @@ public final class PropertiesOperationalSettingsRepository implements Operationa
 
     static Properties toProperties(OperationalSettings settings) {
         OperationalSettings current = settings == null ? OperationalSettings.defaults() : settings;
+        SelectedMediaEngines selected = SelectedMediaEngines.from(current);
         Properties p = new Properties();
         p.setProperty("reading.fontSize", Integer.toString(current.readingDocument().baseFontSize()));
         p.setProperty("reading.lineSpacing", Double.toString(current.readingDocument().lineSpacing()));
@@ -143,6 +168,8 @@ public final class PropertiesOperationalSettingsRepository implements Operationa
         p.setProperty("playback.lookaheadSegments", Integer.toString(current.playbackBuffer().lookaheadSegments()));
         p.setProperty("playback.pauseWhenBufferMissing", Boolean.toString(current.playbackBuffer().pauseWhenBufferMissing()));
         p.setProperty("tts.engineMode", current.tts().engineMode());
+        p.setProperty("capability.voice.engine", selected.voice().value());
+        p.setProperty("engine." + selected.voice().value() + ".commandTemplate", current.tts().commandTemplate());
         p.setProperty("tts.commandTemplate", current.tts().commandTemplate());
         p.setProperty("tts.displayName", current.tts().displayName());
         p.setProperty("tts.language", current.tts().language());
@@ -154,11 +181,17 @@ public final class PropertiesOperationalSettingsRepository implements Operationa
         p.setProperty("download.piper.defaultVoiceUrl", current.tts().piperDefaultVoiceUrl());
         p.setProperty("download.piper.defaultVoiceMetadataUrl", current.tts().piperDefaultVoiceMetadataUrl());
         p.setProperty("video.ffmpegExecutable", current.video().ffmpegExecutable());
+        p.setProperty("capability.video.render.engine", selected.videoRender().value());
+        p.setProperty("capability.video.generation.engine", selected.videoGeneration().value());
+        p.setProperty("engine.ffmpeg.executable", current.video().ffmpegExecutable());
         p.setProperty("video.resolutionPreset", current.video().resolutionPreset());
         p.setProperty("video.preferEmbeddedFfmpeg", Boolean.toString(current.video().preferEmbeddedFfmpeg()));
         p.setProperty("video.silentVisualBlockSeconds", Double.toString(current.video().silentVisualBlockSeconds()));
         p.setProperty("download.ffmpeg.runtimeZipUrl", current.video().ffmpegDownloadUrl());
         p.setProperty("image.engineMode", current.imageGeneration().engineMode());
+        p.setProperty("capability.image.engine", selected.image().value());
+        p.setProperty("engine." + selected.image().value() + ".baseUrl",
+                current.imageGeneration().baseUrl());
         p.setProperty("image.baseUrl", current.imageGeneration().baseUrl());
         p.setProperty("image.devicePolicy", current.imageGeneration().devicePolicy());
         p.setProperty("image.preset", current.imageGeneration().preset());
@@ -168,6 +201,14 @@ public final class PropertiesOperationalSettingsRepository implements Operationa
         p.setProperty("image.lowVram", Boolean.toString(current.imageGeneration().lowVram()));
         p.setProperty("image.memoryProfile", current.imageGeneration().memoryProfile());
         p.setProperty("image.maxAttempts", Integer.toString(current.imageGeneration().maxAttempts()));
+        p.setProperty("visual.generationProfile", current.imageSuperResolution().generationProfile());
+        p.setProperty("upscale.enabled", Boolean.toString(current.imageSuperResolution().enabled()));
+        p.setProperty("upscale.targetProfile", current.imageSuperResolution().targetProfile());
+        p.setProperty("upscale.modelName", current.imageSuperResolution().modelName());
+        p.setProperty("refinement.enabled",
+                Boolean.toString(current.imageSuperResolution().refinementEnabled()));
+        p.setProperty("refinement.preset", current.imageSuperResolution().refinementPreset());
+        p.setProperty("refinement.engineId", current.imageSuperResolution().refinementEngineId());
         p.setProperty("frames.mode", current.frameGeneration().mode());
         p.setProperty("frames.scope", current.frameGeneration().scope());
         p.setProperty("frames.outputDirectory", current.frameGeneration().outputDirectory());
@@ -176,6 +217,10 @@ public final class PropertiesOperationalSettingsRepository implements Operationa
         p.setProperty("compute.selectedDeviceId", current.compute().selectedDeviceId());
         p.setProperty("compute.allowGpuForTts", Boolean.toString(current.compute().allowGpuForTts()));
         p.setProperty("compute.allowGpuForVideo", Boolean.toString(current.compute().allowGpuForVideo()));
+        p.setProperty("compute.allowGpuForContentAnalysis",
+                Boolean.toString(current.compute().allowGpuForContentAnalysis()));
+        p.setProperty("compute.allowRamOffloadForContentAnalysis",
+                Boolean.toString(current.compute().allowRamOffloadForContentAnalysis()));
         p.setProperty("video.encoderPolicy", current.compute().videoEncoderPolicy().name());
         p.setProperty("ocr.engineMode", current.ocr().engineMode());
         p.setProperty("ocr.tesseractExecutable", current.ocr().tesseractExecutable());
@@ -198,6 +243,20 @@ public final class PropertiesOperationalSettingsRepository implements Operationa
         } catch (RuntimeException ex) {
             return fallback;
         }
+    }
+
+    private static String engineProperty(Properties properties, String capability, String field, String fallback) {
+        String engineId = properties.getProperty("capability." + capability + ".engine", "").strip();
+        if (engineId.isBlank()) return fallback;
+        return properties.getProperty("engine." + engineId + "." + field, fallback);
+    }
+
+    private static String canonicalImageEngine(String legacyMode) {
+        return "managed-local".equalsIgnoreCase(legacyMode) ? "comfyui" : legacyMode;
+    }
+
+    private static String legacyImageMode(String engineId) {
+        return "comfyui".equalsIgnoreCase(engineId) ? "managed-local" : engineId;
     }
 
     private static double doubleValue(Properties p, String key, double fallback) {

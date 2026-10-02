@@ -46,20 +46,23 @@ public final class TheatreStageBackdropResolver {
         if (theatre == null) {
             return "";
         }
-        Optional<String> inherited = inheritedInterventionAssignment(theatre, interventionId);
+        Optional<String> inherited = inheritedInterventionAssignment(theatre, sceneId, interventionId);
         if (inherited.isPresent()) {
             return TheatreProjectLayer.STAGE_BACKDROP_NONE.equals(inherited.get()) ? "" : inherited.get();
         }
         return assignment(theatre, TheatreProjectLayer.STAGE_BACKDROP_SCOPE_SCENE, sceneId).orElse("");
     }
 
-    private static Optional<String> inheritedInterventionAssignment(TheatreProjectLayer theatre, String interventionId) {
+    private static Optional<String> inheritedInterventionAssignment(TheatreProjectLayer theatre, String sceneId, String interventionId) {
         if (interventionId == null || interventionId.isBlank()) {
             return Optional.empty();
         }
         int target = sequenceOf(theatre, interventionId).orElse(Integer.MAX_VALUE);
         return theatre.stageBackdropAssignments().stream()
                 .filter(assignment -> TheatreProjectLayer.STAGE_BACKDROP_SCOPE_INTERVENTION.equals(assignment.scope()))
+                .filter(assignment -> theatre.textActionPlacements().stream()
+                        .filter(p -> p.intervencionId().equals(assignment.scopeId()))
+                        .findFirst().map(p -> p.sceneId().equals(sceneId)).orElse(true))
                 .filter(assignment -> sequenceOf(theatre, assignment.scopeId())
                         .map(sequence -> sequence <= target)
                         .orElse(assignment.scopeId().equals(interventionId)))

@@ -2,6 +2,7 @@ package com.marcosmoreiradev.docupodcaststudio.application.runtime;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.DigestInputStream;
@@ -62,7 +63,7 @@ public final class AuditEngineArtifactsUseCase {
         Objects.requireNonNull(outputPath, "outputPath");
         Path target = outputPath.toAbsolutePath().normalize();
         Files.createDirectories(target.getParent());
-        Files.writeString(target, report.toMarkdown());
+        Files.writeString(target, report.toMarkdown(), StandardCharsets.UTF_8);
         return target;
     }
 

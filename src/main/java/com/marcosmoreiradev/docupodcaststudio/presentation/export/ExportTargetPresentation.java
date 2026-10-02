@@ -13,6 +13,7 @@ public record ExportTargetPresentation(
         String readinessLabel,
         String detail,
         boolean executable,
+        boolean preparable,
         String relatedProcessSummary
 ) {
     public ExportTargetPresentation {
@@ -34,7 +35,21 @@ public record ExportTargetPresentation(
             String detail,
             boolean executable
     ) {
-        this(commandId, title, format, targetHint, readinessLabel, detail, executable,
+        this(commandId, title, format, targetHint, readinessLabel, detail, executable, executable,
+                "Sin procesos relacionados registrados.");
+    }
+
+    public ExportTargetPresentation(
+            AppCommandId commandId,
+            String title,
+            String format,
+            String targetHint,
+            String readinessLabel,
+            String detail,
+            boolean executable,
+            boolean preparable
+    ) {
+        this(commandId, title, format, targetHint, readinessLabel, detail, executable, preparable,
                 "Sin procesos relacionados registrados.");
     }
 

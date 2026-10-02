@@ -1,9 +1,11 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ink.InkImageCrop;
-import com.marcosmoreiradev.docupodcaststudio.application.ink.InkPlacedImage;
-import com.marcosmoreiradev.docupodcaststudio.application.ink.InkWorkspaceState;
-import com.marcosmoreiradev.docupodcaststudio.application.ink.InkWorkspaceStateSerializer;
+import com.marcosmoreiradev.docupodcaststudio.presentation.documentary.DocumentaryExperienceController;
+
+import com.marcosmoreiradev.docupodcaststudio.ink.model.InkImageCrop;
+import com.marcosmoreiradev.docupodcaststudio.ink.model.InkPlacedImage;
+import com.marcosmoreiradev.docupodcaststudio.ink.model.InkWorkspaceState;
+import com.marcosmoreiradev.docupodcaststudio.ink.model.InkWorkspaceStateSerializer;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.DocuPodcastProject;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.ProjectSession;
 import org.junit.jupiter.api.Test;
@@ -35,7 +37,7 @@ final class DocumentStudyVideoAssetWorkflowTest {
                         10, 20, 300, 150, 10, 20, 300, InkImageCrop.none())), Map.of());
         ProjectSession session = ProjectSession.opened(DocuPodcastProject.empty("Lesson"), projectFile);
 
-        DocumentStudyVideoAssetWorkflow.DrawingAsset result = new DocumentStudyVideoAssetWorkflow().saveDrawing(
+        DocumentaryExperienceController.DrawingAsset result = new DocumentaryExperienceController().saveDrawing(
                 session, "B0002", png, InkWorkspaceStateSerializer.toJson(state), Map.of("IMG-A", source));
 
         Path sidecar = temp.resolve(result.stateRelativePath());
@@ -59,7 +61,7 @@ final class DocumentStudyVideoAssetWorkflowTest {
         ProjectSession session = ProjectSession.opened(DocuPodcastProject.empty("Lesson"), projectFile);
 
         try {
-            new DocumentStudyVideoAssetWorkflow().saveDrawing(session, "B0003", png, "{}",
+            new DocumentaryExperienceController().saveDrawing(session, "B0003", png, "{}",
                     Map.of("IMG-MISSING", temp.resolve("missing.png")));
         } catch (java.io.IOException expected) {
             // Expected preflight failure.

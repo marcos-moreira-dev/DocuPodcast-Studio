@@ -4,8 +4,12 @@ package com.marcosmoreiradev.docupodcaststudio.application.video;
 public enum VideoRenderStage {
     IDLE("Sin render activo"),
     PREPARING("Preparando unidades"),
+    PLANNING_ILLUSTRATION("Preparando prompt de ilustración"),
+    GENERATING_ILLUSTRATION("Generando ilustración con IA"),
+    REVIEWING_ILLUSTRATION("Revisando ilustración con IA"),
     BUILDING_FRAMES("Componiendo mapas"),
     RENDERING_WITH_FFMPEG("Codificando clips"),
+    ASSEMBLING_FINAL("Ensamblando MP4 final"),
     MIXING_TRACKS("Mezclando pistas"),
     VERIFYING_OUTPUT("Finalizando"),
     COMPLETED("Video terminado"),

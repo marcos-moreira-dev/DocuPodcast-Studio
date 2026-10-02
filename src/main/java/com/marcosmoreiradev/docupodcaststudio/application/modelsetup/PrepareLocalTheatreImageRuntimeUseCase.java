@@ -48,7 +48,6 @@ public final class PrepareLocalTheatreImageRuntimeUseCase {
             writeIfMissing(models.resolve("loras/README.txt"),
                     "LoRA es opcional avanzado para personajes, estilos o vestuario entrenado.\n"
                             + "Usalo cuando las referencias y adaptadores no basten para mantener identidad visual.\n");
-            writeFluxWorkflow(models.resolve("workflows/workflow-flux-reference.json"));
             writeExtraModelPaths(runtime.resolve("extra_model_paths.yaml"), models);
             progress.onProgress("Carpetas base preparadas. Falta instalar o importar un runtime compatible para arrancar el motor.");
             return new LocalTheatreImagePreparationReport(true, runtime, models,
@@ -65,17 +64,6 @@ public final class PrepareLocalTheatreImageRuntimeUseCase {
         }
         Files.createDirectories(path.getParent());
         Files.writeString(path, content, StandardCharsets.UTF_8);
-    }
-
-    private static void writeFluxWorkflow(Path path) throws IOException {
-        Files.createDirectories(path.getParent());
-        String diagnostic = "{\n"
-                + "  \"format\": \"docupodcast-comfy-api-reference\",\n"
-                + "  \"preset\": \"HIGH_QUALITY_FLUX\",\n"
-                + "  \"builtIn\": true,\n"
-                + "  \"nodes\": [\"UNETLoader\", \"DualCLIPLoader\", \"VAELoader\", \"CLIPTextEncodeFlux\", \"ModelSamplingFlux\", \"SamplerCustomAdvanced\", \"SaveImage\"]\n"
-                + "}\n";
-        Files.writeString(path, diagnostic, StandardCharsets.UTF_8);
     }
 
     private static void writeExtraModelPaths(Path path, Path models) throws IOException {

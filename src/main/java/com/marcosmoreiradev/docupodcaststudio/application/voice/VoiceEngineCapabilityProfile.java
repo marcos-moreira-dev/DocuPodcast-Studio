@@ -1,5 +1,8 @@
 package com.marcosmoreiradev.docupodcaststudio.application.voice;
 
+import com.marcosmoreiradev.docupodcaststudio.application.compatibility.voice.LegacyVoiceProfileEngineCompatibility;
+import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceProfile;
+
 /**
  * User-facing capability profile for the currently selected voice engine.
  *
@@ -11,11 +14,11 @@ public record VoiceEngineCapabilityProfile(
         String engineFamily,
         String displayName,
         String sidebarNotice,
-        boolean coquiXttsMode,
-        boolean piperMode,
-        boolean mockMode,
+        boolean advancedAiMode,
+        boolean simpleLocalMode,
+        boolean diagnosticMode,
         boolean supportsCustomVoiceSample,
-        boolean supportsPiperModelVoice,
+        boolean supportsPackagedModelVoice,
         boolean supportsEmotion,
         boolean supportsExpressiveStyle,
         boolean supportsVoiceCloning,
@@ -30,10 +33,10 @@ public record VoiceEngineCapabilityProfile(
         blockedReason = normalize(blockedReason);
     }
 
-    public static VoiceEngineCapabilityProfile coquiXtts(boolean ready, String label) {
+    public static VoiceEngineCapabilityProfile advancedAi(boolean ready, String label) {
         return new VoiceEngineCapabilityProfile(
-                "coqui-xtts",
-                normalize(label).isBlank() ? "Voz IA avanzada" : friendlyAdvancedLabel(label),
+                "advanced-ai",
+                normalize(label).isBlank() ? "Voz IA avanzada" : normalize(label),
                 "Voz IA avanzada activa. Puedes usar voz neutral, voces importadas por muestra y opciones expresivas cuando el motor las soporte.",
                 true,
                 false,
@@ -49,10 +52,10 @@ public record VoiceEngineCapabilityProfile(
         );
     }
 
-    public static VoiceEngineCapabilityProfile piper(boolean ready, String label) {
+    public static VoiceEngineCapabilityProfile simpleLocal(boolean ready, String label) {
         return new VoiceEngineCapabilityProfile(
-                "piper",
-                normalize(label).isBlank() ? "Voz local simple" : friendlyLocalSimpleLabel(label),
+                "simple-local",
+                normalize(label).isBlank() ? "Voz local simple" : normalize(label),
                 "Voz local simple activa. Este modo ofrece lectura local intermedia. Las voces personalizadas por muestra, emociones y estilos expresivos requieren Voz IA avanzada.",
                 false,
                 true,
@@ -68,7 +71,7 @@ public record VoiceEngineCapabilityProfile(
         );
     }
 
-    public static VoiceEngineCapabilityProfile mock() {
+    public static VoiceEngineCapabilityProfile diagnostic() {
         return new VoiceEngineCapabilityProfile(
                 "mock",
                 "Modo de prueba",
@@ -106,26 +109,42 @@ public record VoiceEngineCapabilityProfile(
         );
     }
 
+    public static VoiceEngineCapabilityProfile capabilityDriven(
+            boolean ready, String label, boolean referenceVoice,
+            boolean expressiveStyle, boolean packagedVoice) {
+        boolean advanced = referenceVoice || expressiveStyle;
+        if (!advanced && !packagedVoice) {
+            return localProcess(ready, label);
+        }
+        String display = normalize(label).isBlank() ? "Motor TTS local" : normalize(label);
+        String notice = advanced
+                ? "Motor de voz avanzado activo. Los controles visibles se derivan de sus capacidades declaradas."
+                : "Motor de voz local activo. No declara clonación por muestra ni estilo expresivo.";
+        return new VoiceEngineCapabilityProfile(
+                advanced ? "advanced-local" : "simple-local",
+                display,
+                notice,
+                advanced,
+                !advanced,
+                false,
+                referenceVoice,
+                packagedVoice,
+                expressiveStyle,
+                expressiveStyle,
+                referenceVoice,
+                referenceVoice,
+                ready,
+                ready ? "" : "Prepara el motor local seleccionado desde Configuración antes de sintetizar."
+        );
+    }
+
     public boolean supportsAdvancedExpressiveControls() {
         return supportsEmotion || supportsExpressiveStyle || supportsVoiceCloning;
     }
 
-    private static String friendlyAdvancedLabel(String value) {
-        String normalized = normalize(value);
-        String lower = normalized.toLowerCase(java.util.Locale.ROOT);
-        if (lower.contains("coqui") || lower.contains("xtts")) {
-            return "Voz IA avanzada";
-        }
-        return normalized;
-    }
-
-    private static String friendlyLocalSimpleLabel(String value) {
-        String normalized = normalize(value);
-        String lower = normalized.toLowerCase(java.util.Locale.ROOT);
-        if (lower.contains("piper")) {
-            return "Voz local simple";
-        }
-        return normalized;
+    public boolean supportsVoiceProfile(VoiceProfile voice) {
+        return LegacyVoiceProfileEngineCompatibility.supports(
+                voice, advancedAiMode, simpleLocalMode, diagnosticMode);
     }
 
     private static String normalize(String value) {

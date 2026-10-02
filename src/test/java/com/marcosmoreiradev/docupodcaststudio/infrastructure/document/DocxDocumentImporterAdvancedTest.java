@@ -83,6 +83,48 @@ class DocxDocumentImporterAdvancedTest {
         assertTrue(document.issues().stream().anyMatch(issue -> issue.code().equals("MATH_BLOCK_DETECTED")));
     }
 
+    @Test
+    void keepsProseAroundInlineOmmlAndFiltersPlainTextEquationsAndGibberish() throws Exception {
+        Path docx = tempDir.resolve("contenido-mixto.docx");
+        writeMinimalDocx(docx,
+                """
+                <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>
+                """,
+                """
+                <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                            xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math">
+                  <w:body>
+                    <w:p>
+                      <w:r><w:t>La relación </w:t></w:r>
+                      <m:oMath><m:r><m:t>x + y = z</m:t></m:r></m:oMath>
+                      <w:r><w:t> permite comparar los subconjuntos.</w:t></w:r>
+                    </w:p>
+                    <w:p><w:r><w:t>a² + b² = c²</w:t></w:r></w:p>
+                    <w:p><w:r><w:t>Texto &#xFFFD; dañado</w:t></w:r></w:p>
+                  </w:body>
+                </w:document>
+                """);
+
+        ReadableDocument document = new DocxDocumentImporter().importDocument(docx);
+
+        var prose = document.blocks().stream()
+                .filter(block -> block.type() == DocumentBlockType.PARAGRAPH)
+                .filter(block -> block.text().contains("permite comparar"))
+                .findFirst().orElseThrow();
+        assertTrue(prose.narratable());
+        assertEquals("true", prose.metadata().get("containsInlineMath"));
+        assertEquals("x + y = z", prose.metadata().get("filteredMathText"));
+        assertEquals(2, document.blocks().stream()
+                .filter(block -> block.type() == DocumentBlockType.MATH_NOTICE)
+                .count());
+        assertTrue(document.blocks().stream()
+                .filter(block -> "UNCERTAIN".equals(block.metadata().get("narratability")))
+                .noneMatch(com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlock::narratable));
+        assertTrue(document.issues().stream().anyMatch(issue -> issue.code().equals("DOCX_TEXT_UNCERTAIN")));
+    }
+
     private static void writeMinimalDocx(Path target, String stylesXml, String documentXml) throws IOException {
         Files.createDirectories(target.getParent());
         try (ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(target))) {

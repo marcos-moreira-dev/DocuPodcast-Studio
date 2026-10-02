@@ -56,11 +56,13 @@ public final class BuildStoryboardFromImageLayersUseCase {
             Map<String, String> metadata = mergedMetadata(existing, layer, layer.targetId());
             String drawnFrameAssetId = metadata.getOrDefault(UpsertTheatreStoryboardFrameVariantUseCase.DRAWN_FRAME_ASSET_ID, "");
             String generatedImageAssetId = metadata.getOrDefault(UpsertTheatreStoryboardFrameVariantUseCase.GENERATED_IMAGE_ASSET_ID, "");
+            String sceneryImageAssetId = metadata.getOrDefault(UpsertTheatreStoryboardFrameVariantUseCase.SCENERY_IMAGE_ASSET_ID, "");
             String activeVariant = metadata.getOrDefault(UpsertTheatreStoryboardFrameVariantUseCase.ACTIVE_VISUAL_VARIANT,
                     UpsertTheatreStoryboardFrameVariantUseCase.VARIANT_OFFICIAL);
             String activeImageAssetId = switch (TheatreVisualVariant.fromMetadata(activeVariant)) {
                 case DRAWN -> isVisualAsset(catalog, drawnFrameAssetId) ? drawnFrameAssetId : layer.targetId();
                 case GENERATED -> isVisualAsset(catalog, generatedImageAssetId) ? generatedImageAssetId : layer.targetId();
+                case SCENERY -> isVisualAsset(catalog, sceneryImageAssetId) ? sceneryImageAssetId : layer.targetId();
                 case OFFICIAL -> layer.targetId();
             };
             StoryboardBinding binding = new StoryboardBinding(

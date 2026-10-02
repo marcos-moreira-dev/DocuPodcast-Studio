@@ -59,4 +59,19 @@ public record FfmpegRuntimeReport(
             default -> supportsLibx264();
         };
     }
+
+    /**
+     * Resolves the encoder that the final-video UI can actually promise for the current runtime.
+     * AUTO remains GPU-first and falls back to libx264 only when no supported hardware encoder exists.
+     */
+    public String effectiveEncoder(VideoEncoderPolicy policy) {
+        VideoEncoderPolicy requested = policy == null ? VideoEncoderPolicy.AUTO : policy;
+        if (requested != VideoEncoderPolicy.AUTO) {
+            return supportsEncoder(requested.ffmpegEncoder()) ? requested.ffmpegEncoder() : "";
+        }
+        if (supportsNvenc()) return "h264_nvenc";
+        if (supportsQsv()) return "h264_qsv";
+        if (supportsAmf()) return "h264_amf";
+        return supportsLibx264() ? "libx264" : "";
+    }
 }

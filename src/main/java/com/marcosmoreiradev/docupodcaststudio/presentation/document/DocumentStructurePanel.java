@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.document;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
+
 import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlock;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlockType;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.ReadableDocument;
@@ -21,7 +23,7 @@ public final class DocumentStructurePanel extends ScrollPane {
     private final ObservableValue<ReadableDocument> documentProperty;
     private final Consumer<String> onBlockSelected;
     private final VBox content = new VBox(6);
-    private final ComboBox<String> filter = new ComboBox<>();
+    private final ComboBox<String> filter = StudioFormControls.comboBox();
 
     public DocumentStructurePanel(ObservableValue<ReadableDocument> documentProperty, Consumer<String> onBlockSelected) {
         this.documentProperty = Objects.requireNonNull(documentProperty, "documentProperty");
@@ -63,6 +65,8 @@ public final class DocumentStructurePanel extends ScrollPane {
                 continue;
             }
             var button = ActionButtonFactory.rail(labelFor(block), () -> onBlockSelected.accept(block.id()));
+            // This label is document content with a block-type marker, not an action name.
+            button.setGraphic(null);
             button.getStyleClass().addAll("document-structure-item", "document-structure-" + block.type().name().toLowerCase(Locale.ROOT));
             content.getChildren().add(button);
         }

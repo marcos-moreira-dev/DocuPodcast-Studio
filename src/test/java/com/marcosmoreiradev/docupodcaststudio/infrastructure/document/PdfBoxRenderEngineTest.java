@@ -120,6 +120,51 @@ final class PdfBoxRenderEngineTest {
         assertTrue(crop.image().getHeight() > 0);
     }
 
+    @Test
+    void reportsDisplayedDimensionsForRotatedPageAndCropsInThatSpace() throws Exception {
+        Path pdf = tempDir.resolve("rotated.pdf");
+        try (PDDocument document = new PDDocument()) {
+            PDPage page = new PDPage(new PDRectangle(600, 800));
+            page.setRotation(90);
+            document.addPage(page);
+            document.save(pdf.toFile());
+        }
+
+        var rendered = engine.renderPage(new PdfPageRenderRequest(
+                pdf, 1, 72, 4_000_000, Color.WHITE, true));
+        var crop = engine.renderCrop(new PdfCropRenderRequest(
+                pdf, 1, 100, 60, 300, 180, 0, 72, 4_000_000, Color.WHITE, true));
+
+        assertEquals(800, rendered.pageWidthPoints());
+        assertEquals(600, rendered.pageHeightPoints());
+        assertEquals(800, rendered.image().getWidth());
+        assertEquals(600, rendered.image().getHeight());
+        assertEquals(200, crop.image().getWidth());
+        assertEquals(120, crop.image().getHeight());
+    }
+
+    @Test
+    void usesDisplacedCropBoxAsCanonicalPageOrigin() throws Exception {
+        Path pdf = tempDir.resolve("displaced-crop-box.pdf");
+        try (PDDocument document = new PDDocument()) {
+            PDPage page = new PDPage(new PDRectangle(600, 800));
+            page.setCropBox(new PDRectangle(50, 40, 400, 500));
+            document.addPage(page);
+            document.save(pdf.toFile());
+        }
+
+        var info = engine.inspect(pdf, PdfOpenOptions.empty());
+        var rendered = engine.renderPage(new PdfPageRenderRequest(
+                pdf, 1, 72, 4_000_000, Color.WHITE, true));
+
+        assertEquals(400, info.pages().getFirst().widthPoints());
+        assertEquals(500, info.pages().getFirst().heightPoints());
+        assertEquals(400, rendered.pageWidthPoints());
+        assertEquals(500, rendered.pageHeightPoints());
+        assertEquals(400, rendered.image().getWidth());
+        assertEquals(500, rendered.image().getHeight());
+    }
+
     private Path createPdf(String name, int pageCount, boolean drawBlackBox) throws Exception {
         Path pdf = tempDir.resolve(name);
         try (PDDocument document = new PDDocument()) {

@@ -1,83 +1,46 @@
-# Scripts vigentes — DocuPodcast Studio
+# Scripts publicos de DocuPodcast Studio
 
-Todos los scripts resuelven automaticamente la raiz del repositorio, por lo que pueden ejecutarse desde `scripts\` o desde la raiz.
+Solo existen siete entrypoints publicos. Todos son envoltorios `.bat` aptos para doble clic y rutas con espacios; la logica compartida vive en `lib/DocuPodcast.Tasks.ps1`.
 
-## Desarrollo local
+| Script | Funcion |
+|---|---|
+| `00-diagnosticar.bat` | Comprueba Java 21, Maven, reactor, roots y auxiliares obligatorios. |
+| `01-ejecutar-app.bat` | Compila y abre el launcher productivo. `--smoke` muestra el shell y termina con codigo 0. |
+| `02-ejecutar-tests.bat` | Ejecuta la suite determinista normal. |
+| `03-verificar-completo.bat` | Ejecuta `verify`, GUI headless y smoke del launcher. Paridad solo con `--reference-root=<ruta>` explicito. |
+| `04-smoke-capacidades-reales.bat` | Certifica runtimes detectados; `--required=piper,xtts,ffmpeg,image,video,ocr` permite fijarlos. |
+| `05-generar-app-image.bat` | Genera una app-image ligera con Java y auxiliares pequenos, sin modelos pesados. |
+| `06-exportar-diagnosticos.bat` | Produce diagnostico y ZIP local bajo `target/diagnostics`. |
 
-- `00-verificar-entorno.bat`: valida Java, Maven y Maven Toolchain.
-- `01-ejecutar-app.bat`: ejecuta la app JavaFX.
-- `02-ejecutar-tests.bat`: ejecuta tests y muestra `Tests OK` si pasan.
-- `03-verificar-toolchain.bat`: inspecciona toolchains y valida Temurin 21.
-- `04-verificar-tts-config.bat`: muestra configuracion TTS local o confirma uso de mock.
+Los tres scripts de `scripts/tts` no son entrypoints publicos: son auxiliares internos invocados por los adaptadores Piper/XTTS. Configuracion es la superficie para instalar, importar, reparar y probar motores.
 
-## Cierre / release candidate
+Todos los accesos admiten `--help` sin ejecutar trabajo y rechazan opciones desconocidas. Requisitos y recorrido minimo: [guia de desarrollo](../docs/development/build-test.md).
 
-- `13-revalidacion-local-completa.bat`: entorno + toolchain + TTS + `mvn clean test package`.
-- `14-app-image-completa.bat`: genera app-image con `jpackage`.
-- `15-msi-completo.bat`: genera MSI con `jpackage` si el entorno Windows tiene lo necesario.
-- `16-release-candidate.bat`: revalidacion + app-image + manifest de RC.
-- `17-smoke-exploratorio-minimo.bat`: muestra rutas del smoke T58C y puede abrir la app para la prueba manual.
-- `18-smoke-automatico-cerebro.bat`: ejecuta solo el smoke automático del cerebro sin JavaFX y genera evidencia en `target/docupodcast-smoke`.
-- `19-smoke-motores-reales.bat`: smoke opt-in de Coqui/XTTS, Piper y FFmpeg reales; genera evidencia en `target/docupodcast-real-engines-smoke`.
-- `20-preparar-python-portable-coqui.bat`: descarga Python NuGet repo-local, crea `tools\xtts-wrapper\.venv` e instala dependencias XTTS.
-- `21-probar-coqui-xtts.bat`: genera un WAV corto con Coqui/XTTS usando la voz por defecto.
-- `22-verificar-coqui-xtts-local.bat`: verifica Python local, paquete TTS, modelo XTTS y voz de referencia.
-- `37-smoke-cuda-xtts.bat`: prueba si el Python local de Voz IA avanzada tiene PyTorch con CUDA disponible.
-- `31-generar-javadoc.bat`: genera JavaDoc en `target/site/apidocs`.
+`00-diagnosticar.bat` solo inspecciona por defecto; `--resolve-native` autoriza resolver el auxiliar nativo. `06-exportar-diagnosticos.bat` produce evidencia incluso ante fallos y admite esa opcion y `--reference-root=<ruta>`. Ningun acceso busca una copia hermana automaticamente. Las generaciones reales son optativas, no parte del onboarding minimo.
 
+## Mantenimiento del workspace
 
-## Diagnóstico unificado
+`maintenance\clean-workspace.ps1` funciona en seco por defecto. Sin opciones enumera
+solo derivados del compilador; `-Moderate` añade distribuciones antiguas y resultados
+regenerables de pruebas, diagnósticos y experimentos que ya fueron revisados. Para
+eliminar exige combinar `-Apply -ReferencesReviewed`, rechaza rutas versionadas,
+enlaces o junctions y procesos activos, y registra cada objetivo bajo `target\cleanup`.
+No incluye modelos, runtimes, ejemplos, voces, medios de usuario ni carpetas mixtas.
 
-- `99-diagnostico-completo.bat`: ejecuta una pasada amplia sin detenerse en el primer fallo. Revisa Java/Maven, entorno, toolchain, TTS config, compilación Maven, tests, smoke automático del cerebro, preflight de motores y verificación local Piper/FFmpeg. Genera logs y resumen en `target\diagnostico-completo\<fecha>`.
-- Para incluir smokes de motores reales, ejecuta `scripts\99-diagnostico-completo.bat --real-engines` o define `DOCUPODCAST_RUN_REAL_ENGINES=1`.
+El smoke real de FFmpeg usa el flujo documental completo: crea diapositivas con imagen y texto,
+incorpora audio WAV, publica el MP4 de forma atómica y lo valida con FFprobe. El smoke unitario
+de XTTS resuelve una muestra oficial desde `installationRoot/samples/voices`; no depende del
+directorio de trabajo del launcher.
 
-## Nota sobre Maven runtime
+## Roots
 
-`mvn -version` puede mostrar un JDK distinto, pero el build debe usar Java 21 Temurin mediante Maven Toolchains.
+La precedencia es propiedad Java, variable de entorno y deteccion del layout:
 
-## Robustez con rutas de Windows
+- `docupodcast.app.root` / `DOCUPODCAST_APP_ROOT` para binarios y auxiliares pequenos.
+- `docupodcast.runtime.root` / `DOCUPODCAST_RUNTIME_ROOT` para modelos, herramientas, staging y diagnosticos escribibles.
 
-Los `.bat` publicos soportan rutas con espacios y paréntesis, por ejemplo carpetas extraídas como `DocuPodcast-Studio-tanda16B-v1(1)`. Para evitar errores de `cmd.exe` en bloques `if (...)`, los scripts usan `EnableDelayedExpansion` y `!SCRIPT_DIR!` en mensajes internos de error.
+En desarrollo ambos apuntan al repositorio. En una app empaquetada el runtime predeterminado es `%LOCALAPPDATA%\DocuPodcastStudio\runtime`.
 
-## T90C–T90E — runtime local y preflight de arranque
+## Distribucion
 
-- `20-preparar-python-portable-coqui.bat`: prepara Python repo-local y venv XTTS.
-- `21-probar-coqui-xtts.bat`: genera WAV de prueba con Coqui/XTTS.
-- `22-verificar-coqui-xtts-local.bat`: verifica runtime/modelo/voz local.
-- `23-preflight-arranque-motores.bat`: verifica requisitos de arranque para Coqui/Piper/FFmpeg y genera reporte.
-
-Coqui/XTTS no usa Python global ni PATH. GPU para Voz IA avanzada solo se considera usable si `scripts\37-smoke-cuda-xtts.bat` o la prueba de Configuración confirman CUDA dentro del venv local.
-
-## T90F/T90G — Motores locales y smoke modular
-
-```bat
-scripts\24-verificar-piper-ffmpeg-local.bat
-scripts\25-smoke-coqui.bat
-scripts\26-smoke-piper.bat
-scripts\27-smoke-ffmpeg.bat
-scripts\28-smoke-motores-producto.bat
-```
-
-Todos los motores del producto deben resolverse desde carpetas locales del repo/app. No se usa PATH ni instalaciones globales como fallback de producto.
-
-## TP3 — Runtime layout
-
-- `29-verificar-runtime-layout.bat`: valida la estructura `tools/`, `models/`, `scripts/tts` y wrappers locales preparada para producto portable/instalable. Genera `target/runtime-layout/TP3_RUNTIME_LAYOUT_REPORT.md`.
-
-## Productización TP4-TP6
-
-- `30-generar-manifest-terceros.bat`: genera `target/legal/THIRD_PARTY_MANIFEST.md` y copia evidencia a `dist/legal`.
-- `32-preparar-app-portable-layout.bat`: construye `dist/portable/DocuPodcastStudio` desde el app-image y agrega runtime/legal cuando existen.
-- `33-smoke-rc-instalable.bat`: escribe `dist/release-candidate/TP6_RC_SMOKE_REPORT.md` con gates de RC.
-- `34-smoke-app-portable-runtime.bat`: valida app-image, carpeta portable, launcher y `DOCUPODCAST_APP_ROOT` tras jpackage.
-- `35-auditar-artefactos-motores.bat`: genera `target/legal/ENGINE_ARTIFACTS_AUDIT.md` con presencia y SHA-256 de artefactos locales.
-- `16-release-candidate.bat`: encadena revalidación, runtime layout, manifest legal, app-image, portable, smoke RC, smoke portable PF4B y auditoría de motores PF5A.
-
-- `packaging/windows/docupodcast-icon.ico` y `src/main/resources/branding/`: icono de producto derivado de la imagen IA aprobada, usado por Stage, app-image, MSI y portable.
-
-- `36-smoke-gui-asistido.bat`: genera el checklist técnico PF6B y recuerda que la validación real se completa desde Configuración dentro de la app.
-
-## Smoke CUDA Voz IA avanzada
-
-`scripts\37-smoke-cuda-xtts.bat` verifica si el Python autocontenido puede importar PyTorch y usar CUDA. La app usa el mismo criterio desde Configuración > Rendimiento / dispositivo. Tras `MOTOR-GPU-SMOKE1-HF2`, el probe de la app se ejecuta como `.py` temporal para evitar errores de comillas en Windows.
-
+La app-image no copia `models`, `tools`, `runtime` ni `voice-library`. Un MSI ligero podra envolverse en una tanda futura; no se genera ahora. Los activos estaticos se descargan o importan una sola vez desde Configuracion.

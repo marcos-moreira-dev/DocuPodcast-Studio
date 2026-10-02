@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
+import com.marcosmoreiradev.docupodcaststudio.application.WorkspaceApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreAudioTrackTimeline;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.UpsertTheatreAudioTrackUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.media.PreparedAudioAsset;
@@ -19,11 +19,11 @@ import java.util.Optional;
 
 /** Coordinates theatre background-track editing without adding orchestration to the shell view model. */
 public final class TheatreAudioTrackWorkflow {
-    public TheatreAudioTrackTimeline timeline(ApplicationServices services,
+    public TheatreAudioTrackTimeline timeline(WorkspaceApplicationServices services,
                                               Optional<ProjectSession> session,
                                               NarrationScriptDocument script,
                                               PlaybackManifest manifest) {
-        return session.map(value -> services.theatre().buildAudioTrackTimeline()
+        return session.map(value -> services.project().theatre().buildAudioTrackTimeline()
                         .execute(value.project(), script, manifest))
                 .orElseGet(() -> new TheatreAudioTrackTimeline(List.of()));
     }
@@ -52,7 +52,7 @@ public final class TheatreAudioTrackWorkflow {
                 .findFirst();
     }
 
-    public Result save(ApplicationServices services,
+    public Result save(WorkspaceApplicationServices services,
                        ProjectSession session,
                        NarrationScriptDocument script,
                        PlaybackManifest manifest,
@@ -88,20 +88,20 @@ public final class TheatreAudioTrackWorkflow {
         TheatreProjectLayer.TheatreAudioTrack candidate = new TheatreProjectLayer.TheatreAudioTrack(
                 trackId, assetId, startInterventionId, startSegmentId, sourceStartSeconds, sourceEndSeconds,
                 endMode, volume, sourceDuration, gentleFade);
-        UpsertTheatreAudioTrackUseCase.Result validation = services.theatre().upsertAudioTrack()
+        UpsertTheatreAudioTrackUseCase.Result validation = services.project().theatre().upsertAudioTrack()
                 .execute(base, script, manifest, candidate, replaceConflicts);
         if (!validation.saved()) {
             return new Result(false, candidate, validation.conflicts().stream().map(entry -> entry.track().id()).toList(),
                     validation.message());
         }
         if (preparedAudio != null) {
-            var imported = services.media().importUserMediaAsset().commitPreparedAudio(base, projectFile, preparedAudio);
+            var imported = services.generation().media().importUserMediaAsset().commitPreparedAudio(base, projectFile, preparedAudio);
             base = imported.project();
             assetId = imported.audioAsset().id();
             candidate = new TheatreProjectLayer.TheatreAudioTrack(trackId, assetId, startInterventionId, startSegmentId,
                     sourceStartSeconds, sourceEndSeconds, endMode, volume, sourceDuration, gentleFade);
         }
-        UpsertTheatreAudioTrackUseCase.Result outcome = services.theatre().upsertAudioTrack()
+        UpsertTheatreAudioTrackUseCase.Result outcome = services.project().theatre().upsertAudioTrack()
                 .execute(base, script, manifest, candidate, replaceConflicts);
         session.replaceProject(outcome.project(), true);
         if (outcome.saved()) {
@@ -113,10 +113,10 @@ public final class TheatreAudioTrackWorkflow {
                 .map(entry -> entry.track().id()).toList(), outcome.message());
     }
 
-    public Result remove(ApplicationServices services, ProjectSession session, String trackId) throws IOException {
+    public Result remove(WorkspaceApplicationServices services, ProjectSession session, String trackId) throws IOException {
         DocuPodcastProject before = session.project();
         Optional<TheatreProjectLayer.TheatreAudioTrack> removed = trackById(before, trackId);
-        DocuPodcastProject updated = services.theatre().removeAudioTrack().execute(before, trackId);
+        DocuPodcastProject updated = services.project().theatre().removeAudioTrack().execute(before, trackId);
         session.replaceProject(updated, true);
         if (removed.isPresent() && session.projectFile().isPresent()) {
             cleanupUnusedTrackAssets(services, session, session.projectFile().get(), before, updated,
@@ -125,7 +125,7 @@ public final class TheatreAudioTrackWorkflow {
         return new Result(true, null, List.of(), "Pista eliminada.");
     }
 
-    private static void cleanupUnusedTrackAssets(ApplicationServices services, ProjectSession session, Path projectFile,
+    private static void cleanupUnusedTrackAssets(WorkspaceApplicationServices services, ProjectSession session, Path projectFile,
                                                  DocuPodcastProject before, DocuPodcastProject after,
                                                  List<String> candidateAssetIds) throws IOException {
         for (String assetId : candidateAssetIds) {
@@ -135,7 +135,7 @@ public final class TheatreAudioTrackWorkflow {
             var reference = before.assets().byId(assetId).orElse(null);
             if (reference == null || !(assetId.startsWith("AUDIO-USER-") || assetId.startsWith("AUDIO-NORMALIZED-"))) continue;
             Path root = projectFile.toAbsolutePath().normalize().getParent();
-            if (root != null) services.media().importUserMediaAsset().deleteProjectAudio(projectFile, root.resolve(reference.relativePath()).normalize());
+            if (root != null) services.generation().media().importUserMediaAsset().deleteProjectAudio(projectFile, root.resolve(reference.relativePath()).normalize());
             DocuPodcastProject without = session.project().withoutAsset(assetId);
             session.replaceProject(without, true);
         }
@@ -145,13 +145,13 @@ public final class TheatreAudioTrackWorkflow {
         return script == null ? Optional.empty() : script.segmentById(normalized(segmentId)).flatMap(TheatreAudioTrackWorkflow::firstBlock);
     }
 
-    public Result saveCandidate(ApplicationServices services,
+    public Result saveCandidate(WorkspaceApplicationServices services,
                                 ProjectSession session,
                                 NarrationScriptDocument script,
                                 PlaybackManifest manifest,
                                 TheatreProjectLayer.TheatreAudioTrack candidate,
                                 boolean replaceConflicts) {
-        UpsertTheatreAudioTrackUseCase.Result outcome = services.theatre().upsertAudioTrack()
+        UpsertTheatreAudioTrackUseCase.Result outcome = services.project().theatre().upsertAudioTrack()
                 .execute(session.project(), script, manifest, candidate, replaceConflicts);
         session.replaceProject(outcome.project(), true);
         return new Result(outcome.saved(), candidate, outcome.conflicts().stream()

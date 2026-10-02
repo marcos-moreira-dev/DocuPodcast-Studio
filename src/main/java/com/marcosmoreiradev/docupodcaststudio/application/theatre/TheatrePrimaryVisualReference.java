@@ -33,6 +33,7 @@ public record TheatrePrimaryVisualReference(
         OFFICIAL_IMAGE,
         GENERATED_IMAGE,
         STORYBOARD_FRAME,
+        SCENERY_COMPOSITION,
         LEGACY_THEATRE_VISUAL
     }
 

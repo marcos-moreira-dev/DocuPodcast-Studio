@@ -46,7 +46,12 @@ public final class LocalProcessVoiceTestSynthesisGateway implements VoiceTestSyn
         Path text = request.textFile().toAbsolutePath().normalize();
         Files.createDirectories(output.getParent());
         Files.createDirectories(text.getParent());
-        String sanitizedText = TtsTextPreprocessor.sanitizeForEngine(request.phrase(), configuration.displayName(), configuration.commandTemplate());
+        String sanitizedText = TtsTextPreprocessor.sanitize(request.phrase());
+        if (sanitizedText.isBlank()) {
+            return VoiceTestSynthesisResult.failed(
+                    "La prueba no contiene texto narrable despues de retirar formato y enlaces.",
+                    "empty-voice-payload");
+        }
         Files.writeString(text, sanitizedText, StandardCharsets.UTF_8);
         List<String> command = configuration.commandForVoiceTest(
                 request.segmentId(),

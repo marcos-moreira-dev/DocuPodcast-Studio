@@ -1,9 +1,21 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.export;
 
-import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentTextVideoBackgroundMode;
-import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentTextVideoOptions;
-import com.marcosmoreiradev.docupodcaststudio.application.export.AudioExportFormat;
-import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoResolutionPreset;
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeSourceChooser;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeDialogResponse;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioDialogShell;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioCollectionControls;
+
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoBackgroundMode;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentBackgroundImageFit;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoOptions;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextEffect;
+import com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.SimpleVideoResolutionPreset;
 import com.marcosmoreiradev.docupodcaststudio.presentation.command.AppCommandId;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionButtonFactory;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
@@ -18,6 +30,7 @@ import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Dialog;
@@ -25,9 +38,14 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.RadioButton;
+import javafx.scene.control.Toggle;
+import javafx.scene.control.ToggleGroup;
+import javafx.scene.control.Slider;
 import javafx.scene.control.Spinner;
 import javafx.scene.Node;
 import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.BackgroundImage;
@@ -47,6 +65,8 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
 import javafx.util.StringConverter;
@@ -89,13 +109,13 @@ public final class ExportCenterDialog {
                                                 BiConsumer<Window, ExportCenterSelection> readinessAction) {
         List<ExportTargetPresentation> safeTargets = targets == null ? List.of() : List.copyOf(targets);
         ExportCenterContext safeContext = context == null ? ExportCenterContext.defaults() : context;
-        Dialog<ExportCenterSelection> dialog = new Dialog<>();
+        Dialog<ExportCenterSelection> dialog = StudioDialogShell.dialog();
         dialog.setTitle("Centro de exportaciones");
         dialog.setHeaderText("Elige una salida creativa del proyecto actual");
         DialogStyler.apply(dialog, owner);
         dialog.getDialogPane().getStyleClass().add("export-center-dialog");
 
-        ListView<ExportTargetPresentation> list = new ListView<>();
+        ListView<ExportTargetPresentation> list = StudioCollectionControls.listView();
         list.getStyleClass().add("export-center-target-list");
         list.getItems().setAll(safeTargets);
         list.setMinWidth(TARGET_LIST_MIN_WIDTH);
@@ -124,6 +144,16 @@ public final class ExportCenterDialog {
         Label evidence = valueLabel();
         Label limitationsTitle = detailHeading("Limitaciones");
         Label limitations = valueLabel();
+        CheckBox prepareBeforeExport = StudioFormControls.checkBox(
+                "Completar lo autorizado y exportar",
+                "Completa la lectura según la configuración actual, sin activar categorías omitidas; después exporta automáticamente.");
+        Label prepareBeforeExportHelp = new Label(
+                "Respeta el alcance y las categorías configuradas por el usuario. No activa imágenes, tablas ni IA omitidas; reutiliza los derivados vigentes y genera solamente lo pendiente.");
+        prepareBeforeExportHelp.setWrapText(true);
+        prepareBeforeExportHelp.getStyleClass().add("export-center-note-text");
+        VBox preparationMode = new VBox(5, prepareBeforeExport, prepareBeforeExportHelp);
+        preparationMode.getStyleClass().add("export-center-preparation-mode");
+        setVisible(preparationMode, false);
         DocumentTextVideoControls textVideoControls = new DocumentTextVideoControls(owner);
         VideoEncodingOptionsPane videoOptions = new VideoEncodingOptionsPane(
                 safeContext.availableEncoders(), safeContext.defaultEncoder(), safeContext.projectMode());
@@ -133,6 +163,8 @@ public final class ExportCenterDialog {
                 safeContext.availableEncoders(), safeContext.defaultEncoder());
         TheatrePortionExportOptionsPane theatrePortionOptions = new TheatrePortionExportOptionsPane(
                 safeContext.acts(), safeContext.scenes(), safeContext.availableEncoders(), safeContext.defaultEncoder());
+        theatreMapOptions.setPresentationMode(safeContext.theatrePresentationMode());
+        theatrePortionOptions.setPresentationMode(safeContext.theatrePresentationMode());
         setVisible(videoOptions, false);
         setVisible(theatreCleanOptions, false);
         setVisible(theatreMapOptions, false);
@@ -162,13 +194,13 @@ public final class ExportCenterDialog {
         HBox noteBox = noteBox(note);
         VBox detailSections = new VBox(7, detailTitle, evidenceTitle, evidence, limitationsTitle, limitations);
         detailSections.getStyleClass().add("export-center-detail-sections");
-        VBox detailBox = new VBox(16, details, textVideoControls.root(), videoOptions, theatreCleanOptions,
+        VBox detailBox = new VBox(16, details, preparationMode, textVideoControls.root(), videoOptions, theatreCleanOptions,
                 theatreMapOptions, theatrePortionOptions, detailSections, noteBox);
         detailBox.getStyleClass().add("export-center-detail-pane");
         detailBox.setMinWidth(DETAIL_COLUMN_MIN_WIDTH);
         detailBox.setPrefWidth(DETAIL_COLUMN_PREF_WIDTH);
         detailBox.setMaxWidth(Double.MAX_VALUE);
-        ScrollPane detailScroll = new ScrollPane(detailBox);
+        ScrollPane detailScroll = StudioViewportControls.scrollPane(detailBox);
         detailScroll.getStyleClass().add("export-center-detail-scroll");
         detailScroll.setFitToWidth(true);
         detailScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
@@ -189,9 +221,9 @@ public final class ExportCenterDialog {
         dialog.getDialogPane().setPrefWidth(EXPORT_CENTER_DIALOG_PREF_WIDTH);
         dialog.getDialogPane().setMinWidth(EXPORT_CENTER_DIALOG_MIN_WIDTH);
 
-        ButtonType export = new ButtonType("Exportar", ButtonBar.ButtonData.OK_DONE);
-        ButtonType readinessButton = new ButtonType("Ver estado", ButtonBar.ButtonData.APPLY);
-        ButtonType cancel = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
+        ButtonType export = NativeDialogResponse.button("Exportar", ButtonBar.ButtonData.OK_DONE);
+        ButtonType readinessButton = NativeDialogResponse.button("Ver estado", ButtonBar.ButtonData.APPLY);
+        ButtonType cancel = NativeDialogResponse.button("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
         dialog.getDialogPane().getButtonTypes().setAll(export, readinessButton, cancel);
 
         Runnable updateDetails = () -> {
@@ -201,6 +233,7 @@ public final class ExportCenterDialog {
                 audioFormat.setVisible(false);
                 audioFormat.setManaged(false);
                 textVideoControls.setVisible(false);
+                setVisible(preparationMode, false);
                 setVisible(videoOptions, false);
                 setVisible(theatreCleanOptions, false);
                 setVisible(theatreMapOptions, false);
@@ -217,26 +250,44 @@ public final class ExportCenterDialog {
             boolean theatreCleanSelected = selected.commandId() == AppCommandId.EXPORT_THEATRE_WORK;
             boolean theatreMapSelected = selected.commandId() == AppCommandId.EXPORT_THEATRE_SPATIAL_VIEW;
             boolean theatrePortionSelected = selected.commandId() == AppCommandId.EXPORT_THEATRE_PORTION;
+            boolean preparationSupported = audioSelected || documentVideoSelected;
             format.setText(audioSelected ? "" : selected.format());
             audioFormat.setVisible(audioSelected);
             audioFormat.setManaged(audioSelected);
             textVideoControls.setVisible(documentVideoSelected);
+            setVisible(preparationMode, preparationSupported);
+            prepareBeforeExport.setDisable(!selected.preparable());
+            if (!preparationSupported || !selected.preparable()) {
+                prepareBeforeExport.setSelected(false);
+            }
             setVisible(videoOptions, commonVideoSelected);
             setVisible(theatreCleanOptions, theatreCleanSelected);
             setVisible(theatreMapOptions, theatreMapSelected);
             setVisible(theatrePortionOptions, theatrePortionSelected);
             target.setText(audioSelected ? "audio-final" + audioFormat.getValue().extension() : selected.targetHint());
             readiness.setText(selected.readinessLabel());
+            if (prepareBeforeExport.isSelected() && preparationSupported) {
+                readiness.setText(selected.executable()
+                        ? "Se verificará y reutilizará lo existente"
+                        : "Se preparará antes de exportar");
+            }
             processes.setText(selected.relatedProcessSummary());
+            note.setText(prepareBeforeExport.isSelected() && preparationSupported
+                    ? "Autorizaste completar lo permitido por la configuración actual. No se activarán categorías omitidas; los derivados vigentes se reutilizarán y podrás cancelar desde el progreso."
+                    : "El centro no genera derivados faltantes en silencio. Activa 'Completar lo autorizado y exportar' para completar únicamente lo permitido por tu configuración.");
             renderDetailSections(detailTitle, evidenceTitle, evidence, limitationsTitle, limitations, selected.detail());
         };
         list.getSelectionModel().selectedItemProperty().addListener((obs, oldValue, newValue) -> updateDetails.run());
         audioFormat.valueProperty().addListener((obs, oldValue, newValue) -> updateDetails.run());
+        prepareBeforeExport.selectedProperty().addListener((obs, oldValue, newValue) -> updateDetails.run());
         selectInitial(list, safeTargets, preselectedCommand);
         updateDetails.run();
 
         Button exportButton = (Button) dialog.getDialogPane().lookupButton(export);
         Button readinessNode = (Button) dialog.getDialogPane().lookupButton(readinessButton);
+        // A data-entry dialog must not interpret Enter in an editable control as
+        // confirmation of a potentially hours-long export.
+        exportButton.setDefaultButton(false);
         styleDialogButton(exportButton, "ui-action-button-primary");
         styleDialogButton((Button) dialog.getDialogPane().lookupButton(cancel), "ui-action-button-secondary");
         styleDialogButton(readinessNode, "ui-action-button-secondary");
@@ -244,7 +295,7 @@ public final class ExportCenterDialog {
             event.consume();
             if (readinessAction != null) {
                 readinessAction.accept(dialogWindow(dialog, owner), selectionFrom(
-                        list.getSelectionModel().getSelectedItem(), audioFormat, textVideoControls, videoOptions,
+                        list.getSelectionModel().getSelectedItem(), prepareBeforeExport, audioFormat, textVideoControls, videoOptions,
                         theatreCleanOptions, theatreMapOptions, theatrePortionOptions));
             }
         });
@@ -252,14 +303,21 @@ public final class ExportCenterDialog {
                 .or(javafx.beans.binding.Bindings.createBooleanBinding(
                         () -> {
                             ExportTargetPresentation selected = list.getSelectionModel().getSelectedItem();
-                            return selected != null && !selected.executable();
+                            if (selected == null) return false;
+                            return !selected.executable()
+                                    && !(prepareBeforeExport.isSelected() && selected.preparable());
                         },
-                        list.getSelectionModel().selectedItemProperty())));
+                        list.getSelectionModel().selectedItemProperty(),
+                        prepareBeforeExport.selectedProperty())));
+        prepareBeforeExport.selectedProperty().addListener((obs, oldValue, selected) ->
+                exportButton.setText(Boolean.TRUE.equals(selected)
+                        ? "Completar y exportar" : "Exportar"));
 
         dialog.setResultConverter(button -> {
             if (button == export) {
                 return selectionFrom(list.getSelectionModel().getSelectedItem(), audioFormat, textVideoControls,
-                        videoOptions, theatreCleanOptions, theatreMapOptions, theatrePortionOptions);
+                        videoOptions, theatreCleanOptions, theatreMapOptions, theatrePortionOptions,
+                        prepareBeforeExport);
             }
             return null;
         });
@@ -268,6 +326,7 @@ public final class ExportCenterDialog {
 
     private static ExportCenterSelection selectionFrom(
             ExportTargetPresentation selected,
+            CheckBox prepareBeforeExport,
             ComboBox<AudioExportFormat> audioFormat,
             DocumentTextVideoControls textVideoControls,
             VideoEncodingOptionsPane videoOptions,
@@ -277,12 +336,28 @@ public final class ExportCenterDialog {
         return selected == null ? null : new ExportCenterSelection(
                 ExportCenterAction.EXPORT_SELECTED,
                 selected.commandId(),
+                prepareBeforeExport != null && prepareBeforeExport.isSelected()
+                        ? ExportExecutionMode.PREPARE_FULL_DOCUMENT_AND_EXPORT
+                        : ExportExecutionMode.READY_ONLY,
                 audioFormat.getValue(),
                 textVideoControls.options(),
                 selected.commandId() == AppCommandId.EXPORT_THEATRE_WORK
                         ? theatreCleanOptions.options() : videoOptions.options(),
                 theatreMapOptions.options(),
                 theatrePortionOptions.options());
+    }
+
+    private static ExportCenterSelection selectionFrom(
+            ExportTargetPresentation selected,
+            ComboBox<AudioExportFormat> audioFormat,
+            DocumentTextVideoControls textVideoControls,
+            VideoEncodingOptionsPane videoOptions,
+            TheatreCleanVideoExportOptionsPane theatreCleanOptions,
+            TheatreMapExportOptionsPane theatreMapOptions,
+            TheatrePortionExportOptionsPane theatrePortionOptions,
+            CheckBox prepareBeforeExport) {
+        return selectionFrom(selected, prepareBeforeExport, audioFormat, textVideoControls,
+                videoOptions, theatreCleanOptions, theatreMapOptions, theatrePortionOptions);
     }
 
     private static Window dialogWindow(Dialog<?> dialog, Window fallback) {
@@ -365,7 +440,7 @@ public final class ExportCenterDialog {
     }
 
     private static ComboBox<AudioExportFormat> audioFormatCombo() {
-        ComboBox<AudioExportFormat> combo = new ComboBox<>(FXCollections.observableArrayList(AudioExportFormat.values()));
+        ComboBox<AudioExportFormat> combo = StudioFormControls.comboBox(FXCollections.observableArrayList(AudioExportFormat.values()));
         combo.setValue(AudioExportFormat.WAV);
         combo.setMaxWidth(180);
         StudioFormControls.combo(combo, "Formato de audio final para la salida seleccionada.");
@@ -387,15 +462,38 @@ public final class ExportCenterDialog {
     private static final class DocumentTextVideoControls {
         private final VBox root = new VBox(8);
         private final ComboBox<DocumentTextVideoBackgroundMode> backgroundMode =
-                new ComboBox<>(FXCollections.observableArrayList(DocumentTextVideoBackgroundMode.values()));
-        private final ColorPicker backgroundColor = new ColorPicker(Color.WHITE);
-        private final ColorPicker textColor = new ColorPicker(Color.web("#20232A"));
-        private final ComboBox<String> fontFamily = new ComboBox<>();
-        private final Spinner<Integer> fontSize = new Spinner<>(18, 160, 54);
+                StudioFormControls.comboBox(FXCollections.observableArrayList(DocumentTextVideoBackgroundMode.values()));
+        private final ColorPicker backgroundColor = StudioFormControls.colorPicker(Color.WHITE);
+        private final ColorPicker textColor = StudioFormControls.colorPicker(Color.web("#20232A"));
+        private final Slider backgroundImageOpacity = StudioFormControls.slider(
+                StudioFormControls.slider(5, 100, 35), "Visibilidad de la imagen de fondo.");
+        private final Label backgroundImageOpacityValue = valueLabel();
+        private final ToggleGroup backgroundImageFitGroup = new ToggleGroup();
+        private final RadioButton containBackground = com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls.radioButton("Imagen completa con franjas");
+        private final RadioButton coverBackground = com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls.radioButton("Rellenar con recorte/zoom");
+        private final RadioButton blurredBackground = com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls.radioButton("Fondo difuminado + imagen completa");
+        private final ComboBox<DocumentTextEffect> textEffect =
+                StudioFormControls.comboBox(FXCollections.observableArrayList(DocumentTextEffect.values()));
+        private final ColorPicker textEffectColor = StudioFormControls.colorPicker(Color.BLACK);
+        private final Spinner<Integer> textEffectThickness = StudioFormControls.spinner(1, 12, 3);
+        private final CheckBox underlineNarratedText = StudioFormControls.checkBox(
+                "Subrayar el fragmento narrado",
+                "Subraya únicamente el texto que corresponde al audio de la unidad actual.");
+        private final ColorPicker narratedUnderlineColor = StudioFormControls.colorPicker(Color.web("#4F46E5"));
+        private final Slider narratedUnderlineThickness = StudioFormControls.slider(
+                StudioFormControls.slider(0, 15, 4),
+                "Grosor del subrayado narrativo, entre 0 y 15 píxeles.");
+        private final Label narratedUnderlineThicknessValue = valueLabel();
+        private final ComboBox<String> fontFamily = StudioFormControls.comboBox();
+        private final ComboBox<String> titleFontFamily = StudioFormControls.comboBox();
+        private final Spinner<Integer> fontSize = StudioFormControls.spinner(18, 160, 54);
         private final Label imageLabel = valueLabel();
         private final StackPane previewFrame = new StackPane();
+        private final ImageView previewBackground = new ImageView();
+        private final ImageView previewForeground = new ImageView();
         private final Label previewTitle = new Label("La luz escribe despacio sobre la pagina");
         private final Label previewBody = new Label("Un fragmento hipotetico respira en pantalla mientras la voz acompana el estudio documental.");
+        private final Region previewNarratedUnderline = new Region();
         private Path backgroundImage;
 
         private DocumentTextVideoControls(Window owner) {
@@ -420,12 +518,44 @@ public final class ExportCenterDialog {
             fontFamily.getItems().setAll(Font.getFamilies());
             fontFamily.setValue(defaultFontFamily(fontFamily.getItems()));
             fontFamily.setMaxWidth(Double.MAX_VALUE);
-            StudioFormControls.combo(fontFamily, "Fuente aplicada al texto del frame documental.");
+            configureFontCombo(fontFamily);
+            StudioFormControls.combo(fontFamily, "Fuente aplicada al cuerpo del texto documental.");
             fontFamily.getStyleClass().add("voice-library-combo");
+            titleFontFamily.getItems().setAll(fontFamily.getItems());
+            titleFontFamily.setValue(fontFamily.getValue());
+            titleFontFamily.setMaxWidth(Double.MAX_VALUE);
+            configureFontCombo(titleFontFamily);
+            StudioFormControls.combo(titleFontFamily, "Fuente aplicada a títulos y subtítulos documentales.");
+            titleFontFamily.getStyleClass().add("voice-library-combo");
             StudioFormControls.colorPicker(backgroundColor, "Color de fondo usado cuando el modo de fondo es color solido.");
             StudioFormControls.colorPicker(textColor, "Color del texto del frame documental.");
+            backgroundImageOpacity.setMajorTickUnit(20);
+            backgroundImageOpacity.setBlockIncrement(5);
+            backgroundImageOpacityValue.setMinWidth(52);
+            backgroundImageOpacity.disableProperty().bind(backgroundMode.valueProperty().isNotEqualTo(DocumentTextVideoBackgroundMode.IMAGE));
+            backgroundImageOpacityValue.disableProperty().bind(backgroundImageOpacity.disableProperty());
+            configureBackgroundFitChoices();
+            textEffect.setValue(DocumentTextEffect.NONE);
+            textEffect.setConverter(new StringConverter<>() {
+                @Override public String toString(DocumentTextEffect effect) { return effect == null ? "" : effect.displayName(); }
+                @Override public DocumentTextEffect fromString(String value) { return textEffect.getValue(); }
+            });
+            textEffectColor.disableProperty().bind(textEffect.valueProperty().isEqualTo(DocumentTextEffect.NONE));
+            textEffectThickness.disableProperty().bind(textEffectColor.disableProperty());
+            underlineNarratedText.setSelected(true);
+            StudioFormControls.colorPicker(narratedUnderlineColor,
+                    "Color del subrayado que acompaña al fragmento narrado.");
+            narratedUnderlineThickness.setMajorTickUnit(5);
+            narratedUnderlineThickness.setMinorTickCount(4);
+            narratedUnderlineThickness.setBlockIncrement(1);
+            narratedUnderlineThickness.setSnapToTicks(true);
+            narratedUnderlineThicknessValue.setMinWidth(52);
+            narratedUnderlineColor.disableProperty().bind(underlineNarratedText.selectedProperty().not());
+            narratedUnderlineThickness.disableProperty().bind(underlineNarratedText.selectedProperty().not());
+            narratedUnderlineThicknessValue.disableProperty().bind(underlineNarratedText.selectedProperty().not());
             StudioFormControls.spinner(fontSize, "Tamano base de la tipografia del frame documental.");
             fontSize.setEditable(true);
+            configurePreviewSpinner();
             imageLabel.setText("Sin imagen de fondo");
             Button chooseImage = ActionButtonFactory.secondary(
                     "Elegir imagen de fondo",
@@ -438,8 +568,18 @@ public final class ExportCenterDialog {
                     field("Fondo", backgroundMode),
                     field("Color de fondo", backgroundColor),
                     field("Imagen", new HBox(8, chooseImage, imageLabel)),
+                    field("Visibilidad", percentageControl(backgroundImageOpacity, backgroundImageOpacityValue)),
+                    field("Ajuste de la imagen", new VBox(5,
+                            containBackground, coverBackground, blurredBackground)),
                     field("Color de texto", textColor),
-                    field("Fuente", fontFamily),
+                    field("Efecto de texto", textEffect),
+                    field("Color efecto", textEffectColor),
+                    field("Grosor efecto", textEffectThickness),
+                    underlineNarratedText,
+                    field("Color subrayado", narratedUnderlineColor),
+                    field("Grosor", underlineThicknessControl()),
+                    field("Fuente del cuerpo", fontFamily),
+                    field("Fuente de títulos y subtítulos", titleFontFamily),
                     field("Tamano", fontSize),
                     previewFrame);
             setVisible(false);
@@ -463,11 +603,25 @@ public final class ExportCenterDialog {
                     hex(textColor.getValue()),
                     "#4F46E5",
                     fontFamily.getValue(),
-                    fontSize.getValue());
+                    titleFontFamily.getValue(),
+                    fontSize.getValue(),
+                    underlineNarratedText.isSelected(),
+                    hex(narratedUnderlineColor.getValue()),
+                    (int) Math.round(narratedUnderlineThickness.getValue()),
+                    backgroundImageOpacity.getValue() / 100.0,
+                    selectedBackgroundImageFit(),
+                    textEffect.getValue(), hex(textEffectColor.getValue()), textEffectThickness.getValue());
+        }
+
+        private HBox underlineThicknessControl() {
+            HBox row = new HBox(10, narratedUnderlineThickness, narratedUnderlineThicknessValue);
+            HBox.setHgrow(narratedUnderlineThickness, Priority.ALWAYS);
+            narratedUnderlineThickness.setMaxWidth(Double.MAX_VALUE);
+            return row;
         }
 
         private void chooseBackgroundImage(Window owner) {
-            FileChooser chooser = new FileChooser();
+            FileChooser chooser = NativeSourceChooser.fileChooser();
             chooser.setTitle("Elegir imagen de fondo documental");
             chooser.getExtensionFilters().setAll(
                     new FileChooser.ExtensionFilter("Imagenes (*.png, *.jpg, *.jpeg)", "*.png", "*.jpg", "*.jpeg"),
@@ -487,15 +641,56 @@ public final class ExportCenterDialog {
             previewBody.getStyleClass().add("export-center-frame-preview-body");
             previewTitle.setWrapText(true);
             previewBody.setWrapText(true);
-            VBox copy = new VBox(8, previewTitle, previewBody);
+            previewNarratedUnderline.setMaxWidth(Double.MAX_VALUE);
+            VBox copy = new VBox(8, previewTitle, previewBody, previewNarratedUnderline);
             copy.getStyleClass().add("export-center-frame-preview-copy");
             StackPane.setAlignment(copy, javafx.geometry.Pos.CENTER_LEFT);
-            previewFrame.getChildren().setAll(copy);
+            previewBackground.setPreserveRatio(false);
+            previewBackground.fitWidthProperty().bind(previewFrame.widthProperty());
+            previewBackground.fitHeightProperty().bind(previewFrame.heightProperty());
+            previewBackground.setMouseTransparent(true);
+            previewForeground.setManaged(false);
+            previewForeground.setPreserveRatio(true);
+            previewForeground.fitWidthProperty().bind(previewFrame.widthProperty());
+            previewForeground.fitHeightProperty().bind(previewFrame.heightProperty());
+            previewForeground.setMouseTransparent(true);
+            previewFrame.getChildren().setAll(previewBackground, previewForeground, copy);
             backgroundMode.valueProperty().addListener((obs, oldValue, newValue) -> updatePreview());
             backgroundColor.valueProperty().addListener((obs, oldValue, newValue) -> updatePreview());
+            backgroundImageOpacity.valueProperty().addListener((obs, oldValue, newValue) -> updatePreview());
+            backgroundImageFitGroup.selectedToggleProperty().addListener((obs, oldValue, newValue) -> updatePreview());
             textColor.valueProperty().addListener((obs, oldValue, newValue) -> updatePreview());
+            textEffect.valueProperty().addListener((obs, oldValue, newValue) -> updatePreview());
+            textEffectColor.valueProperty().addListener((obs, oldValue, newValue) -> updatePreview());
+            textEffectThickness.valueProperty().addListener((obs, oldValue, newValue) -> updatePreview());
+            underlineNarratedText.selectedProperty().addListener((obs, oldValue, newValue) -> updatePreview());
+            narratedUnderlineColor.valueProperty().addListener((obs, oldValue, newValue) -> updatePreview());
+            narratedUnderlineThickness.valueProperty().addListener((obs, oldValue, newValue) -> updatePreview());
             fontFamily.valueProperty().addListener((obs, oldValue, newValue) -> updatePreview());
+            titleFontFamily.valueProperty().addListener((obs, oldValue, newValue) -> updatePreview());
             fontSize.valueProperty().addListener((obs, oldValue, newValue) -> updatePreview());
+            updatePreview();
+        }
+
+        private void configurePreviewSpinner() {
+            fontSize.getEditor().setOnAction(event -> {
+                commitFontSizeEditor();
+                event.consume();
+            });
+            fontSize.getEditor().addEventFilter(KeyEvent.KEY_RELEASED, event -> {
+                if (event.getCode() == KeyCode.ENTER) event.consume();
+            });
+        }
+
+        private void commitFontSizeEditor() {
+            var factory = fontSize.getValueFactory();
+            if (factory == null || factory.getConverter() == null) return;
+            try {
+                Integer parsed = factory.getConverter().fromString(fontSize.getEditor().getText());
+                factory.setValue(parsed);
+            } catch (RuntimeException invalidValue) {
+                fontSize.getEditor().setText(factory.getConverter().toString(factory.getValue()));
+            }
             updatePreview();
         }
 
@@ -504,21 +699,131 @@ public final class ExportCenterDialog {
             String family = fontFamily.getValue() == null || fontFamily.getValue().isBlank()
                     ? "SansSerif"
                     : fontFamily.getValue();
+            String titleFamily = titleFontFamily.getValue() == null || titleFontFamily.getValue().isBlank()
+                    ? family
+                    : titleFontFamily.getValue();
             int size = fontSize.getValue() == null ? 54 : fontSize.getValue();
             previewTitle.setTextFill(textColor.getValue() == null ? Color.web("#20232A") : textColor.getValue());
             previewBody.setTextFill(textColor.getValue() == null ? Color.web("#20232A") : textColor.getValue());
-            previewTitle.setFont(Font.font(family, Math.max(18, size * 0.46)));
+            previewTitle.setFont(Font.font(titleFamily, Math.max(18, size * 0.46)));
             previewBody.setFont(Font.font(family, Math.max(12, size * 0.28)));
-            if (backgroundMode.getValue() == DocumentTextVideoBackgroundMode.IMAGE && backgroundImage != null) {
-                previewFrame.setBackground(imageBackground(backgroundImage));
-            } else {
-                previewFrame.setBackground(new Background(new BackgroundFill(
-                        backgroundColor.getValue() == null ? Color.WHITE : backgroundColor.getValue(),
-                        new CornerRadii(6),
-                        javafx.geometry.Insets.EMPTY)));
+            int underlinePx = (int) Math.round(narratedUnderlineThickness.getValue());
+            backgroundImageOpacityValue.setText((int) Math.round(backgroundImageOpacity.getValue()) + "%");
+            String effectCss = textEffectCss(textEffect.getValue(), textEffectColor.getValue(), textEffectThickness.getValue());
+            previewTitle.setStyle(effectCss);
+            previewBody.setStyle(effectCss);
+            narratedUnderlineThicknessValue.setText(underlinePx + " px");
+            boolean showUnderline = underlineNarratedText.isSelected() && underlinePx > 0;
+            previewNarratedUnderline.setVisible(showUnderline);
+            previewNarratedUnderline.setManaged(showUnderline);
+            previewNarratedUnderline.setMinHeight(underlinePx);
+            previewNarratedUnderline.setPrefHeight(underlinePx);
+            previewNarratedUnderline.setMaxHeight(underlinePx);
+            Color underlineColor = narratedUnderlineColor.getValue() == null
+                    ? Color.web("#4F46E5") : narratedUnderlineColor.getValue();
+            previewNarratedUnderline.setBackground(new Background(new BackgroundFill(
+                    underlineColor, new CornerRadii(Math.max(1, underlinePx / 2.0)),
+                    javafx.geometry.Insets.EMPTY)));
+            previewFrame.setBackground(new Background(new BackgroundFill(
+                    backgroundColor.getValue() == null ? Color.WHITE : backgroundColor.getValue(),
+                    new CornerRadii(6), javafx.geometry.Insets.EMPTY)));
+            boolean imageMode = backgroundMode.getValue() == DocumentTextVideoBackgroundMode.IMAGE
+                    && backgroundImage != null;
+            previewBackground.setImage(null);
+            previewBackground.setViewport(null);
+            previewBackground.setEffect(null);
+            previewBackground.setVisible(false);
+            previewBackground.setManaged(false);
+            previewForeground.setImage(null);
+            previewForeground.setVisible(false);
+            if (imageMode) {
+                Image image = new Image(backgroundImage.toUri().toString(), true);
+                double opacity = backgroundImageOpacity.getValue() / 100.0;
+                DocumentBackgroundImageFit fit = selectedBackgroundImageFit();
+                if (fit == DocumentBackgroundImageFit.COVER) {
+                    showCoverPreview(image, opacity, false);
+                } else if (fit == DocumentBackgroundImageFit.BLUR_AND_CONTAIN) {
+                    showCoverPreview(image, opacity, true);
+                    showContainedPreview(image, opacity);
+                } else {
+                    showContainedPreview(image, opacity);
+                }
             }
             previewFrame.setBorder(frameBorder());
             previewFrame.setAccessibleText("Vista previa del frame documental con texto " + foreground + ".");
+        }
+
+        private void configureBackgroundFitChoices() {
+            containBackground.setToggleGroup(backgroundImageFitGroup);
+            coverBackground.setToggleGroup(backgroundImageFitGroup);
+            blurredBackground.setToggleGroup(backgroundImageFitGroup);
+            containBackground.setUserData(DocumentBackgroundImageFit.CONTAIN);
+            coverBackground.setUserData(DocumentBackgroundImageFit.COVER);
+            blurredBackground.setUserData(DocumentBackgroundImageFit.BLUR_AND_CONTAIN);
+            coverBackground.setSelected(true);
+            for (RadioButton choice : List.of(containBackground, coverBackground, blurredBackground)) {
+                choice.disableProperty().bind(backgroundMode.valueProperty().isNotEqualTo(DocumentTextVideoBackgroundMode.IMAGE));
+            }
+            previewFrame.widthProperty().addListener((obs, before, after) -> {
+                updateCoverViewport();
+                centerPreviewForeground();
+            });
+            previewFrame.heightProperty().addListener((obs, before, after) -> {
+                updateCoverViewport();
+                centerPreviewForeground();
+            });
+        }
+
+        private DocumentBackgroundImageFit selectedBackgroundImageFit() {
+            Toggle selected = backgroundImageFitGroup.getSelectedToggle();
+            return selected != null && selected.getUserData() instanceof DocumentBackgroundImageFit fit
+                    ? fit : DocumentBackgroundImageFit.COVER;
+        }
+
+        private void showCoverPreview(Image image, double opacity, boolean blurred) {
+            previewBackground.setImage(image);
+            previewBackground.setOpacity(opacity);
+            previewBackground.setEffect(blurred ? new javafx.scene.effect.GaussianBlur(28) : null);
+            previewBackground.setVisible(true);
+            image.progressProperty().addListener((obs, before, after) -> updateCoverViewport());
+            updateCoverViewport();
+        }
+
+        private void showContainedPreview(Image image, double opacity) {
+            previewForeground.setImage(image);
+            previewForeground.setOpacity(opacity);
+            previewForeground.setVisible(true);
+            image.progressProperty().addListener((obs, before, after) -> centerPreviewForeground());
+            centerPreviewForeground();
+        }
+
+        private void centerPreviewForeground() {
+            Image image = previewForeground.getImage();
+            double frameWidth = previewFrame.getWidth(), frameHeight = previewFrame.getHeight();
+            if (image == null || image.getWidth() <= 0 || image.getHeight() <= 0
+                    || frameWidth <= 0 || frameHeight <= 0) return;
+            double scale = Math.min(frameWidth / image.getWidth(), frameHeight / image.getHeight());
+            double renderedWidth = image.getWidth() * scale;
+            double renderedHeight = image.getHeight() * scale;
+            previewForeground.setLayoutX((frameWidth - renderedWidth) / 2.0);
+            previewForeground.setLayoutY((frameHeight - renderedHeight) / 2.0);
+        }
+
+        private void updateCoverViewport() {
+            Image image = previewBackground.getImage();
+            double width = previewFrame.getWidth(), height = previewFrame.getHeight();
+            if (image == null || image.getWidth() <= 0 || image.getHeight() <= 0 || width <= 0 || height <= 0) return;
+            double imageRatio = image.getWidth() / image.getHeight();
+            double frameRatio = width / height;
+            if (imageRatio > frameRatio) {
+                double cropWidth = image.getHeight() * frameRatio;
+                previewBackground.setViewport(new javafx.geometry.Rectangle2D(
+                        (image.getWidth() - cropWidth) / 2.0, 0, cropWidth, image.getHeight()));
+            } else {
+                double cropHeight = image.getWidth() / frameRatio;
+                previewBackground.setViewport(new javafx.geometry.Rectangle2D(
+                        0, (image.getHeight() - cropHeight) / 2.0, image.getWidth(), cropHeight));
+            }
         }
 
         private static Background imageBackground(Path imagePath) {
@@ -532,6 +837,25 @@ public final class ExportCenterDialog {
             return new Background(background);
         }
 
+        private static HBox percentageControl(Slider slider, Label value) {
+            HBox row = new HBox(10, slider, value);
+            HBox.setHgrow(slider, Priority.ALWAYS);
+            slider.setMaxWidth(Double.MAX_VALUE);
+            return row;
+        }
+
+        private static String textEffectCss(DocumentTextEffect effect, Color color, Integer thicknessValue) {
+            if (effect == null || effect == DocumentTextEffect.NONE) return "";
+            int thickness = thicknessValue == null ? 3 : thicknessValue;
+            String effectColor = hex(color == null ? Color.BLACK : color);
+            if (effect == DocumentTextEffect.SHADOW) {
+                return "-fx-effect: dropshadow(gaussian, " + effectColor + ", " + Math.max(2, thickness * 2)
+                        + ", 0.35, " + thickness + ", " + thickness + ");";
+            }
+            return "-fx-effect: dropshadow(gaussian, " + effectColor + ", " + Math.max(2, thickness)
+                    + ", 1.0, 0, 0);";
+        }
+
         private static Border frameBorder() {
             return new Border(new BorderStroke(
                     Color.web("#D9E1F2"),
@@ -539,6 +863,11 @@ public final class ExportCenterDialog {
                     new CornerRadii(6),
                     BorderWidths.DEFAULT));
         }
+
+        private static void configureFontCombo(ComboBox<String> combo) {
+            com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFontControls.configure(combo);
+        }
+
     }
 
     private static HBox field(String label, javafx.scene.Node node) {

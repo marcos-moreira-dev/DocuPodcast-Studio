@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.theatre;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls;
+
 import com.marcosmoreiradev.docupodcaststudio.domain.document.ReadableDocument;
 import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationScriptDocument;
 import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreProjectLayer;
@@ -173,7 +175,7 @@ final class TheatreInterventionNavigator extends VBox {
                 null,
                 alias -> generateIntervention.accept(scene, alias),
                 alias -> contextExport.accept(scene, alias));
-        ScrollPane scroll = new ScrollPane(canvas);
+        ScrollPane scroll = StudioViewportControls.scrollPane(canvas);
         scroll.getStyleClass().add("theatre-action-canvas-scroll");
         scroll.setFitToWidth(false);
         scroll.setFitToHeight(false);

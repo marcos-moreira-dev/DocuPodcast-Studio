@@ -4,6 +4,13 @@ import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualGeneratio
 
 /** Presets for local theatre image generation. */
 public enum TheatreImageGenerationPreset {
+    /**
+     * Compatibility identifier retained for existing projects. The visible profile is adaptive:
+     * generation resolution comes from the user's visual profile, while the runtime uses GPU-first
+     * execution and may offload model memory to system RAM.
+     */
+    CONTEXTUAL_4GB_SD15("Intervención contextual · calidad adaptativa", "h94/IP-Adapter",
+            "v1-5-pruned-emaonly-fp16.safetensors", 960, 544, 1, 32, 6.0, true, true, false),
     TEST_4GB_SD15("Prueba 4GB", "Comfy-Org/stable-diffusion-v1-5-archive",
             "v1-5-pruned-emaonly-fp16.safetensors", 512, 512, 1, 24, 7.0, true, true, false),
     SD15_DREAMSHAPER("Estetico SD 1.5", "Lykon/DreamShaper",

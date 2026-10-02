@@ -1,254 +1,314 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.document;
 
-import com.marcosmoreiradev.docupodcaststudio.application.document.PdfNarratableDocumentRequest;
-import com.marcosmoreiradev.docupodcaststudio.application.document.PdfNarratableDocumentResolution;
-import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlock;
-import com.marcosmoreiradev.docupodcaststudio.domain.document.ReadableDocument;
-import com.marcosmoreiradev.docupodcaststudio.domain.document.SourceDocumentFormat;
-import com.marcosmoreiradev.docupodcaststudio.presentation.process.FxBackgroundTaskRunner;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PdfPagePreparationScheduler;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PdfPreparationPriority;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PdfPreparationOrigin;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PdfPreparationProgress;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PdfPreparationScope;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PdfPreparationScopeRequest;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PdfPreparationScopeResult;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PdfPreparationTaskKey;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PdfProjectSessionToken;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PreparePdfPageRequest;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PreparePdfPageResult;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PreparePdfScopeUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PreparedPdfWorkspaceRef;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PreparedPdfSource;
+import com.marcosmoreiradev.docupodcaststudio.application.document.OpenPreparedPdfWorkspaceUseCase;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.DocuPodcastShellViewModel;
-import javafx.concurrent.Task;
+import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.property.ReadOnlyIntegerProperty;
+import javafx.beans.property.ReadOnlyStringProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-/** Keeps PDF text/OCR preparation close to the visible page without blocking JavaFX. */
+/** Viewport adapter over the application-level single-worker PDF scheduler. */
 final class PdfVisibleTextPreparationCoordinator {
-    private static final int MAX_VISIBLE_WINDOW_PAGES = 4;
+    private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger(
+            PdfVisibleTextPreparationCoordinator.class);
 
     private final DocuPodcastShellViewModel viewModel;
     private final Supplier<Path> cacheDirectorySupplier;
-    private final FxBackgroundTaskRunner backgroundTaskRunner = new FxBackgroundTaskRunner();
-    private final LinkedHashSet<Integer> queue = new LinkedHashSet<>();
-    private final Set<PageKey> autoAttemptedPages = new HashSet<>();
-    private boolean running;
-    private Path queuedSourcePath;
+    private final PreparePdfScopeUseCase prepareScope;
+    private final PdfPagePreparationScheduler scheduler;
+    private final OpenPreparedPdfWorkspaceUseCase openWorkspace;
+    private final Runnable onPrepared;
+    private final StringProperty status = new SimpleStringProperty("Preparación PDF inactiva.");
+    private final DoubleProperty progress = new SimpleDoubleProperty(0.0);
+    private final IntegerProperty currentPage = new SimpleIntegerProperty(0);
+    private final BooleanProperty active = new SimpleBooleanProperty(false);
+    private Path sessionSource;
+    private PdfProjectSessionToken session = new PdfProjectSessionToken();
+    private int lastVisiblePage;
 
-    PdfVisibleTextPreparationCoordinator(DocuPodcastShellViewModel viewModel, Supplier<Path> cacheDirectorySupplier) {
+    PdfVisibleTextPreparationCoordinator(DocuPodcastShellViewModel viewModel,
+                                         Supplier<Path> cacheDirectorySupplier,
+                                         Runnable onPrepared) {
         this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
         this.cacheDirectorySupplier = Objects.requireNonNull(cacheDirectorySupplier, "cacheDirectorySupplier");
+        this.prepareScope = viewModel.projectWorkspace().document().preparePdfScope();
+        this.scheduler = viewModel.projectWorkspace().document().pdfPagePreparationScheduler();
+        this.openWorkspace = viewModel.projectWorkspace().document().openPreparedPdfWorkspace();
+        this.onPrepared = onPrepared == null ? () -> { } : onPrepared;
+        this.scheduler.addProgressListener(this::acceptProgress);
     }
 
-    void prepareVisibleWindow(ReadableDocument document, int visiblePage) {
-        // OCR is intentionally click-driven; opening or scrolling a PDF must not enqueue analysis.
+    /** Updates viewer state and may promote already queued work; never enqueues work. */
+    void observeVisiblePage(PreparedPdfSource source, int visiblePage) {
+        if (source == null || visiblePage <= 0) return;
+        resetIfSourceChanged(source.sourcePath());
+        int previous = lastVisiblePage;
+        lastVisiblePage = visiblePage;
+        PreparedPdfWorkspaceRef workspace = source.workspace();
+        LOGGER.info("[PDF][UI] page-visible old={} new={} cause=NAVIGATION",
+                previous, visiblePage);
+        com.marcosmoreiradev.docupodcaststudio.application.document.PdfPageViewerState viewerState =
+                openWorkspace.pageViewerState(workspace, visiblePage);
+        boolean reprioritized = scheduler.reprioritizePending(
+                new PdfPreparationTaskKey(workspace.sourceSha256(), visiblePage),
+                PdfPreparationPriority.URGENT);
+        LOGGER.info("[PDF][P{}] viewer canonical={} action={} origin=NAVIGATION",
+                visiblePage, viewerState,
+                reprioritized ? "ACTIVE_JOB_REPRIORITIZED" : "DISPLAY_ONLY");
+        if (viewerState != com.marcosmoreiradev.docupodcaststudio.application.document
+                .PdfPageViewerState.PREPARED && !reprioritized) {
+            LOGGER.info("[PDF][P{}] semantic action=SKIPPED reason=NAVIGATION_IS_PASSIVE",
+                    visiblePage);
+        }
     }
 
-    void preparePageNow(ReadableDocument document, int page) {
-        enqueue(document, List.of(page), true);
+    void preparePageNow(PreparedPdfSource source, int page) {
+        if (source == null || page <= 0) return;
+        resetIfSourceChanged(source.sourcePath());
+        submit(source.workspace(), page, PdfPreparationPriority.URGENT, false,
+                PdfPreparationOrigin.EXPLICIT_RETRY, true,
+                "explicit-page-" + java.util.UUID.randomUUID());
     }
 
-    private void enqueue(ReadableDocument document, List<Integer> pages, boolean priority) {
-        if (!shouldUsePdf(document) || pages.isEmpty()) {
+    static PreparePdfPageRequest explicitSemanticRetryRequest(
+            PreparedPdfWorkspaceRef workspace, Path cacheDirectory, int page,
+            PdfPreparationPriority priority, String scopeId) {
+        return new PreparePdfPageRequest(workspace, cacheDirectory, page,
+                false, null, priority,
+                com.marcosmoreiradev.docupodcaststudio.media.api.ProgressSink.NONE,
+                PdfPreparationOrigin.EXPLICIT_RETRY, true, scopeId);
+    }
+
+    void pause() {
+        scheduler.pause();
+    }
+
+    void resume() {
+        scheduler.resume();
+    }
+
+    void cancelPending() {
+        scheduler.cancelPending(session);
+    }
+
+    void closeProject() {
+        scheduler.closeSession(session);
+        session = new PdfProjectSessionToken();
+        sessionSource = null;
+        lastVisiblePage = 0;
+    }
+
+    void prepareScope(PreparedPdfSource source,
+                      PdfPreparationScope scope,
+                      int rangeStart,
+                      int rangeEnd,
+                      Runnable onCompleted,
+                      Consumer<String> onStatus) {
+        if (source == null) {
+            if (onStatus != null) onStatus.accept("No hay un PDF activo.");
             return;
         }
-        resetIfSourceChanged(document.sourcePath());
-        LinkedHashSet<Integer> nextPages = new LinkedHashSet<>();
-        for (Integer page : pages) {
-            int safePage = page == null ? 0 : page;
-            PageKey key = new PageKey(document.sourcePath(), safePage);
-            if (safePage > 0 && needsPage(document, safePage) && (priority || !autoAttemptedPages.contains(key))) {
-                nextPages.add(safePage);
-                if (priority) {
-                    autoAttemptedPages.remove(key);
-                }
+        resetIfSourceChanged(source.sourcePath());
+        PreparedPdfWorkspaceRef workspace = source.workspace();
+        int visiblePage = Math.max(1, viewModel.pdfVisiblePageNumber());
+        PdfPreparationScopeRequest request = new PdfPreparationScopeRequest(
+                workspace,
+                scope,
+                visiblePage,
+                rangeStart,
+                rangeEnd,
+                viewModel.projectWorkspace().document().buildPdfEnhancedOutline().build(workspace),
+                scope == PdfPreparationScope.WHOLE_DOCUMENT
+                        ? PdfPreparationOrigin.PROCESS_COMPLETE
+                        : PdfPreparationOrigin.PROCESS_FROM_HERE,
+                true, null);
+        LOGGER.info("[PDF][SCOPE] semantic request origin={} scopeId={} retryAllowed={} scope={}",
+                request.origin(), request.scopeId(), request.retryAllowed(), scope);
+        PdfPreparationPriority priority = scope == PdfPreparationScope.WHOLE_DOCUMENT
+                ? PdfPreparationPriority.BACKGROUND
+                : PdfPreparationPriority.URGENT;
+        PdfProjectSessionToken submittedSession = session;
+        prepareScope.execute(request, cacheDirectorySupplier.get(), priority, submittedSession, snapshot -> {
+            if (onStatus != null && submittedSession.active() && submittedSession.equals(session)) {
+                Platform.runLater(() -> onStatus.accept(scopeProgressLabel(snapshot)));
             }
-        }
-        if (nextPages.isEmpty()) {
+        }).whenComplete((result, error) -> Platform.runLater(() ->
+                completeScope(submittedSession, result, error, onCompleted, onStatus)));
+    }
+
+    ReadOnlyStringProperty statusProperty() {
+        return status;
+    }
+
+    ReadOnlyDoubleProperty progressProperty() {
+        return progress;
+    }
+
+    ReadOnlyIntegerProperty currentPageProperty() {
+        return currentPage;
+    }
+
+    ReadOnlyBooleanProperty activeProperty() {
+        return active;
+    }
+
+    private void submit(PreparedPdfWorkspaceRef workspace,
+                        int page,
+                        PdfPreparationPriority priority,
+                        boolean forceOcr,
+                        PdfPreparationOrigin origin,
+                        boolean retryAllowed,
+                        String scopeId) {
+        if (page <= 0 || page > openWorkspace.pageCount(workspace)
+                || (!forceOcr && openWorkspace.pagePrepared(workspace, page))) return;
+        String sourceSha = workspace.sourceSha256();
+        PdfProjectSessionToken submittedSession = session;
+        PreparePdfPageRequest request = origin == PdfPreparationOrigin.EXPLICIT_RETRY
+                && !forceOcr
+                ? explicitSemanticRetryRequest(workspace,
+                cacheDirectorySupplier.get(), page, priority, scopeId)
+                : new PreparePdfPageRequest(workspace, cacheDirectorySupplier.get(), page,
+                forceOcr, null, priority,
+                com.marcosmoreiradev.docupodcaststudio.media.api.ProgressSink.NONE,
+                origin, retryAllowed, scopeId);
+        scheduler.submit(new PdfPreparationTaskKey(sourceSha, page), priority, submittedSession,
+                        request)
+                .whenComplete((result, error) -> Platform.runLater(() ->
+                        complete(submittedSession, result, error)));
+    }
+
+    private void complete(PdfProjectSessionToken submittedSession,
+                          PreparePdfPageResult result,
+                          Throwable error) {
+        if (!submittedSession.active() || !submittedSession.equals(session)) return;
+        if (error != null) {
+            String message = error.getMessage() == null ? "error desconocido" : error.getMessage();
+            viewModel.updateStatusMessage("No se pudo preparar la página PDF: " + message);
             return;
         }
-        if (priority) {
-            LinkedHashSet<Integer> reordered = new LinkedHashSet<>(nextPages);
-            reordered.addAll(queue);
-            queue.clear();
-            queue.addAll(reordered);
-            viewModel.updateStatusMessage("Analizando pagina PDF " + nextPages.iterator().next() + " por clic...");
+        if (result == null || result.cancelled()) return;
+        if (result.succeeded()) {
+            PreparedPdfSource source = viewModel.currentPreparedPdfSourceProperty().get();
+            PreparedPdfWorkspaceRef current = source == null ? null : source.workspace();
+            if (current == null) return;
+            int narratable = openWorkspace.narratableRegionCount(current, result.pageNumber());
+            viewModel.updateStatusMessage("Página PDF " + result.pageNumber() + " preparada: "
+                    + narratable + " regiones narrables.");
+            onPrepared.run();
         } else {
-            queue.addAll(nextPages);
+            String message = result.userFacingReason().isBlank()
+                    ? result.terminalMessage() : result.userFacingReason();
+            if (result.canonicalPageAvailable()) {
+                message += " Se conserva la versión preparada anterior.";
+            }
+            viewModel.updateStatusMessage(message);
         }
-        startNext();
     }
 
-    private void startNext() {
-        if (running) {
+    private void completeScope(PdfProjectSessionToken submittedSession,
+                               PdfPreparationScopeResult result,
+                               Throwable error,
+                               Runnable onCompleted,
+                               Consumer<String> onStatus) {
+        if (!submittedSession.active() || !submittedSession.equals(session)) return;
+        if (error != null) {
+            if (onStatus != null) onStatus.accept("No se pudo ampliar la búsqueda: " + diagnostic(error));
             return;
         }
-        ReadableDocument document = viewModel.currentDocumentProperty().get();
-        if (!shouldUsePdf(document)) {
-            queue.clear();
+        if (result == null || result.cancelled()) {
+            if (onStatus != null) onStatus.accept("Preparación cancelada.");
             return;
         }
-        resetIfSourceChanged(document.sourcePath());
-        Integer page = pollNextNeededPage(document);
-        if (page == null) {
+        if (result.resolution().requiresManualRange()) {
+            if (onStatus != null) onStatus.accept(result.resolution().explanation());
             return;
         }
-        running = true;
-        autoAttemptedPages.add(new PageKey(document.sourcePath(), page));
-        viewModel.updateStatusMessage("Analizando pagina PDF " + page + " por clic...");
-        Task<PdfNarratableDocumentResolution> task = new Task<>() {
-            @Override
-            protected PdfNarratableDocumentResolution call() {
-                return viewModel.applicationServices().document().resolvePdfNarratableDocument()
-                        .resolve(new PdfNarratableDocumentRequest(document, cacheDirectorySupplier.get(), false, 1, List.of(page)));
-            }
+        if (!result.preparedPages().isEmpty()) onPrepared.run();
+        if (onStatus != null) {
+            String message = result.failedPages().isEmpty()
+                    ? "Preparadas " + result.preparedPages().size() + " página(s)."
+                    : "Procesadas " + result.pageOutcomes().size() + " página(s): "
+                    + result.preparedPages().size() + " preparada(s), "
+                    + result.rejectedPages().size() + " no interpretable(s), "
+                    + result.technicalFailurePages().size() + " con fallo técnico.";
+            onStatus.accept(message);
+        }
+        if (onCompleted != null) onCompleted.run();
+    }
+
+    private static String scopeProgressLabel(
+            com.marcosmoreiradev.docupodcaststudio.application.document.PdfPreparationScopeProgress snapshot) {
+        String estimate = snapshot.estimatedRemainingSeconds() < 0
+                ? ""
+                : " · aprox. " + snapshot.estimatedRemainingSeconds() + " s restantes";
+        return "Preparando página " + snapshot.currentPage() + " · "
+                + snapshot.completedPages() + "/" + snapshot.totalPages() + estimate;
+    }
+
+    private static String diagnostic(Throwable error) {
+        Throwable current = error;
+        while (current.getCause() != null) current = current.getCause();
+        String message = current.getMessage();
+        return message == null || message.isBlank() ? current.getClass().getSimpleName() : message;
+    }
+
+    private void acceptProgress(PdfPreparationProgress snapshot) {
+        Platform.runLater(() -> {
+            status.set(snapshot.message().isBlank() ? label(snapshot) : snapshot.message());
+            progress.set(snapshot.fraction());
+            currentPage.set(snapshot.currentPage());
+            active.set(snapshot.state() == PdfPreparationProgress.State.RUNNING
+                    || snapshot.state() == PdfPreparationProgress.State.PAUSED
+                    || snapshot.queued() > 0);
+        });
+    }
+
+    private static String label(PdfPreparationProgress progress) {
+        return switch (progress.state()) {
+            case IDLE -> "Preparación PDF al día.";
+            case RUNNING -> "Preparando página " + progress.currentPage() + ".";
+            case PAUSED -> "Preparación PDF pausada.";
+            case CANCELLED -> "Preparación PDF cancelada.";
+            case FAILED -> "La preparación PDF encontró un error.";
         };
-        task.setOnSucceeded(event -> complete(page, task.getValue()));
-        task.setOnFailed(event -> fail(page, task.getException()));
-        backgroundTaskRunner.start("docupodcast-pdf-visible-text-" + page, task);
-    }
-
-    private Integer pollNextNeededPage(ReadableDocument document) {
-        while (!queue.isEmpty()) {
-            Integer page = queue.iterator().next();
-            queue.remove(page);
-            if (page != null && needsPage(document, page)) {
-                return page;
-            }
-        }
-        return null;
-    }
-
-    private void complete(int page, PdfNarratableDocumentResolution resolution) {
-        running = false;
-        ReadableDocument current = viewModel.currentDocumentProperty().get();
-        if (resolution == null || resolution.document() == null || current == null
-                || !Objects.equals(current.sourcePath(), resolution.document().sourcePath())) {
-            startNext();
-            return;
-        }
-        if (resolution != null && resolution.changed() && resolution.document() != null && !resolution.pagesProcessed().isEmpty()) {
-            int fragmentCount = countReadyOcrBlocks(resolution.document(), page);
-            viewModel.replaceCurrentDocumentFromApplication(resolution.document(),
-                    "Pagina PDF " + page + " analizada: " + fragmentCount + " fragmentos OCR listos.");
-        } else if (resolution != null && !resolution.issues().isEmpty()) {
-            viewModel.updateStatusMessage(statusForIssue(page, resolution.issues().getFirst().code(),
-                    resolution.issues().getFirst().message()));
-        } else {
-            viewModel.updateStatusMessage("Pagina PDF " + page + " ya tiene mapa textual.");
-        }
-        startNext();
-    }
-
-    private void fail(int page, Throwable error) {
-        running = false;
-        String message = error == null || error.getMessage() == null || error.getMessage().isBlank()
-                ? "error desconocido"
-                : error.getMessage();
-        viewModel.updateStatusMessage("No se pudo analizar pagina PDF " + page + ": " + message);
-        startNext();
     }
 
     private void resetIfSourceChanged(Path sourcePath) {
-        if (Objects.equals(queuedSourcePath, sourcePath)) {
-            return;
-        }
-        queuedSourcePath = sourcePath;
-        queue.clear();
-        autoAttemptedPages.clear();
-        running = false;
+        Path normalized = sourcePath == null ? null : sourcePath.toAbsolutePath().normalize();
+        if (Objects.equals(sessionSource, normalized)) return;
+        scheduler.closeSession(session);
+        session = new PdfProjectSessionToken();
+        sessionSource = normalized;
+        lastVisiblePage = 0;
     }
 
-    private static List<Integer> visibleWindow(ReadableDocument document, int visiblePage) {
-        int pageCount = pageCount(document);
-        if (visiblePage <= 0 || pageCount <= 0) {
-            return List.of();
-        }
-        ArrayList<Integer> pages = new ArrayList<>();
-        int[] offsets = {0, 1, -1, 2};
-        for (int offset : offsets) {
-            int page = visiblePage + offset;
-            if (page >= 1 && page <= pageCount) {
-                pages.add(page);
-            }
-        }
-        return pages.stream().distinct().limit(MAX_VISIBLE_WINDOW_PAGES).toList();
-    }
-
-    static boolean needsPage(ReadableDocument document, int page) {
-        if (!shouldUsePdf(document) || page <= 0 || page > pageCount(document)) {
-            return false;
-        }
-        for (DocumentBlock block : document.blocks()) {
-            if (sourcePage(block) == page
-                    && Boolean.parseBoolean(block.metadata().getOrDefault("ocr", "false"))
-                    && "ocr-local".equalsIgnoreCase(block.metadata().getOrDefault("extractionMode", ""))
-                    && block.narratable()
-                    && "pdf-points".equalsIgnoreCase(block.metadata().getOrDefault("bboxUnits", ""))
-                    && !block.metadata().getOrDefault("bbox", "").isBlank()) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static String statusForIssue(int page, String code, String message) {
-        if ("pdf-ocr-runtime-missing".equals(code)) {
-            return "OCR no configurado para pagina PDF " + page
-                    + ". Usa Configurar OCR, importa una carpeta Tesseract portable o configura ocr.tesseractExecutable.";
-        }
-        if ("pdf-ocr-text-discarded".equals(code)) {
-            return "Pagina PDF " + page + " analizada: OCR detecto texto, pero no prosa narrable. "
-                    + (message == null ? "" : message);
-        }
-        if ("pdf-ocr-empty".equals(code)) {
-            return "Pagina PDF " + page + " analizada: no se detecto prosa OCR narrable.";
-        }
-        return "Pagina PDF " + page + ": " + (message == null || message.isBlank() ? "OCR no disponible." : message);
-    }
-
-    private static int countReadyOcrBlocks(ReadableDocument document, int page) {
-        if (document == null) {
-            return 0;
-        }
-        int count = 0;
-        for (DocumentBlock block : document.blocks()) {
-            if (sourcePage(block) == page
-                    && Boolean.parseBoolean(block.metadata().getOrDefault("ocr", "false"))
-                    && "ocr-local".equalsIgnoreCase(block.metadata().getOrDefault("extractionMode", ""))
-                    && block.narratable()) {
-                count++;
-            }
-        }
-        return count;
-    }
-
-    private static boolean shouldUsePdf(ReadableDocument document) {
-        return document != null && document.format() == SourceDocumentFormat.PDF;
-    }
-
-    private static int pageCount(ReadableDocument document) {
-        int max = 0;
-        if (document == null) {
-            return 0;
-        }
-        for (DocumentBlock block : document.blocks()) {
-            max = Math.max(max, parsePositiveInt(block.metadata().get("sourcePageCount")));
-            max = Math.max(max, sourcePage(block));
-        }
-        return max;
-    }
-
-    private static int sourcePage(DocumentBlock block) {
-        return block == null ? 0 : parsePositiveInt(block.metadata().get("sourcePage"));
-    }
-
-    private static int parsePositiveInt(String raw) {
-        if (raw == null || raw.isBlank()) {
-            return 0;
-        }
-        try {
-            return Math.max(0, Integer.parseInt(raw.strip()));
-        } catch (NumberFormatException ex) {
-            return 0;
-        }
-    }
-
-    private record PageKey(Path sourcePath, int page) {
-    }
 }

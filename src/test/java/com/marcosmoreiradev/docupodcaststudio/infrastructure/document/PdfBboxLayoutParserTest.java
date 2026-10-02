@@ -3,8 +3,24 @@ package com.marcosmoreiradev.docupodcaststudio.infrastructure.document;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class PdfBboxLayoutParserTest {
+    @Test
+    void preservesPageWhenPopplerEmitsIllegalXmlControlCharacters() throws Exception {
+        PdfBboxExtraction extraction = new PdfBboxLayoutParser().parse("""
+                <html><body><doc><page width="612" height="792"><flow>
+                <block xMin="20" yMin="30" xMax="220" yMax="60">
+                <line><word>texto\u0004dañado</word></line>
+                </block></flow></page></doc></body></html>
+                """);
+
+        assertEquals(1, extraction.pages().size());
+        assertTrue(extraction.rawText().contains("texto"));
+        assertTrue(extraction.rawText().contains("dañado"));
+        assertTrue(extraction.rawText().contains("\uFFFD"));
+    }
+
     @Test
     void parsesPopplerBboxLayoutPagesBlocksAndWords() throws Exception {
         PdfBboxExtraction extraction = new PdfBboxLayoutParser().parse("""
@@ -70,5 +86,27 @@ final class PdfBboxLayoutParserTest {
         assertEquals(2, page.blocks().size());
         assertEquals("First line\nSecond line", page.blocks().getFirst().text());
         assertEquals("Side", page.blocks().get(1).text());
+    }
+
+    @Test
+    void keepsNearbyCompleteParagraphsAsIndependentSelectableRegions() throws Exception {
+        PdfBboxExtraction extraction = new PdfBboxLayoutParser().parse("""
+                <html xmlns="http://www.w3.org/1999/xhtml"><body><doc>
+                  <page width="612" height="792"><flow>
+                    <block xMin="72" yMin="60" xMax="520" yMax="90">
+                      <line><word>Primer</word><word>párrafo</word><word>completo.</word></line>
+                    </block>
+                    <block xMin="72" yMin="96" xMax="520" yMax="126">
+                      <line><word>Segundo</word><word>párrafo</word><word>independiente.</word></line>
+                    </block>
+                  </flow></page>
+                </doc></body></html>
+                """);
+
+        PdfBboxPage page = extraction.pages().getFirst();
+
+        assertEquals(2, page.blocks().size());
+        assertEquals("Primer párrafo completo.", page.blocks().get(0).text());
+        assertEquals("Segundo párrafo independiente.", page.blocks().get(1).text());
     }
 }

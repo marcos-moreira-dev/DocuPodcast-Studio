@@ -1,5 +1,6 @@
 # Build outputs
 /target/
+**/target/
 /generated/
 
 # Local runtime and smoke-test output
@@ -37,6 +38,13 @@
 /tools/piper/**
 !/tools/piper/README.md
 /tools/tesseract/**
+/tools/document-ai/ollama/
+/tools/document-ai/ollama-models/
+/tools/document-ai/pp-structure/
+/tools/document-ai/downloads/
+/tools/document-ai/logs/
+/tools/document-ai/.staging/
+/tools/document-ai/state/
 
 # Local model payloads. Manifests, workflows, checksums, licenses, README and
 # portable JSON configuration remain tracked.
@@ -100,3 +108,16 @@ replay_pid*
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# Local packaging, diagnostics and experiments (official samples remain tracked)
+/dist/
+/.staging/
+/diagnostics/
+/logs/
+/tmp/
+/output/
+/state/
+/AUDITORIA_TEATRO_DOCUPODCAST_ENTREGABLES.zip
+
+# Rules extracted from the Maven-bundled MathCAT package
+/tools/document-ai/mathcat/

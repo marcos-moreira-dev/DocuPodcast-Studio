@@ -3,10 +3,10 @@ package com.marcosmoreiradev.docupodcaststudio.bootstrap;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.audio.AudioJobFileRepository;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.audio.AudioProcessDiagnosticsFileRepository;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.audio.InMemoryAudioJobQueue;
-import com.marcosmoreiradev.docupodcaststudio.infrastructure.audio.MockAudioGenerationGateway;
-import com.marcosmoreiradev.docupodcaststudio.infrastructure.audio.LocalTtsProcessAudioGenerationGateway;
-import com.marcosmoreiradev.docupodcaststudio.infrastructure.audio.SettingsAwareAudioGenerationGateway;
-import com.marcosmoreiradev.docupodcaststudio.infrastructure.audio.SettingsAwareVoiceTestSynthesisGateway;
+import com.marcosmoreiradev.docupodcaststudio.infrastructure.audio.VoiceEngineAudioGenerationGateway;
+import com.marcosmoreiradev.docupodcaststudio.infrastructure.audio.VoiceCapabilityTestSynthesisGateway;
+import com.marcosmoreiradev.docupodcaststudio.application.media.MediaCapabilityService;
+import com.marcosmoreiradev.docupodcaststudio.application.settings.LoadOperationalSettingsUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.OperationalSettings;
 import com.marcosmoreiradev.docupodcaststudio.application.runtime.ApplicationRuntimeLayout;
 import com.marcosmoreiradev.docupodcaststudio.application.runtime.RuntimePathResolver;
@@ -18,7 +18,6 @@ import com.marcosmoreiradev.docupodcaststudio.application.document.TesseractRunt
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.document.MarkdownDocumentImporter;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.document.PdfBoxRenderEngine;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.document.PlainTextDocumentImporter;
-import com.marcosmoreiradev.docupodcaststudio.infrastructure.document.PdfDocumentImporter;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.document.ReadableDocumentWorkspaceRepository;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.document.TesseractPdfOcrEngine;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.json.DocuPodcastProjectFileRepository;
@@ -48,40 +47,41 @@ import java.util.function.Supplier;
 
 /** Wires concrete infrastructure adapters. */
 public final class InfrastructureServicesFactory {
-    public InfrastructureServices create() {
+    public InfrastructureServices create(MediaCapabilityService mediaCapabilities, Path applicationRoot) {
+        java.util.Objects.requireNonNull(mediaCapabilities, "media capabilities");
         AudioJobFileRepository audioJobRepository = new AudioJobFileRepository();
         AudioProcessDiagnosticsFileRepository processDiagnosticsRepository = new AudioProcessDiagnosticsFileRepository();
         PropertiesOperationalSettingsRepository settingsRepository = PropertiesOperationalSettingsRepository.defaultRepository();
         OperationalSettings operationalSettings = loadOperationalSettings(settingsRepository);
-        ApplicationRuntimeLayout runtimeLayout = RuntimePathResolver.defaultResolver().resolve().layout();
-        Path applicationRoot = runtimeLayout.applicationRoot();
+        ApplicationRuntimeLayout runtimeLayout = new ApplicationRuntimeLayout(applicationRoot);
+        Path resolvedApplicationRoot = runtimeLayout.applicationRoot();
         DefaultExternalProcessRunner processRunner = new DefaultExternalProcessRunner();
         InMemoryAudioJobQueue audioQueue = new InMemoryAudioJobQueue();
-        AudioGenerationGateway audioGateway = new SettingsAwareAudioGenerationGateway(
-                settingsRepository, applicationRoot, audioQueue, audioJobRepository, processDiagnosticsRepository, processRunner);
+        LoadOperationalSettingsUseCase loadSettings = new LoadOperationalSettingsUseCase(settingsRepository);
+        AudioGenerationGateway audioGateway = new VoiceEngineAudioGenerationGateway(
+                mediaCapabilities, loadSettings, audioQueue, audioJobRepository);
         OfficialAiResourceCatalog aiResourceCatalog = new OfficialAiResourceCatalog();
         Path configuredFfmpeg = runtimeLayout.resolveConfiguredPath(operationalSettings.video().ffmpegExecutable());
-        FfmpegToolDiscovery ffmpegDiscovery = new EmbeddedFfmpegLocator().locate(applicationRoot, configuredFfmpeg);
+        FfmpegToolDiscovery ffmpegDiscovery = new EmbeddedFfmpegLocator().locate(resolvedApplicationRoot, configuredFfmpeg);
         FfmpegAudioNormalizationGateway audioNormalizationGateway = new FfmpegAudioNormalizationGateway(ffmpegDiscovery, processRunner);
         PdfBoxRenderEngine pdfRenderEngine = new PdfBoxRenderEngine();
         TesseractRuntimeLocator tesseractLocator = new TesseractRuntimeLocator();
         Supplier<String> tesseractCommand = () -> tesseractLocator
-                .locate(loadOperationalSettings(settingsRepository), applicationRoot)
+                .locate(loadOperationalSettings(settingsRepository), resolvedApplicationRoot)
                 .command();
         BuildPdfOcrTextLayerUseCase pdfOcrTextLayer =
                 new BuildPdfOcrTextLayerUseCase(new TesseractPdfOcrEngine(pdfRenderEngine, processRunner, tesseractCommand));
         return new InfrastructureServices(
                 new DocuPodcastProjectFileRepository(),
-                List.of(new DocxDocumentImporter(), new MarkdownDocumentImporter(), new PlainTextDocumentImporter(),
-                        new PdfDocumentImporter(pdfRenderEngine, pdfOcrTextLayer)),
+                List.of(new DocxDocumentImporter(), new MarkdownDocumentImporter(), new PlainTextDocumentImporter()),
                 new ReadableDocumentWorkspaceRepository(),
                 new NarrationScriptWorkspaceFileRepository(),
                 audioGateway,
                 audioJobRepository,
                 processDiagnosticsRepository,
                 new VoiceLibraryWorkspaceFileRepository(),
-                new LocalVoiceSampleFileRepository(runtimeLayout.applicationRoot()),
-                new SettingsAwareVoiceTestSynthesisGateway(settingsRepository, applicationRoot, processRunner),
+                new LocalVoiceSampleFileRepository(resolvedApplicationRoot),
+                new VoiceCapabilityTestSynthesisGateway(mediaCapabilities, loadSettings),
                 new JavaSoundAudioRecordingGateway(),
                 new LocalImageAssetFileRepository(),
                 new StoryboardWorkspaceFileRepository(),

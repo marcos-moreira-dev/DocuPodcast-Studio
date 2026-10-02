@@ -12,6 +12,9 @@ module com.marcosmoreiradev.docupodcaststudio {
     requires com.sun.jna.platform;
     requires stylus;
     requires stylus.javafx;
+    requires com.marcosmoreiradev.docupodcaststudio.media.api;
+    requires com.marcosmoreiradev.docupodcaststudio.ink;
+    requires org.slf4j;
 
     exports com.marcosmoreiradev.docupodcaststudio;
     exports com.marcosmoreiradev.docupodcaststudio.bootstrap;

@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.domain.voice;
 
+import com.marcosmoreiradev.docupodcaststudio.media.api.EngineId;
+
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -43,13 +45,13 @@ public record VoiceProfile(
                 "VOC-NARRATOR",
                 "Narrador prediseñado",
                 VoiceProfileType.PREDEFINED,
-                VoiceEngineType.MOCK,
+                VoiceEngineType.PIPER,
                 "es",
                 "",
                 "",
                 VoiceQualityPreset.BALANCED,
                 false,
-                "Voz neutral prediseñada de arranque para pruebas y documentos académicos.",
+                "Voz neutral prediseñada para el motor local simple y documentos académicos.",
                 Map.of("builtIn", "true")
         );
     }
@@ -80,6 +82,37 @@ public record VoiceProfile(
 
     public boolean usableForTts() {
         return engineType != VoiceEngineType.HUMAN_AUDIO || hasSample();
+    }
+
+    /** Extensible engine identity persisted alongside the format-v1 enum alias. */
+    public EngineId engineId() {
+        String persisted = normalize(metadata.get("engineId"));
+        return persisted.isBlank() ? engineIdFor(engineType) : new EngineId(persisted);
+    }
+
+    public static EngineId engineIdFor(VoiceEngineType engineType) {
+        VoiceEngineType safe = Objects.requireNonNullElse(engineType, VoiceEngineType.UNKNOWN);
+        return new EngineId(switch (safe) {
+            case PIPER -> "piper";
+            case XTTS -> "xtts";
+            case LOCAL_TTS_PROCESS -> "local-tts-process";
+            case HUMAN_AUDIO -> "human-audio";
+            case MOCK -> "mock";
+            case UNKNOWN -> "unknown";
+        });
+    }
+
+    /** Compatibility mapping used only by format-v1 readers. Unknown ids remain extensible. */
+    public static VoiceEngineType engineTypeFor(String engineId) {
+        String normalized = normalize(engineId).toLowerCase(Locale.ROOT).replace('_', '-');
+        return switch (normalized) {
+            case "piper" -> VoiceEngineType.PIPER;
+            case "xtts", "coqui", "coqui-xtts" -> VoiceEngineType.XTTS;
+            case "local-tts-process", "external" -> VoiceEngineType.LOCAL_TTS_PROCESS;
+            case "human-audio" -> VoiceEngineType.HUMAN_AUDIO;
+            case "mock" -> VoiceEngineType.MOCK;
+            default -> VoiceEngineType.UNKNOWN;
+        };
     }
 
     private static void validateEthicalBoundary(VoiceProfileType type, String sampleAssetId, String consentNote) {

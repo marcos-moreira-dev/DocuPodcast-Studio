@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
+import com.marcosmoreiradev.docupodcaststudio.application.WorkspaceApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.application.document.RefreshSourceDocumentResult;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlock;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.ReadableDocument;
@@ -18,9 +18,9 @@ import java.util.Objects;
  * derived artifacts need review without deleting audio, layers or storyboard data silently.</p>
  */
 public final class SourceDocumentRefreshCoordinator {
-    private final ApplicationServices applicationServices;
+    private final WorkspaceApplicationServices applicationServices;
 
-    public SourceDocumentRefreshCoordinator(ApplicationServices applicationServices) {
+    public SourceDocumentRefreshCoordinator(WorkspaceApplicationServices applicationServices) {
         this.applicationServices = Objects.requireNonNull(applicationServices, "applicationServices");
     }
 
@@ -31,12 +31,12 @@ public final class SourceDocumentRefreshCoordinator {
         Objects.requireNonNull(currentDocument, "currentDocument");
         Objects.requireNonNull(activeProfile, "activeProfile");
 
-        RefreshSourceDocumentResult result = applicationServices.document().refreshSourceDocument().refresh(currentDocument);
+        RefreshSourceDocumentResult result = applicationServices.project().document().refreshSourceDocument().refresh(currentDocument);
         if (!result.refreshedDocumentAvailable()) {
             return new SourceDocumentRefreshOutcome(null, result.report(), false);
         }
 
-        ReadableDocument classified = applicationServices.readingProfile()
+        ReadableDocument classified = applicationServices.project().readingProfile()
                 .applyReadingProfile()
                 .apply(result.refreshedDocument(), activeProfile);
 

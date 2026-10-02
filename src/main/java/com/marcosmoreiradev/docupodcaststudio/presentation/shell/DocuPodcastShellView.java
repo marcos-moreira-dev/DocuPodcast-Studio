@@ -1,15 +1,34 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoBackgroundMode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeSourceChooser;
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.StudioMessageDialog;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioNavigationControls;
+
+import com.marcosmoreiradev.docupodcaststudio.ink.DrawingFeatureCatalog;
 import com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy;
-import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentTextVideoOptions;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoOptions;
+import com.marcosmoreiradev.docupodcaststudio.application.batch.ManageDocumentVideoBatchQueueUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.batch.VerifyBatchVideoOutputUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.batch.WriteDocumentVideoBatchReportUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.ProjectDocumentSource;
+import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentProcessingScope;
 import com.marcosmoreiradev.docupodcaststudio.application.examples.ExampleProjectDescriptor;
 import com.marcosmoreiradev.docupodcaststudio.application.audio.AudioJobStatusDto;
-import com.marcosmoreiradev.docupodcaststudio.application.export.AudioExportFormat;
+import com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat;
 import com.marcosmoreiradev.docupodcaststudio.application.grammar.ProjectGrammarKind;
 import com.marcosmoreiradev.docupodcaststudio.application.guide.GuideTopicId;
 import com.marcosmoreiradev.docupodcaststudio.application.project.ProjectContainerPathPolicy;
 import com.marcosmoreiradev.docupodcaststudio.application.project.ProjectModePolicy;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.OperationalSettings;
+import com.marcosmoreiradev.docupodcaststudio.application.settings.SelectedMediaEngines;
+import com.marcosmoreiradev.docupodcaststudio.application.audio.ListVoiceEngineOperationalStatesUseCase;
+import com.marcosmoreiradev.docupodcaststudio.media.api.ContentAnalysisOperation;
+import com.marcosmoreiradev.docupodcaststudio.media.api.EngineId;
 import com.marcosmoreiradev.docupodcaststudio.application.video.TheatreExportScope;
 import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.ActiveAudioJobDialog;
 import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.AudioEngineUnavailableDialog;
@@ -21,6 +40,8 @@ import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.ProjectInitia
 import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.ProjectNameDialog;
 import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.ProjectSourceCopyNoticeDialog;
 import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.ProjectSourceReplacementDialog;
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.RestartActiveProcessingDialog;
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.ReprocessCompleteReadingDialog;
 import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.UnsavedChangesDialog;
 import com.marcosmoreiradev.docupodcaststudio.presentation.command.AppCommandDispatchResult;
 import com.marcosmoreiradev.docupodcaststudio.presentation.command.AppCommandDispatcher;
@@ -40,19 +61,27 @@ import com.marcosmoreiradev.docupodcaststudio.presentation.export.ExportCenterCo
 import com.marcosmoreiradev.docupodcaststudio.presentation.export.ExportCenterDialog;
 import com.marcosmoreiradev.docupodcaststudio.presentation.export.ExportCenterSelection;
 import com.marcosmoreiradev.docupodcaststudio.presentation.export.ExportCenterState;
+import com.marcosmoreiradev.docupodcaststudio.presentation.export.ExportExecutionMode;
+import com.marcosmoreiradev.docupodcaststudio.presentation.export.PreparedExportIntent;
 import com.marcosmoreiradev.docupodcaststudio.presentation.export.ProjectExportEligibilityPolicy;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow.DiagnosticUserDecisionFactory;
+import com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow.DocumentAudioAction;
+import com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow.DocumentExportReadinessSnapshot;
+import com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow.DocumentReadingReadinessSnapshot;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow.ExampleProjectCreationWorkflow;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow.GrammarWorkflowCoordinator;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow.PdfNarratablePreparationCoordinator;
+import com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow.TheatrePackageRefreshCoordinator;
+import com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow.WordSemanticPreparationCoordinator;
 import com.marcosmoreiradev.docupodcaststudio.presentation.guide.GuideDialog;
 import com.marcosmoreiradev.docupodcaststudio.application.document.SourceDocumentRequirementException;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PdfVisualTextTarget;
 import com.marcosmoreiradev.docupodcaststudio.application.decisions.UserVisibleDecision;
 import com.marcosmoreiradev.docupodcaststudio.presentation.notification.ExceptionAlertPresenter;
 import com.marcosmoreiradev.docupodcaststudio.presentation.notification.UserNotification;
 import com.marcosmoreiradev.docupodcaststudio.presentation.notification.UserNotificationLevel;
-import com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow.DocumentAudioDefensiveDecisionGuard;
-import com.marcosmoreiradev.docupodcaststudio.presentation.settings.EmbeddedDependencySetupAssistant;
+import com.marcosmoreiradev.docupodcaststudio.application.media.administration.CapabilityAdministrationService;
+import com.marcosmoreiradev.docupodcaststudio.application.media.administration.CapabilityRequirement;
 import com.marcosmoreiradev.docupodcaststudio.presentation.settings.SettingsDialog;
 import com.marcosmoreiradev.docupodcaststudio.presentation.settings.SettingsSupportActions;
 import com.marcosmoreiradev.docupodcaststudio.presentation.status.StatusBarView;
@@ -67,6 +96,7 @@ import com.marcosmoreiradev.docupodcaststudio.presentation.process.LongProcessOv
 import com.marcosmoreiradev.docupodcaststudio.presentation.video.VideoExportOptions;
 import com.marcosmoreiradev.docupodcaststudio.presentation.video.VideoExportOptionsDialog;
 import com.marcosmoreiradev.docupodcaststudio.presentation.video.VideoExportProgressCoordinator;
+import com.marcosmoreiradev.docupodcaststudio.presentation.batch.DocumentVideoBatchExecutionPort;
 import com.marcosmoreiradev.docupodcaststudio.presentation.voice.VoiceLibraryWorkspaceView;
 import com.marcosmoreiradev.docupodcaststudio.presentation.welcome.RecentProjectEntry;
 import com.marcosmoreiradev.docupodcaststudio.presentation.welcome.RecentProjectsStore;
@@ -75,6 +105,7 @@ import com.marcosmoreiradev.docupodcaststudio.presentation.workspace.WorkspaceDe
 import com.marcosmoreiradev.docupodcaststudio.presentation.workspace.WorkspaceKind;
 import com.marcosmoreiradev.docupodcaststudio.presentation.workspace.WorkspaceRouteResolver;
 import com.marcosmoreiradev.docupodcaststudio.presentation.workspace.WorkspaceViewRegistry;
+import com.marcosmoreiradev.docupodcaststudio.media.api.CapabilityId;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -84,14 +115,21 @@ import javafx.animation.PauseTransition;
 import javafx.concurrent.Task;
 import javafx.util.Duration;
 import javafx.scene.Node;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.DirectoryChooser;
@@ -107,12 +145,27 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.Comparator;
+import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.prefs.Preferences;
+import com.marcosmoreiradev.docupodcaststudio.domain.batch.BatchItemStage;
+import com.marcosmoreiradev.docupodcaststudio.domain.batch.BatchItemState;
+import com.marcosmoreiradev.docupodcaststudio.domain.batch.DocumentVideoBatchItem;
+import com.marcosmoreiradev.docupodcaststudio.domain.batch.DocumentVideoBatchProject;
+import com.marcosmoreiradev.docupodcaststudio.application.batch.DocumentVideoBatchWorkspaceRepository;
 
 /** Main desktop shell for the onboarding build. */
 public final class DocuPodcastShellView extends BorderPane {
+    private static final Logger LOGGER = LoggerFactory.getLogger(
+            DocuPodcastShellView.class);
     private final DocuPodcastShellViewModel viewModel;
     private final StackPane workspaceHost = new StackPane();
+    private final StackPane projectLoadingOverlay = new StackPane();
+    private final javafx.beans.property.BooleanProperty openingProject = new javafx.beans.property.SimpleBooleanProperty(false);
+    private long workspaceActivationSequence;
     private final WorkspaceDescriptorCatalog workspaceCatalog = WorkspaceDescriptorCatalog.official();
     private final WorkspaceRouteResolver workspaceRouteResolver = new WorkspaceRouteResolver(workspaceCatalog);
     private final ProjectContainerPathPolicy projectContainerPathPolicy = new ProjectContainerPathPolicy();
@@ -130,10 +183,14 @@ public final class DocuPodcastShellView extends BorderPane {
     private final AudioEngineUnavailableDialog audioEngineUnavailableDialog = new AudioEngineUnavailableDialog();
     private final IncompleteAudioExportDialog incompleteAudioExportDialog = new IncompleteAudioExportDialog();
     private final DeleteAudioChunksDialog deleteAudioChunksDialog = new DeleteAudioChunksDialog();
+    private final RestartActiveProcessingDialog restartActiveProcessingDialog =
+            new RestartActiveProcessingDialog();
+    private final ReprocessCompleteReadingDialog reprocessCompleteReadingDialog =
+            new ReprocessCompleteReadingDialog();
     private final UnsavedChangesDialog unsavedChangesDialog = new UnsavedChangesDialog();
     private final ExportAiResourcesResultDialog exportAiResourcesResultDialog = new ExportAiResourcesResultDialog();
-    private final EmbeddedDependencySetupAssistant dependencySetupAssistant = new EmbeddedDependencySetupAssistant();
-    private final SettingsDialog settingsDialog = new SettingsDialog();
+    private final CapabilityAdministrationService capabilityAdministration;
+    private final SettingsDialog settingsDialog;
     private final FxBackgroundTaskRunner backgroundTaskRunner = new FxBackgroundTaskRunner();
     private final VideoExportOptionsDialog videoExportOptionsDialog = new VideoExportOptionsDialog();
     private final TheatrePortionExportOptionsDialog theatrePortionExportOptionsDialog = new TheatrePortionExportOptionsDialog();
@@ -142,10 +199,19 @@ public final class DocuPodcastShellView extends BorderPane {
     private final ExportCenterDialog exportCenterDialog = new ExportCenterDialog();
     private final ProjectExportEligibilityPolicy exportEligibilityPolicy = new ProjectExportEligibilityPolicy();
     private final GrammarWorkflowCoordinator grammarWorkflow;
+    private final TheatrePackageRefreshCoordinator theatrePackageRefresh;
     private final PdfNarratablePreparationCoordinator pdfNarratablePreparation;
+    private final WordSemanticPreparationCoordinator wordSemanticPreparation;
     private static final String PREF_HIDE_SOURCE_COPY_NOTICE = "hideProjectSourceCopyNotice";
-    private String lastAudioDefensiveDecisionKey = "";
     private String lastAudioFailureKey = "";
+    private final DocumentVideoBatchWorkspaceRepository batchRepository;
+    private final ManageDocumentVideoBatchQueueUseCase batchQueue;
+    private final VerifyBatchVideoOutputUseCase batchVideoVerifier = new VerifyBatchVideoOutputUseCase();
+    private final WriteDocumentVideoBatchReportUseCase batchReportWriter =
+            new WriteDocumentVideoBatchReportUseCase();
+    private BatchExecutionSession activeBatchExecution;
+    private Window expressNotificationOwner;
+    private boolean expressOpenedChild;
 
     private final AppCommandRegistry commandRegistry = AppCommandRegistry.official();
     private final CommandAvailabilityPolicy commandAvailabilityPolicy = new CommandAvailabilityPolicy();
@@ -153,22 +219,40 @@ public final class DocuPodcastShellView extends BorderPane {
     private final Preferences preferences = Preferences.userNodeForPackage(DocuPodcastShellView.class);
     private final RibbonStateCoordinator ribbonStateCoordinator = new RibbonStateCoordinator(preferences);
     private final BooleanProperty processOverlayExpanded = new SimpleBooleanProperty(true);
+    private final BooleanProperty processOverlayMaximized = new SimpleBooleanProperty(false);
+    private volatile Task<?> activeFinalAudioExportTask;
 
     public DocuPodcastShellView(DocuPodcastShellViewModel viewModel) {
+        batchRepository = viewModel.projectWorkspace().project().batch().repository();
+        batchQueue = viewModel.projectWorkspace().project().batch().queue();
         this.viewModel = viewModel;
+        this.settingsDialog = new SettingsDialog(viewModel.administrationWorkspace().capabilities());
+        this.capabilityAdministration = viewModel.administrationWorkspace().capabilities();
         this.recentProjectsStore = new RecentProjectsStore((projectFile, storedType) -> {
             try {
-                return new ProjectModePolicy().resolve(viewModel.applicationServices().project().openProject().open(projectFile)).displayName();
+                return new ProjectModePolicy().resolve(viewModel.projectWorkspace().project().openProject().open(projectFile)).displayName();
             } catch (IOException | RuntimeException ex) {
                 return storedType;
             }
         });
         this.grammarWorkflow = new GrammarWorkflowCoordinator(viewModel, backgroundTaskRunner, alertPresenter, this::owner);
+        var theatrePackages = Objects.requireNonNull(viewModel.projectWorkspace().theatrePackage(),
+                "theatre package application services");
+        this.theatrePackageRefresh = new TheatrePackageRefreshCoordinator(
+                viewModel,
+                theatrePackages.refresh(),
+                theatrePackages.importState(),
+                backgroundTaskRunner,
+                alertPresenter,
+                this::owner);
         this.pdfNarratablePreparation = new PdfNarratablePreparationCoordinator(viewModel, backgroundTaskRunner, alertPresenter, this::owner);
+        this.wordSemanticPreparation = new WordSemanticPreparationCoordinator(
+                viewModel, backgroundTaskRunner);
         recentProjects.setAll(recentProjectsStore.load());
         getStyleClass().add("app-root");
         registerCommandHandlers();
         initialiseWorkspaces();
+        workspaceHost.disableProperty().bind(viewModel.theatreRefreshRunningProperty().or(openingProject));
         setTop(buildTop());
         setCenter(buildCenter());
         setBottom(new StatusBarView(
@@ -179,30 +263,81 @@ public final class DocuPodcastShellView extends BorderPane {
                 viewModel::increaseReadingFontSize,
                 viewModel::setReadingFontSize,
                 viewModel.activeAudioJobStatusProperty(),
+                viewModel.pdfPreparationProgressProperty(),
+                viewModel.localDocumentAnalysisRunningProperty(),
                 viewModel.currentDocumentProperty(),
-                viewModel.selectedDocumentBlockIdProperty(),
+                viewModel.currentPreparedPdfSourceProperty(),
+                Bindings.createStringBinding(
+                        () -> viewModel.documentSelectionValidProperty().get()
+                                ? (viewModel.selectedDocumentBlockIdProperty().get().isBlank()
+                                ? "__PDF_SELECTION__"
+                                : viewModel.selectedDocumentBlockIdProperty().get())
+                                : "",
+                        viewModel.documentSelectionValidProperty(),
+                        viewModel.selectedDocumentBlockIdProperty()),
                 viewModel.pdfVisualDocumentProgressProperty(),
                 processOverlayExpanded,
-                viewModel.currentDocumentProperty().isNotNull().and(viewModel.audioJobRunningProperty().not()),
+                viewModel.audioJobRunningProperty(),
+                viewModel.currentDocumentProperty().isNotNull()
+                        .or(viewModel.currentPreparedPdfSourceProperty().isNotNull()),
+                viewModel.documentProcessingScopeProperty(),
+                viewModel.documentProcessingIntervalSupportedProperty(),
+                viewModel.documentProcessingIntervalValidProperty(),
+                viewModel.managedAudioChunksAvailableProperty(),
+                viewModel.fullDocumentReadingReadinessProperty(),
                 this::handleGenerateChunksFromStatusBar,
                 this::handleGenerateSelectedChunkFromStatusBar,
+                this::handleProcessIntervalFromStatusBar,
                 viewModel::resumeMostRecentRecoverableAudioJob,
-                viewModel::cancelActiveAudioJob,
+                this::cancelCurrentExportOrAudioOperation,
                 this::handleDeleteAllAudioChunksFromStatusBar,
                 this::handleOpenOcrSettings));
         viewModel.activeWorkspaceProperty().addListener((obs, oldValue, newValue) -> activate(newValue));
-        viewModel.activeAudioJobStatusProperty().addListener((obs, oldValue, newValue) -> showAudioGenerationFailureIfNeeded(oldValue, newValue));
+        viewModel.activeAudioJobStatusProperty().addListener((obs, oldValue, newValue) -> {
+            showAudioGenerationFailureIfNeeded(oldValue, newValue);
+            handleBatchAudioStatus(newValue);
+        });
         activate(viewModel.activeWorkspaceProperty().get());
     }
 
     public void handleCloseRequest(WindowEvent event) {
+        if (viewModel.theatreRefreshRunningProperty().get()) {
+            event.consume();
+            alertPresenter.show(UserNotification.warning("Actualización de obra en curso",
+                    "Espera a que termine la transacción teatral antes de cerrar DocuPodcast."), owner());
+            return;
+        }
         if (!confirmDiscardOrSaveIfNeeded()) {
             event.consume();
         }
     }
 
     public void runStartupDependencyPreflight() {
-        dependencySetupAssistant.runStartupPreflight(owner(), viewModel.applicationServices().settings());
+        backgroundTaskRunner.start("engine-readiness-preflight", () -> {
+            List<String> unavailable = capabilityAdministration.components().stream()
+                    .filter(component -> {
+                        try {
+                            return !capabilityAdministration.inspect(new CapabilityRequirement(
+                                    component.capability(), component.engineId(), null, null, Map.of())).ready();
+                        }
+                        catch (RuntimeException failure) { return true; }
+                    })
+                    .map(com.marcosmoreiradev.docupodcaststudio.application.media.administration
+                            .ManagedComponentDescriptor::displayName)
+                    .toList();
+            if (!unavailable.isEmpty()) {
+                javafx.application.Platform.runLater(() -> {
+                    // Startup inspection can finish after the user has already opened a
+                    // project or started a real operation. It must not overwrite the
+                    // current workflow with a stale welcome/preflight diagnosis.
+                    if (!viewModel.projectOpenProperty().get()) {
+                        viewModel.updateStatusMessage(
+                                "Capacidades no disponibles: " + String.join(", ", unavailable)
+                                        + ". Revisa Configuración > Motores y dependencias.");
+                    }
+                });
+            }
+        });
     }
 
     private void initialiseWorkspaces() {
@@ -212,6 +347,7 @@ public final class DocuPodcastShellView extends BorderPane {
                         () -> dispatchCommand(AppCommandId.OPEN_PROJECT),
                         () -> dispatchCommand(AppCommandId.NEW_PROJECT),
                         this::handleOpenTechnicalProblemExpress,
+                        () -> dispatchCommand(AppCommandId.CREATE_DOCUMENT_VIDEO_BATCH),
                         () -> dispatchCommand(AppCommandId.OPEN_EXAMPLE_PROJECT),
                         this::handleOpenFirstUseSetup,
                         () -> dispatchCommand(AppCommandId.OPEN_GUIDE),
@@ -219,13 +355,20 @@ public final class DocuPodcastShellView extends BorderPane {
                         this::handleOpenRecentProject))
                 .register(WorkspaceKind.DOCUMENT_READER, () -> new DocumentWorkspaceView(viewModel, this::handleSaveProject,
                         () -> ensureProjectSavedForDocumentAudio("preparar o reproducir la lectura desde la barra flotante"),
-                        () -> confirmAudioEngineReadyForDocumentAction(false)))
+                        () -> confirmAudioEngineReadyForDocumentAction(false),
+                        DocumentWorkspaceMode.READING,
+                        this::handleNarrateFromPdfTarget,
+                        this::handleDocumentAudioAction))
+                .registerAlias(WorkspaceKind.NARRATIVE_VISUAL_PRODUCTION, WorkspaceKind.DOCUMENT_READER)
                 .register(WorkspaceKind.THEATRE_SCRIPT, () -> new DocumentWorkspaceView(viewModel, this::handleSaveProject,
                         () -> ensureProjectSavedForDocumentAudio("preparar o reproducir la lectura desde el guión teatral"),
                         () -> confirmAudioEngineReadyForDocumentAction(false),
-                        DocumentWorkspaceMode.THEATRE_SCRIPT))
+                        DocumentWorkspaceMode.THEATRE_SCRIPT,
+                        this::handleNarrateFromPdfTarget,
+                        this::handleDocumentAudioAction))
                 .register(WorkspaceKind.VOICE_LIBRARY, () -> new VoiceLibraryWorkspaceView(viewModel))
                 .register(WorkspaceKind.THEATRE_IMAGE_GENERATION, () -> new TheatreImageGenerationWorkspaceView(viewModel));
+        workspaceRegistry.validateRegistrations();
     }
 
     private Node buildTop() {
@@ -239,11 +382,36 @@ public final class DocuPodcastShellView extends BorderPane {
     }
 
     private Node buildCenter() {
-        LongProcessOverlayView processOverlay = new LongProcessOverlayView(viewModel, processOverlayExpanded);
+        LongProcessOverlayView processOverlay = new LongProcessOverlayView(
+                viewModel, processOverlayExpanded,
+                this::cancelLocalDocumentAnalysis,
+                pdfNarratablePreparation::cancelActivePreparationSession,
+                processOverlayMaximized);
         installWorkspaceHostClip();
-        StackPane center = new StackPane(workspaceHost, processOverlay);
-        StackPane.setAlignment(processOverlay, Pos.BOTTOM_RIGHT);
-        StackPane.setMargin(processOverlay, new Insets(0, 16, 16, 0));
+        var loadingProgress = com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFeedbackControls.progressIndicator();
+        loadingProgress.getStyleClass().add("project-loading-indicator");
+        loadingProgress.setFocusTraversable(false);
+        loadingProgress.setMinSize(72, 72);
+        loadingProgress.setPrefSize(72, 72);
+        loadingProgress.setMaxSize(72, 72);
+        Label loadingLabel = new Label("Cargando proyecto…");
+        loadingLabel.getStyleClass().add("project-loading-label");
+        VBox loadingMessage = new VBox(18, loadingProgress, loadingLabel);
+        loadingMessage.getStyleClass().add("project-loading-message");
+        loadingMessage.setAlignment(Pos.CENTER);
+        projectLoadingOverlay.getChildren().setAll(loadingMessage);
+        projectLoadingOverlay.setStyle("-fx-background-color: rgba(255,255,255,0.88);");
+        projectLoadingOverlay.setVisible(false);
+        projectLoadingOverlay.setManaged(false);
+        StackPane center = new StackPane(workspaceHost, processOverlay, projectLoadingOverlay);
+        StackPane.setAlignment(processOverlay, Pos.CENTER_RIGHT);
+        var overlayWidth = Bindings.when(processOverlayMaximized)
+                .then(center.widthProperty())
+                .otherwise(center.widthProperty().multiply(0.5));
+        processOverlay.prefWidthProperty().bind(overlayWidth);
+        processOverlay.maxWidthProperty().bind(overlayWidth);
+        processOverlay.minHeightProperty().bind(center.heightProperty());
+        processOverlay.prefHeightProperty().bind(center.heightProperty());
         return center;
     }
 
@@ -268,6 +436,12 @@ public final class DocuPodcastShellView extends BorderPane {
                 .register(AppCommandId.EXIT_APPLICATION, this::requestWindowClose)
                 .register(AppCommandId.CLEAR_SELECTION, viewModel::clearSelectedDocumentBlock)
                 .register(AppCommandId.NEW_PROJECT, this::handleNewProject)
+                .register(AppCommandId.CREATE_DOCUMENT_VIDEO_BATCH,
+                        () -> { if (!confirmDiscardOrSaveIfNeeded()) return;
+                            expressOpenedChild = false;
+                            com.marcosmoreiradev.docupodcaststudio.presentation.batch.DocumentVideoBatchWindow.show(
+                                owner(), this::handleOpenRecentProject, batchExecutionPort(),
+                                this::returnFromDocumentVideoBatch, viewModel.projectWorkspace().project().batch()); })
                 .register(AppCommandId.OPEN_PROJECT, this::handleOpenProject)
                 .register(AppCommandId.SAVE_PROJECT, this::handleSaveProject)
                 .register(AppCommandId.SAVE_PROJECT_AS, this::handleSaveProjectAs)
@@ -275,6 +449,7 @@ public final class DocuPodcastShellView extends BorderPane {
                 .register(AppCommandId.OPEN_PROJECT_FOLDER, this::handleOpenProjectFolder)
                 .register(AppCommandId.OPEN_SOURCE_DOCUMENT, this::handleImportWord)
                 .register(AppCommandId.IMPORT_THEATRE_GRAMMAR, this::handleImportTheatreGrammar)
+                .register(AppCommandId.REFRESH_THEATRE_PACKAGE, theatrePackageRefresh::start)
                 .register(AppCommandId.EXPORT_THEATRE_GRAMMAR_TEMPLATE, this::handleExportTheatreGrammarTemplate)
                 .register(AppCommandId.IMPORT_NARRATIVE_VIDEO_GRAMMAR, this::handleImportNarrativeVideoGrammar)
                 .register(AppCommandId.EXPORT_NARRATIVE_VIDEO_GRAMMAR_TEMPLATE, this::handleExportNarrativeVideoGrammarTemplate)
@@ -282,7 +457,9 @@ public final class DocuPodcastShellView extends BorderPane {
                 .register(AppCommandId.REFRESH_SOURCE_DOCUMENT, this::handleRefreshSourceDocument)
                 .register(AppCommandId.OPEN_SOURCE_DOCUMENT_LOCATION, this::handleOpenSourceDocumentLocation)
                 .register(AppCommandId.PREPARE_DOCUMENT_READING,
-                        () -> pdfNarratablePreparation.prepareThenRun(viewModel::buildNarrationScriptFromDocument))
+                        () -> wordSemanticPreparation.prepareThenRun(
+                                () -> pdfNarratablePreparation.prepareThenRun(
+                                        viewModel::buildNarrationScriptFromDocument)))
                 .register(AppCommandId.PREPARE_TECHNICAL_PROBLEM, this::handlePrepareTechnicalProblem)
                 .register(AppCommandId.LISTEN_DOCUMENT, this::handleListenDocument)
                 .register(AppCommandId.PLAY_SELECTION, this::handlePlaySelection)
@@ -353,7 +530,7 @@ public final class DocuPodcastShellView extends BorderPane {
     }
 
     private MenuBar buildMenuBar() {
-        MenuBar menuBar = new MenuBar();
+        MenuBar menuBar = StudioNavigationControls.menuBar();
         menuBar.getStyleClass().add("app-menu-bar");
 
         Menu archivo = new Menu("Archivo");
@@ -365,6 +542,7 @@ public final class DocuPodcastShellView extends BorderPane {
 
         Menu proyecto = new Menu("Proyecto");
         MenuItem guardar = commandItem(AppCommandId.SAVE_PROJECT);
+        guardar.setAccelerator(new KeyCodeCombination(KeyCode.S, KeyCombination.SHORTCUT_DOWN));
         MenuItem guardarComo = commandItem(AppCommandId.SAVE_PROJECT_AS);
         MenuItem cerrarProyecto = commandItem(AppCommandId.CLOSE_PROJECT);
         MenuItem abrirCarpeta = commandItem(AppCommandId.OPEN_PROJECT_FOLDER);
@@ -417,12 +595,14 @@ public final class DocuPodcastShellView extends BorderPane {
         Menu teatro = new Menu("Teatro");
         MenuItem guionTeatral = commandItem(AppCommandId.OPEN_THEATRE_SCRIPT);
         MenuItem generacionIaTeatral = commandItem(AppCommandId.OPEN_THEATRE_IMAGE_GENERATION);
-        teatro.getItems().addAll(guionTeatral, generacionIaTeatral);
+        MenuItem refrescarObra = commandItem(AppCommandId.REFRESH_THEATRE_PACKAGE);
+        teatro.getItems().addAll(guionTeatral, generacionIaTeatral, new SeparatorMenuItem(), refrescarObra);
         bindModeMenu(teatro, ProjectMode.THEATRE_PRODUCTION);
 
         Menu exportar = new Menu("Exportar");
         MenuItem centroExportacion = commandItem(AppCommandId.OPEN_EXPORT_CENTER);
         MenuItem exportarPodcast = commandItem(AppCommandId.EXPORT_PODCAST_WAV);
+        MenuItem exportarDocumental = commandItem(AppCommandId.EXPORT_DOCUMENT_TEXT_AUDIO_VIDEO);
         MenuItem exportarStoryboard = commandItem(AppCommandId.EXPORT_SIMPLE_VIDEO_PACKAGE);
         MenuItem exportarObra = commandItem(AppCommandId.EXPORT_THEATRE_WORK);
         MenuItem exportarMapaTeatral = commandItem(AppCommandId.EXPORT_THEATRE_SPATIAL_VIEW);
@@ -430,7 +610,8 @@ public final class DocuPodcastShellView extends BorderPane {
         MenuItem estadoExportacion = commandItem(AppCommandId.INSPECT_EXPORT_READINESS);
         MenuItem abrirExportaciones = commandItem(AppCommandId.OPEN_EXPORTS_FOLDER);
         exportar.getItems().addAll(centroExportacion, new SeparatorMenuItem(),
-                exportarPodcast, exportarStoryboard, exportarObra, exportarMapaTeatral, exportarPorcionTeatral,
+                exportarPodcast, exportarDocumental, exportarStoryboard, exportarObra,
+                exportarMapaTeatral, exportarPorcionTeatral,
                 new SeparatorMenuItem(), estadoExportacion, abrirExportaciones);
 
         Menu configuracion = new Menu("Configuración");
@@ -525,7 +706,11 @@ public final class DocuPodcastShellView extends BorderPane {
 
     private void handleOpenExportCenter(AppCommandId preselectedCommand) {
         ProjectExportEligibilityPolicy.ExportEligibility eligibility =
-                exportEligibilityPolicy.evaluate(viewModel.currentDocumentProperty().get());
+                exportEligibilityPolicy.evaluate(
+                        viewModel.currentDocumentSource().orElse(null),
+                        viewModel.currentDocumentContentProjection()
+                                .filter(projection -> !projection.items().isEmpty())
+                                .isPresent());
         if (!eligibility.eligible()) {
             alertPresenter.showDecision(UserVisibleDecision.warning(eligibility.title(), eligibility.message()),
                     owner());
@@ -540,7 +725,7 @@ public final class DocuPodcastShellView extends BorderPane {
                 viewModel.theatreActs(),
                 viewModel.theatreScenes(),
                 encoderPolicies,
-                defaultVideoEncoderPolicy(settings, encoderPolicies));
+                defaultVideoEncoderPolicy(settings, encoderPolicies), viewModel.spatialFrameModeProperty().get());
         exportCenterDialog.show(
                         owner(),
                         exportCenterCoordinator.targets(state),
@@ -622,15 +807,19 @@ public final class DocuPodcastShellView extends BorderPane {
         if (!validateExportSelection(selection)) {
             return;
         }
-        switch (selection.commandId()) {
-            case EXPORT_PODCAST_WAV -> handleExportPodcastWav(selection.audioFormat());
-            case EXPORT_DOCUMENT_TEXT_AUDIO_VIDEO -> handleExportDocumentStudyTextAudioVideo(selection.documentTextVideoOptions());
-            case EXPORT_SIMPLE_VIDEO_PACKAGE -> handleExportSimpleVideo(selection.videoOptions());
-            case EXPORT_THEATRE_WORK -> handleExportTheatreWork(selection.videoOptions());
-            case EXPORT_THEATRE_SPATIAL_VIEW -> handleExportTheatreSpatialView(selection.theatreMapOptions());
-            case EXPORT_THEATRE_PORTION -> handleExportTheatrePortion(selection.theatrePortionOptions());
-            default -> handleInspectExportReadiness();
-        }
+        exportCenterCoordinator.routeFor(selection.commandId()).ifPresentOrElse(route -> {
+            switch (route.operation()) {
+                case PODCAST_AUDIO -> handleExportPodcastWav(
+                        selection.audioFormat(), selection.executionMode());
+                case DOCUMENT_STUDY_VIDEO ->
+                        handleExportDocumentStudyTextAudioVideo(
+                                selection.documentTextVideoOptions(), selection.executionMode());
+                case NARRATIVE_VIDEO -> handleExportSimpleVideo(selection.videoOptions());
+                case THEATRE_WORK -> handleExportTheatreWork(selection.videoOptions());
+                case THEATRE_SPATIAL_MAP -> handleExportTheatreSpatialView(selection.theatreMapOptions());
+                case THEATRE_PORTION -> handleExportTheatrePortion(selection.theatrePortionOptions());
+            }
+        }, this::handleInspectExportReadiness);
     }
 
     private void handlePrepareTechnicalProblem() {
@@ -638,33 +827,153 @@ public final class DocuPodcastShellView extends BorderPane {
     }
 
     private void handleListenDocument() {
-        if (ensureProjectSavedForDocumentAudio("escuchar o preparar audio del documento")
-                && confirmAudioEngineReadyForDocumentAction(false)) {
-            pdfNarratablePreparation.prepareThenRun(viewModel::runDocumentPrimaryAction);
+        executeDocumentAudioAction(DocumentAudioAction.FAST_LISTEN,
+                "escuchar o preparar audio del documento",
+                () -> pdfNarratablePreparation.prepareFastListenThenRun(anchorPage -> {
+                    if (viewModel.currentPreparedPdfSourceProperty().get() != null) {
+                        viewModel.startIncrementalPdfPlayback(anchorPage);
+                        return;
+                    }
+                    viewModel.buildNarrationScriptFromDocument();
+                    if (anchorPage > 0) {
+                        viewModel.runPreparedPdfPrimaryActionFromPage(anchorPage);
+                    } else {
+                        viewModel.runDocumentPrimaryAction();
+                    }
+                }));
+    }
+
+    private void handleNarrateFromPdfTarget(PdfVisualTextTarget target) {
+        if (target == null || !target.available()) return;
+        DocuPodcastShellViewModel.PdfNarrateCacheResult cache =
+                viewModel.playSelectedPdfTargetFromCompatibleCache();
+        if (cache == DocuPodcastShellViewModel.PdfNarrateCacheResult.COMPLETE) {
+            processOverlayExpanded.set(false);
+            return;
         }
+        if (cache == DocuPodcastShellViewModel.PdfNarrateCacheResult.PARTIAL) {
+            if (ensureProjectSavedForDocumentAudio("completar el audio faltante desde la selección")
+                    && confirmAudioEngineReadyForDocumentAction(false)) {
+                processOverlayExpanded.set(true);
+                viewModel.fillMissingAudioFromSelectedPdfTarget();
+            }
+            return;
+        }
+        if (!ensureProjectSavedForDocumentAudio("narrar desde el elemento seleccionado")
+                || !confirmAudioEngineReadyForDocumentAction(false)) {
+            return;
+        }
+        viewModel.stopPlayback();
+        processOverlayExpanded.set(true);
+        pdfNarratablePreparation.reprioritizeFromSelectionThenRun(() -> {
+            viewModel.buildNarrationScriptFromDocument();
+            viewModel.narrateFromSelectedPdfTarget();
+        });
     }
 
     private void handlePlaySelection() {
-        if (ensureProjectSavedForDocumentAudio("reproducir la oración seleccionada")
-                && confirmAudioEngineReadyForDocumentAction(false)) {
-            pdfNarratablePreparation.prepareThenRun(viewModel::playFromSelectedSegment);
-        }
+        executeDocumentAudioAction(DocumentAudioAction.PLAY_SELECTION,
+                "reproducir la oración seleccionada",
+                () -> pdfNarratablePreparation.prepareThenRun(() -> {
+                    viewModel.buildNarrationScriptFromDocument();
+                    viewModel.playFromSelectedSegment();
+                }));
     }
 
 
     private void handleGenerateChunksFromStatusBar() {
+        if (viewModel.documentProcessingActive()) {
+            processOverlayExpanded.set(true);
+            viewModel.updateStatusMessage(
+                    "La lectura completa ya se está procesando. Se mantiene el trabajo actual; no se creó otro lote.");
+            return;
+        }
+        DocumentReadingReadinessSnapshot readiness =
+                viewModel.fullDocumentReadingReadinessProperty().get();
+        if (readiness != null && readiness.reprocessing()
+                && !reprocessCompleteReadingDialog.confirm(owner())) {
+            return;
+        }
         processOverlayExpanded.set(true);
-        if (ensureProjectSavedForDocumentAudio("reconstruir fragmentos de audio")
-                && confirmAudioEngineReadyForDocumentAction(true)) {
-            pdfNarratablePreparation.prepareForwardThenRun(() -> viewModel.generateAudioChunksWithoutPlayback());
+        Runnable start = () -> {
+            executeDocumentAudioAction(DocumentAudioAction.PROCESS_COMPLETE,
+                    "procesar la lectura completa",
+                    () -> pdfNarratablePreparation.prepareCompleteReadingThenRun(
+                            () -> {
+                                viewModel.buildNarrationScriptFromDocument();
+                                viewModel.processCompleteReadingWithoutPlayback();
+                            }));
+        };
+        start.run();
+    }
+
+    private void cancelDocumentPreparationForRestart() {
+        pdfNarratablePreparation.cancelActivePreparationSession();
+        cancelLocalDocumentAnalysis();
+    }
+
+    private void cancelLocalDocumentAnalysis() {
+        if (viewModel.cancelNarrationTranslationAnalysis()) {
+            return;
+        }
+        if (!wordSemanticPreparation.cancelLocalAnalysis()
+                && viewModel.localDocumentAnalysisRunningProperty().get()) {
+            pdfNarratablePreparation.cancelLocalAnalysis();
         }
     }
 
     private void handleGenerateSelectedChunkFromStatusBar() {
         processOverlayExpanded.set(true);
-        if (ensureProjectSavedForDocumentAudio("renderizar audio desde el fragmento seleccionado")
-                && confirmAudioEngineReadyForDocumentAction(true)) {
-            pdfNarratablePreparation.prepareThenRun(viewModel::generateAudioChunksFromSelectedFragment);
+        executeDocumentAudioAction(DocumentAudioAction.GENERATE_SELECTION,
+                "renderizar audio desde el fragmento seleccionado",
+                () -> pdfNarratablePreparation.prepareFromSelectionThenRun(
+                        () -> {
+                            viewModel.buildNarrationScriptFromDocument();
+                            viewModel.generateAudioChunksFromSelectedFragment();
+                        }));
+    }
+
+    private void handleProcessSelectedFragment() {
+        executeDocumentAudioAction(DocumentAudioAction.PROCESS_FRAGMENT,
+                "procesar solamente el fragmento seleccionado",
+                () -> pdfNarratablePreparation.prepareThenRun(() -> {
+                    viewModel.buildNarrationScriptFromDocument();
+                    viewModel.generateAudioChunkForSelectedFragment();
+                }));
+    }
+
+    private void handleProcessIntervalFromStatusBar() {
+        var requested = viewModel.validatedDocumentProcessingInterval();
+        if (requested.isEmpty()) {
+            viewModel.updateStatusMessage(
+                    "El intervalo no es válido. Revisa la unidad inicial y final.");
+            return;
+        }
+        processOverlayExpanded.set(true);
+        boolean processingActive = viewModel.documentProcessingActive();
+        if (processingActive && !restartActiveProcessingDialog.confirm(owner())) {
+            return;
+        }
+        Runnable start = () -> executeDocumentAudioAction(
+                DocumentAudioAction.PROCESS_INTERVAL,
+                "procesar el intervalo documental",
+                () -> {
+                    if (viewModel.currentPreparedPdfSourceProperty().get() != null) {
+                        pdfNarratablePreparation.prepareIntervalThenRun(
+                                requested.get(),
+                                () -> viewModel.processPdfIntervalWithoutPlayback(
+                                        requested.get()));
+                    } else {
+                        viewModel.buildNarrationScriptFromDocument();
+                        viewModel.processWordIntervalWithoutPlayback(
+                                requested.get());
+                    }
+                });
+        if (processingActive) {
+            cancelDocumentPreparationForRestart();
+            viewModel.cancelAudioAndThen(start);
+        } else {
+            start.run();
         }
     }
 
@@ -675,9 +984,39 @@ public final class DocuPodcastShellView extends BorderPane {
     }
 
     private void handleGenerateAudio() {
-        if (ensureProjectSavedForDocumentAudio("generar audio por fragmentos")
-                && confirmAudioEngineReadyForDocumentAction(true)) {
-            pdfNarratablePreparation.prepareForwardThenRun(() -> viewModel.generateAudioChunksWithoutPlayback());
+        executeDocumentAudioAction(DocumentAudioAction.GENERATE_ALL,
+                "generar audio por fragmentos",
+                () -> pdfNarratablePreparation.prepareAudioThenRun(
+                        () -> {
+                            viewModel.buildNarrationScriptFromDocument();
+                            viewModel.generateAudioChunksWithoutPlayback();
+                        }));
+    }
+
+    private void executeDocumentAudioAction(
+            DocumentAudioAction action,
+            String projectAction,
+            Runnable continuation) {
+        if (!ensureProjectSavedForDocumentAudio(projectAction)
+                || !confirmAudioEngineReadyForDocumentAction(action.forceGeneration())) {
+            return;
+        }
+        if (action.requiresWordSemanticPreparation()) {
+            wordSemanticPreparation.prepareThenRun(continuation);
+        } else {
+            continuation.run();
+        }
+    }
+
+    private void handleDocumentAudioAction(DocumentAudioAction action) {
+        switch (action) {
+            case FAST_LISTEN -> handleListenDocument();
+            case PLAY_SELECTION -> handlePlaySelection();
+            case PROCESS_FRAGMENT -> handleProcessSelectedFragment();
+            case PROCESS_INTERVAL -> handleProcessIntervalFromStatusBar();
+            case PROCESS_COMPLETE -> handleGenerateChunksFromStatusBar();
+            case GENERATE_ALL -> handleGenerateAudio();
+            case GENERATE_SELECTION -> handleGenerateSelectedChunkFromStatusBar();
         }
     }
 
@@ -686,7 +1025,6 @@ public final class DocuPodcastShellView extends BorderPane {
                 ? viewModel.audioEngineUnavailableForGeneration()
                 : viewModel.audioEngineUnavailableForDocumentPrimaryAction();
         if (!unavailable) {
-            showDocumentAudioDefensiveDecisions();
             return true;
         }
         if (audioEngineUnavailableDialog.show(owner(), viewModel.audioEngineUnavailableMessage())) {
@@ -695,21 +1033,8 @@ public final class DocuPodcastShellView extends BorderPane {
         return false;
     }
 
-    private void showDocumentAudioDefensiveDecisions() {
-        List<UserVisibleDecision> decisions = new DocumentAudioDefensiveDecisionGuard(viewModel.applicationServices())
-                .decisionsBeforeDocumentGeneration();
-        List<UserVisibleDecision> unseen = decisions.stream()
-                .filter(UserVisibleDecision::requiresDialog)
-                .filter(decision -> !decisionKey(decision).equals(lastAudioDefensiveDecisionKey))
-                .toList();
-        if (unseen.isEmpty()) {
-            return;
-        }
-        lastAudioDefensiveDecisionKey = decisionKey(unseen.get(unseen.size() - 1));
-        alertPresenter.showDialogDecisions(unseen, owner());
-    }
-
     private void showAudioGenerationFailureIfNeeded(AudioJobStatusDto oldStatus, AudioJobStatusDto newStatus) {
+        if (activeBatchExecution != null) return; // The queue reports failures per document.
         if (newStatus == null || !newStatus.failed() || oldStatus == null || !oldStatus.running()) {
             return;
         }
@@ -733,11 +1058,10 @@ public final class DocuPodcastShellView extends BorderPane {
         if (detail.contains("pytorch cuda") || detail.contains("cuda no esta disponible")) {
             return "Seleccionaste una GPU manual, pero el Python local de DocuPodcast no tiene CUDA disponible. Cambia a CPU/AUTO o prepara el Python local con backend GPU y vuelve a generar.";
         }
+        if (detail.contains("no puede representar la voz/personaje")) {
+            return "La voz asignada no es compatible con el motor seleccionado. Elige Narrador predeterminado y revisa las voces específicas de los fragmentos; después pulsa Generar. Para conservar una voz personalizada, selecciona un motor compatible con voces de referencia.";
+        }
         return "El motor de voz termino sin WAV valido para el fragmento actual. Abre los detalles tecnicos del dialogo o Diagnostico avanzado antes de reintentar.";
-    }
-
-    private static String decisionKey(UserVisibleDecision decision) {
-        return decision == null ? "" : decision.headline() + "|" + decision.technicalDetail();
     }
 
     private boolean ensureProjectSavedForDocumentAudio(String action) {
@@ -745,7 +1069,8 @@ public final class DocuPodcastShellView extends BorderPane {
             return true;
         }
         if (!viewModel.projectOpenProperty().get()) {
-            return true;
+            showProjectRequiredMessage();
+            return false;
         }
         alertPresenter.show(UserNotification.information(
                 "Guardar proyecto antes de continuar",
@@ -758,8 +1083,8 @@ public final class DocuPodcastShellView extends BorderPane {
             return;
         }
         ExampleProjectDialog dialog = new ExampleProjectDialog(
-                viewModel.applicationServices().examples().catalog().listExamples(),
-                viewModel.applicationServices().examples().inspectReadiness());
+                viewModel.administrationWorkspace().examples().catalog().listExamples(),
+                viewModel.administrationWorkspace().examples().inspectReadiness());
         dialog.show(owner()).ifPresent(this::createExampleProjectFromDescriptor);
     }
 
@@ -791,7 +1116,7 @@ public final class DocuPodcastShellView extends BorderPane {
         alertPresenter.show(UserNotification.information(
                 "Crear demo teatral",
                 "Elige una carpeta contenedora. DocuPodcast creara una carpeta con el nombre del proyecto y dentro copiara teatro.md, source.docx y assets; despues generara el .docupodcast.json desde ese manifiesto."), owner());
-        DirectoryChooser chooser = new DirectoryChooser();
+        DirectoryChooser chooser = NativeSourceChooser.directoryChooser();
         chooser.setTitle("Elegir carpeta contenedora del demo teatral");
         File directory = chooser.showDialog(owner());
         if (directory == null) {
@@ -859,7 +1184,9 @@ public final class DocuPodcastShellView extends BorderPane {
     }
 
     private void handleOpenTechnicalProblemExpress() {
-        TechnicalProblemDialog.showExpress(owner())
+        TechnicalProblemDialog.showExpress(owner(),
+                        viewModel.inkInputProviders().create(DrawingFeatureCatalog.DOCUMENT_PROBLEM),
+                        viewModel.drawingFeatures().require(DrawingFeatureCatalog.DOCUMENT_PROBLEM))
                 .ifPresentOrElse(
                         result -> {
                             if (result.externalPngTarget() != null) {
@@ -873,17 +1200,16 @@ public final class DocuPodcastShellView extends BorderPane {
     }
 
     private void createProjectFromSetup(ProjectNameDialog.ProjectSetup setup) {
+        viewModel.createNewProject(setup.title(), setup.mode());
         ProjectInitialSourceDialog.Decision decision = projectInitialSourceDialog.show(owner());
         if (decision == ProjectInitialSourceDialog.Decision.CANCEL) {
             return;
         }
         if (decision == ProjectInitialSourceDialog.Decision.CREATE_WITHOUT_SOURCE) {
-            viewModel.createNewProject(setup.title(), setup.mode());
             return;
         }
         chooseSourceDocument("Elegir fuente inicial del proyecto")
-                .ifPresent(sourceFile -> runSourceDocumentImport(sourceFile,
-                        () -> viewModel.createNewProject(setup.title(), setup.mode())));
+                .ifPresent(this::runSourceDocumentImport);
     }
 
     public void handleOpenProject() {
@@ -924,9 +1250,81 @@ public final class DocuPodcastShellView extends BorderPane {
     }
 
     private void openProjectFile(Path projectFile) throws IOException {
-        viewModel.openProject(projectFile);
-        rememberCurrentProject();
-        viewModel.inspectProjectIntegrityDecision().ifPresent(decision -> alertPresenter.showDecision(decision, owner()));
+        openProjectFile(projectFile, () -> {}, failure ->
+                showError("No se pudo abrir el proyecto", failure));
+    }
+
+    private void openProjectFile(Path projectFile, Runnable afterOpen) {
+        openProjectFile(projectFile, afterOpen, failure ->
+                showError("No se pudo abrir el proyecto", failure));
+    }
+
+    private void openProjectFile(Path projectFile, Runnable afterOpen,
+                                 java.util.function.Consumer<Throwable> failureHandler) {
+        if (openingProject.get()) {
+            failureHandler.accept(new IllegalStateException(
+                    "Ya hay otro proyecto abriéndose."));
+            return;
+        }
+        openingProject.set(true);
+        projectLoadingOverlay.setManaged(true);
+        projectLoadingOverlay.setVisible(true);
+        getTop().setDisable(true);
+        if (getBottom() != null) getBottom().setDisable(true);
+        Task<PreparedProjectOpen> task = new Task<>() {
+            @Override protected PreparedProjectOpen call() throws Exception {
+                var opened = viewModel.prepareProjectOpen(projectFile);
+                var integrity = viewModel.inspectPreparedProject(opened, projectFile);
+                var playback = viewModel.prepareOpenedProjectPlaybackManifest(opened, projectFile);
+                return new PreparedProjectOpen(opened, integrity, playback);
+            }
+        };
+        task.setOnSucceeded(event -> {
+            try {
+                viewModel.applyOpenedProject(task.getValue().opened(), projectFile,
+                        task.getValue().playback());
+                rememberCurrentProject();
+                finishProjectOpen();
+                viewModel.updateStatusMessage(task.getValue().integrity().statusMessage());
+                task.getValue().integrity().decision().ifPresent(decision -> alertPresenter.showDecision(decision, owner()));
+                afterOpen.run();
+            } catch (IOException | RuntimeException ex) {
+                finishProjectOpen();
+                failureHandler.accept(ex);
+            }
+        });
+        task.setOnFailed(event -> {
+            finishProjectOpen();
+            failureHandler.accept(task.getException());
+        });
+        Thread worker = new Thread(task, "project-open");
+        worker.setDaemon(true);
+        worker.start();
+    }
+
+    private void finishProjectOpen() {
+        openingProject.set(false);
+        projectLoadingOverlay.setVisible(false);
+        projectLoadingOverlay.setManaged(false);
+        getTop().setDisable(false);
+        if (getBottom() != null) getBottom().setDisable(false);
+    }
+
+    private record PreparedProjectOpen(
+            com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow.OpenedProjectContext opened,
+            com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow.ProjectIntegrityInspectionOutcome integrity,
+            com.marcosmoreiradev.docupodcaststudio.domain.playback.PlaybackManifest playback) {}
+
+    /**
+     * Opens a project supplied by the production launcher and optionally starts the same
+     * gap-aware audio generation action exposed by the reading workspace.
+     */
+    public void runStartupProjectAction(Path projectFile, boolean generateAudio) {
+        openProjectFile(projectFile, () -> {
+            if (generateAudio) {
+                viewModel.submitAudioGeneration();
+            }
+        });
     }
 
     public boolean handleSaveProject() {
@@ -986,9 +1384,12 @@ public final class DocuPodcastShellView extends BorderPane {
             return;
         }
 
-        if (projectSourceCopyNoticeDialog.show(owner(), canonicalSource)) {
-            preferences.putBoolean(PREF_HIDE_SOURCE_COPY_NOTICE, true);
-        }
+        projectSourceCopyNoticeDialog.show(owner(), canonicalSource,
+                dontShowAgain -> {
+                    if (dontShowAgain) {
+                        preferences.putBoolean(PREF_HIDE_SOURCE_COPY_NOTICE, true);
+                    }
+                });
     }
 
     private void rememberCurrentProject() {
@@ -1012,6 +1413,19 @@ public final class DocuPodcastShellView extends BorderPane {
         viewModel.closeCurrentProject();
     }
 
+    private void returnFromDocumentVideoBatch() {
+        if (viewModel.projectOpenProperty().get()) {
+            if (expressOpenedChild) {
+                try { viewModel.saveCurrentProject(); }
+                catch (IOException failure) { throw new IllegalStateException("No se pudo guardar el proyecto del lote.", failure); }
+            }
+            viewModel.closeCurrentProject();
+        }
+        expressOpenedChild = false;
+        viewModel.showWelcome();
+        recentProjects.setAll(recentProjectsStore.load());
+    }
+
     public void handleImportWord() {
         if (!prepareForSourceDocumentImport()) {
             return;
@@ -1020,7 +1434,7 @@ public final class DocuPodcastShellView extends BorderPane {
     }
 
     private Optional<Path> chooseSourceDocument(String title) {
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle(title);
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Documentos compatibles (*.docx, *.pdf, *.md, *.markdown, *.txt)", "*.docx", "*.pdf", "*.md", "*.markdown", "*.txt"));
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Word/DOCX (*.docx)", "*.docx"));
@@ -1032,6 +1446,10 @@ public final class DocuPodcastShellView extends BorderPane {
     }
 
     private boolean prepareForSourceDocumentImport() {
+        if (!viewModel.projectOpenProperty().get()) {
+            showProjectRequiredMessage();
+            return false;
+        }
         Optional<Path> currentSource = viewModel.currentSourceDocumentPath();
         if (currentSource.isEmpty()) {
             return true;
@@ -1040,6 +1458,13 @@ public final class DocuPodcastShellView extends BorderPane {
             return false;
         }
         return confirmSourceReplacementDirtyState();
+    }
+
+    private void showProjectRequiredMessage() {
+        alertPresenter.show(UserNotification.information(
+                "Primero crea un proyecto",
+                "Crea o abre un proyecto y después selecciona su fuente documental. "
+                        + "DocuPodcast no abre Word, PDF, Markdown ni TXT como archivos sueltos."), owner());
     }
 
     private boolean confirmSourceReplacementDirtyState() {
@@ -1074,7 +1499,7 @@ public final class DocuPodcastShellView extends BorderPane {
         if (!prepareForSourceDocumentImport()) {
             return;
         }
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle("Importar obra a partir de gramatica teatral");
         chooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("Gramatica teatral Markdown (*.md, *.markdown)", "*.md", "*.markdown"),
@@ -1088,7 +1513,7 @@ public final class DocuPodcastShellView extends BorderPane {
     }
 
     public void handleExportTheatreGrammarTemplate() {
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle("Exportar plantilla de gramatica teatral");
         chooser.setInitialFileName(ProjectGrammarKind.THEATRE_PRODUCTION.defaultFileName());
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Markdown (*.md)", "*.md"));
@@ -1103,7 +1528,7 @@ public final class DocuPodcastShellView extends BorderPane {
         if (!prepareForSourceDocumentImport()) {
             return;
         }
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle("Importar guion narrativo");
         chooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("Gramatica narrativa Markdown (*.md, *.markdown)", "*.md", "*.markdown"),
@@ -1117,7 +1542,7 @@ public final class DocuPodcastShellView extends BorderPane {
     }
 
     public void handleExportNarrativeVideoGrammarTemplate() {
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle("Exportar plantilla narrativa");
         chooser.setInitialFileName(ProjectGrammarKind.NARRATIVE_VIDEO.defaultFileName());
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Markdown (*.md)", "*.md"));
@@ -1129,14 +1554,10 @@ public final class DocuPodcastShellView extends BorderPane {
     }
 
     private void runSourceDocumentImport(Path sourceFile) {
-        runSourceDocumentImport(sourceFile, null);
-    }
-
-    private void runSourceDocumentImport(Path sourceFile, Runnable beforeAttach) {
         DocumentImportProgressDialog progress = new DocumentImportProgressDialog(owner(), sourceFile.getFileName().toString());
-        Task<ReadableDocument> task = new Task<>() {
+        Task<com.marcosmoreiradev.docupodcaststudio.application.document.ProjectDocumentSource> task = new Task<>() {
             @Override
-            protected ReadableDocument call() throws Exception {
+            protected com.marcosmoreiradev.docupodcaststudio.application.document.ProjectDocumentSource call() throws Exception {
                 updateMessage("Leyendo documento para mostrarlo en la vista Documento...");
                 return viewModel.importAndClassifySourceDocument(sourceFile);
             }
@@ -1147,9 +1568,6 @@ public final class DocuPodcastShellView extends BorderPane {
             PauseTransition closePulse = new PauseTransition(Duration.millis(80));
             closePulse.setOnFinished(closeEvent -> {
                 try {
-                    if (beforeAttach != null) {
-                        beforeAttach.run();
-                    }
                     viewModel.attachImportedDocument(task.getValue());
                     promptSaveProjectForImportedSourceIfNeeded(sourceFile);
                 } catch (IOException | RuntimeException ex) {
@@ -1173,7 +1591,7 @@ public final class DocuPodcastShellView extends BorderPane {
 
 
     public void handleImportStoryboardImage() {
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle("Importar imagen para visuales");
         chooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("Imagen compatible (*.png, *.jpg, *.jpeg, *.webp, *.gif)", "*.png", "*.jpg", "*.jpeg", "*.webp", "*.gif"),
@@ -1191,7 +1609,7 @@ public final class DocuPodcastShellView extends BorderPane {
     }
 
     public void handleImportBridgeImageForSelection() {
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle("Importar imagen puente");
         chooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("Imagen compatible (*.png, *.jpg, *.jpeg, *.webp, *.gif)", "*.png", "*.jpg", "*.jpeg", "*.webp", "*.gif"),
@@ -1209,7 +1627,7 @@ public final class DocuPodcastShellView extends BorderPane {
     }
 
     public void handleImportVoiceSample() {
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle("Importar muestra de voz");
         chooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("Audio compatible (*.wav, *.mp3, *.flac, *.ogg, *.m4a)", "*.wav", "*.mp3", "*.flac", "*.ogg", "*.m4a"),
@@ -1228,7 +1646,7 @@ public final class DocuPodcastShellView extends BorderPane {
 
 
     public void handleImportAudioForSelection() {
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle("Elegir audio del computador");
         chooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("Audio compatible (*.wav, *.mp3, *.m4a, *.flac, *.ogg)", "*.wav", "*.mp3", "*.m4a", "*.flac", "*.ogg"),
@@ -1246,7 +1664,7 @@ public final class DocuPodcastShellView extends BorderPane {
     }
 
     public void handleExtractVideoAudioForSelection() {
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle("Extraer audio de video");
         chooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("Video compatible (*.mp4, *.mov, *.mkv, *.webm)", "*.mp4", "*.mov", "*.mkv", "*.webm"),
@@ -1266,25 +1684,98 @@ public final class DocuPodcastShellView extends BorderPane {
 
     public void handleExportPodcastWav() { handleExportPodcastWav(AudioExportFormat.WAV); }
     public void handleExportPodcastWav(AudioExportFormat requestedFormat) {
+        handleExportPodcastWav(requestedFormat,
+                ExportExecutionMode.PREPARE_FULL_DOCUMENT_AND_EXPORT);
+    }
+
+    private void handleExportPodcastWav(AudioExportFormat requestedFormat,
+                                        ExportExecutionMode executionMode) {
+        AudioExportFormat format = requestedFormat == null ? AudioExportFormat.WAV : requestedFormat;
+        Path target = chooseExportPodcastWavTarget(format);
+        if (target == null) return;
+        ExportExecutionMode mode = executionMode == null
+                ? ExportExecutionMode.READY_ONLY : executionMode;
+        if (mode.preparesFullDocument()) {
+            viewModel.setDocumentProcessingScope(DocumentProcessingScope.FULL_DOCUMENT);
+            viewModel.beginLocalDocumentAnalysis("Preparando exportación de audio",
+                    "Verificando el documento completo y reutilizando los derivados vigentes.");
+            prepareDocumentForExportThenRun(() ->
+                    handleExportPodcastWavPrepared(format, target, true));
+            return;
+        }
+        handleExportPodcastWavPrepared(format, target, false);
+    }
+
+    private void handleExportPodcastWavPrepared(AudioExportFormat requestedFormat,
+                                                Path target,
+                                                boolean generateMissing) {
         AudioExportFormat format = requestedFormat == null ? AudioExportFormat.WAV : requestedFormat;
         if (!viewModel.hasAllChunksRendered()) {
-            if (!incompleteAudioExportDialog.confirmRenderAndExport(owner())) { return; }
-            Path target = chooseExportPodcastWavTarget(format);
-            if (target == null) { return; }
-            viewModel.submitAudioGenerationWithPendingExport(() -> {
-                try { viewModel.exportPodcastWav(target); }
-                catch (IOException | RuntimeException ex) { showError("No se pudo exportar el audio final", ex); }
+            if (!generateMissing) {
+                alertPresenter.showDecision(UserVisibleDecision.warning(
+                        "Audio todavía incompleto",
+                        "Activa 'Completar lo autorizado y exportar' para generar únicamente los fragmentos permitidos que estén pendientes y exportar automáticamente."), owner());
+                return;
+            }
+            PreparedExportIntent intent = new PreparedExportIntent(
+                    AppCommandId.EXPORT_PODCAST_WAV,
+                    ExportExecutionMode.PREPARE_FULL_DOCUMENT_AND_EXPORT,
+                    target,
+                    "Audio final");
+            viewModel.submitAudioGenerationWithPendingExport(null, intent, () -> {
+                exportPodcastWavInBackground(target);
             });
             return;
         }
-        Path target = chooseExportPodcastWavTarget(format);
-        if (target == null) { return; }
-        try { viewModel.exportPodcastWav(target); }
-        catch (IOException | RuntimeException ex) { showError("No se pudo exportar el audio final", ex); }
+        exportPodcastWavInBackground(target);
+    }
+
+    private void exportPodcastWavInBackground(Path target) {
+        viewModel.beginLocalDocumentAnalysis("Finalizando audio",
+                "Uniendo los fragmentos vigentes y escribiendo " + target.getFileName() + ".");
+        Task<String> task = new Task<>() {
+            @Override
+            protected String call() throws Exception {
+                return viewModel.exportPodcastWavResult(target);
+            }
+        };
+        task.setOnSucceeded(event -> {
+            activeFinalAudioExportTask = null;
+            viewModel.endLocalDocumentAnalysis();
+            viewModel.updateStatusMessage(task.getValue());
+        });
+        task.setOnFailed(event -> {
+            activeFinalAudioExportTask = null;
+            viewModel.endLocalDocumentAnalysis();
+            showError("No se pudo exportar el audio final", task.getException());
+        });
+        task.setOnCancelled(event -> {
+            activeFinalAudioExportTask = null;
+            viewModel.endLocalDocumentAnalysis();
+            viewModel.updateStatusMessage("Exportación de audio cancelada; los fragmentos válidos se conservaron.");
+        });
+        activeFinalAudioExportTask = task;
+        backgroundTaskRunner.start("docupodcast-final-audio-export", task);
+    }
+
+    private void cancelCurrentExportOrAudioOperation() {
+        Task<?> finalAudio = activeFinalAudioExportTask;
+        if (finalAudio != null && finalAudio.isRunning()) {
+            finalAudio.cancel(true);
+            viewModel.updateStatusMessage(
+                    "Cancelación de la exportación final de audio solicitada; los WAV preparados se conservarán.");
+            return;
+        }
+        if (videoExportProgressCoordinator.cancelBackgroundExport()) {
+            viewModel.updateStatusMessage(
+                    "Cancelación del video solicitada; los derivados válidos se conservarán.");
+            return;
+        }
+        viewModel.cancelCurrentAudioOperation();
     }
     private Path chooseExportPodcastWavTarget(AudioExportFormat requestedFormat) {
         AudioExportFormat format = requestedFormat == null ? AudioExportFormat.WAV : requestedFormat;
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle("Exportar audio final");
         chooser.setInitialFileName("audio-final" + format.extension());
         chooser.getExtensionFilters().addAll(
@@ -1299,9 +1790,10 @@ public final class DocuPodcastShellView extends BorderPane {
     }
 
     public void handleExportDiagnosticReport() {
-        FileChooser chooser = new FileChooser();
-        chooser.setTitle("Exportar reporte diagnóstico");
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Markdown (*.md)", "*.md"));
+        FileChooser chooser = NativeSourceChooser.fileChooser();
+        chooser.setTitle("Exportar paquete de soporte sanitizado");
+        chooser.setInitialFileName("docupodcast-soporte.zip");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Paquete ZIP (*.zip)", "*.zip"));
         File file = chooser.showSaveDialog(owner());
         if (file == null) {
             return;
@@ -1315,7 +1807,7 @@ public final class DocuPodcastShellView extends BorderPane {
     }
 
     public void handleExportProjectBundle() {
-        DirectoryChooser chooser = new DirectoryChooser();
+        DirectoryChooser chooser = NativeSourceChooser.directoryChooser();
         chooser.setTitle("Elegir carpeta para paquete DocuPodcast");
         File folder = chooser.showDialog(owner());
         if (folder == null) {
@@ -1343,34 +1835,131 @@ public final class DocuPodcastShellView extends BorderPane {
     }
 
     public void handleExportDocumentStudyTextAudioVideo() {
-        handleExportDocumentStudyTextAudioVideo(DocumentTextVideoOptions.defaults());
+        handleExportDocumentStudyTextAudioVideo(DocumentTextVideoOptions.defaults(),
+                ExportExecutionMode.PREPARE_FULL_DOCUMENT_AND_EXPORT);
     }
 
     public void handleExportDocumentStudyTextAudioVideo(DocumentTextVideoOptions requestedOptions) {
-        DocumentTextVideoOptions textOptions = requestedOptions == null ? DocumentTextVideoOptions.defaults() : requestedOptions;
+        handleExportDocumentStudyTextAudioVideo(requestedOptions,
+                ExportExecutionMode.PREPARE_FULL_DOCUMENT_AND_EXPORT);
+    }
+
+    private void handleExportDocumentStudyTextAudioVideo(
+            DocumentTextVideoOptions requestedOptions,
+            ExportExecutionMode executionMode) {
+        DocumentTextVideoOptions textOptions = requestedOptions == null
+                ? DocumentTextVideoOptions.defaults() : requestedOptions;
         VideoExportOptions options = documentStudyVideoOptions(textOptions);
+        File target = fileForExport("Exportar video documental texto+audio",
+                "estudio-documental-texto-audio", options);
+        if (target == null || !ensureVideoRendererAvailable()) return;
+        ExportExecutionMode mode = executionMode == null
+                ? ExportExecutionMode.READY_ONLY : executionMode;
+        if (mode.preparesFullDocument()) {
+            viewModel.setDocumentProcessingScope(DocumentProcessingScope.FULL_DOCUMENT);
+            viewModel.beginLocalDocumentAnalysis("Preparando exportación de video",
+                    "Verificando semántica, narración y audio del documento completo.");
+            prepareDocumentForExportThenRun(() ->
+                    handleExportDocumentStudyTextAudioVideoPrepared(
+                            textOptions, target, options, true));
+            return;
+        }
+        handleExportDocumentStudyTextAudioVideoPrepared(textOptions, target, options, false);
+    }
+
+    private void handleExportDocumentStudyTextAudioVideoPrepared(
+            DocumentTextVideoOptions requestedOptions,
+            File target,
+            VideoExportOptions options,
+            boolean generateMissing) {
+        var scriptAtClick = viewModel.currentScriptProperty().get();
+        LOGGER.info("document-export.audio-boundary stage=JAVAFX_COMMAND count={} ids={}",
+                scriptAtClick == null ? 0 : scriptAtClick.segments().size(),
+                scriptAtClick == null ? java.util.List.of()
+                        : scriptAtClick.segments().stream()
+                        .map(com.marcosmoreiradev.docupodcaststudio.domain.script
+                                .NarrationSegment::id).toList());
+        DocumentTextVideoOptions textOptions = requestedOptions == null ? DocumentTextVideoOptions.defaults() : requestedOptions;
         String statusMessage = "Exportando video documental texto+audio.";
-        if (!viewModel.hasAllChunksRendered()) {
-            if (!incompleteAudioExportDialog.confirmRenderAndExport(owner())) { return; }
-            viewModel.submitAudioGenerationWithPendingExport(() -> {
+        DocumentExportReadinessSnapshot readiness;
+        try {
+            readiness = viewModel.inspectDocumentExportReadiness();
+        } catch (IOException | RuntimeException failure) {
+            if (generateMissing) viewModel.endLocalDocumentAnalysis();
+            showError("No se pudo comprobar la preparación de la exportación", failure);
+            return;
+        }
+        if (readiness.compositionOnlyPending()) {
+            viewModel.updateStatusMessage(
+                    "Componiendo el audio vigente de la región configurada y exportando video.");
+            exportDocumentStudyTextAudioVideoInBackground(target, options, textOptions);
+            return;
+        }
+        if (!readiness.readyToRender()) {
+            if (!generateMissing) {
+                alertPresenter.showDecision(UserVisibleDecision.warning(
+                        "La exportación necesita preparación",
+                        audioReadinessDetail(readiness)
+                                + "\n\nActiva 'Completar lo autorizado y exportar' para completar la cadena según la configuración actual."), owner());
+                return;
+            }
+            PreparedExportIntent intent = new PreparedExportIntent(
+                    AppCommandId.EXPORT_DOCUMENT_TEXT_AUDIO_VIDEO,
+                    ExportExecutionMode.PREPARE_FULL_DOCUMENT_AND_EXPORT,
+                    target.toPath(),
+                    "Video de estudio documental");
+            viewModel.submitAudioGenerationWithPendingExport(readiness, intent, () -> {
                 viewModel.updateStatusMessage(statusMessage);
-                exportDocumentStudyTextAudioVideoInBackground(
-                        fileForExport("Exportar video documental texto+audio", "estudio-documental-texto-audio", options),
-                        options,
-                        textOptions);
+                exportDocumentStudyTextAudioVideoInBackground(target, options, textOptions);
             });
             return;
         }
-        File file = fileForExport("Exportar video documental texto+audio", "estudio-documental-texto-audio", options);
-        if (file == null) {
-            return;
-        }
         viewModel.updateStatusMessage(statusMessage);
-        if (dependencySetupAssistant.offerVideoLocalSetupIfMissing(owner(), viewModel.applicationServices().settings(),
-                () -> exportDocumentStudyTextAudioVideoInBackground(file, options, textOptions))) {
-            return;
+        exportDocumentStudyTextAudioVideoInBackground(target, options, textOptions);
+    }
+
+    /** Resolves source-specific semantics before both audio and video export inspect narration. */
+    private void prepareDocumentForExportThenRun(Runnable continuation) {
+        Runnable afterWord = () -> {
+            if (viewModel.currentDocumentProperty().get() != null) {
+                viewModel.buildNarrationScriptFromDocument();
+                continuation.run();
+                return;
+            }
+            pdfNarratablePreparation.prepareCompleteReadingThenRun(() -> {
+                viewModel.buildNarrationScriptFromDocument();
+                continuation.run();
+            });
+        };
+        wordSemanticPreparation.prepareThenRun(afterWord);
+    }
+
+    private static String audioReadinessDetail(
+            DocumentExportReadinessSnapshot readiness) {
+        int missing = readiness.missingAudioSegmentIds().size();
+        int stale = readiness.staleAudioSegmentIds().size();
+        int invalid = readiness.invalidAudioSegmentIds().size();
+        int total = readiness.selection().resolvedSegmentIds().size();
+        int reusable = Math.max(0, total - missing - stale - invalid);
+        String condition;
+        if (missing > 0 && (stale > 0 || invalid > 0)) {
+            condition = "Faltan fragmentos y algunos deben actualizarse.";
+        } else if (missing > 0) {
+            condition = "Faltan fragmentos de audio.";
+        } else if (stale > 0) {
+            condition = "Hay fragmentos de audio que deben actualizarse.";
+        } else if (invalid > 0) {
+            condition = "Hay fragmentos de audio inválidos que deben reconstruirse.";
+        } else {
+            condition = "Faltan composiciones audiovisuales.";
         }
-        exportDocumentStudyTextAudioVideoInBackground(file, options, textOptions);
+        return condition + "\n\nAlcance: "
+                + readiness.selection().scope()
+                + "\nAudio reutilizable: " + reusable
+                + "\nAudio faltante: " + missing
+                + "\nAudio por actualizar: " + stale
+                + (invalid == 0 ? "" : "\nAudio inválido: " + invalid)
+                + "\n\n¿Renderizar únicamente los derivados pendientes y luego exportar?";
     }
 
     public void handleExportTheatreWork() {
@@ -1402,10 +1991,7 @@ public final class DocuPodcastShellView extends BorderPane {
             return;
         }
         viewModel.updateStatusMessage(statusMessage);
-        if (dependencySetupAssistant.offerVideoLocalSetupIfMissing(owner(), viewModel.applicationServices().settings(),
-                () -> exportTheatreWorkInBackground(file, options))) {
-            return;
-        }
+        if (!ensureVideoRendererAvailable()) return;
         exportTheatreWorkInBackground(file, options);
     }
 
@@ -1439,10 +2025,7 @@ public final class DocuPodcastShellView extends BorderPane {
             return;
         }
         viewModel.updateStatusMessage(statusMessage);
-        if (dependencySetupAssistant.offerVideoLocalSetupIfMissing(owner(), viewModel.applicationServices().settings(),
-                () -> exportTheatreSpatialVideoInBackground(file, options))) {
-            return;
-        }
+        if (!ensureVideoRendererAvailable()) return;
         exportTheatreSpatialVideoInBackground(file, options);
     }
 
@@ -1475,10 +2058,7 @@ public final class DocuPodcastShellView extends BorderPane {
                 return;
             }
             viewModel.updateStatusMessage(status);
-            if (dependencySetupAssistant.offerVideoLocalSetupIfMissing(owner(), viewModel.applicationServices().settings(),
-                    () -> exportTheatrePortionInBackground(file, options))) {
-                return;
-            }
+            if (!ensureVideoRendererAvailable()) return;
             exportTheatrePortionInBackground(file, options);
         };
         if (!viewModel.hasChunksRenderedForTheatreScope(options.scope())) {
@@ -1507,19 +2087,40 @@ public final class DocuPodcastShellView extends BorderPane {
         if (statusMessage != null && !statusMessage.isBlank()) {
             viewModel.updateStatusMessage(statusMessage);
         }
-        if (dependencySetupAssistant.offerVideoLocalSetupIfMissing(owner(), viewModel.applicationServices().settings(),
-                () -> exportFinalVideoInBackground(file, options))) {
-            return;
-        }
+        if (!ensureVideoRendererAvailable()) return;
         exportFinalVideoInBackground(file, options);
     }
+
+    private boolean ensureVideoRendererAvailable() {
+        boolean ready = capabilityAdministration.components().stream()
+                .filter(component -> CapabilityId.VIDEO_RENDERING.equals(component.capability()))
+                .anyMatch(component -> {
+                    try {
+                        return capabilityAdministration.inspect(new CapabilityRequirement(
+                                component.capability(), component.engineId(), null, null, Map.of())).ready();
+                    }
+                    catch (RuntimeException failure) { return false; }
+                });
+        if (ready) return true;
+        alertPresenter.show(UserNotification.warning(
+                "Render de video no disponible",
+                "No hay un renderizador listo. Abre Configuración > Motores y dependencias "
+                        + "para instalarlo, repararlo o probarlo."), owner());
+        return false;
+    }
+
     private File fileForExport(String title, String filePrefix, VideoExportOptions options) {
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle(title);
         chooser.getExtensionFilters().setAll(new FileChooser.ExtensionFilter("Video MP4 (*.mp4)", "*.mp4"));
         chooser.setInitialFileName(filePrefix + "-" + options.resolution().label().toLowerCase(java.util.Locale.ROOT)
                 + "-" + options.framesPerSecond() + "fps.mp4");
-        return chooser.showSaveDialog(owner());
+        File selected = chooser.showSaveDialog(owner());
+        if (selected == null || selected.getName().toLowerCase(java.util.Locale.ROOT).endsWith(".mp4")) {
+            return selected;
+        }
+        File parent = selected.getAbsoluteFile().getParentFile();
+        return new File(parent, selected.getName() + ".mp4");
     }
 
     private void exportFinalVideoInBackground(File file, VideoExportOptions options) {
@@ -1547,16 +2148,120 @@ public final class DocuPodcastShellView extends BorderPane {
         if (!saveProjectBeforeBackgroundExport("No se pudo guardar el proyecto antes de exportar el video documental")) {
             return;
         }
-        videoExportProgressCoordinator.export(owner(), file.toPath(), options,
-                (targetFile, selectedOptions, progress, cancellationRequested) ->
+        viewModel.beginDocumentExportRender();
+        videoExportProgressCoordinator.exportInBackground(file.toPath(), options,
+                    (targetFile, selectedOptions, progress, cancellationRequested) ->
+                            viewModel.exportDocumentStudyTextAudioVideo(targetFile,
+                                    selectedOptions.resolution(), selectedOptions.framesPerSecond(),
+                                    selectedOptions.encoderPolicy(),
+                                    textOptions == null ? DocumentTextVideoOptions.defaults()
+                                            : textOptions.withResolution(selectedOptions.resolution()),
+                                    progress,
+                                    () -> cancellationRequested.getAsBoolean()
+                                            || viewModel.documentExportCancellationRequested()),
+                    viewModel::acceptDocumentExportProgress,
+                    this::showDocumentVideoExportSuccess,
+                    ex -> showError("No se pudo exportar el video documental texto+audio", ex),
+                    viewModel::endDocumentExportRender);
+    }
+
+    /** Batch variant: same renderer and scheduler, with non-modal terminal callbacks. */
+    private void exportDocumentStudyTextAudioVideoInBackground(
+            File file,
+            VideoExportOptions options,
+            DocumentTextVideoOptions textOptions,
+            Consumer<Path> success,
+            Consumer<Throwable> failure,
+            Consumer<com.marcosmoreiradev.docupodcaststudio.application.video.VideoRenderProgress> progress) {
+        if (file == null) {
+            failure.accept(new IOException("No se definió el archivo MP4 de salida."));
+            return;
+        }
+        try {
+            viewModel.saveCurrentProject();
+        } catch (IOException | RuntimeException ex) {
+            failure.accept(ex);
+            return;
+        }
+        viewModel.beginDocumentExportRender();
+        videoExportProgressCoordinator.exportInBackground(file.toPath(), options,
+                (targetFile, selectedOptions, renderProgress, cancellationRequested) ->
                         viewModel.exportDocumentStudyTextAudioVideo(targetFile,
-                                selectedOptions.resolution(),
-                                selectedOptions.framesPerSecond(),
+                                selectedOptions.resolution(), selectedOptions.framesPerSecond(),
                                 selectedOptions.encoderPolicy(),
-                                textOptions == null ? DocumentTextVideoOptions.defaults() : textOptions.withResolution(selectedOptions.resolution()),
-                                progress,
-                                cancellationRequested),
-                ex -> showError("No se pudo exportar el video documental texto+audio", ex));
+                                textOptions == null ? DocumentTextVideoOptions.defaults()
+                                        : textOptions.withResolution(selectedOptions.resolution()),
+                                renderProgress,
+                                () -> cancellationRequested.getAsBoolean()
+                                        || viewModel.documentExportCancellationRequested()),
+                progress,
+                success,
+                failure,
+                viewModel::endDocumentExportRender);
+    }
+
+    private void showDocumentVideoExportSuccess(Path targetFile) {
+        Path normalized = targetFile == null ? null : targetFile.toAbsolutePath().normalize();
+        if (normalized == null || !Files.isRegularFile(normalized)) {
+            showError("La exportación terminó sin un archivo verificable",
+                    new IOException("No se encontró el MP4 final en " + normalized));
+            return;
+        }
+
+        ButtonType openFolderButton = com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeDialogResponse.button(
+                "Abrir carpeta", ButtonBar.ButtonData.LEFT);
+        var outcome = viewModel.lastDocumentaryVideoOutcome();
+        boolean incomplete = outcome != null && outcome.missingIllustrations() > 0;
+        String message = (incomplete
+                ? "El video se exportó, pero faltan " + outcome.missingIllustrations()
+                    + " ilustraciones de IA. Puedes reintentar la exportación: se reutilizan los audios y las imágenes válidas."
+                : "El video se exportó correctamente.")
+                + System.lineSeparator() + System.lineSeparator()
+                + "Archivo: " + normalized.getFileName()
+                + System.lineSeparator()
+                + "Tamaño: " + formattedFileSize(normalized)
+                + System.lineSeparator()
+                + "Ubicación: " + normalized;
+        Alert alert = StudioMessageDialog.create(
+                owner(),
+                incomplete ? Alert.AlertType.WARNING : Alert.AlertType.INFORMATION,
+                "Exportación terminada",
+                incomplete ? "Video con ilustraciones incompletas" : "Video exportado correctamente",
+                message,
+                "",
+                openFolderButton,
+                ButtonType.OK);
+        Optional<ButtonType> response = alert.showAndWait();
+        if (response.orElse(null) == openFolderButton) {
+            Path parent = normalized.getParent();
+            if (parent != null) {
+                try {
+                    openFolder(parent, "No se pudo abrir la carpeta del video exportado");
+                } catch (IOException | RuntimeException ex) {
+                    showError("No se pudo abrir la carpeta del video exportado", ex);
+                }
+            }
+        }
+    }
+
+    private static String formattedFileSize(Path file) {
+        try {
+            long bytes = Files.size(file);
+            if (bytes < 1024L) {
+                return bytes + " B";
+            }
+            double kibibytes = bytes / 1024.0;
+            if (kibibytes < 1024.0) {
+                return String.format(java.util.Locale.ROOT, "%.1f KB", kibibytes);
+            }
+            double mebibytes = kibibytes / 1024.0;
+            if (mebibytes < 1024.0) {
+                return String.format(java.util.Locale.ROOT, "%.1f MB", mebibytes);
+            }
+            return String.format(java.util.Locale.ROOT, "%.2f GB", mebibytes / 1024.0);
+        } catch (IOException ex) {
+            return "no disponible";
+        }
     }
 
     private void exportTheatreWorkInBackground(File file, VideoExportOptions options) {
@@ -1668,7 +2373,7 @@ public final class DocuPodcastShellView extends BorderPane {
 
     private OperationalSettings currentOperationalSettings() {
         try {
-            return viewModel.applicationServices().settings().loadOperationalSettings().load();
+            return viewModel.administrationWorkspace().settings().loadOperationalSettings().load();
         } catch (IOException | RuntimeException ex) {
             return OperationalSettings.defaults();
         }
@@ -1678,7 +2383,7 @@ public final class DocuPodcastShellView extends BorderPane {
         java.util.LinkedHashSet<VideoEncoderPolicy> policies = new java.util.LinkedHashSet<>();
         policies.add(VideoEncoderPolicy.CPU_X264);
         try {
-            var report = viewModel.applicationServices().settings().inspectComputeEnvironment().inspect(settings);
+            var report = viewModel.administrationWorkspace().settings().inspectComputeEnvironment().inspect(settings);
             for (var device : report.devices()) {
                 addVideoEncoderForDevice(policies, device.id(), device.vendor(), device.displayName());
             }
@@ -1738,16 +2443,16 @@ public final class DocuPodcastShellView extends BorderPane {
     }
 
     public void handleOpenSettings() {
-        settingsDialog.show(owner(), viewModel.applicationServices().settings(),
+        settingsDialog.show(owner(), viewModel.administrationWorkspace().settings(),
                 SettingsSupportActions.of(commandDispatcher::canDispatch, this::dispatchCommand));
     }
 
     public void handleOpenVoiceEngineSettings() {
-        settingsDialog.showVoiceEngines(owner(), viewModel.applicationServices().settings());
+        settingsDialog.showVoiceEngines(owner(), viewModel.administrationWorkspace().settings());
     }
 
     public void handleOpenOcrSettings() {
-        settingsDialog.showVoiceEngines(owner(), viewModel.applicationServices().settings());
+        settingsDialog.showVoiceEngines(owner(), viewModel.administrationWorkspace().settings());
         retryVisiblePdfTextPreparation();
     }
 
@@ -1759,26 +2464,26 @@ public final class DocuPodcastShellView extends BorderPane {
     }
 
     public void handleOpenFirstUseSetup() {
-        settingsDialog.showFirstUseSetup(owner(), viewModel.applicationServices().settings());
+        settingsDialog.showFirstUseSetup(owner(), viewModel.administrationWorkspace().settings());
     }
 
     public void handleOpenGuide() {
-        new GuideDialog(viewModel.applicationServices().guide()).show(owner());
+        new GuideDialog(viewModel.administrationWorkspace().guide()).show(owner());
     }
 
     public void handleOpenGuideTopic(GuideTopicId topicId) {
-        new GuideDialog(viewModel.applicationServices().guide()).showTopic(owner(), topicId);
+        new GuideDialog(viewModel.administrationWorkspace().guide()).showTopic(owner(), topicId);
     }
 
     public void handleExportAiResources() {
-        DirectoryChooser chooser = new DirectoryChooser();
+        DirectoryChooser chooser = NativeSourceChooser.directoryChooser();
         chooser.setTitle("Exportar recursos IA de DocuPodcast");
         File folder = chooser.showDialog(owner());
         if (folder == null) {
             return;
         }
         try {
-            var result = viewModel.applicationServices().resources().exportAiResources().export(folder.toPath());
+            var result = viewModel.administrationWorkspace().resources().exportAiResources().export(folder.toPath());
             exportAiResourcesResultDialog.show(owner(), result);
         } catch (IOException | RuntimeException ex) {
             showError("No se pudieron exportar los recursos IA", ex);
@@ -1805,12 +2510,31 @@ public final class DocuPodcastShellView extends BorderPane {
 
     private void activate(WorkspaceKind workspaceKind) {
         WorkspaceKind resolved = workspaceRouteResolver.resolve(workspaceKind);
+        long sequence = ++workspaceActivationSequence;
+        if (!workspaceRegistry.isCached(resolved) && (resolved == WorkspaceKind.VOICE_LIBRARY
+                || resolved == WorkspaceKind.SETTINGS || resolved == WorkspaceKind.THEATRE_IMAGE_GENERATION
+                || resolved == WorkspaceKind.NARRATIVE_VISUAL_PRODUCTION)) {
+            Label loading = new Label("Cargando " + resolved.displayName().toLowerCase(java.util.Locale.ROOT) + "…");
+            workspaceHost.getChildren().setAll(loading);
+            javafx.animation.PauseTransition pending = new javafx.animation.PauseTransition(javafx.util.Duration.millis(40));
+            pending.setOnFinished(event -> {
+                if (sequence != workspaceActivationSequence) return;
+                try {
+                    workspaceHost.getChildren().setAll(workspaceRegistry.viewFor(resolved));
+                } catch (RuntimeException ex) {
+                    loading.setText("No se pudo cargar esta vista. Vuelve a abrirla para reintentar.");
+                    showError("No se pudo cargar la vista", ex);
+                }
+            });
+            pending.play();
+            return;
+        }
         Node view = workspaceRegistry.viewFor(resolved);
         workspaceHost.getChildren().setAll(view);
     }
 
     private FileChooser projectFileChooser(String title) {
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle(title);
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Proyecto DocuPodcast (*.docupodcast.json)", "*.docupodcast.json"));
         return chooser;
@@ -1862,7 +2586,570 @@ public final class DocuPodcastShellView extends BorderPane {
         }
     }
 
+    private DocumentVideoBatchExecutionPort batchExecutionPort() {
+        return new DocumentVideoBatchExecutionPort() {
+            @Override public void start(DocumentVideoBatchProject project, Path descriptor, Listener listener) {
+                startBatchProduction(project, descriptor, listener);
+            }
+            @Override public void requestPause() {
+                if (activeBatchExecution != null) {
+                    activeBatchExecution.pauseRequested = true;
+                    viewModel.updateStatusMessage("La cola Express se pausará al terminar el paso seguro actual.");
+                }
+            }
+            @Override public void cancelCurrent() {
+                if (activeBatchExecution != null) {
+                    activeBatchExecution.cancelRequested = true;
+                    if (activeBatchExecution.audioExportThread != null) activeBatchExecution.audioExportThread.interrupt();
+                    videoExportProgressCoordinator.cancelBackgroundExport();
+                    viewModel.cancelNarrationTranslationAnalysis();
+                    viewModel.cancelCurrentAudioOperation();
+                    wordSemanticPreparation.cancelLocalAnalysis();
+                    pdfNarratablePreparation.cancelActivePreparationSession();
+                    viewModel.updateStatusMessage("Cancelación del documento actual solicitada; la cola conservará los derivados válidos.");
+                }
+            }
+            @Override public void cancelAll() {
+                BatchExecutionSession session = activeBatchExecution;
+                if (session == null) return;
+                session.cancelRequested = true;
+                session.cancelAllRequested = true;
+                if (session.audioExportThread != null) session.audioExportThread.interrupt();
+                videoExportProgressCoordinator.cancelBackgroundExport();
+                viewModel.cancelNarrationTranslationAnalysis();
+                viewModel.cancelCurrentAudioOperation();
+                wordSemanticPreparation.cancelLocalAnalysis();
+                pdfNarratablePreparation.cancelActivePreparationSession();
+                try {
+                    DocumentVideoBatchProject latest = batchRepository.open(session.descriptor);
+                    session.project = batchQueue.cancelAll(latest, session.descriptor);
+                    session.listener.projectChanged(session.project);
+                } catch (IOException failure) {
+                    LOGGER.error("No se pudo persistir la cancelación completa de la cola Express", failure);
+                }
+                // Wait for the active worker's callback before restoring the editor.
+                if (session.currentItemId.isBlank()) advanceBatchProduction();
+            }
+            @Override public boolean running() { return activeBatchExecution != null; }
+            @Override public EngineConfiguration engineConfiguration() {
+                var platform = viewModel.mediaEnginePlatform();
+                List<EngineChoice> voices = new ArrayList<>();
+                voices.add(new EngineChoice("", "Usar la configuración general", "", true));
+                new ListVoiceEngineOperationalStatesUseCase(platform).list().forEach(state ->
+                        voices.add(new EngineChoice(state.engineId(), expressVoiceEngineName(state.engineId(), state.displayName()),
+                                state.statusLabel(), state.ready() && state.realTts())));
+                List<EngineChoice> ai = new ArrayList<>();
+                ai.add(new EngineChoice("", "Automático (motor compatible)", "", true));
+                platform.contentAnalysisEngines().supporting(ContentAnalysisOperation.IMAGE_DESCRIPTION)
+                        .forEach(engine -> {
+                            var readiness = engine.inspectReadiness(null);
+                            ai.add(new EngineChoice(engine.descriptor().id().value(),
+                                    expressAiEngineName(engine.descriptor().id().value(), engine.descriptor().displayName()),
+                                    readiness.ready() ? "Listo" : "Requiere reparación",
+                                    readiness.ready()));
+                        });
+                EngineId selectedVoice = SelectedMediaEngines.from(currentOperationalSettings()).voice();
+                return new EngineConfiguration(voices, ai,
+                        selectedVoice == null ? "" : selectedVoice.value(), "");
+            }
+            @Override public void selectGlobalVoiceEngine(String engineId) throws IOException {
+                persistGlobalVoiceEngine(engineId);
+            }
+        };
+    }
+
+    private static String expressVoiceEngineName(String id, String fallback) {
+        return fallback;
+    }
+
+    private static String expressAiEngineName(String id, String fallback) {
+        return fallback;
+    }
+
+    private void startBatchProduction(DocumentVideoBatchProject project, Path descriptor,
+                                      DocumentVideoBatchExecutionPort.Listener listener) {
+        if (activeBatchExecution != null) {
+            viewModel.updateStatusMessage("Ya hay una cola Express en ejecución.");
+            return;
+        }
+        expressNotificationOwner = listener.notificationOwner();
+        if (!project.profile().audioOnly() && !ensureVideoRendererAvailable()) return;
+        try {
+            Path normalizedDescriptor = descriptor.toAbsolutePath().normalize();
+            DocumentVideoBatchProject recovered = batchQueue.recoverInterrupted(
+                    batchRepository.open(normalizedDescriptor), normalizedDescriptor);
+            // Express shares the current DocuPodcast voice selection. The ID stored in
+            // older batch descriptors is only historical and must not override a newer
+            // choice made later in the main settings surface.
+            viewModel.preferVoiceEngineForCurrentOperation("");
+            activeBatchExecution = new BatchExecutionSession(normalizedDescriptor, recovered, listener);
+            listener.projectChanged(recovered);
+            advanceBatchProduction();
+        } catch (IOException | RuntimeException failure) {
+            showError("No se pudo iniciar la producción por lotes", failure);
+        }
+    }
+
+    private void persistGlobalVoiceEngine(String engineId) throws IOException {
+        String requested = engineId == null ? "" : engineId.strip();
+        if (requested.isBlank()) return;
+        var engine = viewModel.mediaEnginePlatform().voiceEngines().find(new EngineId(requested))
+                .orElseThrow(() -> new IOException("El motor de voz no está registrado: " + requested));
+        var readiness = engine.inspectReadiness(null);
+        if (!readiness.ready()) {
+            throw new IOException("El motor de voz «" + engine.descriptor().displayName()
+                    + "» no está listo: " + readiness.summary());
+        }
+        OperationalSettings current = currentOperationalSettings();
+        OperationalSettings.MediaEngineSelectionSettings selected = current.mediaEngines();
+        if (requested.equalsIgnoreCase(selected.voiceEngineId())) return;
+        OperationalSettings updated = new OperationalSettings(
+                current.readingDocument(), current.playbackBuffer(), current.tts(), current.video(),
+                current.imageGeneration(), current.imageSuperResolution(),
+                new OperationalSettings.MediaEngineSelectionSettings(requested, selected.imageEngineId(),
+                        selected.videoGenerationEngineId(), selected.videoRenderEngineId()),
+                current.frameGeneration(), current.compute(), current.ocr(), current.storage(), current.diagnostics());
+        var report = viewModel.administrationWorkspace().settings().saveOperationalSettings().save(updated);
+        if (!report.errors().isEmpty()) {
+            throw new IOException("No se guardó el motor de voz: " + String.join(" ", report.errors()));
+        }
+        viewModel.updateStatusMessage("Motor de voz global: " + requested + ".");
+    }
+
+    private void advanceBatchProduction() {
+        BatchExecutionSession session = activeBatchExecution;
+        if (session == null) return;
+        try {
+            session.project = batchRepository.open(session.descriptor);
+            if (session.cancelAllRequested) {
+                session.project = batchQueue.cancelAll(session.project, session.descriptor);
+                finishBatchProduction(false, "Producción completa cancelada; los archivos terminados se conservaron.");
+                return;
+            }
+            if (session.pauseRequested) {
+                finishBatchProduction(true, "La cola quedó pausada y puede continuarse después.");
+                return;
+            }
+            Optional<DocumentVideoBatchItem> next = session.project.items().stream()
+                    .filter(item -> item.state() == BatchItemState.PENDING)
+                    .sorted(Comparator.comparingInt(DocumentVideoBatchItem::order))
+                    .findFirst();
+            if (next.isEmpty()) {
+                boolean hasPaused = session.project.items().stream().anyMatch(item ->
+                        item.state() == BatchItemState.PAUSED
+                                || item.state() == BatchItemState.PAUSE_REQUESTED);
+                finishBatchProduction(hasPaused, hasPaused
+                        ? "No quedan documentos pendientes; reanuda los elementos pausados para continuar."
+                        : "Todos los documentos disponibles alcanzaron un estado terminal.");
+                return;
+            }
+            session.currentItemId = next.get().id();
+            session.cancelRequested = false;
+            Path existingOutput = safeBatchResolve(session.descriptor.getParent(),
+                    next.get().outputVideoRelativePath());
+            if (!session.project.profile().audioOnly() && batchVideoVerifier.verify(existingOutput)) {
+                transitionBatch(BatchItemState.COMPLETED, BatchItemStage.FINISHED,
+                        1.0, "MP4 existente verificado y reutilizado: " + existingOutput.getFileName());
+                session.currentItemId = "";
+                javafx.application.Platform.runLater(this::advanceBatchProduction);
+                return;
+            }
+            transitionBatch(BatchItemState.RUNNING, BatchItemStage.DOCUMENT_PREPARATION,
+                    0.04, "Abriendo el proyecto documental");
+            openAndPrepareBatchItem(next.get());
+        } catch (IOException | RuntimeException failure) {
+            failCurrentBatchItem(failure);
+        }
+    }
+
+    private void openAndPrepareBatchItem(DocumentVideoBatchItem item) {
+        BatchExecutionSession session = activeBatchExecution;
+        if (session == null) return;
+        try {
+            Path root = session.descriptor.getParent();
+            Path childDescriptor = safeBatchResolve(root, item.childProjectRelativePath());
+            Path copiedSource = safeBatchResolve(root, item.copiedSourceRelativePath());
+            openProjectFile(childDescriptor, () -> {
+                expressOpenedChild = true;
+                if (viewModel.currentSourceDocumentPath().isPresent()) {
+                    applyBatchProfileAndPrepare(item);
+                    return;
+                }
+                transitionBatch(BatchItemState.RUNNING, BatchItemStage.DOCUMENT_PREPARATION,
+                        0.08, "Importando la copia protegida de la fuente");
+                Task<ProjectDocumentSource> importTask = new Task<>() {
+                    @Override protected ProjectDocumentSource call() throws Exception {
+                        return viewModel.importAndClassifySourceDocument(copiedSource);
+                    }
+                };
+                importTask.setOnSucceeded(event -> {
+                    try {
+                        if (batchCancellationCheckpoint()) return;
+                        viewModel.attachImportedDocument(importTask.getValue());
+                        viewModel.saveCurrentProject();
+                        applyBatchProfileAndPrepare(item);
+                    } catch (IOException | RuntimeException failure) {
+                        failCurrentBatchItem(failure);
+                    }
+                });
+                importTask.setOnFailed(event ->
+                        failCurrentBatchItem(importTask.getException()));
+                backgroundTaskRunner.start("docupodcast-batch-source-import", importTask);
+            }, this::failCurrentBatchItem);
+        } catch (IOException | RuntimeException failure) {
+            failCurrentBatchItem(failure);
+        }
+    }
+
+    private void applyBatchProfileAndPrepare(DocumentVideoBatchItem item) {
+        BatchExecutionSession session = activeBatchExecution;
+        if (session == null || batchCancellationCheckpoint()) return;
+        try {
+            var semanticPolicy = session.project.profile().interpretImages()
+                    ? com.marcosmoreiradev.docupodcaststudio.domain.reading.SecondarySemanticReadingPolicy.INTERPRET_ALL_BRIEF
+                    : com.marcosmoreiradev.docupodcaststudio.domain.reading.SecondarySemanticReadingPolicy.TABLES_AND_EQUATIONS;
+            viewModel.setDocumentListeningPreferences(viewModel.documentListeningPreferences()
+                    .withSecondarySemanticPolicy(semanticPolicy));
+            if (!session.project.profile().audioOnly()) {
+            var projection = viewModel.currentDocumentContentProjection().orElse(null);
+            var configuration = viewModel.documentaryVideoConfiguration()
+                    .withDefaultSecondarySemanticDuration(session.project.profile().imageSlideSeconds());
+            if (projection != null) {
+                for (var content : projection.items()) {
+                    var slide = configuration.content(content.contentId())
+                            .orElseGet(() -> com.marcosmoreiradev.docupodcaststudio.domain.study
+                                    .DocumentVideoSlideConfiguration.empty(content.contentId()));
+                    configuration = configuration.withContent(
+                            slide.withDuration(session.project.profile().imageSlideSeconds()));
+                }
+            }
+            var branding = session.project.profile().branding();
+            if (branding.enabled() && projection != null) {
+                Path logo = safeBatchResolve(session.descriptor.getParent(), branding.projectRelativePath());
+                var asset = viewModel.importDocumentaryVideoImage(logo);
+                var position = branding.placement() == com.marcosmoreiradev.docupodcaststudio.domain.batch.BrandingPlacement.BOTTOM_LEFT
+                        || branding.placement() == com.marcosmoreiradev.docupodcaststudio.domain.batch.BrandingPlacement.TOP_LEFT
+                        ? com.marcosmoreiradev.docupodcaststudio.domain.study.DocumentMascotPosition.BOTTOM_LEFT
+                        : com.marcosmoreiradev.docupodcaststudio.domain.study.DocumentMascotPosition.BOTTOM_RIGHT;
+                for (var content : projection.items()) {
+                    var slide = configuration.content(content.contentId())
+                            .orElseGet(() -> com.marcosmoreiradev.docupodcaststudio.domain.study
+                                    .DocumentVideoSlideConfiguration.empty(content.contentId()));
+                    configuration = configuration.withContent(slide.withVisual(
+                            slide.visual().withMascot(asset.id(), position, branding.sizePercent())));
+                }
+            }
+            viewModel.updateDocumentaryVideoConfiguration(configuration);
+            }
+            viewModel.saveCurrentProject();
+            transitionBatch(BatchItemState.RUNNING, BatchItemStage.DOCUMENT_PREPARATION,
+                    0.14, "Preparando semántica y lectura del documento completo");
+            prepareDocumentForBatchExportThenRun(
+                    () -> prepareBatchAudioAndVideo(item),
+                    this::failCurrentBatchItem);
+        } catch (IOException | RuntimeException failure) {
+            failCurrentBatchItem(failure);
+        }
+    }
+
+    /** Batch counterpart of the interactive preparation gate: no modal decisions. */
+    private void prepareDocumentForBatchExportThenRun(
+            Runnable continuation, java.util.function.Consumer<Throwable> failureHandler) {
+        Runnable afterWord = () -> {
+            if (viewModel.currentDocumentProperty().get() != null) {
+                viewModel.buildNarrationScriptFromDocument();
+                continuation.run();
+                return;
+            }
+            BatchExecutionSession session = activeBatchExecution;
+            String aiEngineId = session == null ? "" : session.project.profile().aiEngineId();
+            pdfNarratablePreparation.prepareCompleteReadingForBatchThenRun(() -> {
+                viewModel.buildNarrationScriptFromDocument();
+                continuation.run();
+            }, failureHandler, aiEngineId);
+        };
+        BatchExecutionSession session = activeBatchExecution;
+        String aiEngineId = session == null ? "" : session.project.profile().aiEngineId();
+        wordSemanticPreparation.prepareForBatchThenRun(afterWord, failureHandler, aiEngineId);
+    }
+
+    private void prepareBatchAudioAndVideo(DocumentVideoBatchItem item) {
+        BatchExecutionSession session = activeBatchExecution;
+        if (session == null || batchCancellationCheckpoint()) return;
+        try {
+            if (pauseCurrentBatchItemIfRequested()) return;
+            DocumentExportReadinessSnapshot readiness = viewModel.inspectDocumentExportReadiness();
+            Runnable export = () -> {
+                transitionBatch(BatchItemState.RUNNING, BatchItemStage.AUDIO_VERIFICATION,
+                        0.50, "Audio vigente verificado; preparando la salida final");
+                exportCurrentBatchItem(item);
+            };
+            if (readiness.readyToRender() || readiness.compositionOnlyPending()) {
+                export.run();
+                return;
+            }
+            transitionBatch(BatchItemState.RUNNING, BatchItemStage.AUDIO_GENERATION,
+                    0.20, "Generando y verificando la voz faltante");
+            session.awaitingAudio = true;
+            PreparedExportIntent intent = new PreparedExportIntent(
+                    session.project.profile().audioOnly() ? AppCommandId.EXPORT_PODCAST_WAV : AppCommandId.EXPORT_DOCUMENT_TEXT_AUDIO_VIDEO,
+                    ExportExecutionMode.PREPARE_FULL_DOCUMENT_AND_EXPORT,
+                    safeBatchResolve(session.descriptor.getParent(), item.outputVideoRelativePath()),
+                    session.project.profile().outputLabel() + " por lotes");
+            viewModel.submitAudioGenerationWithPendingExport(readiness, intent, () -> {
+                BatchExecutionSession current = activeBatchExecution;
+                if (current == null) return;
+                current.awaitingAudio = false;
+                if (pauseCurrentBatchItemIfRequested() || batchCancellationCheckpoint()) return;
+                export.run();
+            }, failure -> {
+                session.awaitingAudio = false;
+                Task<Void> waitForWorker = new Task<>() {
+                    @Override protected Void call() throws Exception {
+                        viewModel.awaitNarrationTranslationStopped();
+                        return null;
+                    }
+                };
+                waitForWorker.setOnSucceeded(event -> {
+                    if (activeBatchExecution == session && session.currentItemId.equals(item.id())) failCurrentBatchItem(failure);
+                });
+                waitForWorker.setOnFailed(event -> {
+                    if (activeBatchExecution == session && session.currentItemId.equals(item.id())) failCurrentBatchItem(waitForWorker.getException());
+                });
+                backgroundTaskRunner.start("docupodcast-batch-audio-stop", waitForWorker);
+            });
+        } catch (IOException | RuntimeException failure) {
+            failCurrentBatchItem(failure);
+        }
+    }
+
+    private void exportCurrentBatchItem(DocumentVideoBatchItem item) {
+        BatchExecutionSession session = activeBatchExecution;
+        if (session == null || batchCancellationCheckpoint()) return;
+        try {
+            Path target = safeBatchResolve(session.descriptor.getParent(), item.outputVideoRelativePath());
+            Files.createDirectories(target.getParent());
+            if (session.project.profile().audioOnly()) {
+                exportBatchAudio(session, target);
+                return;
+            }
+            transitionBatch(BatchItemState.RUNNING, BatchItemStage.VISUAL_PLAN,
+                    0.52, "Construyendo el plan visual del documento");
+            var effectiveVideo = session.project.profile().effectiveVideo(item.sourceRelativePath());
+            if (effectiveVideo.backgroundMode() == com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoBackgroundMode.IMAGE
+                    && !Files.isRegularFile(Path.of(effectiveVideo.backgroundImagePath()))) {
+                throw new java.io.IOException("Imagen de fondo no disponible para " + item.title() + ": " + effectiveVideo.backgroundImagePath());
+            }
+            VideoExportOptions options = documentStudyVideoOptions(effectiveVideo);
+            exportDocumentStudyTextAudioVideoInBackground(target.toFile(), options,
+                    effectiveVideo, exported -> completeCurrentBatchItem(exported),
+                    this::failCurrentBatchItem, progress -> {
+                        BatchExecutionSession current = activeBatchExecution;
+                        if (current == null) return;
+                        viewModel.acceptDocumentExportProgress(progress);
+                        double ratio = 0.55 + (0.40 * progress.ratio());
+                        long now = System.nanoTime();
+                        if (ratio - current.lastPersistedProgress >= 0.02
+                                || now - current.lastProgressPersistNanos > 2_000_000_000L) {
+                            current.lastPersistedProgress = ratio;
+                            current.lastProgressPersistNanos = now;
+                            transitionBatch(BatchItemState.RUNNING,
+                                    progress.stage() == com.marcosmoreiradev.docupodcaststudio.application.video.VideoRenderStage.VERIFYING_OUTPUT
+                                            ? BatchItemStage.VIDEO_VERIFICATION : BatchItemStage.VIDEO_RENDER,
+                                    ratio, progress.currentStep());
+                        }
+                    });
+        } catch (IOException | RuntimeException failure) {
+            failCurrentBatchItem(failure);
+        }
+    }
+
+    private void completeCurrentBatchItem(Path target) {
+        try {
+            if (activeBatchExecution == null || batchCancellationCheckpoint()) return;
+            if (!batchVideoVerifier.verify(target)) {
+                throw new IOException("La exportación no produjo un MP4 verificable: " + target);
+            }
+            transitionBatch(BatchItemState.COMPLETED, BatchItemStage.FINISHED,
+                    1.0, "MP4 verificado: " + target.getFileName());
+            BatchExecutionSession session = activeBatchExecution;
+            if (session != null) session.currentItemId = "";
+            advanceBatchProduction();
+        } catch (IOException | RuntimeException failure) {
+            failCurrentBatchItem(failure);
+        }
+    }
+
+    private void exportBatchAudio(BatchExecutionSession session, Path target) throws IOException {
+        viewModel.saveCurrentProject();
+        transitionBatch(BatchItemState.RUNNING, BatchItemStage.AUDIO_EXPORT,
+                0.55, "Exportando audio " + session.project.profile().audioFormat().displayName());
+        Task<Void> export = new Task<>() {
+            @Override protected Void call() throws Exception {
+                session.audioExportThread = Thread.currentThread();
+                try {
+                    var verifier = new com.marcosmoreiradev.docupodcaststudio.application.batch.VerifyBatchAudioOutputUseCase();
+                    if (!verifier.verify(target, session.project.profile().audioFormat())) {
+                        if (session.cancelRequested) throw new IOException("Exportación cancelada");
+                        viewModel.exportPodcastWavResult(target);
+                        if (session.cancelRequested) throw new IOException("Exportación cancelada");
+                        verifier.recordCompleted(target, session.project.profile().audioFormat());
+                    }
+                    return null;
+                } finally { session.audioExportThread = null; }
+            }
+        };
+        export.setOnSucceeded(event -> {
+            if (activeBatchExecution != session || batchCancellationCheckpoint()) return;
+            transitionBatch(BatchItemState.RUNNING, BatchItemStage.AUDIO_OUTPUT_VERIFICATION, 0.98,
+                    "Audio exportado y verificado");
+            transitionBatch(BatchItemState.COMPLETED, BatchItemStage.FINISHED, 1.0,
+                    "Audio verificado: " + target.getFileName());
+            session.currentItemId = "";
+            advanceBatchProduction();
+        });
+        export.setOnFailed(event -> {
+            if (activeBatchExecution == session) failCurrentBatchItem(export.getException());
+        });
+        backgroundTaskRunner.start("docupodcast-batch-audio-export", export);
+    }
+
+    private void handleBatchAudioStatus(AudioJobStatusDto status) {
+        BatchExecutionSession session = activeBatchExecution;
+        if (session == null || !session.awaitingAudio || status == null) return;
+        if (status.running()) {
+            double progress = 0.20 + (0.30 * status.progress());
+            long now = System.nanoTime();
+            if (progress - session.lastPersistedProgress >= 0.02
+                    || now - session.lastProgressPersistNanos > 2_000_000_000L) {
+                session.lastPersistedProgress = progress;
+                session.lastProgressPersistNanos = now;
+                transitionBatch(BatchItemState.RUNNING, BatchItemStage.AUDIO_GENERATION,
+                        progress, status.statusLine());
+            }
+        }
+    }
+
+    private boolean pauseCurrentBatchItemIfRequested() {
+        BatchExecutionSession session = activeBatchExecution;
+        if (session == null || session.currentItemId.isBlank()) return false;
+        try {
+            DocumentVideoBatchProject latest = batchRepository.open(session.descriptor);
+            Optional<DocumentVideoBatchItem> current = latest.items().stream()
+                    .filter(item -> item.id().equals(session.currentItemId)).findFirst();
+            if (current.isPresent() && current.get().state() == BatchItemState.PAUSE_REQUESTED) {
+                session.project = latest;
+                transitionBatch(BatchItemState.PAUSED, current.get().stage(), current.get().progress(),
+                        "Pausado en un punto seguro; los derivados válidos se conservaron");
+                session.currentItemId = "";
+                advanceBatchProduction();
+                return true;
+            }
+        } catch (IOException failure) {
+            failCurrentBatchItem(failure);
+            return true;
+        }
+        return false;
+    }
+
+    private boolean batchCancellationCheckpoint() {
+        BatchExecutionSession session = activeBatchExecution;
+        if (session == null || !session.cancelRequested) return false;
+        transitionBatch(BatchItemState.CANCELLED, BatchItemStage.FINISHED,
+                session.lastPersistedProgress, "Cancelado por el usuario; derivados válidos conservados");
+        session.currentItemId = "";
+        advanceBatchProduction();
+        return true;
+    }
+
+    private void failCurrentBatchItem(Throwable failure) {
+        BatchExecutionSession session = activeBatchExecution;
+        if (session == null) return;
+        session.awaitingAudio = false;
+        BatchItemState terminal = session.cancelRequested ? BatchItemState.CANCELLED : BatchItemState.FAILED;
+        String message = failure == null ? "Error desconocido" : rootCauseMessage(failure);
+        transitionBatch(terminal, BatchItemStage.FINISHED,
+                session.lastPersistedProgress, message);
+        session.currentItemId = "";
+        javafx.application.Platform.runLater(this::advanceBatchProduction);
+    }
+
+    private void transitionBatch(BatchItemState state, BatchItemStage stage,
+                                 double progress, String message) {
+        BatchExecutionSession session = activeBatchExecution;
+        if (session == null || session.currentItemId.isBlank()) return;
+        if (session.cancelRequested && state == BatchItemState.RUNNING) return;
+        try {
+            DocumentVideoBatchProject latest = batchRepository.open(session.descriptor);
+            session.project = batchQueue.transition(latest, session.descriptor,
+                    session.currentItemId, state, stage, progress, message);
+            session.listener.projectChanged(session.project);
+        } catch (IOException failure) {
+            LOGGER.error("No se pudo persistir el checkpoint de la cola Express", failure);
+        }
+    }
+
+    private void finishBatchProduction(boolean paused, String message) {
+        BatchExecutionSession session = activeBatchExecution;
+        if (session == null) return;
+        activeBatchExecution = null;
+        viewModel.preferVoiceEngineForCurrentOperation("");
+        DocumentVideoBatchProject project = session.project;
+        int completed = (int) project.items().stream().filter(item -> item.state() == BatchItemState.COMPLETED).count();
+        int failed = (int) project.items().stream().filter(item -> item.state() == BatchItemState.FAILED).count();
+        int skipped = (int) project.items().stream().filter(item -> item.state() == BatchItemState.SKIPPED).count();
+        int cancelled = (int) project.items().stream().filter(item -> item.state() == BatchItemState.CANCELLED).count();
+        try {
+            batchReportWriter.write(project, session.descriptor, paused, message);
+        } catch (IOException reportFailure) {
+            LOGGER.warn("No se pudo escribir el informe final de la cola Express", reportFailure);
+        }
+        session.listener.finished(project, new DocumentVideoBatchExecutionPort.BatchRunResult(
+                completed, failed, skipped, cancelled, paused, message));
+        viewModel.updateStatusMessage(paused ? "Cola Express pausada." : "Cola Express terminada.");
+    }
+
+    private static Path safeBatchResolve(Path root, String relative) throws IOException {
+        Path normalizedRoot = root.toAbsolutePath().normalize();
+        Path resolved = normalizedRoot.resolve(relative).normalize();
+        if (!resolved.startsWith(normalizedRoot)) {
+            throw new IOException("Ruta insegura fuera del proyecto por lotes: " + relative);
+        }
+        return resolved;
+    }
+
+
+    private static String rootCauseMessage(Throwable failure) {
+        Throwable cursor = failure;
+        while (cursor != null && cursor.getCause() != null && cursor.getCause() != cursor) {
+            cursor = cursor.getCause();
+        }
+        String value = cursor == null ? "Error desconocido" : cursor.getMessage();
+        return value == null || value.isBlank() ? cursor.getClass().getSimpleName() : value;
+    }
+
+    private static final class BatchExecutionSession {
+        private final Path descriptor;
+        private final DocumentVideoBatchExecutionPort.Listener listener;
+        private DocumentVideoBatchProject project;
+        private String currentItemId = "";
+        private boolean pauseRequested;
+        private volatile boolean cancelRequested;
+        private boolean cancelAllRequested;
+        private volatile Thread audioExportThread;
+        private boolean awaitingAudio;
+        private double lastPersistedProgress;
+        private long lastProgressPersistNanos;
+        private BatchExecutionSession(Path descriptor, DocumentVideoBatchProject project,
+                                      DocumentVideoBatchExecutionPort.Listener listener) {
+            this.descriptor = descriptor;
+            this.project = project;
+            this.listener = listener;
+        }
+    }
+
     private Window owner() {
+        if (expressNotificationOwner != null && expressNotificationOwner.isShowing()) return expressNotificationOwner;
         return getScene() == null ? null : getScene().getWindow();
     }
 

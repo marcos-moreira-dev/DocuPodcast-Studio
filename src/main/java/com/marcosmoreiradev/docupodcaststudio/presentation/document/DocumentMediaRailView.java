@@ -1,5 +1,13 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.document;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeDialogResponse;
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.StudioMessageDialog;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioNavigationControls;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioCollectionControls;
+
+import com.marcosmoreiradev.docupodcaststudio.ink.DrawingFeatureCatalog;
 import com.marcosmoreiradev.docupodcaststudio.application.storyboard.TheatreVisualVariant;
 import com.marcosmoreiradev.docupodcaststudio.domain.playback.PlaybackCue;
 import com.marcosmoreiradev.docupodcaststudio.domain.playback.PlaybackCursor;
@@ -24,6 +32,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuItem;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.SemanticActionIcons;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -54,7 +63,7 @@ public final class DocumentMediaRailView extends VBox {
     private final DocuPodcastShellViewModel viewModel;
     private final Runnable hideRailAction;
     private final Label fragmentCount = new Label();
-    private final ListView<DocumentFragmentRailPresentation> storyboardItems = new ListView<>();
+    private final ListView<DocumentFragmentRailPresentation> storyboardItems = StudioCollectionControls.listView();
     private final Map<String, TheatreVisualVariant> inspectedVariants = new HashMap<>();
     private Button editFrameButton;
     private Button storyboardOverviewButton;
@@ -230,7 +239,7 @@ public final class DocumentMediaRailView extends VBox {
     }
 
     private String thumbnailActionTooltip(DocumentFragmentRailPresentation fragment) {
-        return "Ver siguiente variante: usuario, IA o lienzo";
+        return "Ver siguiente variante: usuario, IA, lienzo o escena";
     }
 
     private static String variantCategoryLabel(TheatreVisualVariant variant) {
@@ -238,6 +247,7 @@ public final class DocumentMediaRailView extends VBox {
             case OFFICIAL -> "Usuario";
             case GENERATED -> "IA";
             case DRAWN -> "Lienzo";
+            case SCENERY -> "Escena";
         };
     }
 
@@ -253,6 +263,8 @@ public final class DocumentMediaRailView extends VBox {
         inspectedVariants.put(fragment.unitId(), next);
         if (variantAvailable(fragment, next)) {
             viewModel.activateTheatreStoryboardVisualVariant(fragment.segmentId(), next.metadataValue());
+        } else if (next == TheatreVisualVariant.SCENERY) {
+            viewModel.materializeTheatreSceneryVisualVariant(fragment.segmentId());
         }
         if (cardRefresh != null) {
             cardRefresh.run();
@@ -269,6 +281,7 @@ public final class DocumentMediaRailView extends VBox {
             case OFFICIAL -> fragment.hasOfficialImage();
             case GENERATED -> fragment.hasGeneratedImage();
             case DRAWN -> fragment.hasDrawnFrame();
+            case SCENERY -> fragment.hasSceneryImage();
         };
     }
 
@@ -277,6 +290,7 @@ public final class DocumentMediaRailView extends VBox {
             case OFFICIAL -> fragment.officialImageFileUri();
             case GENERATED -> fragment.generatedImageFileUri();
             case DRAWN -> fragment.drawnFrameFileUri();
+            case SCENERY -> fragment.sceneryImageFileUri();
         };
     }
 
@@ -285,6 +299,7 @@ public final class DocumentMediaRailView extends VBox {
             case OFFICIAL -> "Imagen no asignada";
             case GENERATED -> "Imagen IA pendiente";
             case DRAWN -> "Boceto no disponible";
+            case SCENERY -> "Composición de escena pendiente";
         };
     }
 
@@ -297,6 +312,7 @@ public final class DocumentMediaRailView extends VBox {
             case OFFICIAL -> "Seleccionar fragmento para asignar una imagen";
             case GENERATED -> "Abrir Generar con este fragmento seleccionado";
             case DRAWN -> "Dibujar o editar el frame de este fragmento";
+            case SCENERY -> "Crear la composición con personajes y escenografía";
         };
     }
 
@@ -306,6 +322,8 @@ public final class DocumentMediaRailView extends VBox {
             viewModel.showTheatreImageGenerationWorkspace();
         } else if (variant == TheatreVisualVariant.DRAWN) {
             openSelectedFrameEditor();
+        } else if (variant == TheatreVisualVariant.SCENERY) {
+            viewModel.materializeTheatreSceneryVisualVariant(fragment.segmentId());
         }
     }
 
@@ -317,11 +335,14 @@ public final class DocumentMediaRailView extends VBox {
         TheatreFrameSketchDialog dialog = new TheatreFrameSketchDialog(
                 getScene() == null ? null : getScene().getWindow(),
                 context.get(),
-                this::openStoryboardOverview);
+                this::openStoryboardOverview,
+                viewModel.inkInputProviders().create(DrawingFeatureCatalog.THEATRE_FRAME),
+                viewModel.drawingFeatures().require(DrawingFeatureCatalog.THEATRE_FRAME));
         try {
             dialog.showAndWait().ifPresent(result -> {
                 try {
-                    viewModel.saveTheatreStoryboardFrame(result.segmentId(), result.framePng(), result.inkStateJson(), result.activateDrawn());
+                    viewModel.saveTheatreStoryboardFrame(result.segmentId(), result.framePng(), result.inkStateJson(),
+                            result.activateDrawn(), result.drawingVault());
                 } catch (Exception ex) {
                     showFrameError(ex);
                 }
@@ -339,11 +360,14 @@ public final class DocumentMediaRailView extends VBox {
     }
 
     private void showFrameError(Exception ex) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Frame dibujado");
-        alert.setHeaderText("No se pudo guardar el frame");
-        alert.setContentText(ex == null ? "Error desconocido." : ex.getMessage());
-        alert.initOwner(getScene() == null ? null : getScene().getWindow());
+        Alert alert = NativeDialogResponse.alert(Alert.AlertType.ERROR);
+        StudioMessageDialog.configure(
+                alert,
+                getScene() == null ? null : getScene().getWindow(),
+                "Frame dibujado",
+                "No se pudo guardar el frame",
+                ex == null || ex.getMessage() == null ? "Error desconocido." : ex.getMessage(),
+                StudioMessageDialog.technicalDetail(ex));
         alert.showAndWait();
     }
 
@@ -352,14 +376,16 @@ public final class DocumentMediaRailView extends VBox {
                                       DocumentFragmentRailPresentation previous,
                                       DocumentFragmentRailPresentation next) {
         MenuItem previousItem = new MenuItem("Asignar imagen al fragmento anterior");
+        SemanticActionIcons.decorate(previousItem);
         previousItem.setDisable(previous == null || !fragment.imageReady());
         previousItem.setOnAction(event -> viewModel.copyFragmentImageToAdjacentFragment(fragment, previous));
 
         MenuItem nextItem = new MenuItem("Asignar imagen al fragmento posterior");
+        SemanticActionIcons.decorate(nextItem);
         nextItem.setDisable(next == null || !fragment.imageReady());
         nextItem.setOnAction(event -> viewModel.copyFragmentImageToAdjacentFragment(fragment, next));
 
-        ContextMenu menu = new ContextMenu(previousItem, nextItem);
+        ContextMenu menu = StudioNavigationControls.contextMenu(previousItem, nextItem);
         card.setOnContextMenuRequested(event -> {
             menu.show(card, event.getScreenX(), event.getScreenY());
             event.consume();

@@ -24,10 +24,25 @@ public final class MaterializeImportedDocumentUseCase {
         Objects.requireNonNull(document, "document");
         Objects.requireNonNull(projectFile, "projectFile");
         MaterializedImportedDocument materialized = repository.materialize(document, project.readingProfile(), projectFile);
-        ReadableDocument projectSourceDocument = materialized.projectSourceDocument() == null ? document : materialized.projectSourceDocument();
+        ProjectDocumentSource projectSource = materialized.projectSource() == null
+                ? new BlockDocumentSource(document) : materialized.projectSource();
         DocuPodcastProject updated = project
                 .withAsset(materialized.sourceDocumentAsset())
                 .withAsset(materialized.importedDocumentAsset());
-        return new MaterializedImportedDocumentResult(updated, projectSourceDocument, materialized);
+        return new MaterializedImportedDocumentResult(updated, projectSource, materialized);
+    }
+
+    public MaterializedImportedDocumentResult materializeWithResult(DocuPodcastProject project,
+                                                                     ProjectDocumentSource source,
+                                                                     Path projectFile) throws IOException {
+        Objects.requireNonNull(project, "project");
+        Objects.requireNonNull(source, "source");
+        Objects.requireNonNull(projectFile, "projectFile");
+        MaterializedImportedDocument materialized =
+                repository.materialize(source, project.readingProfile(), projectFile);
+        DocuPodcastProject updated = project
+                .withAsset(materialized.sourceDocumentAsset())
+                .withAsset(materialized.importedDocumentAsset());
+        return new MaterializedImportedDocumentResult(updated, materialized.projectSource(), materialized);
     }
 }

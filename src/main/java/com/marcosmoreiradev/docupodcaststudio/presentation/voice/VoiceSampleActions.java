@@ -1,5 +1,10 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.voice;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeSourceChooser;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeDialogResponse;
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.StudioMessageDialog;
+
 import com.marcosmoreiradev.docupodcaststudio.application.voice.VoiceToneRecordingPlan;
 import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceProfile;
 import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceReferenceTone;
@@ -44,18 +49,18 @@ final class VoiceSampleActions {
         Button importOwnSample = ActionButtonFactory.secondary("Importar audio",
                 "Importar audio de muestra para el tono seleccionado.", this::chooseAndImportOwnVoiceSample);
         importOwnSample.disableProperty().bind(viewModel.voiceRecordingRunningProperty());
-        Button startRecording = ActionButtonFactory.primary("● Grabar", "Grabar muestra", this::startOwnVoiceRecording);
+        Button startRecording = ActionButtonFactory.primary("Grabar", "Grabar muestra", this::startOwnVoiceRecording);
         startRecording.disableProperty().bind(viewModel.voiceRecordingRunningProperty());
-        Button stopRecording = ActionButtonFactory.secondary("■ Detener", "Detener y guardar", this::stopOwnVoiceRecording);
+        Button stopRecording = ActionButtonFactory.secondary("Detener", "Detener y guardar", this::stopOwnVoiceRecording);
         stopRecording.disableProperty().bind(Bindings.not(viewModel.voiceRecordingRunningProperty()));
-        Button cancelRecording = ActionButtonFactory.secondary("✕ Cancelar", "Cancelar grabación", this::cancelOwnVoiceRecording);
+        Button cancelRecording = ActionButtonFactory.secondary("Cancelar", "Cancelar grabación", this::cancelOwnVoiceRecording);
         cancelRecording.disableProperty().bind(Bindings.not(viewModel.voiceRecordingRunningProperty()));
-        Button playSample = ActionButtonFactory.secondary("▶ Escuchar", "Reproducir muestra", this::playSelectedToneSample);
+        Button playSample = ActionButtonFactory.secondary("Escuchar", "Reproducir muestra", this::playSelectedToneSample);
         playSample.textProperty().bind(Bindings.when(samplePlaybackRunning)
-                .then("▶ Reproduciendo muestra...")
-                .otherwise("▶ Escuchar"));
+                .then("Reproduciendo muestra...")
+                .otherwise("Escuchar"));
         playSample.disableProperty().bind(Bindings.or(viewModel.voiceRecordingRunningProperty(), samplePlaybackRunning));
-        Button repeatRecording = ActionButtonFactory.secondary("↺ Repetir", "Grabar muestra otra vez", this::startOwnVoiceRecording);
+        Button repeatRecording = ActionButtonFactory.secondary("Repetir", "Grabar muestra otra vez", this::startOwnVoiceRecording);
         repeatRecording.disableProperty().bind(viewModel.voiceRecordingRunningProperty());
         Button deleteSample = ActionButtonFactory.secondary("Eliminar muestra", this::deleteSelectedToneSample);
         deleteSample.disableProperty().bind(viewModel.voiceRecordingRunningProperty());
@@ -81,7 +86,7 @@ final class VoiceSampleActions {
     }
 
     private void chooseAndImportOwnVoiceSample() {
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         VoiceToneRecordingPlan plan = context.currentToneRecordingPlan();
         chooser.setTitle("Importar muestra de voz · " + plan.toneDisplayName());
         chooser.getExtensionFilters().addAll(
@@ -161,7 +166,7 @@ final class VoiceSampleActions {
     }
 
     private void exportSelectedToneSample() {
-        DirectoryChooser chooser = new DirectoryChooser();
+        DirectoryChooser chooser = NativeSourceChooser.directoryChooser();
         chooser.setTitle("Exportar muestra de voz");
         File selected = chooser.showDialog(context.ownerWindow());
         if (selected == null) {
@@ -184,10 +189,16 @@ final class VoiceSampleActions {
             return;
         }
         VoiceReferenceTone tone = context.selectedReferenceTone();
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Eliminar muestra de voz");
-        confirm.setHeaderText("Eliminar la muestra del tono " + tone.displayName());
-        confirm.setContentText("Se retirará la referencia del proyecto y, si el archivo pertenece a la carpeta gestionada por DocuPodcast, también se eliminará ese archivo. Esta acción no borra archivos externos originales.");
+        Alert confirm = NativeDialogResponse.alert(Alert.AlertType.CONFIRMATION);
+        StudioMessageDialog.configure(
+                confirm,
+                context.ownerWindow(),
+                "Eliminar muestra de voz",
+                "Eliminar la muestra del tono " + tone.displayName(),
+                "Se retirará la referencia del proyecto y, si el archivo pertenece a la carpeta "
+                        + "gestionada por DocuPodcast, también se eliminará ese archivo. "
+                        + "Esta acción no borra archivos externos originales.",
+                "");
         Optional<ButtonType> choice = confirm.showAndWait();
         if (choice.isEmpty() || choice.get() != ButtonType.OK) {
             context.showSummary("Eliminación cancelada. La muestra anterior se conserva.");

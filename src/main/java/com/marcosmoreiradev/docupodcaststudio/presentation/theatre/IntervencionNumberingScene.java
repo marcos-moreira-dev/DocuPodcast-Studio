@@ -90,10 +90,11 @@ public final class IntervencionNumberingScene {
             int baseIndex) {
         int displayNumber = Math.max(1, globalIndex - baseIndex + 1);
         return new IntervencionCatalogo.IntervencionInfo(
-                "INTERVENCION-" + displayNumber,
+                alias.alias(),
                 "Intervencion " + displayNumber,
                 alias.blockId(),
                 alias.preview(),
-                alias.fullText());
+                alias.fullText(),
+                alias.stageDirection());
     }
 }

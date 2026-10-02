@@ -2,9 +2,11 @@ package com.marcosmoreiradev.docupodcaststudio.domain.project;
 
 import com.marcosmoreiradev.docupodcaststudio.domain.assets.ProjectAssetKind;
 import com.marcosmoreiradev.docupodcaststudio.domain.assets.ProjectAssetReference;
+import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceReferenceTone;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class DocuPodcastProjectTest {
@@ -28,5 +30,39 @@ final class DocuPodcastProjectTest {
         assertEquals(0, project.assets().size());
         assertEquals(1, updated.assets().size());
         assertTrue(updated.assets().byId("SRC-001").isPresent());
+    }
+
+    @Test
+    void documentDefaultVoiceTravelsInProjectViewState() {
+        DocuPodcastProject project = DocuPodcastProject.createNew("Lectura")
+                .withDocumentDefaultVoiceProfileId("  VOC-MARIA  ");
+
+        assertEquals("VOC-MARIA", project.documentDefaultVoiceProfileId());
+        assertEquals("VOC-MARIA", project.viewState().get(
+                DocuPodcastProject.DOCUMENT_DEFAULT_VOICE_PROFILE_KEY));
+    }
+
+    @Test
+    void documentDefaultToneTravelsInProjectViewState() {
+        DocuPodcastProject project = DocuPodcastProject.createNew("Lectura")
+                .withDocumentDefaultVoiceToneId(VoiceReferenceTone.HAPPY.layerTargetId());
+
+        assertEquals(VoiceReferenceTone.HAPPY.layerTargetId(),
+                project.documentDefaultVoiceToneId());
+        assertEquals(VoiceReferenceTone.HAPPY.layerTargetId(), project.viewState().get(
+                DocuPodcastProject.DOCUMENT_DEFAULT_VOICE_TONE_KEY));
+    }
+
+    @Test
+    void readAfterColonPreferenceTravelsInProjectViewState() {
+        DocuPodcastProject original = DocuPodcastProject.createNew("Lectura");
+
+        assertFalse(original.documentReadAfterColon());
+
+        DocuPodcastProject updated = original.withDocumentReadAfterColon(true);
+
+        assertTrue(updated.documentReadAfterColon());
+        assertEquals("true", updated.viewState().get(
+                DocuPodcastProject.DOCUMENT_READ_AFTER_COLON_KEY));
     }
 }

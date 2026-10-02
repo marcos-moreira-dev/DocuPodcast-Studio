@@ -1,11 +1,14 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.theatre;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioNavigationControls;
+
 import javafx.beans.property.StringProperty;
 import javafx.scene.Cursor;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.SemanticActionIcons;
 import javafx.scene.control.Tooltip;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
@@ -93,11 +96,11 @@ final class TheatreTextSequenceCanvas extends Canvas {
         hitTooltip.setShowDelay(Duration.millis(180));
         hitTooltip.setWrapText(true);
         hitTooltip.setMaxWidth(340);
-        Tooltip.install(this, hitTooltip);
         setOnMouseClicked(this::selectAliasAt);
         setOnMouseMoved(this::updatePointerHint);
         setOnMouseExited(event -> {
             setCursor(Cursor.DEFAULT);
+            Tooltip.uninstall(this, hitTooltip);
             hitTooltip.setText("");
         });
         if (selectedIntervencion != null) {
@@ -140,6 +143,13 @@ final class TheatreTextSequenceCanvas extends Canvas {
 
     private void updatePointerHint(MouseEvent event) {
         String hint = tooltipAt(event.getX(), event.getY());
+        if (hint.isBlank()) {
+            Tooltip.uninstall(this, hitTooltip);
+        } else if (!hint.equals(hitTooltip.getText())) {
+            Tooltip.uninstall(this, hitTooltip);
+            hitTooltip.setText(hint);
+            Tooltip.install(this, hitTooltip);
+        }
         hitTooltip.setText(hint);
         setCursor(hint.isBlank() ? Cursor.DEFAULT : Cursor.HAND);
     }
@@ -152,6 +162,11 @@ final class TheatreTextSequenceCanvas extends Canvas {
             }
             if (hit.containsEdit(x, y)) {
                 return primaryActionTooltip(label);
+            }
+            if (hit.contains(x, y)) {
+                return aliasFor(hit)
+                        .map(alias -> label + " · " + alias.preview())
+                        .orElse("Seleccionar " + label + ".");
             }
         }
         return "";
@@ -185,7 +200,8 @@ final class TheatreTextSequenceCanvas extends Canvas {
     private void showContextMenu(IntervencionCatalogo.IntervencionInfo alias,
                                  TheatreZigzagLayout.HitBox hit,
                                  MouseEvent event) {
-        MenuItem process = new MenuItem("Procesar intervención");
+        MenuItem process = new MenuItem("Generar imagen de esta intervención…");
+        SemanticActionIcons.decorate(process);
         process.setDisable(processIntervencion == null);
         process.setOnAction(ignored -> {
             selectHit(hit);
@@ -195,6 +211,7 @@ final class TheatreTextSequenceCanvas extends Canvas {
         });
 
         MenuItem export = new MenuItem("Exportar paquete IA");
+        SemanticActionIcons.decorate(export);
         export.setDisable(contextExportIntervencion == null);
         export.setOnAction(ignored -> {
             selectHit(hit);
@@ -204,6 +221,7 @@ final class TheatreTextSequenceCanvas extends Canvas {
         });
 
         MenuItem record = new MenuItem("Grabar audio narraci\u00f3n/efecto sonido");
+        SemanticActionIcons.decorate(record);
         record.setDisable(recordIntervencion == null);
         record.setOnAction(ignored -> {
             selectHit(hit);
@@ -213,9 +231,10 @@ final class TheatreTextSequenceCanvas extends Canvas {
         });
 
         MenuItem viewContext = new MenuItem("Ver contexto");
+        SemanticActionIcons.decorate(viewContext);
         viewContext.setOnAction(ignored -> selectHit(hit));
 
-        ContextMenu menu = new ContextMenu(process, record, export, viewContext);
+        ContextMenu menu = StudioNavigationControls.contextMenu(process, record, export, viewContext);
         menu.show(this, event.getScreenX(), event.getScreenY());
     }
 
@@ -267,7 +286,10 @@ final class TheatreTextSequenceCanvas extends Canvas {
             gc.strokeRoundRect(point.x(), point.y(), point.width(), point.height(), 8, 8);
             gc.setFill(Color.web(selected ? "#166534" : "#1E3A8A"));
             gc.setFont(javafx.scene.text.Font.font("System", javafx.scene.text.FontWeight.BOLD, 12));
-            gc.fillText(TheatreZigzagLayout.displayLabel(alias.alias()), point.x() + 12, point.y() + 21);
+            String displayLabel = alias.displayName().isBlank()
+                    ? TheatreZigzagLayout.displayLabel(alias.alias())
+                    : alias.displayName();
+            gc.fillText(displayLabel, point.x() + 12, point.y() + 21);
             String cue = TheatreZigzagLayout.speakerLabel(alias.preview());
             if (!cue.isBlank()) {
                 gc.setFill(Color.web(selected ? "#15803D" : "#475569"));

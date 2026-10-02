@@ -26,6 +26,27 @@ final class StudyProblemWorkflowTest {
     Path tempDir;
 
     @Test
+    void exportsEveryNotebookPageInOrderIncludingTheActivePage() throws Exception {
+        var first = com.marcosmoreiradev.docupodcaststudio.ink.model.InkWorkspaceState.create(
+                720, 520, "#ffffffff", java.util.List.of(), java.util.List.of(), Map.of("page", "first"));
+        String firstJson = com.marcosmoreiradev.docupodcaststudio.ink.model.InkWorkspaceStateSerializer.toJson(first);
+        var active = com.marcosmoreiradev.docupodcaststudio.ink.model.InkWorkspaceState.create(
+                720, 520, "#ffffffff", java.util.List.of(), java.util.List.of(),
+                Map.of("notebook.count", "2", "notebook.current", "1", "notebook.page.0", firstJson, "page", "second"));
+        String activeJson = com.marcosmoreiradev.docupodcaststudio.ink.model.InkWorkspaceStateSerializer.toJson(active);
+        var captured = new java.util.ArrayList<com.marcosmoreiradev.docupodcaststudio.application.documentstudy.StudyProblemPdfPage>();
+        var workflow = new StudyProblemWorkflow((pages, target) -> captured.addAll(pages));
+        var session = ProjectSession.newUnsaved(DocuPodcastProject.createNew("Estudio"));
+        workflow.save(session, java.util.Optional.of(tempDir), java.util.List.of(
+                DocumentBlock.of("B1", DocumentBlockType.PARAGRAPH, "Ejercicio", "Word", Map.of())),
+                "Cuaderno", "", new WritableImage(4,4), Map.of(), activeJson);
+        workflow.exportAllSolutionImagesAsPdf(session, java.util.Optional.of(tempDir), tempDir.resolve("pages.pdf"));
+        assertEquals(2, captured.size());
+        assertEquals(firstJson, captured.get(0).canvasStateJson());
+        assertEquals(activeJson, captured.get(1).canvasStateJson());
+    }
+
+    @Test
     void savesPdfSourceCropAsStudyAssetAndSourceReference() throws Exception {
         Path crop = tempDir.resolve("preview.png");
         BufferedImage image = new BufferedImage(8, 8, BufferedImage.TYPE_INT_ARGB);

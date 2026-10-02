@@ -1,5 +1,9 @@
 package com.marcosmoreiradev.docupodcaststudio.application.voice;
 
+import com.marcosmoreiradev.docupodcaststudio.media.api.EngineDescriptor;
+import com.marcosmoreiradev.docupodcaststudio.media.api.EngineFeature;
+import com.marcosmoreiradev.docupodcaststudio.media.api.MediaEnginePlatform;
+
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
@@ -7,14 +11,47 @@ import java.util.Optional;
 /**
  * Product-level voice engine catalog and capability policy.
  *
- * <p>The policy keeps the main reader friendly: the advanced AI voice is the preferred high-quality path, the simple
- * local voice is the intermediate/lightweight option, and test mode remains diagnostic. Raw command lines stay out of the
- * normal user workflow.</p>
+ * <p>Product callers project the active engine registry. Provider-specific factories remain only
+ * for format-v1 compatibility and tests; raw command lines stay out of the normal workflow.</p>
  */
 public final class VoiceEngineUsabilityPolicy {
     private VoiceEngineUsabilityPolicy() {
     }
 
+    /** Product projection: the executable registry is the authority, not this compatibility catalog. */
+    public static List<VoiceEngineOption> registeredOptions(MediaEnginePlatform platform) {
+        MediaEnginePlatform active = platform == null ? MediaEnginePlatform.empty() : platform;
+        return active.voiceEngines().descriptors().stream()
+                .map(VoiceEngineUsabilityPolicy::fromDescriptor)
+                .toList();
+    }
+
+    private static VoiceEngineOption fromDescriptor(EngineDescriptor descriptor) {
+        EnumSet<VoiceEngineControl> controls = EnumSet.of(VoiceEngineControl.VOLUME);
+        if (!descriptor.diagnosticOnly()) {
+            controls.add(VoiceEngineControl.SPEED);
+            controls.add(VoiceEngineControl.LANGUAGE);
+            controls.add(VoiceEngineControl.DEVICE);
+            controls.add(VoiceEngineControl.MODEL_FOLDER);
+        }
+        if (descriptor.supports(EngineFeature.REFERENCE_VOICE)) {
+            controls.add(VoiceEngineControl.REFERENCE_VOICE);
+        }
+        if (descriptor.supports(EngineFeature.EXPRESSIVE_STYLE)) {
+            controls.add(VoiceEngineControl.EMOTION_INTENT);
+        }
+        return new VoiceEngineOption(descriptor.id().value(), descriptor.displayName(),
+                descriptor.runtimeKind(), descriptor.diagnosticOnly()
+                ? "Diagnóstico del flujo sin voz final."
+                : descriptor.supports(EngineFeature.REFERENCE_VOICE)
+                ? "Narración local con personajes y referencias autorizadas."
+                : "Lectura local sin clonación por muestra.",
+                "Administrado desde Configuración", "piper".equals(descriptor.id().value()),
+                !descriptor.diagnosticOnly(), descriptor.diagnosticOnly(), controls);
+    }
+
+    /** @deprecated compatibility catalog for format-v1 tests and migrations. */
+    @Deprecated(forRemoval = false)
     public static VoiceEngineOption xttsHighQuality() {
         return new VoiceEngineOption(
                 "tts-xtts",
@@ -70,12 +107,14 @@ public final class VoiceEngineUsabilityPolicy {
         );
     }
 
+    /** @deprecated use {@link #registeredOptions(MediaEnginePlatform)}. */
+    @Deprecated(forRemoval = false)
     public static List<VoiceEngineOption> recommendedOptions() {
         return List.of(xttsHighQuality(), piperLightweight(), mockDiagnostic());
     }
 
     public static VoiceEngineOption defaultEngine() {
-        return xttsHighQuality();
+        return piperLightweight();
     }
 
     public static Optional<VoiceEngineOption> find(String id) {

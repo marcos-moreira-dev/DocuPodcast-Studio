@@ -6,7 +6,6 @@ import com.marcosmoreiradev.docupodcaststudio.application.project.ValidateProjec
 import com.marcosmoreiradev.docupodcaststudio.domain.project.DocuPodcastProject;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
@@ -16,6 +15,7 @@ public final class DocuPodcastProjectFileRepository implements ProjectRepository
     private final DocuPodcastProjectJsonWriter writer = new DocuPodcastProjectJsonWriter();
     private final DocuPodcastProjectJsonReader reader = new DocuPodcastProjectJsonReader();
     private final ValidateProjectPayloadUseCase payloadValidator = new ValidateProjectPayloadUseCase();
+    private final AtomicJsonFileWriter atomicWriter = new AtomicJsonFileWriter();
 
     @Override
     public void save(DocuPodcastProject project, Path targetFile) throws IOException {
@@ -29,13 +29,13 @@ public final class DocuPodcastProjectFileRepository implements ProjectRepository
         if (parent != null) {
             Files.createDirectories(parent);
         }
-        Files.writeString(targetFile, writer.write(project), StandardCharsets.UTF_8);
+        atomicWriter.write(targetFile, writer.write(project));
     }
 
     @Override
     public DocuPodcastProject open(Path sourceFile) throws IOException {
         Objects.requireNonNull(sourceFile, "sourceFile");
-        String json = Files.readString(sourceFile, StandardCharsets.UTF_8);
+        String json = Files.readString(sourceFile, java.nio.charset.StandardCharsets.UTF_8);
         return reader.read(json);
     }
 }

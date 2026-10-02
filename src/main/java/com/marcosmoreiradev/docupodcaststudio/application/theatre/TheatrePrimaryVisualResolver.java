@@ -13,6 +13,7 @@ import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreProjectLayer
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -52,19 +53,27 @@ public final class TheatrePrimaryVisualResolver {
             String activeVariant = metadata.getOrDefault(
                     UpsertTheatreStoryboardFrameVariantUseCase.ACTIVE_VISUAL_VARIANT,
                     UpsertTheatreStoryboardFrameVariantUseCase.VARIANT_OFFICIAL);
-            for (Candidate candidate : List.of(
-                    new Candidate(firstNonBlank(metadata.get(UpsertTheatreStoryboardFrameVariantUseCase.OFFICIAL_IMAGE_ASSET_ID),
-                            isActive(activeVariant, UpsertTheatreStoryboardFrameVariantUseCase.VARIANT_OFFICIAL)
-                                    ? binding.imageAssetId() : ""),
-                            TheatrePrimaryVisualReference.Source.OFFICIAL_IMAGE),
-                    new Candidate(firstNonBlank(metadata.get(UpsertTheatreStoryboardFrameVariantUseCase.GENERATED_IMAGE_ASSET_ID),
-                            isActive(activeVariant, UpsertTheatreStoryboardFrameVariantUseCase.VARIANT_GENERATED)
-                                    ? binding.imageAssetId() : ""),
-                            TheatrePrimaryVisualReference.Source.GENERATED_IMAGE),
-                    new Candidate(firstNonBlank(metadata.get(UpsertTheatreStoryboardFrameVariantUseCase.DRAWN_FRAME_ASSET_ID),
-                            isActive(activeVariant, UpsertTheatreStoryboardFrameVariantUseCase.VARIANT_DRAWN)
-                                    ? binding.imageAssetId() : ""),
-                            TheatrePrimaryVisualReference.Source.STORYBOARD_FRAME))) {
+            Candidate official = new Candidate(metadata.getOrDefault(
+                    UpsertTheatreStoryboardFrameVariantUseCase.OFFICIAL_IMAGE_ASSET_ID, ""),
+                    TheatrePrimaryVisualReference.Source.OFFICIAL_IMAGE);
+            Candidate generated = new Candidate(metadata.getOrDefault(
+                    UpsertTheatreStoryboardFrameVariantUseCase.GENERATED_IMAGE_ASSET_ID, ""),
+                    TheatrePrimaryVisualReference.Source.GENERATED_IMAGE);
+            Candidate drawn = new Candidate(metadata.getOrDefault(
+                    UpsertTheatreStoryboardFrameVariantUseCase.DRAWN_FRAME_ASSET_ID, ""),
+                    TheatrePrimaryVisualReference.Source.STORYBOARD_FRAME);
+            Candidate scenery = new Candidate(metadata.getOrDefault(
+                    UpsertTheatreStoryboardFrameVariantUseCase.SCENERY_IMAGE_ASSET_ID, ""),
+                    TheatrePrimaryVisualReference.Source.SCENERY_COMPOSITION);
+            LinkedHashMap<TheatrePrimaryVisualReference.Source, Candidate> ordered = new LinkedHashMap<>();
+            if (isActive(activeVariant, UpsertTheatreStoryboardFrameVariantUseCase.VARIANT_SCENERY)) {
+                ordered.put(scenery.source(), new Candidate(
+                        firstNonBlank(scenery.assetId(), binding.imageAssetId()), scenery.source()));
+            }
+            for (Candidate fallback : List.of(official, generated, drawn, scenery)) {
+                ordered.putIfAbsent(fallback.source(), fallback);
+            }
+            for (Candidate candidate : ordered.values()) {
                 Optional<TheatrePrimaryVisualReference> resolved = usable(assets, candidate.assetId(),
                         projectDirectory, interventionId, segment.id(), candidate.source());
                 if (resolved.isPresent()) {

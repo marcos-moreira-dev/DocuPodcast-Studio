@@ -3,8 +3,12 @@ package com.marcosmoreiradev.docupodcaststudio.productization;
 import com.marcosmoreiradev.docupodcaststudio.application.audio.AudioGenerationRequest;
 import com.marcosmoreiradev.docupodcaststudio.application.audio.InspectAudioJobMaintenanceUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.BuildPdfOcrTextLayerUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.BuildPdfVisualDocumentUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.BlockDocumentSource;
+import com.marcosmoreiradev.docupodcaststudio.application.document.CreatePreparedPdfSessionWorkspaceUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.DocumentSourceImportService;
 import com.marcosmoreiradev.docupodcaststudio.application.document.ImportDocumentUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PreparedPdfSource;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PdfOcrErrorCode;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PdfOcrException;
 import com.marcosmoreiradev.docupodcaststudio.application.export.ExportReadinessReport;
@@ -47,7 +51,7 @@ import com.marcosmoreiradev.docupodcaststudio.infrastructure.audio.MockAudioGene
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.document.DocxDocumentImporter;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.document.MarkdownDocumentImporter;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.document.PdfBoxRenderEngine;
-import com.marcosmoreiradev.docupodcaststudio.infrastructure.document.PdfDocumentImporter;
+import com.marcosmoreiradev.docupodcaststudio.infrastructure.document.JsonPreparedPdfDocumentRepository;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.document.PlainTextDocumentImporter;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.document.ReadableDocumentWorkspaceRepository;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.export.FileSystemProjectBundleExporter;
@@ -99,23 +103,23 @@ final class BrainSmokeScenarioTest {
 
         SmokeDocuments documents = step(steps, "DOC-SOURCES", "Importar fuentes y abrir PDF visual si OCR no esta disponible", () -> {
             SmokeSources sources = writeSmokeSources(tempDir.resolve("sources"));
-            DocumentSourceImportService importService = new DocumentSourceImportService(new ImportDocumentUseCase(List.of(
-                    new DocxDocumentImporter(), new MarkdownDocumentImporter(), new PlainTextDocumentImporter(),
-                    new PdfDocumentImporter(new PdfBoxRenderEngine(), new BuildPdfOcrTextLayerUseCase(request -> {
-                        throw new PdfOcrException(PdfOcrErrorCode.TESSERACT_NOT_FOUND, "OCR smoke no disponible.");
-                    }))
-            )));
-            ReadableDocument docx = importService.importSource(sources.docx());
-            ReadableDocument txt = importService.importSource(sources.txt());
-            ReadableDocument markdown = importService.importSource(sources.markdown());
-            ReadableDocument pdf = importService.importSource(sources.nativePdf());
-            ReadableDocument scannedPdf = importService.importSource(sources.scannedPdf());
+            DocumentSourceImportService importService = new DocumentSourceImportService(
+                    new ImportDocumentUseCase(List.of(new DocxDocumentImporter(),
+                            new MarkdownDocumentImporter(), new PlainTextDocumentImporter())),
+                    new CreatePreparedPdfSessionWorkspaceUseCase(
+                            new JsonPreparedPdfDocumentRepository(),
+                            new BuildPdfVisualDocumentUseCase(new PdfBoxRenderEngine())));
+            ReadableDocument docx = ((BlockDocumentSource) importService.importSource(sources.docx())).document();
+            ReadableDocument txt = ((BlockDocumentSource) importService.importSource(sources.txt())).document();
+            ReadableDocument markdown = ((BlockDocumentSource) importService.importSource(sources.markdown())).document();
+            PreparedPdfSource pdf = (PreparedPdfSource) importService.importSource(sources.nativePdf());
+            PreparedPdfSource scannedPdf = (PreparedPdfSource) importService.importSource(sources.scannedPdf());
             assertEquals(SourceDocumentFormat.DOCX, docx.format());
             assertEquals(SourceDocumentFormat.TXT, txt.format());
             assertEquals(SourceDocumentFormat.MARKDOWN, markdown.format());
-            assertEquals(SourceDocumentFormat.PDF, pdf.format());
-            assertEquals(SourceDocumentFormat.PDF, scannedPdf.format());
-            assertTrue(scannedPdf.blocks().stream().anyMatch(block -> "visual-fallback".equals(block.metadata().get("extractionMode"))));
+            assertTrue(Files.isRegularFile(pdf.workspace().projectRoot().resolve("document/manifest.json")));
+            assertTrue(Files.isRegularFile(scannedPdf.workspace().projectRoot().resolve("document/manifest.json")));
+            assertFalse(Files.exists(pdf.workspace().projectRoot().resolve("document/document.json")));
             return new StepValue<>(new SmokeDocuments(sources, docx, txt, markdown, pdf),
                     "DOCX/TXT/Markdown/PDF nativo importados; PDF escaneado abierto como visual por OCR no disponible");
         });
@@ -402,7 +406,8 @@ final class BrainSmokeScenarioTest {
     private record SmokeSources(Path docx, Path txt, Path markdown, Path nativePdf, Path scannedPdf) {
     }
 
-    private record SmokeDocuments(SmokeSources sources, ReadableDocument docx, ReadableDocument txt, ReadableDocument markdown, ReadableDocument pdf) {
+    private record SmokeDocuments(SmokeSources sources, ReadableDocument docx, ReadableDocument txt,
+                                  ReadableDocument markdown, PreparedPdfSource pdf) {
     }
 
     private record SmokeProject(DocuPodcastProject project, StoryboardDocument storyboard) {

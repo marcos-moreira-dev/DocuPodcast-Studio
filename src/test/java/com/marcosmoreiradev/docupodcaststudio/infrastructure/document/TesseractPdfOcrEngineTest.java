@@ -55,7 +55,7 @@ final class TesseractPdfOcrEngineTest {
     }
 
     @Test
-    void writesPlainTextPageCacheInsideProjectCacheDirectory() throws Exception {
+    void returnsRecognizedTextWithoutWritingInternalTxtFiles() throws Exception {
         Path pdf = pdfFile();
         Path cacheDirectory = tempDir.resolve(".docupodcast-cache").resolve("pdf-ocr");
         TesseractPdfOcrEngine engine = new TesseractPdfOcrEngine(
@@ -63,7 +63,7 @@ final class TesseractPdfOcrEngineTest {
                 new RecordingRunner(List.of(), "eng"),
                 () -> "tesseract");
 
-        engine.recognize(new PdfOcrRequest(
+        PdfOcrPageResult result = engine.recognize(new PdfOcrRequest(
                 pdf,
                 7,
                 300,
@@ -72,13 +72,12 @@ final class TesseractPdfOcrEngineTest {
                 true,
                 cacheDirectory));
 
-        List<Path> textFiles;
-        try (var paths = Files.walk(cacheDirectory.resolve("text"))) {
-            textFiles = paths.filter(Files::isRegularFile).toList();
+        assertEquals("Hello", result.lines().getFirst().text());
+        assertTrue(Files.notExists(cacheDirectory.resolve("text")));
+        try (var paths = Files.walk(cacheDirectory)) {
+            assertTrue(paths.filter(Files::isRegularFile)
+                    .noneMatch(path -> path.getFileName().toString().endsWith(".txt")));
         }
-        assertEquals(1, textFiles.size());
-        assertTrue(textFiles.getFirst().getFileName().toString().contains("-p00007-"));
-        assertEquals("Hello", Files.readString(textFiles.getFirst()).strip());
     }
 
     @Test

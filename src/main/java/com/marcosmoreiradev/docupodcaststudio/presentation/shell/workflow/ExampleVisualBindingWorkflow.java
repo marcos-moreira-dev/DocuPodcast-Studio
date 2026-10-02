@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
+import com.marcosmoreiradev.docupodcaststudio.application.WorkspaceApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.application.decisions.UserVisibleDecision;
 import com.marcosmoreiradev.docupodcaststudio.application.examples.ExampleVisualBindingDescriptor;
 import com.marcosmoreiradev.docupodcaststudio.domain.assignment.NarrativeLayerKind;
@@ -24,7 +24,7 @@ import java.util.Optional;
 public final class ExampleVisualBindingWorkflow {
     private final NarrativeLayerCoordinator layerCoordinator = new NarrativeLayerCoordinator();
 
-    public Result bind(ApplicationServices services,
+    public Result bind(WorkspaceApplicationServices services,
                        ProjectSession session,
                        Path projectFile,
                        ReadableDocument document,
@@ -47,7 +47,7 @@ public final class ExampleVisualBindingWorkflow {
                 skipped++;
                 continue;
             }
-            var importedImage = services.storyboard().importImageAsset().importImage(session.project(), projectFile, asset);
+            var importedImage = services.generation().storyboard().importImageAsset().importImage(session.project(), projectFile, asset);
             imported++;
             session.replaceProject(importedImage.project(), true);
             Optional<DocumentBlock> block = firstSourceBlock(document, segment.get());

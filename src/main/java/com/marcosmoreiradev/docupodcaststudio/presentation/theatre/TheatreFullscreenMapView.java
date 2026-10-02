@@ -46,7 +46,7 @@ import java.util.Optional;
 public final class TheatreFullscreenMapView {
     private static final double MAP_WIDTH = 760.0;
     private static final double MAP_HEIGHT = 476.0;
-    private static final double MARKER_SIZE = 118.0;
+    private static final double MARKER_SIZE = 59.0;
     private static final double ARROW_TRIM_FACTOR = 0.56;
     private static final double SELF_LOOP_SCALE_FACTOR = 0.34;
     private static final double SELF_LOOP_RIGHT_OFFSET_FACTOR = 0.44;
@@ -93,7 +93,12 @@ public final class TheatreFullscreenMapView {
         bottomText.setWrapText(true);
         bottomText.setTextAlignment(TextAlignment.LEFT);
         bottomText.setMaxWidth(Double.MAX_VALUE);
-        root.setBottom(bottomText);
+        javafx.scene.control.ScrollPane captionScroll = com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls.scrollPane(bottomText);
+        captionScroll.setFitToWidth(true);
+        captionScroll.setStyle("-fx-background: #000000; -fx-background-color: #000000;");
+        captionScroll.prefHeightProperty().bind(root.heightProperty().multiply(0.24));
+        bottomText.setStyle("-fx-text-fill: #FDECC8; -fx-background-color: #000000;");
+        root.setBottom(captionScroll);
 
         Scene scene = new Scene(root, 1200, 700);
         scene.getStylesheets().addAll(stylesheets == null ? java.util.List.of() : stylesheets);
@@ -134,10 +139,17 @@ public final class TheatreFullscreenMapView {
             bottomText.setFont(Font.font("Georgia", FontWeight.BOLD, FontPosture.ITALIC, captionFontSize(caption)));
         };
         Platform.runLater(redraw);
-        viewModel.activePlacementAliasProperty().addListener((obs, oldValue, newValue) -> redraw.run());
-        viewModel.activeTextActionPlacementProperty().addListener((obs, oldValue, newValue) -> redraw.run());
-        viewModel.focusedTheatreSceneIdProperty().addListener((obs, oldValue, newValue) -> redraw.run());
-        viewModel.spatialFrameModeProperty().addListener((obs, oldValue, newValue) -> redraw.run());
+        javafx.beans.value.ChangeListener<Object> listener = (obs, oldValue, newValue) -> redraw.run();
+        viewModel.activePlacementAliasProperty().addListener(listener);
+        viewModel.activeTextActionPlacementProperty().addListener(listener);
+        viewModel.focusedTheatreSceneIdProperty().addListener(listener);
+        viewModel.spatialFrameModeProperty().addListener(listener);
+        stage.setOnHidden(event -> {
+            viewModel.activePlacementAliasProperty().removeListener(listener);
+            viewModel.activeTextActionPlacementProperty().removeListener(listener);
+            viewModel.focusedTheatreSceneIdProperty().removeListener(listener);
+            viewModel.spatialFrameModeProperty().removeListener(listener);
+        });
     }
 
     private static HBox playbar(DocuPodcastShellViewModel viewModel, Runnable primaryPlaybackAction) {
@@ -192,6 +204,13 @@ public final class TheatreFullscreenMapView {
         clearCenterSizing(companion, mapPane);
         centerHost.getChildren().clear();
         String mode = TheatreStageGeometry.normalizeFrameMode(viewModel.spatialFrameModeProperty().get());
+        if ("scenery".equals(mode)) {
+            TheatreSceneryPane scenery = (TheatreSceneryPane) centerHost.getProperties()
+                    .computeIfAbsent("sceneryPane", key -> new TheatreSceneryPane());
+            scenery.update(viewModel, visiblePlacements.values().stream().findFirst().orElse(null));
+            centerHost.getChildren().add(scenery);
+            return;
+        }
         if ("none".equals(mode)) {
             mapPane.getStyleClass().remove("theatre-fullscreen-map-split");
             if (!mapPane.getStyleClass().contains("theatre-fullscreen-map-only")) {
@@ -374,6 +393,13 @@ public final class TheatreFullscreenMapView {
                     drawActionArrow(gc, origin, stagePoint(destination, overlayBounds), overlayBounds));
             drawParticipantGroups(gc, participants(viewModel, placement), overlayBounds,
                     selfLoopLocations(viewModel, placement, overlayBounds));
+            TheatreSpatialOverlayLegend.draw(
+                    gc,
+                    overlayBounds.width(),
+                    overlayBounds.height(),
+                    activeSpeakerName(viewModel, placement),
+                    activeTargetName(viewModel, placement),
+                    currentCastNames(viewModel, placement));
         });
     }
 
@@ -523,6 +549,10 @@ public final class TheatreFullscreenMapView {
     private static Map<String, TheatreProjectLayer.TextActionPlacement> visiblePlacements(
             DocuPodcastShellViewModel viewModel,
             Map<String, TheatreProjectLayer.TextActionPlacement> placements) {
+        TheatreProjectLayer.TextActionPlacement current = viewModel.activeTextActionPlacementProperty().get();
+        if (current != null) {
+            return Map.of(current.intervencionId(), current);
+        }
         if (placements == null || placements.isEmpty()) {
             return Map.of();
         }
@@ -565,8 +595,77 @@ public final class TheatreFullscreenMapView {
         for (Map.Entry<String, MarkerGroup> entry : byLocation.entrySet()) {
             StagePoint pt = markerPointForSelfLoop(stagePoint(entry.getKey(), mapBounds), entry.getValue().selfLoop, mapBounds);
             drawMarker(gc, pt, entry.getValue().role);
-            drawCharacterLabel(gc, pt, entry.getValue().names, entry.getValue().speakers, index++, mapBounds);
+            index++;
         }
+    }
+
+    private static String activeSpeakerName(DocuPodcastShellViewModel viewModel,
+                                            TheatreProjectLayer.TextActionPlacement placement) {
+        if (placement == null) {
+            return "";
+        }
+        String display = characterDisplayName(viewModel, placement.characterId());
+        if (!display.isBlank()) {
+            return display;
+        }
+        String fallback = firstNonSpecialCharacter(placement.characterLocations());
+        return fallback.isBlank() ? placement.characterId() : fallback;
+    }
+
+    private static String activeTargetName(DocuPodcastShellViewModel viewModel,
+                                           TheatreProjectLayer.TextActionPlacement placement) {
+        if (placement == null) {
+            return "";
+        }
+        ArrayList<String> targets = new ArrayList<>();
+        for (String target : interactionTargets(placement.interactionTarget())) {
+            String normalized = target == null ? "" : target.strip();
+            if (normalized.isBlank()) {
+                continue;
+            }
+            if (isSelfTarget(normalized)) {
+                addUniqueName(targets, "SÍ MISMO");
+            } else if (TheatreSpatialRoleIcon.isAudience(normalized)) {
+                addUniqueName(targets, "PÚBLICO");
+            } else if (isOffstageTarget(normalized)) {
+                addUniqueName(targets, "FUERA DE ESCENA");
+            } else if (com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreInteractionTargetPolicy.ALL_REMAINING
+                    .equalsIgnoreCase(normalized)) {
+                addUniqueName(targets,
+                        com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreInteractionTargetPolicy.ALL_REMAINING);
+            } else {
+                String display = characterDisplayName(viewModel, characterIdForDisplay(viewModel, normalized));
+                addUniqueName(targets, display.isBlank() ? normalized : display);
+            }
+        }
+        if (targets.isEmpty() && TheatreSpatialRoleIcon.isAudience(placement.destination())) {
+            targets.add("PÚBLICO");
+        }
+        return String.join(" + ", targets);
+    }
+
+    private static List<String> currentCastNames(DocuPodcastShellViewModel viewModel,
+                                                 TheatreProjectLayer.TextActionPlacement placement) {
+        ArrayList<String> cast = new ArrayList<>();
+        if (placement == null) {
+            return cast;
+        }
+        addUniqueName(cast, activeSpeakerName(viewModel, placement));
+        placement.characterLocations().forEach((character, location) -> {
+            if (character == null || character.isBlank() || isSpecialTarget(character) || isAbsentLocation(location)) {
+                return;
+            }
+            String display = characterDisplayName(viewModel, characterIdForDisplay(viewModel, character));
+            addUniqueName(cast, display.isBlank() ? character : display);
+        });
+        return List.copyOf(cast);
+    }
+
+    private static void addUniqueName(List<String> names, String name) {
+        if (name == null || name.isBlank() || names.stream().anyMatch(value -> value.equalsIgnoreCase(name))) {
+            return;
+        }
+        names.add(name.strip());
     }
 
     private static List<String> selfLoopLocations(DocuPodcastShellViewModel viewModel,
@@ -747,7 +846,7 @@ public final class TheatreFullscreenMapView {
         return List.copyOf(result.values());
     }
 
-    private static String caption(DocuPodcastShellViewModel viewModel, TheatreProjectLayer.TextActionPlacement placement) {
+    static String caption(DocuPodcastShellViewModel viewModel, TheatreProjectLayer.TextActionPlacement placement) {
         if (placement == null) {
             return "Selecciona una intervencion en el mapa de acciones.";
         }
@@ -759,12 +858,26 @@ public final class TheatreFullscreenMapView {
                 .orElse(null);
         String fullText = catalogInfo == null ? "" : catalogInfo.fullText();
         String preview = fullText.isBlank() && catalogInfo != null ? catalogInfo.preview() : fullText;
+        if (catalogInfo != null && catalogInfo.stageDirection()) {
+            String text = stripStageDirectionCue(preview);
+            return "Acotación: " + text;
+        }
         String speaker = characterDisplayName(viewModel, placement.characterId());
         if (speaker.isBlank()) {
             speaker = cueLabel(preview);
         }
-        String text = stripSpeaker(preview);
+        String text = !speaker.isBlank() && preview.startsWith(speaker + ":") ? preview.substring(speaker.length()+1).strip() : preview;
         return (speaker.isBlank() ? placement.intervencionId() : speaker) + ": " + text;
+    }
+
+    static String stripStageDirectionCue(String value) {
+        String text = value == null ? "" : value.strip();
+        int colon = text.indexOf(':');
+        if (colon > 0 && colon <= 16
+                && text.substring(0, colon).strip().equalsIgnoreCase("Acotación")) {
+            return text.substring(colon + 1).strip();
+        }
+        return text;
     }
 
     private static int captionFontSize(String text) {

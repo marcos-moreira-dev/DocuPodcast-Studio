@@ -20,4 +20,14 @@ public final class TtsEngineModes {
             default -> mode == null || mode.isBlank() ? "Modo de prueba" : mode.strip();
         };
     }
+
+    public static String backendLabel(String mode) {
+        String normalized = mode == null ? "" : mode.strip().toLowerCase(java.util.Locale.ROOT);
+        return switch (normalized) {
+            case LOCAL_SIMPLE -> "Piper";
+            case ADVANCED_AI -> "Coqui XTTS";
+            case TEST -> "Diagnóstico de audio";
+            default -> "";
+        };
+    }
 }

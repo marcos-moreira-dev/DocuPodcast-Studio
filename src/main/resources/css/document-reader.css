@@ -423,6 +423,19 @@
     -fx-border-radius: 5;
 }
 
+.document-context-combo .document-context-combo-text {
+    -fx-text-fill: -docu-text-strong;
+}
+
+.document-context-combo .list-cell:selected .document-context-combo-text,
+.document-context-combo .list-cell:focused .document-context-combo-text {
+    -fx-text-fill: -docu-accent-ink;
+}
+
+.document-context-combo:disabled .document-context-combo-text {
+    -fx-text-fill: -docu-text-disabled;
+}
+
 .document-context-badge {
     -fx-background-color: #EEF2FF;
     -fx-text-fill: -docu-accent-dark;
@@ -532,6 +545,24 @@
     -fx-border-width: 1;
 }
 
+/* Flujo PDF semántico: la microcopy respira y solo los controles agrupan. */
+.document-fragment-inspector .document-context-note,
+.document-fragment-inspector .document-context-selected,
+.document-fragment-inspector .document-context-copy,
+.document-fragment-inspector .document-context-source-location {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-effect: none;
+    -fx-padding: 0;
+}
+
+.document-context-advanced-review {
+    -fx-background-color: transparent;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+}
+
 .document-audio-flow {
     -fx-background-color: transparent;
     -fx-border-color: transparent;
@@ -626,4 +657,17 @@
     -fx-background-color: -dp-surface;
     -fx-border-color: -dp-border;
     -fx-border-radius: 4px;
+}
+
+.document-content-description-dialog {
+    -fx-font-family: "Segoe UI";
+    -fx-font-size: 13px;
+    -fx-text-fill: -docu-text-strong;
+    -fx-control-inner-background: -dp-surface;
+    -fx-background-color: -dp-surface;
+    -fx-border-color: -dp-border;
+    -fx-border-radius: 7px;
+    -fx-background-radius: 7px;
+    -fx-highlight-fill: -docu-accent-soft;
+    -fx-highlight-text-fill: -docu-text-strong;
 }

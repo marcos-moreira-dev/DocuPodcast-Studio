@@ -1,5 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.welcome;
 
+import com.marcosmoreiradev.docupodcaststudio.application.batch.DocumentVideoBatchPathPolicy;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.ProjectMode;
 
 import java.io.IOException;
@@ -56,6 +57,7 @@ public final class RecentProjectsStore {
             }
             List<RecentProjectEntry> existing = entries.stream()
                     .filter(entry -> Files.isRegularFile(entry.projectFile()))
+                    .filter(entry -> !isManagedByDocumentVideoBatch(entry.projectFile()))
                     .limit(LIMIT)
                     .toList();
             List<String> resolvedLines = existing.stream().map(RecentProjectsStore::format).toList();
@@ -77,7 +79,7 @@ public final class RecentProjectsStore {
             return load();
         }
         Path normalized = projectFile.toAbsolutePath().normalize();
-        if (!Files.isRegularFile(normalized)) {
+        if (!Files.isRegularFile(normalized) || isManagedByDocumentVideoBatch(normalized)) {
             return load();
         }
         Map<Path, RecentProjectEntry> ordered = new LinkedHashMap<>();
@@ -142,6 +144,29 @@ public final class RecentProjectsStore {
 
     private static Path defaultStoreFile() {
         return Path.of(System.getProperty("user.home", "."), ".docupodcast-studio", "recent-projects.txt");
+    }
+
+    /**
+     * Child projects are implementation details of a persistent Express queue, not
+     * projects the user opened deliberately. The batch descriptor is the stable
+     * boundary marker, so this remains valid even if the internal folder layout
+     * evolves.
+     */
+    private static boolean isManagedByDocumentVideoBatch(Path projectFile) {
+        Path directory = projectFile == null ? null : projectFile.toAbsolutePath().normalize().getParent();
+        while (directory != null) {
+            try (var candidates = Files.newDirectoryStream(directory,
+                    "*" + DocumentVideoBatchPathPolicy.DESCRIPTOR_SUFFIX)) {
+                if (candidates.iterator().hasNext()) {
+                    return true;
+                }
+            } catch (IOException | RuntimeException ignored) {
+                // A parent that cannot be inspected is not enough reason to hide a
+                // normal recent project. Continue towards the filesystem root.
+            }
+            directory = directory.getParent();
+        }
+        return false;
     }
 
     private String resolveProjectType(Path projectFile, String storedType) {

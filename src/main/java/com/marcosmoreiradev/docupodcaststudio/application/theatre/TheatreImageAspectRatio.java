@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.application.theatre;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile;
+
 import com.marcosmoreiradev.docupodcaststudio.application.image.ImageEnhancementOutputProfile;
 import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualAspectRatio;
 
@@ -34,18 +36,25 @@ public enum TheatreImageAspectRatio {
         return promptText;
     }
 
+    public int widthRatio() {
+        return widthRatio;
+    }
+
+    public int heightRatio() {
+        return heightRatio;
+    }
+
     public int widthFor(ImageEnhancementOutputProfile profile) {
-        ImageEnhancementOutputProfile current = profile == null ? ImageEnhancementOutputProfile.FHD_1080 : profile;
-        return heightRatio >= widthRatio
-                ? multipleOfEight(current.height())
-                : multipleOfEight((int) Math.round(current.height() * (widthRatio / (double) heightRatio)));
+        return visualAspectRatio().widthFor(profile);
     }
 
     public int heightFor(ImageEnhancementOutputProfile profile) {
-        ImageEnhancementOutputProfile current = profile == null ? ImageEnhancementOutputProfile.FHD_1080 : profile;
-        return widthRatio >= heightRatio
-                ? multipleOfEight(current.height())
-                : multipleOfEight((int) Math.round(current.height() * (heightRatio / (double) widthRatio)));
+        return visualAspectRatio().heightFor(profile);
+    }
+
+    public com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile.Dimensions
+    deliveryDimensions(ImageEnhancementOutputProfile profile) {
+        return visualAspectRatio().deliveryDimensions(profile);
     }
 
     public String workflowId() {
@@ -66,7 +75,4 @@ public enum TheatreImageAspectRatio {
         return WIDE_16_9;
     }
 
-    private static int multipleOfEight(int value) {
-        return Math.max(8, Math.round(value / 8.0f) * 8);
-    }
 }

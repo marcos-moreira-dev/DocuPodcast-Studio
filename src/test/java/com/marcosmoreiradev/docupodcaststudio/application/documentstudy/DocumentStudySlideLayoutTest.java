@@ -36,4 +36,19 @@ final class DocumentStudySlideLayoutTest {
         assertEquals(left.height, right.height);
         assertTrue(left.width < 336);
     }
+
+    @Test
+    void namedMascotSizesGrowMonotonically() {
+        Rectangle small = DocumentStudySlideCompositor.mascotBounds(
+                1920, 1080, 432, 336, 600, 900, DocumentMascotPosition.BOTTOM_RIGHT, 10);
+        Rectangle medium = DocumentStudySlideCompositor.mascotBounds(
+                1920, 1080, 432, 336, 600, 900, DocumentMascotPosition.BOTTOM_RIGHT, 20);
+        Rectangle large = DocumentStudySlideCompositor.mascotBounds(
+                1920, 1080, 432, 336, 600, 900, DocumentMascotPosition.BOTTOM_RIGHT, 30);
+
+        assertTrue(small.width < medium.width);
+        assertTrue(medium.width < large.width);
+        assertEquals(1920, large.x + large.width);
+        assertEquals(1080, large.y + large.height);
+    }
 }

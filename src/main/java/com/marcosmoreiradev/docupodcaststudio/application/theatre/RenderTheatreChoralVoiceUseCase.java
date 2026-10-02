@@ -56,6 +56,7 @@ public final class RenderTheatreChoralVoiceUseCase {
     private final ExternalProcessRunner processRunner;
     private final Supplier<OperationalSettings> settingsSupplier;
     private final Path applicationRoot;
+    private final VoiceReferenceSamplePathResolver samplePathResolver;
 
     public RenderTheatreChoralVoiceUseCase(VoiceTestSynthesisGateway synthesisGateway,
                                            VoiceCapabilityPolicy capabilityPolicy,
@@ -65,6 +66,20 @@ public final class RenderTheatreChoralVoiceUseCase {
                                            ExternalProcessRunner processRunner,
                                            Supplier<OperationalSettings> settingsSupplier,
                                            Path applicationRoot) {
+        this(synthesisGateway, capabilityPolicy, resolveToneReference, ffmpegLocator, ffmpegProbe,
+                processRunner, settingsSupplier, applicationRoot,
+                VoiceReferenceSamplePathResolver.fromCurrentApplicationRoot());
+    }
+
+    public RenderTheatreChoralVoiceUseCase(VoiceTestSynthesisGateway synthesisGateway,
+                                           VoiceCapabilityPolicy capabilityPolicy,
+                                           ResolveVoiceToneReferenceUseCase resolveToneReference,
+                                           EmbeddedFfmpegLocator ffmpegLocator,
+                                           FfmpegRuntimeProbeUseCase ffmpegProbe,
+                                           ExternalProcessRunner processRunner,
+                                           Supplier<OperationalSettings> settingsSupplier,
+                                           Path applicationRoot,
+                                           VoiceReferenceSamplePathResolver samplePathResolver) {
         this.synthesisGateway = Objects.requireNonNull(synthesisGateway, "synthesisGateway");
         this.capabilityPolicy = Objects.requireNonNull(capabilityPolicy, "capabilityPolicy");
         this.resolveToneReference = Objects.requireNonNull(resolveToneReference, "resolveToneReference");
@@ -73,6 +88,7 @@ public final class RenderTheatreChoralVoiceUseCase {
         this.processRunner = Objects.requireNonNull(processRunner, "processRunner");
         this.settingsSupplier = Objects.requireNonNull(settingsSupplier, "settingsSupplier");
         this.applicationRoot = Objects.requireNonNull(applicationRoot, "applicationRoot").toAbsolutePath().normalize();
+        this.samplePathResolver = Objects.requireNonNull(samplePathResolver, "samplePathResolver");
     }
 
     public TheatreChoralVoiceRenderResult execute(TheatreChoralVoiceRenderRequest request,
@@ -98,7 +114,7 @@ public final class RenderTheatreChoralVoiceUseCase {
         }
 
         VoiceEngineCapabilityProfile engine = capabilityPolicy.activeEngineProfile(request.engineDescriptor());
-        if (engine.mockMode() || !engine.canSynthesizeNow()) {
+        if (engine.diagnosticMode() || !engine.canSynthesizeNow()) {
             throw new IOException("Configura e inicia un motor TTS local real antes de renderizar voces simultaneas.");
         }
         Map<String, PreparedVoice> voices = prepareVoices(request, segment, projectRoot, engine);
@@ -200,7 +216,8 @@ public final class RenderTheatreChoralVoiceUseCase {
         theatre.characters().forEach(character -> characters.put(character.id(), character));
         Map<String, String> voiceByCharacter = new LinkedHashMap<>();
         theatre.voiceRoleAliases().forEach(alias -> voiceByCharacter.putIfAbsent(alias.characterId(), alias.voiceProfileId()));
-        VoiceReferenceTone tone = VoiceReferenceTone.fromLayerTargetId(segment.performanceStyleId())
+        VoiceReferenceTone tone = VoiceReferenceTone.fromLayerTargetId(
+                        TheatreChoralVoiceFingerprint.effectiveToneTarget(request.project(), segment))
                 .orElse(VoiceReferenceTone.NEUTRAL);
         LinkedHashMap<String, PreparedVoice> result = new LinkedHashMap<>();
         for (String characterId : request.participantCharacterIds()) {
@@ -216,10 +233,10 @@ public final class RenderTheatreChoralVoiceUseCase {
                 throw new IOException(character.displayName() + " no se puede sintetizar con el motor TTS actual.");
             }
             Path reference = null;
-            if (engine.coquiXttsMode()) {
+            if (engine.advancedAiMode()) {
                 VoiceToneReferenceResolution resolution = resolveToneReference.resolve(request.project().voiceLibrary(), voiceId, tone);
                 if (resolution.available()) {
-                    reference = VoiceReferenceSamplePathResolver.fromCurrentApplicationRoot().resolve(
+                    reference = samplePathResolver.resolve(
                             projectRoot, resolution.sample().orElseThrow(), "muestra de " + character.displayName());
                 } else if (voice.type() != VoiceProfileType.PREDEFINED) {
                     throw new IOException(character.displayName() + ": " + resolution.userMessage());

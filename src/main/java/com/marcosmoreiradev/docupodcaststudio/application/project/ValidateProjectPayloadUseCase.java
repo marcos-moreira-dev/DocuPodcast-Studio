@@ -28,8 +28,6 @@ public final class ValidateProjectPayloadUseCase {
             }
             case AUDIO_PROJECT -> {
                 requireAny(project, messages, "AUDIO_PROJECT requires a narration script asset", ProjectAssetKind.NARRATION_SCRIPT);
-                requireAny(project, messages, "AUDIO_PROJECT requires audio clips, final audio or audio manifest",
-                        ProjectAssetKind.AUDIO_CLIP, ProjectAssetKind.AUDIO_FINAL, ProjectAssetKind.AUDIO_MANIFEST);
             }
             case FULL_PROJECT -> requireAny(project, messages, "FULL_PROJECT requires at least a narration script asset",
                     ProjectAssetKind.NARRATION_SCRIPT);

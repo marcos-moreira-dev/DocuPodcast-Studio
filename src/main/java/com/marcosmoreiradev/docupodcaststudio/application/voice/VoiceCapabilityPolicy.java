@@ -7,6 +7,7 @@ import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceEngineType;
 import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceLibrary;
 import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceProfile;
 import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceProfileType;
+import com.marcosmoreiradev.docupodcaststudio.media.api.EngineFeature;
 
 import java.util.List;
 
@@ -19,27 +20,22 @@ import java.util.List;
 public final class VoiceCapabilityPolicy {
 
     public VoiceEngineCapabilityProfile activeEngineProfile(AudioEngineDescriptor engine) {
-        if (engine == null || "mock".equalsIgnoreCase(engine.mode()) || !engine.realTts()) {
-            return VoiceEngineCapabilityProfile.mock();
+        if (engine == null || engine.diagnosticOnly() || !engine.realTts()) {
+            return VoiceEngineCapabilityProfile.diagnostic();
         }
-        String descriptor = (engine.mode() + " " + engine.displayName() + " " + engine.message() + " " + engine.commandPreview())
-                .toLowerCase(java.util.Locale.ROOT);
-        boolean ready = engine.configured();
-        if (descriptor.contains("piper") || descriptor.contains("voz local simple")) {
-            return VoiceEngineCapabilityProfile.piper(ready, engine.displayName());
-        }
-        if (descriptor.contains("xtts") || descriptor.contains("coqui") || descriptor.contains("voz ia avanzada")) {
-            return VoiceEngineCapabilityProfile.coquiXtts(ready, engine.displayName());
-        }
-        return VoiceEngineCapabilityProfile.localProcess(ready, engine.displayName());
+        return VoiceEngineCapabilityProfile.capabilityDriven(
+                engine.configured(), engine.displayName(),
+                engine.supports(EngineFeature.REFERENCE_VOICE),
+                engine.supports(EngineFeature.EXPRESSIVE_STYLE),
+                engine.supports(EngineFeature.PACKAGED_VOICE));
     }
 
     public boolean supportsCustomVoiceSample(AudioEngineDescriptor engine) {
         return activeEngineProfile(engine).supportsCustomVoiceSample();
     }
 
-    public boolean supportsPiperModelVoice(AudioEngineDescriptor engine) {
-        return activeEngineProfile(engine).supportsPiperModelVoice();
+    public boolean supportsPackagedModelVoice(AudioEngineDescriptor engine) {
+        return activeEngineProfile(engine).supportsPackagedModelVoice();
     }
 
     public boolean supportsEmotion(AudioEngineDescriptor engine) {
@@ -88,16 +84,17 @@ public final class VoiceCapabilityPolicy {
         VoiceEngineCapabilityProfile profile = activeEngineProfile(engine);
         boolean engineConfigured = engine != null && engine.configured();
         boolean realTts = engine != null && engine.realTts();
-        boolean mock = profile.mockMode();
+        boolean mock = profile.diagnosticMode();
         boolean assignable = true;
+        boolean referenceVoice = requiresReferenceVoice(voice);
 
-        if (profile.piperMode() && voice.engineType() != VoiceEngineType.PIPER && voice.engineType() != VoiceEngineType.LOCAL_TTS_PROCESS && voice.engineType() != VoiceEngineType.MOCK) {
+        if (profile.simpleLocalMode() && referenceVoice) {
             return new VoiceProfileCapability(voice.id(), voice.displayName(), assignable, false, voice.hasSample() || voice.hasModel(), false, true, false,
-                    "No disponible con Voz local simple", "La Voz local simple usa modelos .onnx y lectura intermedia. Las voces por muestra humana requieren Voz IA avanzada.");
+                    "Motor sin referencias", "El motor activo no puede representar esta voz/personaje. Elige Coqui XTTS o Qwen3-TTS; la voz y su emoción se conservarán.");
         }
 
         if (legacyDefaultAdvancedReference(voice)) {
-            boolean synth = profile.coquiXttsMode() && engineConfigured;
+            boolean synth = profile.supportsVoiceCloning() && engineConfigured;
             return new VoiceProfileCapability(voice.id(), "Narrador prediseñado avanzado", assignable, synth, true, false, !synth, !synth,
                     synth ? "Neutral prediseñada" : "Requiere Voz IA avanzada",
                     synth ? "Voz IA avanzada puede usar la referencia Neutral prediseñada."
@@ -105,14 +102,20 @@ public final class VoiceCapabilityPolicy {
         }
 
         if (OfficialAdvancedVoicePresetCatalog.isOfficialPreset(voice)) {
-            boolean synth = profile.coquiXttsMode() && engineConfigured;
+            boolean synth = profile.supportsVoiceCloning() && engineConfigured;
             return new VoiceProfileCapability(voice.id(), voice.displayName(), assignable, synth, true, false, !synth, !synth,
                     synth ? "Voz IA avanzada lista" : "Requiere Voz IA avanzada",
                     synth ? "Voz IA avanzada puede usar las muestras oficiales de esta voz."
                             : "Esta voz oficial se usa cuando Voz IA avanzada está activa.");
         }
 
-        if (profile.coquiXttsMode() && voice.engineType() == VoiceEngineType.HUMAN_AUDIO) {
+        if (mock && "VOC-NARRATOR".equals(voice.id()) && "true".equalsIgnoreCase(voice.metadata().get("builtIn"))) {
+            return new VoiceProfileCapability(voice.id(), voice.displayName(), assignable, true, false, false,
+                    false, false, "Modo de prueba listo",
+                    "Disponible únicamente cuando el modo diagnóstico mock fue seleccionado explícitamente.");
+        }
+
+        if (profile.supportsVoiceCloning() && voice.engineType() == VoiceEngineType.HUMAN_AUDIO) {
             if (!voice.hasSample()) {
                 return new VoiceProfileCapability(voice.id(), voice.displayName(), assignable, false, false, true, false, true,
                         "Requiere muestra", "Voz IA avanzada puede usar voces importadas cuando exista una muestra registrada.");
@@ -146,20 +149,25 @@ public final class VoiceCapabilityPolicy {
         }
 
         if (voice.engineType() == VoiceEngineType.LOCAL_TTS_PROCESS || voice.engineType() == VoiceEngineType.PIPER) {
+            boolean builtInNarrator = "VOC-NARRATOR".equals(voice.id())
+                    && "true".equalsIgnoreCase(voice.metadata().get("builtIn"));
             if (realTts && engineConfigured) {
                 return new VoiceProfileCapability(voice.id(), voice.displayName(), assignable, true, voice.hasSample(), false, false, false,
-                        "TTS listo", "Compatible con el motor local configurado. La voz exacta dependerá del comando y sus parámetros.");
+                        builtInNarrator ? "TTS por defecto" : "TTS listo",
+                        "Compatible con el motor local configurado. La voz exacta dependerá del comando y sus parámetros.");
             }
             return new VoiceProfileCapability(voice.id(), voice.displayName(), assignable, false, voice.hasSample(), false, true, false,
-                    "Motor pendiente", "Requiere motor TTS local configurado antes de sintetizar.");
+                    builtInNarrator ? "Motor no configurado" : "Motor pendiente",
+                    "Requiere motor TTS local configurado antes de sintetizar.");
         }
 
-        if (voice.engineType() == VoiceEngineType.XTTS) {
+        if (referenceVoice) {
             boolean hasReference = voice.hasSample() || voice.hasModel();
-            boolean synth = profile.coquiXttsMode() && engineConfigured && hasReference;
+            boolean synth = profile.supportsVoiceCloning() && engineConfigured && hasReference;
             return new VoiceProfileCapability(voice.id(), voice.displayName(), assignable, synth, hasReference, !hasReference, !synth, true,
-                    synth ? "Voz IA avanzada lista" : "Requiere Voz IA avanzada",
-                    synth ? "Perfil compatible con el motor avanzado activo." : "Prepara Voz IA avanzada y una muestra/modelo antes de sintetizar esta voz.");
+                    synth ? "Motor con referencias listo" : "Requiere motor con referencias",
+                    synth ? "Perfil compatible con " + profile.displayName() + "."
+                            : "Prepara Coqui XTTS o Qwen3-TTS y una muestra antes de sintetizar esta voz.");
         }
 
         if (voice.type() == VoiceProfileType.AUTHORIZED || voice.type() == VoiceProfileType.IMPORTED) {
@@ -182,11 +190,11 @@ public final class VoiceCapabilityPolicy {
             return new PerformanceStyleCapability(style.id(), style.displayName(), true, true, false, false,
                     "Básico", "Se puede asignar como estilo base en cualquier motor.");
         }
-        if (profile.piperMode()) {
+        if (profile.simpleLocalMode()) {
             return new PerformanceStyleCapability(style.id(), style.displayName(), false, false, false, true,
                     "No disponible con Voz local simple", "Voz local simple ofrece lectura local intermedia; las emociones y estilos expresivos requieren Voz IA avanzada.");
         }
-        if (profile.coquiXttsMode() && realTts) {
+        if (profile.supportsExpressiveStyle() && realTts) {
             return new PerformanceStyleCapability(style.id(), style.displayName(), true, true, false, false,
                     "Voz IA avanzada", "Disponible como intención expresiva cuando el motor avanzado activo lo soporte.");
         }
@@ -205,5 +213,16 @@ public final class VoiceCapabilityPolicy {
     private static boolean legacyDefaultAdvancedReference(VoiceProfile voice) {
         return voice != null && "VOC-OWN-PLACEHOLDER".equalsIgnoreCase(voice.id())
                 && !voice.metadata().containsKey("userManaged");
+    }
+
+    private static boolean requiresReferenceVoice(VoiceProfile voice) {
+        if (voice == null) return false;
+        if (OfficialAdvancedVoicePresetCatalog.isOfficialPreset(voice)) return true;
+        if (voice.engineType() == VoiceEngineType.XTTS
+                || voice.engineType() == VoiceEngineType.HUMAN_AUDIO) return true;
+        return voice.supportsStyleTransfer()
+                || (voice.hasSample()
+                && voice.engineType() != VoiceEngineType.PIPER
+                && voice.engineType() != VoiceEngineType.LOCAL_TTS_PROCESS);
     }
 }

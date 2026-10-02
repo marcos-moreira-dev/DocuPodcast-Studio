@@ -1,6 +1,9 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell;
 
 import com.marcosmoreiradev.docupodcaststudio.domain.document.ReadableDocument;
+import com.marcosmoreiradev.docupodcaststudio.application.document.BlockDocumentSource;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PreparedPdfSource;
+import com.marcosmoreiradev.docupodcaststudio.application.document.ProjectDocumentSource;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.DocuPodcastProject;
 import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationScriptDocument;
 import com.marcosmoreiradev.docupodcaststudio.domain.storyboard.StoryboardDocument;
@@ -20,7 +23,7 @@ public final class ProjectSession {
     private DocuPodcastProject project;
     private Path projectFile;
     private boolean dirty;
-    private ReadableDocument importedDocument;
+    private ProjectDocumentSource documentSource;
     private NarrationScriptDocument narrationScript;
     private StoryboardDocument storyboard;
 
@@ -59,7 +62,16 @@ public final class ProjectSession {
     }
 
     public Optional<ReadableDocument> importedDocument() {
-        return Optional.ofNullable(importedDocument);
+        return documentSource instanceof BlockDocumentSource block
+                ? Optional.of(block.document()) : Optional.empty();
+    }
+
+    public Optional<ProjectDocumentSource> documentSource() {
+        return Optional.ofNullable(documentSource);
+    }
+
+    public Optional<PreparedPdfSource> preparedPdfSource() {
+        return documentSource instanceof PreparedPdfSource pdf ? Optional.of(pdf) : Optional.empty();
     }
 
     public Optional<NarrationScriptDocument> narrationScript() {
@@ -94,7 +106,12 @@ public final class ProjectSession {
 
 
     public void hydrateImportedDocument(ReadableDocument importedDocument) {
-        this.importedDocument = Objects.requireNonNull(importedDocument, "importedDocument");
+        this.documentSource = new BlockDocumentSource(
+                Objects.requireNonNull(importedDocument, "importedDocument"));
+    }
+
+    public void hydrateDocumentSource(ProjectDocumentSource source) {
+        this.documentSource = Objects.requireNonNull(source, "source");
     }
 
     public void hydrateNarrationScript(NarrationScriptDocument narrationScript) {
@@ -106,7 +123,13 @@ public final class ProjectSession {
     }
 
     public void setImportedDocument(ReadableDocument importedDocument) {
-        this.importedDocument = Objects.requireNonNull(importedDocument, "importedDocument");
+        this.documentSource = new BlockDocumentSource(
+                Objects.requireNonNull(importedDocument, "importedDocument"));
+        this.dirty = true;
+    }
+
+    public void setDocumentSource(ProjectDocumentSource source) {
+        this.documentSource = Objects.requireNonNull(source, "source");
         this.dirty = true;
     }
 

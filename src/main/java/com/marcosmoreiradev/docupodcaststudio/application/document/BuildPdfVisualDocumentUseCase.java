@@ -17,7 +17,16 @@ public final class BuildPdfVisualDocumentUseCase {
                 sourcePdf,
                 info.pageCount(),
                 info.pages().stream()
-                        .map(page -> new PdfVisualPage(page.pageNumber(), page.widthPoints(), page.heightPoints(), recommendedDpi))
+                        .map(page -> {
+                            int rotation = PdfPageCoordinateTransform.normalizeRotation(page.rotation());
+                            boolean swapsAxes = rotation == 90 || rotation == 270;
+                            return new PdfVisualPage(
+                                    page.pageNumber(),
+                                    swapsAxes ? page.heightPoints() : page.widthPoints(),
+                                    swapsAxes ? page.widthPoints() : page.heightPoints(),
+                                    rotation,
+                                    recommendedDpi);
+                        })
                         .toList(),
                 info.warnings());
     }

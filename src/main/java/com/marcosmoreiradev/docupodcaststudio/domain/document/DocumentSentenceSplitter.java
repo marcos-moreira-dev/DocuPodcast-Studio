@@ -33,8 +33,8 @@ public final class DocumentSentenceSplitter {
         int index = 0;
         for (int i = 0; i < source.length(); i++) {
             char current = source.charAt(i);
-            if (isSentenceTerminator(current)) {
-                int end = includeClosingPunctuation(source, i + 1);
+            if (isSentenceTerminator(current) && !isDecimalPoint(source, i)) {
+                int end = includeSentenceEnding(source, i + 1);
                 index = addSpan(spans, normalizedBlockId, index, source, start, end);
                 start = firstNonWhitespace(source, end);
                 i = Math.max(i, start - 1);
@@ -56,6 +56,9 @@ public final class DocumentSentenceSplitter {
             return index;
         }
         String sentence = source.substring(trimmedStart, trimmedEnd);
+        if (!containsSpeakableContent(sentence)) {
+            return index;
+        }
         spans.add(new DocumentSentenceSpan(
                 blockId + ":S" + String.format("%03d", index + 1),
                 index,
@@ -68,17 +71,44 @@ public final class DocumentSentenceSplitter {
         return value == '.' || value == '!' || value == '?' || value == '…';
     }
 
-    private static int includeClosingPunctuation(String source, int end) {
+    private static int includeSentenceEnding(String source, int end) {
         int cursor = end;
         while (cursor < source.length()) {
             char value = source.charAt(cursor);
-            if (value == '"' || value == '\'' || value == ')' || value == ']' || value == '»' || value == '”') {
+            if (isSentenceTerminator(value) || value == '"' || value == '\''
+                    || value == ')' || value == ']' || value == '»' || value == '”') {
                 cursor++;
             } else {
                 break;
             }
         }
         return cursor;
+    }
+
+    private static boolean isDecimalPoint(String source, int index) {
+        return source.charAt(index) == '.' && index > 0 && index + 1 < source.length()
+                && Character.isDigit(source.charAt(index - 1))
+                && Character.isDigit(source.charAt(index + 1));
+    }
+
+    private static boolean containsSpeakableContent(String value) {
+        for (int index = 0; index < value.length(); index++) {
+            char current = value.charAt(index);
+            if (Character.isWhitespace(current)) {
+                continue;
+            }
+            int type = Character.getType(current);
+            if (type != Character.CONNECTOR_PUNCTUATION
+                    && type != Character.DASH_PUNCTUATION
+                    && type != Character.START_PUNCTUATION
+                    && type != Character.END_PUNCTUATION
+                    && type != Character.INITIAL_QUOTE_PUNCTUATION
+                    && type != Character.FINAL_QUOTE_PUNCTUATION
+                    && type != Character.OTHER_PUNCTUATION) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static int firstNonWhitespace(String source, int start) {

@@ -1,5 +1,8 @@
 package com.marcosmoreiradev.docupodcaststudio.application.documentstudy;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoOptions;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoBackgroundMode;
+
 import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoFrame;
 import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoPlan;
 import com.marcosmoreiradev.docupodcaststudio.domain.audio.AudioJobSnapshot;
@@ -8,6 +11,7 @@ import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationScriptDocum
 import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationSegment;
 
 import javax.imageio.ImageIO;
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.FontMetrics;
@@ -145,12 +149,13 @@ public final class BuildDocumentStudyTextVideoPlanUseCase {
             g.setColor(color(options.accentColor()));
             g.fillRect(margin, top, Math.max(96, width / 10), Math.max(8, height / 180));
             g.setColor(color(options.textColor()));
-            Font titleFont = new Font(options.fontFamily(), Font.BOLD, Math.max(24, options.fontSize() - 16));
+            Font titleFont = new Font(options.titleFontFamily(), Font.BOLD, Math.max(24, options.fontSize() - 16));
             Font bodyFont = new Font(options.fontFamily(), Font.PLAIN, options.fontSize());
             g.setFont(titleFont);
             FontMetrics titleMetrics = g.getFontMetrics();
             String title = "Fragmento " + index + " - " + (segment.title().isBlank() ? documentTitle : segment.title());
-            g.drawString(abbreviate(title, 96), margin, top + Math.max(64, titleMetrics.getHeight() + 20));
+            DocumentTextPainter.drawString(g, abbreviate(title, 96), margin,
+                    top + Math.max(64, titleMetrics.getHeight() + 20), options);
             g.setFont(bodyFont);
             FontMetrics bodyMetrics = g.getFontMetrics();
             int y = top + Math.max(128, titleMetrics.getHeight() + 90);
@@ -159,10 +164,12 @@ public final class BuildDocumentStudyTextVideoPlanUseCase {
             int maxY = height - Math.max(64, height / 10);
             for (String line : wrap(segment.narrationText(), bodyMetrics, maxWidth)) {
                 if (y + lineHeight > maxY) {
-                    g.drawString("...", margin, y);
+                    DocumentTextPainter.drawString(g, "...", margin, y, options);
                     break;
                 }
-                g.drawString(line, margin, y);
+                DocumentTextPainter.drawString(g, line, margin, y, options);
+                drawNarratedUnderline(g, effectiveUnderlineWidth(line, bodyMetrics),
+                        margin, y, bodyMetrics, options);
                 y += lineHeight;
             }
         } finally {
@@ -170,6 +177,26 @@ public final class BuildDocumentStudyTextVideoPlanUseCase {
         }
         Files.createDirectories(target.getParent());
         ImageIO.write(image, "png", target.toFile());
+    }
+
+    private static int effectiveUnderlineWidth(String line, FontMetrics metrics) {
+        return line == null ? 0 : metrics.stringWidth(line);
+    }
+
+    private static void drawNarratedUnderline(Graphics2D g, int width, int x, int baseline,
+                                              FontMetrics metrics, DocumentTextVideoOptions options) {
+        if (!options.underlineNarratedText() || options.narratedUnderlineThicknessPx() <= 0 || width <= 0) {
+            return;
+        }
+        var previousColor = g.getColor();
+        var previousStroke = g.getStroke();
+        int thickness = options.narratedUnderlineThicknessPx();
+        int y = baseline + Math.max(thickness, metrics.getDescent() / 2);
+        g.setColor(color(options.narratedUnderlineColor()));
+        g.setStroke(new BasicStroke(thickness, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g.drawLine(x, y, x + width, y);
+        g.setStroke(previousStroke);
+        g.setColor(previousColor);
     }
 
     private static void drawBackgroundImageIfPresent(Graphics2D g, DocumentTextVideoOptions options, int width, int height) throws IOException {
@@ -180,14 +207,8 @@ public final class BuildDocumentStudyTextVideoPlanUseCase {
         if (background == null) {
             throw new IOException("No se pudo leer imagen de fondo documental: " + options.backgroundImagePath());
         }
-        double scale = Math.max(width / (double) background.getWidth(), height / (double) background.getHeight());
-        int drawWidth = Math.max(1, (int) Math.round(background.getWidth() * scale));
-        int drawHeight = Math.max(1, (int) Math.round(background.getHeight() * scale));
-        int x = (width - drawWidth) / 2;
-        int y = (height - drawHeight) / 2;
-        g.drawImage(background, x, y, drawWidth, drawHeight, null);
-        g.setColor(new Color(255, 255, 255, 150));
-        g.fillRect(0, 0, width, height);
+        DocumentBackgroundImagePainter.paint(g, background, width, height,
+                options.backgroundImageOpacity(), options.backgroundImageFit());
     }
 
     private static List<String> wrap(String text, FontMetrics metrics, int maxWidth) {

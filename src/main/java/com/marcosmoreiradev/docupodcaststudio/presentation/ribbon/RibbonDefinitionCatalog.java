@@ -65,6 +65,8 @@ public final class RibbonDefinitionCatalog {
                     group("Gramatica",
                             cmd(AppCommandId.IMPORT_THEATRE_GRAMMAR, true),
                             cmd(AppCommandId.EXPORT_THEATRE_GRAMMAR_TEMPLATE, false)),
+                    group("Carpeta de obra",
+                            cmd(AppCommandId.REFRESH_THEATRE_PACKAGE, true)),
                     group("Gestion avanzada de obra",
                             cmd(AppCommandId.OPEN_THEATRE_IMAGE_GENERATION, true)));
         };

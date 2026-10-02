@@ -19,7 +19,8 @@
 /* HF10 — bounded document window for very large sources. */
 .document-large-preview-actions {
     -fx-alignment: center-left;
-    -fx-spacing: 8;
+    -fx-hgap: 8;
+    -fx-vgap: 8;
 }
 
 .document-large-preview-button,
@@ -29,6 +30,12 @@
     -fx-padding: 6 10 6 10;
     -fx-font-size: 12px;
     -fx-cursor: hand;
+    -fx-wrap-text: false;
+}
+
+.document-large-preview-button.ui-responsive-action-compact,
+.document-large-preview-button-secondary.ui-responsive-action-compact {
+    -fx-padding: 6;
 }
 
 .document-large-preview-button {

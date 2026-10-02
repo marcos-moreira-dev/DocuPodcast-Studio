@@ -1,15 +1,15 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.settings;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
+
 import com.marcosmoreiradev.docupodcaststudio.application.compute.ComputeDeviceDescriptor;
 import com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy;
-import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.DownloadXttsOfficialModelUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.OperationalSettings;
-import com.marcosmoreiradev.docupodcaststudio.application.settings.TtsEngineModes;
+import com.marcosmoreiradev.docupodcaststudio.application.settings.ImageSuperResolutionSettings;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
-import javafx.scene.control.ListCell;
 import javafx.scene.control.TextField;
-import javafx.util.StringConverter;
 
 /** Form control state plus mapping to persistent operational settings. */
 final class SettingsFormModel {
@@ -23,105 +23,138 @@ final class SettingsFormModel {
     final TextField initialReadySegments = textField(Integer.toString(DEFAULT_PREBUFFER_SENTENCES));
     final TextField lookaheadSegments = textField(Integer.toString(DEFAULT_LOOKAHEAD_SENTENCES));
     final CheckBox pauseWhenBufferMissing = checkBox(true);
-    final ComboBox<String> ttsEngineMode = engineModeCombo();
-    final TextField ttsCommandTemplate = textField("");
-    final TextField ttsDisplayName = textField("Voz local");
-    final TextField ttsLanguage = textField("es");
-    final TextField ttsVoiceProfileId = textField("VOC-NARRATOR");
-    final TextField ttsTimeoutSeconds = textField("180");
-    final TextField ttsMaxRetries = textField("3");
-    final TextField xttsDownloadBaseUrl = textField(OperationalSettings.TtsEngineSettings.DEFAULT_XTTS_DOWNLOAD_BASE_URL);
-    final TextField piperRuntimeZipUrl = textField(OperationalSettings.TtsEngineSettings.DEFAULT_PIPER_RUNTIME_ZIP_URL);
-    final TextField piperDefaultVoiceUrl = textField(OperationalSettings.TtsEngineSettings.DEFAULT_PIPER_DEFAULT_VOICE_URL);
-    final TextField piperDefaultVoiceMetadataUrl = textField(OperationalSettings.TtsEngineSettings.DEFAULT_PIPER_DEFAULT_VOICE_METADATA_URL);
-    final TextField ffmpegExecutable = textField("");
-    final TextField ffmpegDownloadUrl = textField(OperationalSettings.VideoRenderSettings.DEFAULT_FFMPEG_DOWNLOAD_URL);
-    final TextField ocrTesseractExecutable = textField("");
-    final TextField ocrLanguages = textField(OperationalSettings.OcrSettings.DEFAULT_LANGUAGES);
-    final TextField ocrDpi = textField("300");
-    final TextField ocrTimeoutSeconds = textField("180");
-    final CheckBox ocrCacheEnabled = checkBox(true);
-    final TextField ocrTesseractRuntimeZipUrl = textField("");
-    final ComboBox<String> resolutionPreset = combo("2K", "720P", "1080P", "2K", "4K");
-    final CheckBox preferEmbeddedFfmpeg = checkBox(true);
+    final ComboBox<String> resolutionPreset = combo("2K", "540P", "720P", "1080P", "2K", "4K");
     final TextField silentVisualBlockSeconds = textField("5.0");
-    final TextField imageBaseUrl = textField("http://127.0.0.1:8188");
-    final ComboBox<String> imagePreset = combo("PRODUCTION_SDXL_REFERENCE",
-            "DIAGNOSTIC_SD15", "PRODUCTION_SDXL_REFERENCE", "ADVANCED_FLUX_KONTEXT", "CUSTOM_COMFY_WORKFLOW",
-            "TEST_4GB_SD15", "SD15_DREAMSHAPER");
-    final TextField imageModelName = textField("sd_xl_base_1.0.safetensors");
-    final TextField imageAdaptersDirectory = textField("models/image/adapters");
-    final TextField imageTimeoutSeconds = textField("300");
-    final TextField imageMaxAttempts = textField("2");
-    final CheckBox imageLowVram = checkBox(true);
-    final ComboBox<String> imageMemoryProfile = combo("SAFE_LOW_VRAM", "SAFE_LOW_VRAM", "NORMAL", "VRAM_RAM_OFFLOAD", "HIGH_MEMORY");
+    final CheckBox preferManagedVideoRuntime = checkBox(true);
+    final ComboBox<String> generationResolution =
+            combo("P1080", "P540", "P720", "P1080", "QHD_2K", "UHD_4K");
+    final CheckBox upscaleEnabled = checkBox(false);
+    final ComboBox<String> upscaleTargetResolution =
+            combo("P1080", "P720", "P1080", "QHD_2K", "UHD_4K");
+    final TextField upscaleModel = textField("RealESRGAN_x4plus.pth");
+    final CheckBox refinementEnabled = checkBox(false);
+    final ComboBox<String> refinementPreset =
+            combo("Conservadora", "Conservadora", "Equilibrada");
     final ComboBox<String> computePolicy = combo("AUTO", "AUTO", "CPU_ONLY", "PREFER_GPU", "SPECIFIC_DEVICE");
     final ComboBox<String> computeSelectedDeviceId = combo("auto", "auto", "cpu");
     final CheckBox allowGpuForTts = checkBox(true);
     final CheckBox allowGpuForVideo = checkBox(true);
+    final CheckBox allowGpuForContentAnalysis = checkBox(true);
+    final CheckBox allowRamOffloadForContentAnalysis = checkBox(true);
     final ComboBox<String> videoEncoderPolicy = combo("AUTO", "AUTO", "CPU_X264", "NVIDIA_NVENC", "INTEL_QSV", "AMD_AMF");
     final TextField modelsDirectory = textField("models");
     final TextField exportsDirectory = textField("exports");
     final CheckBox preflightOnStartup = checkBox(true);
     final CheckBox writeLogs = checkBox(true);
     final CheckBox exportManifests = checkBox(true);
-    private OperationalSettings.OcrSettings ocrSettings = OperationalSettings.OcrSettings.defaults();
+    private final java.util.LinkedHashMap<String, String> computeDeviceIdsByChoice =
+            new java.util.LinkedHashMap<>();
+    private OperationalSettings baseSettings = OperationalSettings.defaults();
+    private java.util.List<String> savedValues;
+    boolean operationRunning;
+
+    private java.util.List<javafx.scene.control.Control> controls() {
+        return java.util.List.of(baseFontSize, lineSpacing, keepActiveSentenceNearCenter,
+                initialReadySegments, lookaheadSegments, pauseWhenBufferMissing, resolutionPreset,
+                silentVisualBlockSeconds, preferManagedVideoRuntime, generationResolution, upscaleEnabled,
+                upscaleTargetResolution, upscaleModel, refinementEnabled, refinementPreset, computePolicy,
+                computeSelectedDeviceId, allowGpuForTts, allowGpuForVideo, allowGpuForContentAnalysis,
+                allowRamOffloadForContentAnalysis, videoEncoderPolicy, modelsDirectory, exportsDirectory,
+                writeLogs, exportManifests);
+    }
+
+    private java.util.List<String> values() {
+        return controls().stream().map(control -> control instanceof TextField text ? text.getText()
+                : control instanceof CheckBox check ? Boolean.toString(check.isSelected())
+                : java.util.Objects.toString(((ComboBox<?>) control).getValue(), "")).toList();
+    }
+
+    void markSaved() { savedValues = values(); }
+    void rebaseUneditedSettings(OperationalSettings latest) {
+        baseSettings = latest;
+        mediaEngines = latest.mediaEngines();
+        frameGeneration = latest.frameGeneration();
+    }
+    boolean dirty() { return savedValues != null && !savedValues.equals(values()); }
+    void observeChanges(Runnable changed) {
+        for (var control : controls()) {
+            if (control instanceof TextField text) text.textProperty().addListener((o, a, b) -> changed.run());
+            else if (control instanceof CheckBox check) check.selectedProperty().addListener((o, a, b) -> changed.run());
+            else ((ComboBox<?>) control).valueProperty().addListener((o, a, b) -> changed.run());
+        }
+    }
+    private OperationalSettings.MediaEngineSelectionSettings mediaEngines =
+            OperationalSettings.MediaEngineSelectionSettings.defaults();
     private com.marcosmoreiradev.docupodcaststudio.application.settings.FrameGenerationSettings frameGeneration =
             com.marcosmoreiradev.docupodcaststudio.application.settings.FrameGenerationSettings.defaults();
 
     SettingsFormModel(OperationalSettings settings) {
+        computePolicy.setConverter(labels(value -> com.marcosmoreiradev.docupodcaststudio.application.compute.ComputeDevicePolicy.from(value).label()));
+        videoEncoderPolicy.setConverter(labels(value -> VideoEncoderPolicy.from(value).label()));
+        computePolicy.setEditable(false);
+        computeSelectedDeviceId.setEditable(false);
         load(settings);
+        generationResolution.valueProperty().addListener((obs, oldValue, newValue) ->
+                refreshUpscaleTargetChoices());
+        upscaleEnabled.selectedProperty().addListener((obs, oldValue, newValue) ->
+                refreshUpscaleTargetChoices());
+        upscaleEnabled.selectedProperty().addListener((obs, oldValue, enabled) -> {
+            refinementEnabled.setDisable(!enabled);
+            if (!enabled) refinementEnabled.setSelected(false);
+        });
+        refinementEnabled.selectedProperty().addListener((obs, oldValue, enabled) ->
+                refinementPreset.setDisable(!enabled));
+        refreshUpscaleTargetChoices();
+    }
+
+    private void refreshUpscaleTargetChoices() {
+        String previous = comboValue(upscaleTargetResolution, "");
+        VisualResolutionProfile source = VisualResolutionProfile.from(
+                comboValue(generationResolution, "P1080"), VisualResolutionProfile.P1080);
+        java.util.List<String> choices = VisualResolutionProfile.higherThanProfile(source).stream()
+                .filter(profile -> profile != VisualResolutionProfile.P540)
+                .map(VisualResolutionProfile::name)
+                .toList();
+        upscaleTargetResolution.getItems().setAll(choices);
+        upscaleTargetResolution.setValue(choices.contains(previous)
+                ? previous : choices.stream().findFirst().orElse(null));
+        boolean available = !choices.isEmpty();
+        upscaleTargetResolution.setDisable(!upscaleEnabled.isSelected() || !available);
+        if (!available) upscaleEnabled.setSelected(false);
     }
 
     void load(OperationalSettings settings) {
         OperationalSettings current = settings == null ? OperationalSettings.defaults() : settings;
+        baseSettings = current;
         baseFontSize.setText(Integer.toString(current.readingDocument().baseFontSize()));
         lineSpacing.setText(Double.toString(current.readingDocument().lineSpacing()));
         keepActiveSentenceNearCenter.setSelected(current.readingDocument().keepActiveSentenceNearCenter());
         initialReadySegments.setText(Integer.toString(current.playbackBuffer().initialReadySegments()));
         lookaheadSegments.setText(Integer.toString(current.playbackBuffer().lookaheadSegments()));
         pauseWhenBufferMissing.setSelected(current.playbackBuffer().pauseWhenBufferMissing());
-        ttsEngineMode.setValue(current.tts().engineMode());
-        ttsCommandTemplate.setText(current.tts().commandTemplate());
-        ttsDisplayName.setText(current.tts().displayName());
-        ttsLanguage.setText(current.tts().language());
-        ttsVoiceProfileId.setText(current.tts().voiceProfileId());
-        ttsTimeoutSeconds.setText(Integer.toString(current.tts().timeoutSeconds()));
-        ttsMaxRetries.setText(Integer.toString(current.tts().maxRetries()));
-        xttsDownloadBaseUrl.setText(DownloadXttsOfficialModelUseCase.normalizeRepositoryUrlForDisplay(current.tts().xttsDownloadBaseUrl()));
-        xttsDownloadBaseUrl.setPromptText(OperationalSettings.TtsEngineSettings.DEFAULT_XTTS_DOWNLOAD_BASE_URL);
-        piperRuntimeZipUrl.setText(current.tts().piperRuntimeZipUrl());
-        piperRuntimeZipUrl.setPromptText(OperationalSettings.TtsEngineSettings.DEFAULT_PIPER_RUNTIME_ZIP_URL);
-        piperDefaultVoiceUrl.setText(current.tts().piperDefaultVoiceUrl());
-        piperDefaultVoiceUrl.setPromptText(OperationalSettings.TtsEngineSettings.DEFAULT_PIPER_DEFAULT_VOICE_URL);
-        piperDefaultVoiceMetadataUrl.setText(current.tts().piperDefaultVoiceMetadataUrl());
-        piperDefaultVoiceMetadataUrl.setPromptText(OperationalSettings.TtsEngineSettings.DEFAULT_PIPER_DEFAULT_VOICE_METADATA_URL);
-        ffmpegExecutable.setText(current.video().ffmpegExecutable());
-        ffmpegDownloadUrl.setText(current.video().ffmpegDownloadUrl());
-        ffmpegDownloadUrl.setPromptText(OperationalSettings.VideoRenderSettings.DEFAULT_FFMPEG_DOWNLOAD_URL);
-        ocrTesseractExecutable.setText(current.ocr().tesseractExecutable());
-        ocrLanguages.setText(current.ocr().languages());
-        ocrDpi.setText(Integer.toString(current.ocr().dpi()));
-        ocrTimeoutSeconds.setText(Integer.toString(current.ocr().timeoutSeconds()));
-        ocrCacheEnabled.setSelected(current.ocr().cacheEnabled());
-        ocrTesseractRuntimeZipUrl.setText(current.ocr().tesseractRuntimeZipUrl());
         resolutionPreset.setValue(current.video().resolutionPreset());
-        preferEmbeddedFfmpeg.setSelected(current.video().preferEmbeddedFfmpeg());
         silentVisualBlockSeconds.setText(Double.toString(current.video().silentVisualBlockSeconds()));
-        imageBaseUrl.setText(current.imageGeneration().baseUrl());
-        imagePreset.setValue(current.imageGeneration().preset());
-        imageModelName.setText(current.imageGeneration().modelName());
-        imageAdaptersDirectory.setText(current.imageGeneration().adaptersDirectory());
-        imageTimeoutSeconds.setText(Integer.toString(current.imageGeneration().timeoutSeconds()));
-        imageMaxAttempts.setText(Integer.toString(current.imageGeneration().maxAttempts()));
-        imageLowVram.setSelected(current.imageGeneration().lowVram());
-        imageMemoryProfile.setValue(current.imageGeneration().memoryProfile());
+        preferManagedVideoRuntime.setSelected(current.video().preferManagedVideoRuntime());
+        generationResolution.setValue(current.imageSuperResolution().generationProfile());
+        upscaleEnabled.setSelected(current.imageSuperResolution().enabled());
+        upscaleTargetResolution.setValue(current.imageSuperResolution().targetProfile());
+        upscaleModel.setText(current.imageSuperResolution().modelName());
+        upscaleModel.setEditable(false);
+        refinementEnabled.setSelected(current.imageSuperResolution().refinementEnabled());
+        refinementEnabled.setDisable(!upscaleEnabled.isSelected());
+        refinementPreset.setValue("balanced".equalsIgnoreCase(
+                current.imageSuperResolution().refinementPreset())
+                ? "Equilibrada" : "Conservadora");
+        refinementPreset.setDisable(!refinementEnabled.isSelected());
         frameGeneration = current.frameGeneration();
-        ocrSettings = current.ocr();
+        mediaEngines = current.mediaEngines();
         computePolicy.setValue(current.compute().policy().name());
         computeSelectedDeviceId.setValue(current.compute().selectedDeviceId().isBlank() ? "auto" : current.compute().selectedDeviceId());
         allowGpuForTts.setSelected(current.compute().allowGpuForTts());
         allowGpuForVideo.setSelected(current.compute().allowGpuForVideo());
+        allowGpuForContentAnalysis.setSelected(current.compute().allowGpuForContentAnalysis());
+        allowRamOffloadForContentAnalysis.setSelected(
+                current.compute().allowRamOffloadForContentAnalysis());
         videoEncoderPolicy.setValue(current.compute().videoEncoderPolicy().name());
         modelsDirectory.setText(current.storage().modelsDirectory());
         exportsDirectory.setText(current.storage().exportsDirectory());
@@ -131,19 +164,31 @@ final class SettingsFormModel {
     }
 
     void refreshComputeDeviceChoices(java.util.List<ComputeDeviceDescriptor> devices) {
-        String current = comboValue(computeSelectedDeviceId, "auto");
-        java.util.ArrayList<String> choices = new java.util.ArrayList<>();
-        choices.add("auto");
-        choices.add("cpu");
+        String current = selectedComputeDeviceId();
+        computeDeviceIdsByChoice.clear();
+        computeDeviceIdsByChoice.put("Automático · prioriza GPU compatible", "");
+        computeDeviceIdsByChoice.put("CPU local", "cpu");
         if (devices != null) {
             for (ComputeDeviceDescriptor device : devices) {
                 if (device.gpu()) {
-                    choices.add(device.id());
+                    computeDeviceIdsByChoice.put(
+                            device.displayName() + " · " + device.id(), device.id());
                 }
             }
         }
-        computeSelectedDeviceId.getItems().setAll(choices.stream().distinct().toList());
-        computeSelectedDeviceId.setValue(current == null || current.isBlank() ? "auto" : current);
+        computeSelectedDeviceId.getItems().setAll(computeDeviceIdsByChoice.keySet());
+        String selected = computeDeviceIdsByChoice.entrySet().stream()
+                .filter(entry -> entry.getValue().equalsIgnoreCase(current))
+                .map(java.util.Map.Entry::getKey)
+                .findFirst()
+                .orElseGet(() -> {
+                    if (current.isBlank()) return "Automático · prioriza GPU compatible";
+                    String missing = current + " · no detectado";
+                    computeDeviceIdsByChoice.put(missing, current);
+                    computeSelectedDeviceId.getItems().add(missing);
+                    return missing;
+                });
+        computeSelectedDeviceId.setValue(selected);
     }
 
     void refreshVideoEncoderChoices(java.util.List<ComputeDeviceDescriptor> devices) {
@@ -169,11 +214,17 @@ final class SettingsFormModel {
                 }
             }
         }
+        choices.add(current);
         videoEncoderPolicy.getItems().setAll(choices.stream().toList());
         videoEncoderPolicy.setValue(choices.contains(current) ? current : VideoEncoderPolicy.AUTO.name());
     }
 
     OperationalSettings toSettings() {
+        requireRange(baseFontSize, "Tamaño base", 14, 28);
+        requireRange(lineSpacing, "Interlineado", 1, 2);
+        requireRange(initialReadySegments, "Fragmentos iniciales", 1, 25);
+        requireRange(lookaheadSegments, "Fragmentos de anticipación", intValue(initialReadySegments, 5), 50);
+        requireRange(silentVisualBlockSeconds, "Duración de visual silencioso", 1, 60);
         return new OperationalSettings(
                 new OperationalSettings.ReadingDocumentSettings(
                         intValue(baseFontSize, 18),
@@ -183,51 +234,30 @@ final class SettingsFormModel {
                         intValue(initialReadySegments, 5),
                         intValue(lookaheadSegments, 10),
                         pauseWhenBufferMissing.isSelected()),
-                new OperationalSettings.TtsEngineSettings(
-                        comboValue(ttsEngineMode, "mock"),
-                        ttsCommandTemplate.getText(),
-                        ttsDisplayName.getText(),
-                        ttsLanguage.getText(),
-                        ttsVoiceProfileId.getText(),
-                        intValue(ttsTimeoutSeconds, 180),
-                        intValue(ttsMaxRetries, 3),
-                        DownloadXttsOfficialModelUseCase.normalizeRepositoryUrlForDisplay(xttsDownloadBaseUrl.getText()),
-                        piperRuntimeZipUrl.getText(),
-                        piperDefaultVoiceUrl.getText(),
-                        piperDefaultVoiceMetadataUrl.getText()),
-                new OperationalSettings.VideoRenderSettings(
-                        ffmpegExecutable.getText(),
-                        comboValue(resolutionPreset, "2K"),
-                        preferEmbeddedFfmpeg.isSelected(),
-                        doubleValue(silentVisualBlockSeconds, 5.0),
-                        ffmpegDownloadUrl.getText()),
-                new com.marcosmoreiradev.docupodcaststudio.application.settings.ImageGenerationSettings(
-                        "managed-local",
-                        imageBaseUrl.getText(),
-                        comboValue(computePolicy, "AUTO"),
-                        comboValue(imagePreset, "PRODUCTION_SDXL_REFERENCE"),
-                        imageModelName.getText(),
-                        imageAdaptersDirectory.getText(),
-                        intValue(imageTimeoutSeconds,
-                                com.marcosmoreiradev.docupodcaststudio.application.settings.ImageGenerationSettings.DEFAULT_TIMEOUT_SECONDS),
-                        imageLowVram.isSelected(),
-                        comboValue(imageMemoryProfile, "SAFE_LOW_VRAM"),
-                        intValue(imageMaxAttempts, 2)),
+                baseSettings.tts(),
+                baseSettings.video().withPresentationPreferences(comboValue(resolutionPreset, "2K"),
+                                doubleValue(silentVisualBlockSeconds, 5.0))
+                        .withRuntimePreference(preferManagedVideoRuntime.isSelected()),
+                baseSettings.imageGeneration(),
+                new ImageSuperResolutionSettings(
+                        comboValue(generationResolution, "P1080"),
+                        upscaleEnabled.isSelected(),
+                        comboValue(upscaleTargetResolution, "QHD_2K"),
+                        upscaleModel.getText(),
+                        upscaleEnabled.isSelected() && refinementEnabled.isSelected(),
+                        refinementPresetId(),
+                        ImageSuperResolutionSettings.DEFAULT_REFINEMENT_ENGINE),
+                mediaEngines,
                 frameGeneration,
                 new OperationalSettings.ComputeSettings(
                         comboValue(computePolicy, "AUTO"),
-                        normalizeSelectedDevice(comboValue(computeSelectedDeviceId, "auto")),
+                        selectedComputeDeviceId(),
                         allowGpuForTts.isSelected(),
                         allowGpuForVideo.isSelected(),
-                        comboValue(videoEncoderPolicy, "AUTO")),
-                new OperationalSettings.OcrSettings(
-                        ocrSettings.engineMode(),
-                        ocrTesseractExecutable.getText(),
-                        ocrLanguages.getText(),
-                        intValue(ocrDpi, 300),
-                        intValue(ocrTimeoutSeconds, 180),
-                        ocrCacheEnabled.isSelected(),
-                        ocrTesseractRuntimeZipUrl.getText()),
+                        comboValue(videoEncoderPolicy, "AUTO"),
+                        allowGpuForContentAnalysis.isSelected(),
+                        allowRamOffloadForContentAnalysis.isSelected()),
+                baseSettings.ocr(),
                 new OperationalSettings.StorageSettings(
                         modelsDirectory.getText(),
                         exportsDirectory.getText()),
@@ -239,8 +269,8 @@ final class SettingsFormModel {
     }
 
     String currentComputeDeviceLabel() {
-        String value = comboValue(computeSelectedDeviceId, "auto");
-        if (value == null || value.isBlank() || "auto".equalsIgnoreCase(value)) {
+        String value = selectedComputeDeviceId();
+        if (value.isBlank()) {
             return "Automático";
         }
         if ("cpu".equalsIgnoreCase(value)) {
@@ -249,60 +279,40 @@ final class SettingsFormModel {
         return "Dispositivo específico";
     }
 
-    void applyOcrSettings(OperationalSettings.OcrSettings settings) {
-        OperationalSettings.OcrSettings current = settings == null
-                ? OperationalSettings.OcrSettings.defaults()
-                : settings;
-        ocrSettings = current;
-        ocrTesseractExecutable.setText(current.tesseractExecutable());
-        ocrLanguages.setText(current.languages());
-        ocrDpi.setText(Integer.toString(current.dpi()));
-        ocrTimeoutSeconds.setText(Integer.toString(current.timeoutSeconds()));
-        ocrCacheEnabled.setSelected(current.cacheEnabled());
-        ocrTesseractRuntimeZipUrl.setText(current.tesseractRuntimeZipUrl());
+    OperationalSettings currentSettings() {
+        return toSettings();
+    }
+
+    private static javafx.util.StringConverter<String> labels(java.util.function.Function<String, String> label) {
+        return new javafx.util.StringConverter<>() {
+            public String toString(String value) { return value == null ? "" : label.apply(value); }
+            public String fromString(String value) { return value; }
+        };
+    }
+
+    private String refinementPresetId() {
+        return "Equilibrada".equalsIgnoreCase(comboValue(refinementPreset, "Conservadora"))
+                ? "balanced" : "conservative";
     }
 
     private static TextField textField(String value) {
-        TextField field = new TextField(java.util.Objects.toString(value, ""));
+        TextField field = StudioFormControls.textField(java.util.Objects.toString(value, ""));
         field.setPrefColumnCount(34);
         return field;
     }
 
     private static CheckBox checkBox(boolean selected) {
-        CheckBox checkBox = new CheckBox();
+        CheckBox checkBox = StudioFormControls.checkBox();
         checkBox.setSelected(selected);
         return checkBox;
     }
 
     private static ComboBox<String> combo(String selected, String... values) {
-        ComboBox<String> combo = new ComboBox<>();
+        ComboBox<String> combo = StudioFormControls.comboBox();
         combo.getItems().setAll(values);
-        combo.setEditable(true);
+        combo.setEditable(false);
         combo.setValue(selected == null || selected.isBlank() ? values[0] : selected);
         combo.setPrefWidth(240);
-        return combo;
-    }
-
-    private static ComboBox<String> engineModeCombo() {
-        ComboBox<String> combo = combo(TtsEngineModes.TEST, TtsEngineModes.TEST, TtsEngineModes.EXTERNAL,
-                TtsEngineModes.LOCAL_SIMPLE, TtsEngineModes.ADVANCED_AI);
-        combo.setEditable(false);
-        combo.setConverter(new StringConverter<>() {
-            @Override public String toString(String value) { return TtsEngineModes.safeLabel(value); }
-            @Override public String fromString(String value) { return value; }
-        });
-        combo.setCellFactory(list -> new ListCell<>() {
-            @Override protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                setText(empty || item == null ? null : TtsEngineModes.safeLabel(item));
-            }
-        });
-        combo.setButtonCell(new ListCell<>() {
-            @Override protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                setText(empty || item == null ? null : TtsEngineModes.safeLabel(item));
-            }
-        });
         return combo;
     }
 
@@ -310,7 +320,8 @@ final class SettingsFormModel {
         try {
             return Integer.parseInt(field.getText().strip());
         } catch (RuntimeException ex) {
-            return fallback;
+            field.requestFocus();
+            throw new IllegalArgumentException("Introduce un número entero válido: " + field.getText());
         }
     }
 
@@ -318,7 +329,8 @@ final class SettingsFormModel {
         try {
             return Double.parseDouble(field.getText().strip());
         } catch (RuntimeException ex) {
-            return fallback;
+            field.requestFocus();
+            throw new IllegalArgumentException("Introduce un número válido: " + field.getText());
         }
     }
 
@@ -327,9 +339,22 @@ final class SettingsFormModel {
         return value == null || value.isBlank() ? fallback : value.strip();
     }
 
-    private static String normalizeSelectedDevice(String value) {
-        String normalized = value == null ? "" : value.strip();
-        return "auto".equalsIgnoreCase(normalized) ? "" : normalized;
+    private static void requireRange(TextField field, String label, double min, double max) {
+        double value = doubleValue(field, min);
+        if (!Double.isFinite(value) || value < min || value > max) {
+            field.requestFocus();
+            throw new IllegalArgumentException(label + ": introduce un valor entre " + min + " y " + max + ".");
+        }
+    }
+
+    private String selectedComputeDeviceId() {
+        String choice = comboValue(computeSelectedDeviceId, "");
+        String mapped = computeDeviceIdsByChoice.get(choice);
+        if (mapped != null) return mapped;
+        String normalized = choice.strip();
+        return normalized.equalsIgnoreCase("auto")
+                || normalized.startsWith("Automático")
+                || normalized.startsWith("Automático") ? "" : normalized;
     }
 
     private static boolean deviceLooksLike(ComputeDeviceDescriptor device, String token) {

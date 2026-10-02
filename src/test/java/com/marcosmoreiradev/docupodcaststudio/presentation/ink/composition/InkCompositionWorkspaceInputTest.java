@@ -1,11 +1,11 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition;
 
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputCapabilities;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputCursor;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputListener;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputProvider;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputSample;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.JavaFxMouseInputProvider;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputCapabilities;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputCursor;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputListener;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputProvider;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputSample;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.JavaFxMouseInputProvider;
 import javafx.application.Platform;
 import javafx.event.Event;
 import javafx.scene.Node;
@@ -96,14 +96,14 @@ final class InkCompositionWorkspaceInputTest {
     }
 
     @Test
-    void documentaryWorkspaceUsesTheSameNativeOnlyProviderAsTechnicalProblemExpress() throws Exception {
+    void documentaryWorkspaceFallsBackToMouseWhenNativeInkIsUnavailable() throws Exception {
         InkCompositionWorkspace workspace = runOnFxAndWait(() ->
                 new InkCompositionWorkspace(InkCompositionProfile.documentaryIllustration(), null));
 
         InkInputCapabilities capabilities = runOnFxAndWait(workspace::inputCapabilitiesForTesting);
 
-        assertFalse("JavaFX mouse".equals(capabilities.providerName()));
-        assertFalse(capabilities.fallbackReason().contains("fallback de mouse"));
+        assertEquals("JavaFX mouse", capabilities.providerName());
+        assertFalse(capabilities.nativeProvider());
 
         runOnFxAndWait(() -> {
             workspace.close();
@@ -199,14 +199,17 @@ final class InkCompositionWorkspaceInputTest {
 
         runOnFxAndWait(() -> {
             workspace.setZoomForTesting(0.50);
+            return null;
+        });
+        runOnFxAndWait(() -> {
             double expectedWidth = InkCompositionProfile.documentaryIllustration().logicalWidth() * 0.50;
             double expectedHeight = InkCompositionProfile.documentaryIllustration().logicalHeight() * 0.50;
-            assertEquals(expectedWidth, workspace.zoomHostForTesting().getMinWidth(), 0.001);
-            assertEquals(expectedWidth, workspace.zoomHostForTesting().getPrefWidth(), 0.001);
-            assertEquals(expectedWidth, workspace.zoomHostForTesting().getMaxWidth(), 0.001);
-            assertEquals(expectedHeight, workspace.zoomHostForTesting().getMinHeight(), 0.001);
-            assertEquals(expectedHeight, workspace.zoomHostForTesting().getPrefHeight(), 0.001);
-            assertEquals(expectedHeight, workspace.zoomHostForTesting().getMaxHeight(), 0.001);
+            assertEquals(expectedWidth, workspace.zoomHostForTesting().minWidth(-1), 0.001);
+            assertEquals(expectedWidth, workspace.zoomHostForTesting().prefWidth(-1), 0.001);
+            assertEquals(expectedHeight, workspace.zoomHostForTesting().minHeight(-1), 0.001);
+            assertEquals(expectedHeight, workspace.zoomHostForTesting().prefHeight(-1), 0.001);
+            assertEquals(Double.MAX_VALUE, workspace.zoomHostForTesting().getMaxWidth());
+            assertEquals(Double.MAX_VALUE, workspace.zoomHostForTesting().getMaxHeight());
             assertEquals(javafx.geometry.Pos.CENTER,
                     workspace.centeredCanvasForTesting().getAlignment());
             return null;
@@ -228,8 +231,11 @@ final class InkCompositionWorkspaceInputTest {
 
         runOnFxAndWait(() -> {
             workspace.setZoomForTesting(0.75);
-            double hostWidth = workspace.zoomHostForTesting().getPrefWidth();
-            double hostHeight = workspace.zoomHostForTesting().getPrefHeight();
+            return null;
+        });
+        runOnFxAndWait(() -> {
+            double hostWidth = workspace.zoomHostForTesting().prefWidth(-1);
+            double hostHeight = workspace.zoomHostForTesting().prefHeight(-1);
             ScrollPane scroll = workspace.canvasScrollForTesting();
 
             assertTrue(scroll.isFitToWidth());
@@ -241,8 +247,8 @@ final class InkCompositionWorkspaceInputTest {
 
             workspace.selectPanModeForTesting();
             assertTrue(scroll.isPannable());
-            assertEquals(hostWidth, workspace.zoomHostForTesting().getPrefWidth(), 0.001);
-            assertEquals(hostHeight, workspace.zoomHostForTesting().getPrefHeight(), 0.001);
+            assertEquals(hostWidth, workspace.zoomHostForTesting().prefWidth(-1), 0.001);
+            assertEquals(hostHeight, workspace.zoomHostForTesting().prefHeight(-1), 0.001);
 
             workspace.selectOrganizeModeForTesting();
             assertFalse(scroll.isPannable());
@@ -250,8 +256,8 @@ final class InkCompositionWorkspaceInputTest {
             assertFalse(scroll.isPannable());
             assertEquals(ScrollPane.ScrollBarPolicy.AS_NEEDED, scroll.getHbarPolicy());
             assertEquals(ScrollPane.ScrollBarPolicy.AS_NEEDED, scroll.getVbarPolicy());
-            assertEquals(hostWidth, workspace.zoomHostForTesting().getPrefWidth(), 0.001);
-            assertEquals(hostHeight, workspace.zoomHostForTesting().getPrefHeight(), 0.001);
+            assertEquals(hostWidth, workspace.zoomHostForTesting().prefWidth(-1), 0.001);
+            assertEquals(hostHeight, workspace.zoomHostForTesting().prefHeight(-1), 0.001);
             assertEquals(Region.USE_COMPUTED_SIZE,
                     workspace.centeredCanvasForTesting().getMinWidth(), 0.001);
             assertEquals(Region.USE_COMPUTED_SIZE,

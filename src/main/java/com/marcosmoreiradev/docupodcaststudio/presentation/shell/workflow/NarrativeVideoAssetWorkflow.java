@@ -9,7 +9,7 @@ import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeKeyframe
 import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeParagraphTake;
 import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeProjectLayer;
 import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeVideoConfiguration;
-import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualClipGenerationResult;
+import com.marcosmoreiradev.docupodcaststudio.application.narrative.NarrativeGeneratedVideoArtifact;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.ProjectSession;
 
 import java.io.IOException;
@@ -107,7 +107,7 @@ public final class NarrativeVideoAssetWorkflow {
 
     public List<NarrativeGeneratedClip> commitGeneratedClips(ProjectSession session,
                                                             String blockId,
-                                                            List<VisualClipGenerationResult> results,
+                                                            List<NarrativeGeneratedVideoArtifact> results,
                                                             String sourceFingerprint) throws IOException {
         Path projectFile = requireProjectFile(session);
         Path root = projectFile.toAbsolutePath().normalize().getParent();
@@ -117,9 +117,9 @@ public final class NarrativeVideoAssetWorkflow {
         var project = session.project();
         ArrayList<NarrativeGeneratedClip> clips = new ArrayList<>();
         int order = 0;
-        for (VisualClipGenerationResult result : results) {
+        for (NarrativeGeneratedVideoArtifact result : results) {
             Path clipPath = requireProjectOwnedFile(root, result.clipPath(), "clip de video");
-            Path lastFramePath = requireProjectOwnedFile(root, result.lastFramePath(), "ultimo frame");
+            Path lastFramePath = requireProjectOwnedFile(root, result.continuationFramePath(), "ultimo frame");
             String clipAssetId = "NARRATIVE-CLIP-" + safeToken(blockId, "paragraph") + "-" + compactId();
             String lastFrameAssetId = "NARRATIVE-LAST-FRAME-" + safeToken(blockId, "paragraph")
                     + "-" + compactId();
@@ -148,8 +148,8 @@ public final class NarrativeVideoAssetWorkflow {
                     order++,
                     result.durationSeconds(),
                     lastFrameAssetId,
-                    result.modelId(),
-                    result.workflowId(),
+                    result.engineId().value(),
+                    result.presetId().value(),
                     result.seed(),
                     sourceFingerprint,
                     result.metadata() == null ? Map.of() : result.metadata()));

@@ -43,6 +43,19 @@ final class RenderTheatreChoralVoiceUseCaseTest {
     Path tempDir;
 
     @Test
+    void interventionEmotionOverridesLegacyStyleAndInvalidatesChorus() throws Exception {
+        Fixture f = fixture();
+        var emotion = new com.marcosmoreiradev.docupodcaststudio.domain.assignment.NarrativeLayerAssignment(
+                "EMOTION-1", com.marcosmoreiradev.docupodcaststudio.domain.assignment.NarrativeLayerKind.EMOTION,
+                new com.marcosmoreiradev.docupodcaststudio.domain.script.ScriptTextRange(
+                        f.segment().id(), 0, f.segment().narrationText().length()), "TONE-ANGRY", "Enojo", "");
+        var project = f.project().withNarrativeLayerAssignments(List.of(emotion));
+        assertEquals("TONE-ANGRY", TheatreChoralVoiceFingerprint.effectiveToneTarget(project, f.segment()));
+        assertFalse(TheatreChoralVoiceFingerprint.compute(f.project(), f.segment(), List.of("CHR-BIGOTE"))
+                .equals(TheatreChoralVoiceFingerprint.compute(project, f.segment(), List.of("CHR-BIGOTE"))));
+    }
+
+    @Test
     void synthesizesFullTextForEveryParticipantAndRegistersAtomicMix() throws Exception {
         Fixture fixture = fixture();
         ArrayList<VoiceTestSynthesisRequest> synthesisRequests = new ArrayList<>();

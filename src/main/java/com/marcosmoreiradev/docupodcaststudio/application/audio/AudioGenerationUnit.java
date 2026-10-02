@@ -6,6 +6,8 @@ import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationSegment;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import com.marcosmoreiradev.docupodcaststudio.domain.audio.AudioSourceFingerprint;
+import com.marcosmoreiradev.docupodcaststudio.domain.document.pdf.PdfRegionRevisionRef;
 
 /**
  * Effective unit that a TTS audio job must generate.
@@ -22,7 +24,8 @@ public record AudioGenerationUnit(
         String sourceSegmentId,
         String voiceProfileId,
         String performanceStyleId,
-        List<String> appliedLayerIds
+        List<String> appliedLayerIds,
+        AudioSourceFingerprint sourceFingerprint
 ) {
     private static final String DEFAULT_NARRATOR_VOICE_ID = "VOC-NARRATOR";
 
@@ -34,15 +37,23 @@ public record AudioGenerationUnit(
         voiceProfileId = normalize(voiceProfileId);
         performanceStyleId = normalize(performanceStyleId);
         appliedLayerIds = appliedLayerIds == null ? List.of() : List.copyOf(appliedLayerIds);
+        sourceFingerprint = sourceFingerprint == null ? AudioSourceFingerprint.untraceable() : sourceFingerprint;
         if (text.isBlank()) {
             throw new IllegalArgumentException("text is required for audio generation units");
         }
     }
 
+    public AudioGenerationUnit(String id, String title, String text, String sourceSegmentId,
+                               String voiceProfileId, String performanceStyleId,
+                               List<String> appliedLayerIds) {
+        this(id, title, text, sourceSegmentId, voiceProfileId, performanceStyleId,
+                appliedLayerIds, AudioSourceFingerprint.untraceable());
+    }
+
     public static AudioGenerationUnit fromSegment(NarrationSegment segment) {
         Objects.requireNonNull(segment, "segment");
         return new AudioGenerationUnit(segment.id(), segment.title(), segment.narrationText(), segment.id(),
-                segment.voiceProfileId(), segment.performanceStyleId(), List.of());
+                segment.voiceProfileId(), segment.performanceStyleId(), List.of(), fingerprint(segment));
     }
 
     public static AudioGenerationUnit fromRenderUnit(RenderUnit unit) {
@@ -57,7 +68,15 @@ public record AudioGenerationUnit(
         String title = unit.title().isBlank() ? unit.segmentId() : unit.title();
         String text = audioTextFor(unit, sourceSegment);
         return new AudioGenerationUnit(unit.id(), title, text, unit.segmentId(),
-                unit.voiceProfileId(), unit.performanceStyleId(), unit.appliedLayerIds());
+                unit.voiceProfileId(), unit.performanceStyleId(), unit.appliedLayerIds(),
+                sourceSegment == null || sourceSegment.isEmpty()
+                        ? AudioSourceFingerprint.untraceable()
+                        : fingerprint(sourceSegment.get(), unit.voiceProfileId(), unit.performanceStyleId()));
+    }
+
+    public AudioGenerationUnit withSourceFingerprint(AudioSourceFingerprint fingerprint) {
+        return new AudioGenerationUnit(id, title, text, sourceSegmentId, voiceProfileId,
+                performanceStyleId, appliedLayerIds, fingerprint);
     }
 
     private static String audioTextFor(RenderUnit unit, Optional<NarrationSegment> sourceSegment) {
@@ -110,5 +129,35 @@ public record AudioGenerationUnit(
 
     private static String normalize(String value) {
         return value == null ? "" : value.strip();
+    }
+
+    private static AudioSourceFingerprint fingerprint(NarrationSegment segment) {
+        return fingerprint(segment, segment.voiceProfileId(), segment.performanceStyleId());
+    }
+
+    private static AudioSourceFingerprint fingerprint(NarrationSegment segment,
+                                                      String effectiveVoiceProfileId,
+                                                      String effectivePerformanceStyleId) {
+        String pageRaw = segment.metadata().getOrDefault("pdfSourcePage", "");
+        String revisionRaw = segment.metadata().getOrDefault("pdfRegionRevision", "");
+        String voiceConfiguration = normalize(effectiveVoiceProfileId) + "|"
+                + normalize(effectivePerformanceStyleId);
+        if (pageRaw.isBlank() || revisionRaw.isBlank() || segment.sourceBlockIds().isEmpty()) {
+            return AudioSourceFingerprint.generic(segment.narrationText(),
+                    voiceConfiguration,
+                    segment.metadata().getOrDefault("generationSource", "document-workspace"));
+        }
+        try {
+            int page = Integer.parseInt(pageRaw);
+            long revision = Long.parseLong(revisionRaw);
+            List<PdfRegionRevisionRef> refs = segment.sourceBlockIds().stream()
+                    .map(id -> new PdfRegionRevisionRef(id, page, revision)).toList();
+            return AudioSourceFingerprint.pdf(refs, segment.narrationText(),
+                    voiceConfiguration,
+                    segment.metadata().getOrDefault("pdfGroupingRule", "region-v1"),
+                    segment.metadata().getOrDefault("pdfDerivedTreatmentFingerprint", ""));
+        } catch (NumberFormatException ex) {
+            return AudioSourceFingerprint.untraceable();
+        }
     }
 }

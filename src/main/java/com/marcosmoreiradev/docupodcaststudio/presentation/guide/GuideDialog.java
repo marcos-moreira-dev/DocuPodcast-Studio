@@ -1,5 +1,15 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.guide;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioDialogShell;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioNavigationControls;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioCollectionControls;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
+
 import com.marcosmoreiradev.docupodcaststudio.application.guide.GuideSearchResult;
 import com.marcosmoreiradev.docupodcaststudio.application.guide.GuideTopic;
 import com.marcosmoreiradev.docupodcaststudio.application.guide.GuideTopicId;
@@ -36,7 +46,7 @@ public final class GuideDialog {
     }
 
     public void showTopic(Window owner, GuideTopicId topicId) {
-        Dialog<Void> dialog = new Dialog<>();
+        Dialog<Void> dialog = StudioDialogShell.dialog();
         dialog.setTitle("Guía de DocuPodcast Studio");
         dialog.setHeaderText("Guía integrada: documento fuente, proyecto, lectura, voces, imágenes, audio y exportación");
         DialogStyler.apply(dialog, owner);
@@ -52,7 +62,7 @@ public final class GuideDialog {
     }
 
     private Node buildContent(GuideTopicId initialTopicId) {
-        TabPane tabs = new TabPane();
+        TabPane tabs = StudioNavigationControls.tabPane();
         tabs.getStyleClass().add("guide-tabs");
         tabs.getTabs().add(contentTab(initialTopicId));
         tabs.getTabs().add(searchTab());
@@ -61,7 +71,7 @@ public final class GuideDialog {
     }
 
     private Tab contentTab(GuideTopicId initialTopicId) {
-        ListView<GuideTopic> list = new ListView<>();
+        ListView<GuideTopic> list = StudioCollectionControls.listView();
         list.getStyleClass().add("guide-topic-list");
         list.getItems().setAll(services.catalog().topics());
         list.setCellFactory(view -> new javafx.scene.control.ListCell<>() {
@@ -79,17 +89,17 @@ public final class GuideDialog {
         }
         renderTopic(body, list.getSelectionModel().getSelectedItem());
 
-        SplitPane split = new SplitPane(list, wrap(body));
+        SplitPane split = StudioViewportControls.splitPane(list, wrap(body));
         split.setDividerPositions(0.28);
-        Tab tab = new Tab("Contenido");
+        Tab tab = StudioNavigationControls.tab("Contenido");
         tab.setContent(split);
         return tab;
     }
 
     private Tab searchTab() {
-        TextField query = new TextField();
+        TextField query = StudioFormControls.textField();
         query.setPromptText("Buscar: documento, proyecto, voz, imagen, audio, exportar…");
-        ListView<GuideSearchResult> results = new ListView<>();
+        ListView<GuideSearchResult> results = StudioCollectionControls.listView();
         results.getStyleClass().add("guide-search-results");
         results.setCellFactory(view -> new javafx.scene.control.ListCell<>() {
             @Override
@@ -105,9 +115,9 @@ public final class GuideDialog {
         VBox left = new VBox(8, new Label("Búsqueda local"), query, results);
         VBox.setVgrow(results, Priority.ALWAYS);
         left.setPadding(new Insets(10));
-        SplitPane split = new SplitPane(left, wrap(body));
+        SplitPane split = StudioViewportControls.splitPane(left, wrap(body));
         split.setDividerPositions(0.34);
-        Tab tab = new Tab("Buscar");
+        Tab tab = StudioNavigationControls.tab("Buscar");
         tab.setContent(split);
         return tab;
     }
@@ -119,7 +129,7 @@ public final class GuideDialog {
     }
 
     private Node wrap(VBox body) {
-        ScrollPane scroll = new ScrollPane(body);
+        ScrollPane scroll = StudioViewportControls.scrollPane(body);
         scroll.setFitToWidth(true);
         scroll.getStyleClass().add("guide-body-scroll");
         BorderPane pane = new BorderPane(scroll);

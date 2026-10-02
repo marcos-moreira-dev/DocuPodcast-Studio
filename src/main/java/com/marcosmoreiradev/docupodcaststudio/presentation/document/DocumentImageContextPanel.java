@@ -1,5 +1,9 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.document;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeSourceChooser;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls;
+
 import com.marcosmoreiradev.docupodcaststudio.domain.assignment.NarrativeLayerKind;
 import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreProjectLayer;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionButtonFactory;
@@ -50,8 +54,8 @@ public final class DocumentImageContextPanel extends VBox {
     private final ImageView preview = new ImageView();
     private final Label emptyPreview = new Label("Sin imagen asociada");
     private final StringProperty selectedImageUri = new SimpleStringProperty("");
-    private final ComboBox<CameraOption> cameraCombo = new ComboBox<>();
-    private final CheckBox applyCameraPlane = new CheckBox("Aplicar plano");
+    private final ComboBox<CameraOption> cameraCombo = StudioFormControls.comboBox();
+    private final CheckBox applyCameraPlane = StudioFormControls.checkBox("Aplicar plano");
     private final Label cameraSelectionNote = new Label("");
     private final ImageView backdropPreview = new ImageView();
     private final Label backdropPreviewLabel = new Label("Fondo no asignado\n(se aplica por defecto)");
@@ -108,7 +112,7 @@ public final class DocumentImageContextPanel extends VBox {
                 applyPlane, cameraControls, backdropControls(), viewFull, remove, note);
         body.getStyleClass().add("document-context-body");
         body.setMaxWidth(Double.MAX_VALUE);
-        ScrollPane scroll = new ScrollPane(body);
+        ScrollPane scroll = StudioViewportControls.scrollPane(body);
         scroll.setFitToWidth(true);
         scroll.setFitToHeight(true);
         scroll.getStyleClass().add("document-context-scroll");
@@ -219,7 +223,7 @@ public final class DocumentImageContextPanel extends VBox {
     }
 
     private void chooseImageFromComputer(NarrativeLayerKind kind) {
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle("Elegir imagen para la selección");
         chooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("Imágenes compatibles (*.png, *.jpg, *.jpeg, *.webp, *.gif)", "*.png", "*.jpg", "*.jpeg", "*.webp", "*.gif"),
@@ -261,7 +265,6 @@ public final class DocumentImageContextPanel extends VBox {
 
     private CheckBox cameraApplicationControl(VBox cameraControls) {
         applyCameraPlane.setSelected(true);
-        applyCameraPlane.getStyleClass().addAll(StudioFormControls.FORM_CONTROL, StudioFormControls.FORM_TOGGLE);
         StudioFormControls.installTooltip(applyCameraPlane,
                 "Usar el tipo de plano asignado como referencia visual para IA y como guia del lienzo.");
         applyCameraPlane.selectedProperty().addListener((obs, oldValue, newValue) -> {
@@ -346,8 +349,10 @@ public final class DocumentImageContextPanel extends VBox {
                     StableImageLoader.shared().load(thumb, item.uri(), 54, 32, true, ignored -> {});
                 }
                 Label text = new Label(item.displayName());
+                text.getStyleClass().add("document-context-combo-text");
                 text.setWrapText(true);
                 HBox row = new HBox(8, thumb, text);
+                row.getStyleClass().add("document-context-combo-cell");
                 row.setAlignment(Pos.CENTER_LEFT);
                 setGraphic(row);
             }
@@ -405,7 +410,7 @@ public final class DocumentImageContextPanel extends VBox {
             VBox card = cameraCatalogCard(option, stage);
             grid.add(card, i % 2, i / 2);
         }
-        ScrollPane scroll = new ScrollPane(grid);
+        ScrollPane scroll = StudioViewportControls.scrollPane(grid);
         scroll.setFitToWidth(true);
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scroll.setPrefViewportWidth(1360);
@@ -465,7 +470,7 @@ public final class DocumentImageContextPanel extends VBox {
     }
 
     private void chooseStageBackdrop() {
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle("Elegir fondo de escenario desde este fragmento");
         chooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("Imagenes compatibles (*.png, *.jpg, *.jpeg, *.webp)", "*.png", "*.jpg", "*.jpeg", "*.webp"),

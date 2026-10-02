@@ -125,22 +125,32 @@ public enum VoiceReferenceTone {
     }
 
     public static Optional<VoiceReferenceTone> fromLayerTargetId(String value) {
-        String normalized = value == null ? "" : value.strip();
+        String normalized = value == null ? "" : value.strip().toUpperCase(java.util.Locale.ROOT);
         if (normalized.startsWith("TONE-")) {
             normalized = normalized.substring("TONE-".length());
         }
         if (normalized.startsWith("STY-")) {
-            return fromPerformanceStyleId(normalized);
+            var legacy = fromPerformanceStyleId(normalized);
+            if (legacy.isPresent()) return legacy;
+            normalized = normalized.substring(4);
         }
         if (normalized.isBlank()) {
             return Optional.empty();
         }
         for (VoiceReferenceTone tone : values()) {
-            if (tone.name().equalsIgnoreCase(normalized)) {
+            String label = normalizeLabel(tone.displayName());
+            String input = normalizeLabel(normalized);
+            if (tone.name().equalsIgnoreCase(normalized) || label.equals(input)
+                    || (label.endsWith("a") && (label.substring(0,label.length()-1)+"o").equals(input))) {
                 return Optional.of(tone);
             }
         }
         return Optional.empty();
+    }
+
+    private static String normalizeLabel(String value) {
+        return java.text.Normalizer.normalize(value,java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "").toLowerCase(java.util.Locale.ROOT);
     }
 
     private static Optional<VoiceReferenceTone> fromPerformanceStyleId(String styleId) {

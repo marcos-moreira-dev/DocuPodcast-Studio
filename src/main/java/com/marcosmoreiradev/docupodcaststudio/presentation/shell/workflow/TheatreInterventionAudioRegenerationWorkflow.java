@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
+import com.marcosmoreiradev.docupodcaststudio.application.WorkspaceApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.application.audio.AudioGenerationRequest;
 import com.marcosmoreiradev.docupodcaststudio.application.audio.AudioJobStatusDto;
 import com.marcosmoreiradev.docupodcaststudio.domain.audio.AudioJobSnapshot;
@@ -17,7 +17,7 @@ import java.util.function.Consumer;
 
 /** Regenerates one theatre intervention and atomically patches the current playable job. */
 public final class TheatreInterventionAudioRegenerationWorkflow {
-    public void start(ApplicationServices services, AudioWorkflowCoordinator audioWorkflow,
+    public void start(WorkspaceApplicationServices services, AudioWorkflowCoordinator audioWorkflow,
                       PlayableAudioJobSelector selector, ProjectSession session,
                       NarrationScriptDocument script, String activeJobId, NarrationSegment segment,
                       Consumer<AudioJobStatusDto> progress, Consumer<AudioJobSnapshot> success,
@@ -35,7 +35,7 @@ public final class TheatreInterventionAudioRegenerationWorkflow {
         AudioGenerationRequest request = audioWorkflow.buildInterventionRegenerationRequest(
                 session, script, projectDirectory, session.title() + " - regeneracion puntual", segment.id());
         List<String> expected = request.generationUnits().stream().map(unit -> unit.id()).toList();
-        services.audio().regenerateTheatreInterventionAudio()
+        services.playback().audio().regenerateTheatreInterventionAudio()
                 .regenerate(request, target, expected, progress, success, failure);
     }
 

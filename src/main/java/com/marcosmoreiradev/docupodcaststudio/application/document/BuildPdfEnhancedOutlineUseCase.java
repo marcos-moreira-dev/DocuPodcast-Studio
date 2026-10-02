@@ -1,122 +1,72 @@
 package com.marcosmoreiradev.docupodcaststudio.application.document;
 
-import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlock;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlockType;
-import com.marcosmoreiradev.docupodcaststudio.domain.document.ReadableDocument;
-import com.marcosmoreiradev.docupodcaststudio.domain.document.SourceDocumentFormat;
+import com.marcosmoreiradev.docupodcaststudio.domain.document.pdf.PdfRegionType;
 
-import java.nio.file.Path;
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.Objects;
 
-/** Enriches weak PDF outlines with native/OCR text from early pages without mutating the source. */
+/** Builds an outline directly from prepared PDF V2 heading regions. */
 public final class BuildPdfEnhancedOutlineUseCase {
-    private static final int OCR_CONTENTS_PAGE_LIMIT = 30;
+    private final PreparedPdfDocumentRepository repository;
+    private final PdfBookmarkOutlineReader bookmarks;
 
-    private final BuildDocumentOutlineUseCase baseOutline;
-    private final BuildPdfResolvedTextLayerUseCase resolvedTextLayer;
-
-    public BuildPdfEnhancedOutlineUseCase(BuildDocumentOutlineUseCase baseOutline,
-                                          BuildPdfResolvedTextLayerUseCase resolvedTextLayer) {
-        this.baseOutline = baseOutline == null ? new BuildDocumentOutlineUseCase() : baseOutline;
-        this.resolvedTextLayer = resolvedTextLayer;
+    public BuildPdfEnhancedOutlineUseCase(PreparedPdfDocumentRepository repository) {
+        this(repository, PdfBookmarkOutlineReader.NONE);
     }
 
-    public DocumentOutlineProjection build(ReadableDocument document, Path cacheDirectory) {
-        DocumentOutlineProjection base = baseOutline.build(document);
-        if (document == null || document.format() != SourceDocumentFormat.PDF || strongPdfOutline(base)
-                || resolvedTextLayer == null) {
-            return base;
-        }
-        int pageCount = sourcePageCount(document);
-        if (pageCount <= 0) {
-            return base;
-        }
-        List<Integer> targetPages = new ArrayList<>();
-        for (int page = 1; page <= Math.min(OCR_CONTENTS_PAGE_LIMIT, pageCount); page++) {
-            targetPages.add(page);
-        }
-        PdfResolvedTextLayerProjection resolved = resolvedTextLayer.resolve(new PdfResolvedTextLayerRequest(
-                document,
-                targetPages,
-                PdfTextResolutionPolicy.OCR_WHEN_UNAVAILABLE,
-                cacheDirectory,
-                PdfOcrRequest.DEFAULT_DPI,
-                PdfOcrRequest.DEFAULT_LANGUAGES));
-        ReadableDocument enriched = enrichedDocument(document, resolved.layers(), pageCount);
-        DocumentOutlineProjection candidate = baseOutline.build(enriched);
-        if (candidate.origin() == DocumentOutlineOrigin.CONTENTS
-                && candidate.indexedEntryCount() >= 4
-                && !containsSyntheticBlock(candidate.entries())) {
-            return new DocumentOutlineProjection(candidate.origin(), candidate.title(),
-                    candidate.detail() + " Incluye capa textual nativa/OCR local cuando fue necesaria.",
-                    candidate.entries(), candidate.indexedEntryCount(), candidate.flatLimit());
-        }
-        return base;
+    public BuildPdfEnhancedOutlineUseCase(PreparedPdfDocumentRepository repository,
+                                          PdfBookmarkOutlineReader bookmarks) {
+        this.repository = Objects.requireNonNull(repository, "repository");
+        this.bookmarks = Objects.requireNonNull(bookmarks, "bookmarks");
     }
 
-    private static boolean strongPdfOutline(DocumentOutlineProjection projection) {
-        if (projection == null) {
-            return false;
-        }
-        return projection.origin() == DocumentOutlineOrigin.PDF_BOOKMARKS
-                || projection.origin() == DocumentOutlineOrigin.CONTENTS
-                || projection.origin() == DocumentOutlineOrigin.HEADINGS;
-    }
-
-    private static ReadableDocument enrichedDocument(ReadableDocument document, List<PdfTextLayer> layers, int pageCount) {
-        List<DocumentBlock> blocks = new ArrayList<>(document.blocks());
-        Set<String> seenTextLayerLines = new LinkedHashSet<>();
-        for (PdfTextLayer layer : layers) {
-            if (!layer.available() || layer.pageNumber() > OCR_CONTENTS_PAGE_LIMIT) {
-                continue;
+    public DocumentOutlineProjection build(PreparedPdfWorkspaceRef workspace) {
+        if (workspace == null) return empty();
+        try {
+            ArrayList<DocumentOutlineEntry> entries = new ArrayList<>();
+            int index = 0;
+            for (DocumentOutlineHint bookmark : bookmarks.hintsFor(workspace.sourcePath())) {
+                entries.add(new DocumentOutlineEntry("pdf-bookmark-" + index,
+                        "pdf-page-" + bookmark.sourcePage(), DocumentBlockType.HEADING,
+                        bookmark.title(), bookmark.sourcePage(), index++, List.of()));
             }
-            int ordinal = 0;
-            for (PdfTextLine line : layer.lines()) {
-                String text = line.text().replaceAll("\\s+", " ").strip();
-                if (text.isBlank() || !seenTextLayerLines.add(text.toLowerCase(java.util.Locale.ROOT))) {
-                    continue;
-                }
-                blocks.add(DocumentBlock.of(
-                        "pdf-text-layer-" + layer.pageNumber() + "-" + ordinal++,
-                        DocumentBlockType.IGNORED,
-                        text,
-                        "",
-                        Map.of(
-                                "sourcePage", Integer.toString(layer.pageNumber()),
-                                "sourcePageCount", Integer.toString(pageCount),
-                                "textLayerOrigin", layer.origin().name())));
+            for (var entry : repository.loadRegionIndex(workspace.projectRoot()).headings()) {
+                var region = entry.region();
+                PdfRegionType type = region.effectiveType();
+                DocumentBlockType blockType = switch (type) {
+                    case TITLE -> DocumentBlockType.TITLE;
+                    case HEADING -> DocumentBlockType.HEADING;
+                    default -> DocumentBlockType.SUBHEADING;
+                };
+                entries.add(new DocumentOutlineEntry("pdf-outline-" + region.id(), region.id(),
+                        blockType, region.effectiveText(), Integer.toString(entry.pageNumber()),
+                        index++, List.of()));
             }
+            if (entries.isEmpty()) return empty();
+            DocumentOutlineOrigin origin = entries.stream()
+                    .anyMatch(entry -> entry.id().startsWith("pdf-bookmark-"))
+                    ? DocumentOutlineOrigin.PDF_BOOKMARKS : DocumentOutlineOrigin.HEADINGS;
+            return new DocumentOutlineProjection(origin,
+                    "Índice del PDF preparado",
+                    origin == DocumentOutlineOrigin.PDF_BOOKMARKS
+                            ? "Bookmarks del PDF y secciones preparadas."
+                            : "Títulos y secciones leídos directamente desde regiones PDF V2.",
+                    entries, entries.size(), 0);
+        } catch (IOException ex) {
+            return new DocumentOutlineProjection(DocumentOutlineOrigin.FLAT,
+                    "Índice del PDF preparado",
+                    "No se pudo leer el índice V2: " + ex.getMessage(),
+                    List.of(), 0, 0);
         }
-        return new ReadableDocument(document.title(), document.format(), document.sourcePath(), blocks);
     }
 
-    private static int sourcePageCount(ReadableDocument document) {
-        int max = 0;
-        for (DocumentBlock block : document.blocks()) {
-            max = Math.max(max, parsePositiveInt(block.metadata().get("sourcePageCount")));
-            max = Math.max(max, parsePositiveInt(block.metadata().get("sourcePage")));
-        }
-        return max;
-    }
-
-    private static int parsePositiveInt(String value) {
-        if (value == null || value.isBlank() || !value.strip().matches("\\d+")) {
-            return 0;
-        }
-        int parsed = Integer.parseInt(value.strip());
-        return Math.max(0, parsed);
-    }
-
-    private static boolean containsSyntheticBlock(List<DocumentOutlineEntry> entries) {
-        for (DocumentOutlineEntry entry : entries == null ? List.<DocumentOutlineEntry>of() : entries) {
-            if (entry.blockId().startsWith("pdf-text-layer-") || containsSyntheticBlock(entry.children())) {
-                return true;
-            }
-        }
-        return false;
+    private static DocumentOutlineProjection empty() {
+        return new DocumentOutlineProjection(DocumentOutlineOrigin.FLAT,
+                "Índice del PDF preparado",
+                "Todavía no hay títulos o secciones en las páginas preparadas.",
+                List.of(), 0, 0);
     }
 }

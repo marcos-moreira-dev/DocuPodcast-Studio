@@ -1,9 +1,19 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.document;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentBackgroundImageFit;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeSourceChooser;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeDialogResponse;
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.StudioMessageDialog;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls;
+
 import com.marcosmoreiradev.docupodcaststudio.domain.assets.ProjectAssetReference;
 import com.marcosmoreiradev.docupodcaststudio.domain.study.DocumentStudyMusicTrack;
 import com.marcosmoreiradev.docupodcaststudio.domain.study.DocumentStudyVideoConfiguration;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionButtonFactory;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.ResponsiveActionGroup;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.DocuPodcastShellViewModel;
 import javafx.geometry.Insets;
@@ -36,12 +46,18 @@ import java.util.Objects;
 /** Project-wide documentary video settings, independent from slide editing. */
 public final class DocumentStudyVideoSettingsPanel extends BorderPane {
     private final DocuPodcastShellViewModel viewModel;
-    private final TextField title = StudioFormControls.textInput(new TextField(),
+    private final TextField title = StudioFormControls.textInput(StudioFormControls.textField(),
             "Titulo opcional mostrado en la zona superior de las diapositivas.");
-    private final Spinner<Double> defaultTableDuration = StudioFormControls.spinner(
-            new Spinner<>(new SpinnerValueFactory.DoubleSpinnerValueFactory(2.0, 60.0, 6.0, 1.0)),
-            "Segundos durante los que se muestra cada tabla sin narracion.");
+    private final Spinner<Double> defaultSecondarySemanticDuration = StudioFormControls.spinner(
+            StudioFormControls.spinner(new SpinnerValueFactory.DoubleSpinnerValueFactory(2.0, 60.0, 6.0, 1.0)),
+            "Segundos durante los que se muestra un componente semántico secundario sin audio.");
     private final VBox musicRows = new VBox(8);
+    private final javafx.scene.control.CheckBox aiIllustrations = StudioFormControls.checkBox(
+            "Incluir ilustraciones representativas con IA");
+    private final javafx.scene.control.CheckBox illustrationBackground = StudioFormControls.checkBox(
+            "Usar la ilustración como fondo de toda la diapositiva");
+    private final com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioImageBackgroundControls imageBackground =
+            new com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioImageBackgroundControls();
     private boolean syncingControls;
 
     public DocumentStudyVideoSettingsPanel(DocuPodcastShellViewModel viewModel) {
@@ -54,22 +70,38 @@ public final class DocumentStudyVideoSettingsPanel extends BorderPane {
         title.focusedProperty().addListener((obs, oldValue, focused) -> {
             if (!Boolean.TRUE.equals(focused)) commitTitle();
         });
-        defaultTableDuration.setEditable(true);
-        defaultTableDuration.valueProperty().addListener((obs, oldValue, value) -> {
+        defaultSecondarySemanticDuration.setEditable(true);
+        defaultSecondarySemanticDuration.valueProperty().addListener((obs, oldValue, value) -> {
             if (!syncingControls && value != null) {
-                saveConfiguration(configuration().withDefaultTableDuration(value));
+                saveConfiguration(configuration()
+                        .withDefaultSecondarySemanticDuration(value));
             }
         });
 
+        aiIllustrations.setWrapText(true);
+        aiIllustrations.setOnAction(event -> {
+            if (!syncingControls) saveConfiguration(configuration().withAiIllustrationsEnabled(aiIllustrations.isSelected()));
+        });
+        StudioFormControls.installTooltip(aiIllustrations,
+                "Genera ilustraciones sencillas al exportar video. Reutiliza las existentes; excluye títulos y capturas.");
+        illustrationBackground.setWrapText(true);
+        illustrationBackground.setOnAction(event -> commitIllustrationAppearance());
+        imageBackground.opacity.valueProperty().addListener((obs, before, after) -> commitIllustrationAppearance());
+        imageBackground.fitGroup.selectedToggleProperty().addListener((obs, before, after) -> commitIllustrationAppearance());
+        VBox backgroundOptions = new VBox(7, fieldLabel("Visibilidad de la imagen"), imageBackground.opacity,
+                fieldLabel("Ajuste de imagen"), imageBackground.fitChoices());
+        backgroundOptions.disableProperty().bind(aiIllustrations.selectedProperty().not()
+                .or(illustrationBackground.selectedProperty().not()).or(aiIllustrations.disabledProperty()));
+        illustrationBackground.disableProperty().bind(aiIllustrations.selectedProperty().not().or(aiIllustrations.disabledProperty()));
         GridPane general = new GridPane();
         general.setHgap(8);
         general.setVgap(7);
         general.add(fieldLabel("Titulo del video"), 0, 0);
         general.add(title, 0, 1);
-        general.add(fieldLabel("Duracion predeterminada de tablas"), 0, 2);
-        general.add(defaultTableDuration, 0, 3);
+        general.add(fieldLabel("Duración predeterminada de elementos semánticos secundarios:"), 0, 2);
+        general.add(defaultSecondarySemanticDuration, 0, 3);
         GridPane.setHgrow(title, Priority.ALWAYS);
-        GridPane.setHgrow(defaultTableDuration, Priority.ALWAYS);
+        GridPane.setHgrow(defaultSecondarySemanticDuration, Priority.ALWAYS);
 
         Button addMusic = ActionButtonFactory.secondary(
                 "Agregar musica",
@@ -80,6 +112,13 @@ public final class DocumentStudyVideoSettingsPanel extends BorderPane {
                 hint("Estos valores se aplican al video completo, no a un parrafo individual."),
                 general,
                 new Separator(),
+                sectionTitle("Ilustraciones con IA"),
+                aiIllustrations,
+                illustrationBackground,
+                hint("Sustituye el fondo configurado solo donde haya una ilustración de IA. Conserva el texto y la mascota."),
+                backgroundOptions,
+                hint("Usa los motores de IA general e imágenes de Configuración. Se preparan al renderizar el video."),
+                new Separator(),
                 sectionTitle("Musica de fondo"),
                 hint("Las pistas se reproducen en secuencia y vuelven a empezar si el video continua."),
                 addMusic,
@@ -87,7 +126,7 @@ public final class DocumentStudyVideoSettingsPanel extends BorderPane {
         content.setPadding(new Insets(14));
         content.setFillWidth(true);
 
-        ScrollPane scroll = new ScrollPane(content);
+        ScrollPane scroll = StudioViewportControls.scrollPane(content);
         scroll.setFitToWidth(true);
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
@@ -106,18 +145,33 @@ public final class DocumentStudyVideoSettingsPanel extends BorderPane {
         syncingControls = true;
         try {
             if (!Objects.equals(title.getText(), configuration.videoTitle())) title.setText(configuration.videoTitle());
-            defaultTableDuration.getValueFactory().setValue(configuration.defaultTableDurationSeconds());
+            aiIllustrations.setSelected(configuration.aiIllustrationsEnabled());
+            var appearance = configuration.aiIllustrationAppearance();
+            illustrationBackground.setSelected(appearance.background());
+            imageBackground.opacity.setValue((int) Math.round(appearance.opacity() * 100));
+            imageBackground.setFit(com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentBackgroundImageFit.valueOf(appearance.fit()));
+            defaultSecondarySemanticDuration.getValueFactory().setValue(
+                    configuration.defaultSecondarySemanticDurationSeconds());
         } finally {
             syncingControls = false;
         }
         boolean unavailable = !viewModel.documentaryVideoConfigurationAvailable();
         title.setDisable(unavailable);
-        defaultTableDuration.setDisable(unavailable);
+        aiIllustrations.setDisable(unavailable);
+        defaultSecondarySemanticDuration.setDisable(unavailable);
         refreshMusicRows();
     }
 
+    private void commitIllustrationAppearance() {
+        if (syncingControls || imageBackground.opacity.getValue() == null) return;
+        saveConfiguration(configuration().withAiIllustrationAppearance(
+                new com.marcosmoreiradev.docupodcaststudio.domain.study.DocumentAiIllustrationAppearance(
+                        illustrationBackground.isSelected(), imageBackground.opacity.getValue() / 100.0,
+                        imageBackground.fit().name())));
+    }
+
     private void chooseMusic() {
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle("Agregar musica de fondo");
         chooser.getExtensionFilters().setAll(
                 new FileChooser.ExtensionFilter("Audio compatible", "*.wav", "*.mp3", "*.m4a", "*.flac", "*.ogg"),
@@ -154,7 +208,7 @@ public final class DocumentStudyVideoSettingsPanel extends BorderPane {
         Tooltip.install(name, new Tooltip(displayName));
         name.getStyleClass().add("document-study-video-music-name");
         Label duration = hint("Duracion: " + seconds(track.durationSeconds()));
-        Slider volume = StudioFormControls.slider(new Slider(0.0, 1.0, track.volume()), "Volumen de esta pista.");
+        Slider volume = StudioFormControls.slider(StudioFormControls.slider(0.0, 1.0, track.volume()), "Volumen de esta pista.");
         volume.setBlockIncrement(0.05);
         Label value = new Label(percent(track.volume()));
         volume.valueProperty().addListener((obs, oldValue, newValue) -> value.setText(percent(newValue.doubleValue())));
@@ -172,6 +226,7 @@ public final class DocumentStudyVideoSettingsPanel extends BorderPane {
         up.setDisable(index == 0);
         down.setDisable(index >= size - 1);
         HBox actions = new HBox(6, up, down, remove);
+        ResponsiveActionGroup.install(actions, 280, up, down, remove);
         VBox row = new VBox(6, name, duration, volumeHeading, volume, actions);
         row.getStyleClass().add("document-study-video-music-row");
         return row;
@@ -211,11 +266,14 @@ public final class DocumentStudyVideoSettingsPanel extends BorderPane {
     }
 
     private void showError(String header, Exception ex) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.initOwner(getScene() == null ? null : getScene().getWindow());
-        alert.setTitle("Video documental");
-        alert.setHeaderText(header);
-        alert.setContentText(ex.getMessage() == null ? ex.toString() : ex.getMessage());
+        Alert alert = NativeDialogResponse.alert(Alert.AlertType.ERROR);
+        StudioMessageDialog.configure(
+                alert,
+                getScene() == null ? null : getScene().getWindow(),
+                "Video documental",
+                header,
+                ex.getMessage() == null ? ex.toString() : ex.getMessage(),
+                StudioMessageDialog.technicalDetail(ex));
         alert.showAndWait();
     }
 

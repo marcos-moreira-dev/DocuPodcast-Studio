@@ -130,6 +130,8 @@ public enum ImageModelPackageProfile {
         return displayName;
     }
 
+    @Override public String toString() { return displayName; }
+
     public String description() {
         return description;
     }

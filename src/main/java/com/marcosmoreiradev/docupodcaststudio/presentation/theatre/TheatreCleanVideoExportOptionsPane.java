@@ -12,7 +12,7 @@ import java.util.List;
 
 /** Options that belong only to the clean theatre renderer. */
 public final class TheatreCleanVideoExportOptionsPane extends VBox {
-    private final CheckBox renderUnassigned = new CheckBox("Renderizar fragmentos sin imagen ni lienzo");
+    private final CheckBox renderUnassigned = StudioFormControls.checkBox("Renderizar fragmentos sin imagen ni lienzo");
     private final VideoEncodingOptionsPane video;
 
     public TheatreCleanVideoExportOptionsPane(List<VideoEncoderPolicy> encoders,
@@ -20,7 +20,6 @@ public final class TheatreCleanVideoExportOptionsPane extends VBox {
         setSpacing(12);
         getStyleClass().add("theatre-clean-video-export-options");
         video = new VideoEncodingOptionsPane(encoders, defaultEncoder);
-        renderUnassigned.getStyleClass().addAll(StudioFormControls.FORM_CONTROL, StudioFormControls.FORM_TOGGLE);
         StudioFormControls.installTooltip(renderUnassigned,
                 "Usa un fondo negro con texto blanco cuando el fragmento no tenga imagen ni frame dibujado.");
         Label explanation = new Label(

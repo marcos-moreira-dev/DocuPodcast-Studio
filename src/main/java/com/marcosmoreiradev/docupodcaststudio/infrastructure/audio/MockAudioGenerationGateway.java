@@ -118,6 +118,7 @@ public final class MockAudioGenerationGateway implements AudioGenerationGateway 
                 status.jobId(), status.documentName(), AudioJobState.CANCELLATION_REQUESTED, status.stage(),
                 status.completedSegments(), status.totalSegments(), status.failedSegments(), status.progress(),
                 status.currentSegmentId(), status.currentSegmentTitle(), status.estimatedRemainingSeconds(),
+                status.estimatedRemainingErrorSeconds(),
                 "Cancelación solicitada. El job se detendrá al terminar el paso seguro actual.",
                 status.outputDirectory(), status.finalAudioPath(), status.manifestPath()
         )));
@@ -236,7 +237,8 @@ public final class MockAudioGenerationGateway implements AudioGenerationGateway 
                                      String message, Path jobDir, String finalAudioPath, String manifestPath) {
         return new AudioJobStatusDto(jobId, request.script().title(), state, stage, completed, total, failed,
                 total == 0 ? 0.0 : (double) completed / Math.max(1, total), segmentId, segmentTitle,
-                eta, message, jobDir.toString(), finalAudioPath, manifestPath);
+                eta, eta <= 0 ? 0 : Math.max(1, Math.round(eta * 0.15)),
+                message, jobDir.toString(), finalAudioPath, manifestPath);
     }
 
     private void publish(AudioJobStatusDto status, Consumer<AudioJobStatusDto> consumer, Path projectDirectory,
@@ -257,7 +259,8 @@ public final class MockAudioGenerationGateway implements AudioGenerationGateway 
 
     private static List<AudioSegmentSnapshot> pendingSegments(AudioGenerationRequest request) {
         return request.generationUnits().stream()
-                .map(unit -> AudioSegmentSnapshot.pending(unit.id(), unit.effectiveTitle()))
+                .map(unit -> AudioSegmentSnapshot.pending(
+                        unit.id(), unit.effectiveTitle(), unit.sourceFingerprint()))
                 .toList();
     }
 
@@ -270,13 +273,15 @@ public final class MockAudioGenerationGateway implements AudioGenerationGateway 
         for (AudioGenerationUnit unit : request.generationUnits()) {
             AudioSegmentSnapshot persisted = persistedById.get(unit.id());
             if (persisted == null) {
-                merged.add(AudioSegmentSnapshot.pending(unit.id(), unit.effectiveTitle()));
-            } else if (persisted.completed()) {
+                merged.add(AudioSegmentSnapshot.pending(
+                        unit.id(), unit.effectiveTitle(), unit.sourceFingerprint()));
+            } else if (persisted.reusableFor(unit.sourceFingerprint())) {
                 merged.add(persisted);
             } else {
                 // Failed, cancelled, generating-at-crash and pending units are eligible for regeneration.
                 merged.add(new AudioSegmentSnapshot(unit.id(), unit.effectiveTitle(), persisted.status(),
-                        persisted.audioRelativePath(), persisted.durationSeconds(), persisted.attempts(), persisted.errorMessage()));
+                        persisted.audioRelativePath(), persisted.durationSeconds(), persisted.attempts(),
+                        persisted.errorMessage(), unit.sourceFingerprint()));
             }
         }
         return List.copyOf(merged);

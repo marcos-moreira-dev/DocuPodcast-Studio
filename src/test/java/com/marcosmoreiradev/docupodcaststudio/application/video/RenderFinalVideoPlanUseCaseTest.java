@@ -1,11 +1,11 @@
 package com.marcosmoreiradev.docupodcaststudio.application.video;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.video.SimpleVideoResolutionPreset;
+
 import com.marcosmoreiradev.docupodcaststudio.application.compute.ComputeDevicePolicy;
 import com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy;
-import com.marcosmoreiradev.docupodcaststudio.application.process.ExternalProcessObserver;
-import com.marcosmoreiradev.docupodcaststudio.application.process.ExternalProcessRequest;
-import com.marcosmoreiradev.docupodcaststudio.application.process.ExternalProcessResult;
-import com.marcosmoreiradev.docupodcaststudio.application.process.ExternalProcessRunner;
+import com.marcosmoreiradev.docupodcaststudio.application.media.MediaCapabilityService;
+import com.marcosmoreiradev.docupodcaststudio.media.api.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -13,47 +13,42 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 final class RenderFinalVideoPlanUseCaseTest {
     @TempDir Path tempDir;
     private Path projectDirectory;
-    private Path applicationRoot;
     private Path overlayAudio;
-    private RecordingRunner runner;
+    private CapturingRenderEngine engine;
     private RenderFinalVideoPlanUseCase renderer;
 
     @BeforeEach
     void setUp() throws Exception {
         projectDirectory = tempDir.resolve("project");
-        applicationRoot = tempDir.resolve("app");
-        Path tools = applicationRoot.resolve("tools/ffmpeg/bin");
-        Files.createDirectories(tools);
-        Files.writeString(tools.resolve("ffmpeg.exe"), "fake");
-        Files.writeString(tools.resolve("ffprobe.exe"), "fake");
         Files.createDirectories(projectDirectory.resolve("media/images"));
         Files.createDirectories(projectDirectory.resolve("media/audio"));
         Files.createDirectories(projectDirectory.resolve("generated/narrative/clips"));
-        Files.write(projectDirectory.resolve("media/images/frame.png"), new byte[] {1});
-        Files.write(projectDirectory.resolve("media/audio/narration.wav"), new byte[] {1});
-        Files.write(projectDirectory.resolve("generated/narrative/clips/take.mp4"), new byte[] {1});
+        Files.write(projectDirectory.resolve("media/images/frame.png"), new byte[]{1});
+        Files.write(projectDirectory.resolve("media/audio/narration.wav"), new byte[]{1});
+        Files.write(projectDirectory.resolve("generated/narrative/clips/take.mp4"), new byte[]{1});
         overlayAudio = projectDirectory.resolve("media/audio/ambience.wav");
-        Files.write(overlayAudio, new byte[] {1});
-        runner = new RecordingRunner();
+        Files.write(overlayAudio, new byte[]{1});
+        engine = new CapturingRenderEngine();
+        EngineRegistry<VideoRenderEngine> renders = new EngineRegistry<>(CapabilityId.VIDEO_RENDERING);
+        renders.register(engine);
+        MediaEnginePlatform platform = new MediaEnginePlatform(null, null, null, renders, null);
         renderer = new RenderFinalVideoPlanUseCase(
-                new FfmpegRuntimeProbeUseCase(runner), new EmbeddedFfmpegLocator(), runner);
+                new MediaCapabilityService(platform, LocalResourceScheduler.safeDefaults()));
     }
 
     @Test
-    void rendersPreparedPlanWithoutCategoryStateAndCleansTemporaryWork() throws Exception {
+    void translatesProductPlanToNeutralTimeline() throws Exception {
         Path target = tempDir.resolve("plain.mp4");
         ArrayList<VideoRenderProgress> progress = new ArrayList<>();
 
@@ -62,179 +57,129 @@ final class RenderFinalVideoPlanUseCaseTest {
 
         assertEquals(target.toAbsolutePath().normalize(), result.targetFile());
         assertTrue(Files.size(target) > 0L);
+        VideoTimelinePlan plan = engine.lastRequest.effectivePlan();
+        assertEquals(1280, plan.width());
+        assertEquals(720, plan.height());
+        assertEquals(24, plan.framesPerSecond());
+        assertEquals(VideoEncodingPreference.CPU, plan.encodingPreference());
+        assertFalse(engine.lastContext.policy().hasTimeout());
+        assertEquals(projectDirectory.resolve("media/images/frame.png"), plan.items().getFirst().visuals().getFirst().file());
+        assertEquals(projectDirectory.resolve("media/audio/narration.wav"), plan.items().getFirst().narrationAudio());
+        assertTrue(progress.stream().anyMatch(item -> item.stage() == VideoRenderStage.ASSEMBLING_FINAL));
         assertTrue(progress.stream().anyMatch(item -> item.stage() == VideoRenderStage.COMPLETED));
-        assertFalse(runner.renderCommands().stream().anyMatch(command -> command.contains("-filter_complex")));
-        List<String> frameCommand = runner.renderCommands().stream()
-                .filter(command -> command.contains(projectDirectory.resolve("media/audio/narration.wav").toString()))
-                .findFirst()
-                .orElseThrow();
-        assertTrue(frameCommand.stream().anyMatch(part -> part.contains(
-                "apad=pad_dur=1.000,atrim=duration=1.000,asetpts=PTS-STARTPTS")));
-        assertTrue(frameCommand.stream().anyMatch(part -> part.contains("aresample=48000")));
-        assertTrue(frameCommand.stream().anyMatch(part -> part.contains(
-                "aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo")));
-        assertTrue(frameCommand.contains("-fps_mode"));
-        assertTrue(frameCommand.contains("cfr"));
-        assertFalse(frameCommand.contains("-shortest"));
-        assertTrue(frameCommand.contains("-t"));
-        try (var children = Files.list(projectDirectory.resolve("exports/video-render-work"))) {
-            assertEquals(0L, children.count());
-        }
     }
 
     @Test
-    void appliesOptionalGenericAudioOverlayInASecondPass() throws Exception {
-        Path target = tempDir.resolve("overlay.mp4");
+    void translatesAudioOverlaysWithoutCodecDetails() throws Exception {
         VideoAudioOverlayPlan overlays = new VideoAudioOverlayPlan(List.of(
-                new VideoAudioOverlayPlan.Input("AMBIENCE", overlayAudio, 0.0, 1.0, 0.0, 0.25)));
+                new VideoAudioOverlayPlan.Input("AMBIENCE", overlayAudio, 0.1, 0.9, 0.4, 0.25, 0.1)));
 
-        renderer.render(request(target, overlays), ignored -> { }, () -> false);
+        renderer.render(request(tempDir.resolve("overlay.mp4"), overlays));
 
-        assertTrue(Files.size(target) > 0L);
-        assertTrue(runner.renderCommands().stream().anyMatch(command -> command.contains("-filter_complex")));
-        assertTrue(runner.renderCommands().stream().anyMatch(command -> command.stream()
-                .anyMatch(part -> part.contains("amix=inputs=2"))));
+        TimelineAudioTrack track = engine.lastRequest.effectivePlan().overlays().getFirst();
+        assertEquals("AMBIENCE", track.id());
+        assertEquals(overlayAudio.toAbsolutePath().normalize(), track.file());
+        assertEquals(0.4, track.timelineStartSeconds());
+        assertEquals(0.25, track.volume());
+        assertEquals(0.1, track.fadeInSeconds());
     }
 
     @Test
-    void keepsOverlayMixAliveForTheWholeSilentClosingTimeline() throws Exception {
-        SimpleVideoFrame closing = new SimpleVideoFrame(
-                "FRAME-CLOSING", "CLOSING-1", "Fin", "", "IMG-001",
-                "media/images/frame.png", "", 0.0, 6.0, true, false, true);
-        SimpleVideoPlan plan = new SimpleVideoPlan("Cierre", List.of(closing), 0.0, Instant.now());
-        SimpleVideoExportSettings settings = new SimpleVideoExportSettings(
-                SimpleVideoResolutionPreset.HD_720, 24, 0.0, true, true,
-                ComputeDevicePolicy.CPU_ONLY, VideoEncoderPolicy.CPU_X264);
-        VideoAudioOverlayPlan overlays = new VideoAudioOverlayPlan(List.of(
-                new VideoAudioOverlayPlan.Input("MUSIC", overlayAudio, 0.0, 1.0, 0.0, 0.25)));
-        FinalVideoRenderRequest request = new FinalVideoRenderRequest(
-                plan, projectDirectory, tempDir.resolve("closing.mp4"), settings,
-                applicationRoot, null, overlays);
-
-        renderer.render(request, ignored -> { }, () -> false);
-
-        List<String> mixCommand = runner.renderCommands().stream()
-                .filter(command -> command.contains("-filter_complex"))
-                .findFirst()
-                .orElseThrow();
-        String joined = String.join(" ", mixCommand);
-        assertTrue(joined.contains("apad=pad_dur=6.000"));
-        assertTrue(joined.contains("atrim=duration=6.000"));
-        assertTrue(joined.contains("amix=inputs=2:duration=longest"));
-        assertTrue(joined.contains("-t 6.000"));
-        assertTrue(joined.contains("-ar 48000 -ac 2"));
-        assertFalse(mixCommand.contains("-shortest"));
-
-        List<String> closingCommand = runner.renderCommands().stream()
-                .filter(command -> command.stream().anyMatch(part -> part.contains("anullsrc=")))
-                .findFirst()
-                .orElseThrow();
-        assertTrue(closingCommand.contains("anullsrc=channel_layout=stereo:sample_rate=48000"));
-        assertTrue(closingCommand.stream().anyMatch(part -> part.contains("fps=24")));
-        assertFalse(closingCommand.contains("-shortest"));
-    }
-
-    @Test
-    void cancellationStopsBeforeEncodingTheFirstFrame() {
-        ArrayList<VideoRenderProgress> progress = new ArrayList<>();
-
-        IOException failure = assertThrows(IOException.class, () -> renderer.render(
-                request(tempDir.resolve("cancelled.mp4"), VideoAudioOverlayPlan.emptyPlan()),
-                progress::add, () -> true));
-
-        assertTrue(failure.getMessage().contains("cancelada"));
-        assertTrue(progress.stream().anyMatch(item -> item.stage() == VideoRenderStage.CANCELLED));
-        assertTrue(runner.renderCommands().isEmpty());
-    }
-
-    @Test
-    void rendersNarrativeVideoPartsWithoutTheirAudioAndMuxesNarrationOnce() throws Exception {
+    void preservesClipOffsetsAndDurations() throws Exception {
         SimpleVideoFrame.VisualPart clip = SimpleVideoFrame.VisualPart.videoClip(
                 "VIDEO-001", "generated/narrative/clips/take.mp4", 1.25, 0.75, "clip-1");
         SimpleVideoFrame frame = new SimpleVideoFrame(
-                "FRAME-001", "SEG-001", "Toma", "Texto",
-                "IMG-001", "media/images/frame.png", "media/audio/narration.wav",
-                1.25, 0.0, true, true, false, List.of(), List.of(clip));
+                "FRAME-001", "SEG-001", "Toma", "Texto", "IMG-001", "media/images/frame.png",
+                "media/audio/narration.wav", 1.25, 0.0, true, true, false, List.of(), List.of(clip));
         SimpleVideoPlan plan = new SimpleVideoPlan("Narrativo", List.of(frame), 0.0, Instant.now());
-        SimpleVideoExportSettings settings = new SimpleVideoExportSettings(
-                SimpleVideoResolutionPreset.HD_VERTICAL_720X1280, 24, 0.0, true, true,
-                ComputeDevicePolicy.CPU_ONLY, VideoEncoderPolicy.CPU_X264);
-        FinalVideoRenderRequest request = new FinalVideoRenderRequest(
-                plan, projectDirectory, tempDir.resolve("narrative.mp4"), settings,
-                applicationRoot, null, VideoAudioOverlayPlan.emptyPlan());
+        renderer.render(new FinalVideoRenderRequest(plan, projectDirectory, tempDir.resolve("clip.mp4"),
+                settings(), tempDir, null, VideoAudioOverlayPlan.emptyPlan()));
 
-        renderer.render(request, ignored -> { }, () -> false);
+        TimelineVisualSource source = engine.lastRequest.effectivePlan().items().getFirst().visuals().getFirst();
+        assertEquals(TimelineVisualKind.VIDEO_CLIP, source.kind());
+        assertEquals(0.75, source.sourceStartSeconds());
+        assertEquals(1.25, source.durationSeconds());
+    }
 
-        List<List<String>> commands = runner.renderCommands();
-        List<String> videoPartCommand = commands.stream()
-                .filter(command -> command.contains(projectDirectory.resolve(
-                        "generated/narrative/clips/take.mp4").toString()))
-                .findFirst()
-                .orElseThrow();
-        assertTrue(videoPartCommand.contains("-an"));
-        assertTrue(videoPartCommand.contains("-ss"));
-        assertTrue(videoPartCommand.contains("0.750"));
-        assertTrue(videoPartCommand.contains("-t"));
-        assertTrue(videoPartCommand.contains("1.250"));
-        long narrationInputs = commands.stream()
-                .filter(command -> command.contains(projectDirectory.resolve(
-                        "media/audio/narration.wav").toString()))
-                .count();
-        assertEquals(1L, narrationInputs);
+    @Test
+    void preservesQsvAmfAndNvencExactlyToTheNeutralAdapterContract()
+            throws Exception {
+        assertEncoder(VideoEncoderPolicy.NVIDIA_NVENC,
+                VideoEncodingPreference.NVIDIA_NVENC, "nvenc.mp4");
+        assertEncoder(VideoEncoderPolicy.INTEL_QSV,
+                VideoEncodingPreference.INTEL_QSV, "qsv.mp4");
+        assertEncoder(VideoEncoderPolicy.AMD_AMF,
+                VideoEncodingPreference.AMD_AMF, "amf.mp4");
+    }
+
+    @Test
+    void cancellationReleasesSharedResourcesAndReportsCancelled() {
+        ArrayList<VideoRenderProgress> progress = new ArrayList<>();
+        IOException failure = assertThrows(IOException.class, () -> renderer.render(
+                request(tempDir.resolve("cancelled.mp4"), VideoAudioOverlayPlan.emptyPlan()),
+                progress::add, () -> true));
+        assertTrue(failure.getMessage().contains("cancelada"));
+        assertTrue(progress.stream().anyMatch(item -> item.stage() == VideoRenderStage.CANCELLED));
     }
 
     private FinalVideoRenderRequest request(Path target, VideoAudioOverlayPlan overlays) {
         SimpleVideoFrame frame = new SimpleVideoFrame("FRAME-001", "SEG-001", "Escena", "Texto",
-                "IMG-001", "media/images/frame.png", "media/audio/narration.wav",
-                1.0, 0.0, true, true);
-        SimpleVideoPlan plan = new SimpleVideoPlan("Prueba", List.of(frame), 0.0, Instant.now());
-        SimpleVideoExportSettings settings = new SimpleVideoExportSettings(
-                SimpleVideoResolutionPreset.HD_720, 24, 0.0, true, true,
-                ComputeDevicePolicy.CPU_ONLY, VideoEncoderPolicy.CPU_X264);
-        return new FinalVideoRenderRequest(plan, projectDirectory, target, settings,
-                applicationRoot, null, overlays);
+                "IMG-001", "media/images/frame.png", "media/audio/narration.wav", 1.0, 0.0, true, true);
+        return new FinalVideoRenderRequest(
+                new SimpleVideoPlan("Prueba", List.of(frame), 0.0, Instant.now()),
+                projectDirectory, target, settings(), tempDir, null, overlays);
     }
 
-    private static final class RecordingRunner implements ExternalProcessRunner {
-        private final ArrayList<List<String>> commands = new ArrayList<>();
+    private void assertEncoder(VideoEncoderPolicy policy,
+                               VideoEncodingPreference expected,
+                               String output) throws Exception {
+        FinalVideoRenderRequest base = request(tempDir.resolve(output),
+                VideoAudioOverlayPlan.emptyPlan());
+        SimpleVideoExportSettings settings = new SimpleVideoExportSettings(
+                SimpleVideoResolutionPreset.HD_720, 24, 0.0,
+                true, true, ComputeDevicePolicy.PREFER_GPU, policy);
+        renderer.render(new FinalVideoRenderRequest(base.plan(),
+                base.projectDirectory(), base.targetMp4(), settings,
+                base.applicationRoot(), base.configuredFfmpeg(),
+                base.audioOverlayPlan()));
+        assertEquals(expected,
+                engine.lastRequest.effectivePlan().encodingPreference());
+        assertEquals(policy.ffmpegEncoder(), expected.exactKind().ffmpegCodec());
+    }
 
-        @Override
-        public ExternalProcessResult run(ExternalProcessRequest request) throws IOException {
-            commands.add(request.command());
-            if (request.command().contains("-encoders")) {
-                return result(request, " V....D libx264 libx264 H.264");
-            }
-            if (request.command().contains("-version")) {
-                String executable = request.command().getFirst().toLowerCase();
-                return result(request, executable.contains("ffprobe")
-                        ? "ffprobe version fake"
-                        : "ffmpeg version fake --enable-libx264");
-            }
-            Path output = Path.of(request.command().getLast());
-            Files.createDirectories(output.toAbsolutePath().normalize().getParent());
-            Files.write(output, new byte[] {1, 2, 3});
-            return result(request, "frame=1 time=00:00:01.00 speed=1x");
+    private static SimpleVideoExportSettings settings() {
+        return new SimpleVideoExportSettings(SimpleVideoResolutionPreset.HD_720, 24, 0.0, true, true,
+                ComputeDevicePolicy.CPU_ONLY, VideoEncoderPolicy.CPU_X264);
+    }
+
+    private static final class CapturingRenderEngine implements VideoRenderEngine {
+        private static final EngineId ID = new EngineId("fake-render");
+        private VideoRenderRequest lastRequest;
+        private ExecutionContext lastContext;
+
+        @Override public EngineDescriptor descriptor() {
+            return new EngineDescriptor(ID, CapabilityId.VIDEO_RENDERING, "Fake render", "1", "test", Set.of(), true);
         }
 
-        @Override
-        public ExternalProcessResult run(ExternalProcessRequest request, ExternalProcessObserver observer)
-                throws IOException {
-            if (observer != null && observer.cancellationRequested()) {
-                return new ExternalProcessResult(1, false, true, "", "", request.commandAudit(), Duration.ZERO);
-            }
-            if (observer != null) observer.onOutputLine("frame=1 time=00:00:01.00 speed=1x");
-            return run(request);
+        @Override public EngineConfigurationSchema configurationSchema() {
+            return new EngineConfigurationSchema(ID, List.of());
         }
 
-        List<List<String>> renderCommands() {
-            return commands.stream()
-                    .filter(command -> !command.contains("-version") && !command.contains("-encoders"))
-                    .toList();
+        @Override public EngineReadiness inspectReadiness(EngineConfiguration configuration) {
+            return EngineReadiness.ready(ID, "ready");
         }
 
-        private static ExternalProcessResult result(ExternalProcessRequest request, String stdout) {
-            return new ExternalProcessResult(0, false, false, stdout, "",
-                    request.commandAudit(), Duration.ofMillis(1));
+        @Override public VideoRenderResult render(VideoRenderRequest request, ExecutionContext context)
+                throws IOException, InterruptedException {
+            context.cancellation().throwIfCancellationRequested();
+            lastRequest = request;
+            lastContext = context;
+            Files.createDirectories(request.outputFile().toAbsolutePath().normalize().getParent());
+            Files.write(request.outputFile(), new byte[]{1, 2, 3});
+            context.progress().report("RENDERING", 0.5, "rendering");
+            context.progress().report("ASSEMBLING", 1.0, "assembling");
+            context.progress().report("COMPLETED", 1.0, "done");
+            return new VideoRenderResult(request.outputFile(), request.effectivePlan().durationSeconds(), Map.of());
         }
     }
 }

@@ -2,6 +2,7 @@ package com.marcosmoreiradev.docupodcaststudio.application.video;
 
 import java.text.Normalizer;
 import java.util.Locale;
+import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreInteractionTargetPolicy;
 
 /** Normalized theatre stage geometry shared by preview and video export. */
 public final class TheatreStageGeometry {
@@ -41,6 +42,7 @@ public final class TheatreStageGeometry {
     public static String normalizeFrameMode(String mode) {
         String normalized = normalize(mode);
         return switch (normalized) {
+            case "scenery" -> "scenery";
             case "characters", "personajes" -> "characters";
             case "none", "sin acompanante", "sin acompañante" -> "none";
             default -> "fragments";
@@ -48,6 +50,7 @@ public final class TheatreStageGeometry {
     }
 
     public static boolean specialInteractionTarget(String target) {
+        if (TheatreInteractionTargetPolicy.isAllRemaining(target)) return true;
         String normalized = normalize(target);
         return normalized.equals("publico")
                 || normalized.equals("para si mismo")
@@ -59,7 +62,10 @@ public final class TheatreStageGeometry {
             return "";
         }
         return Normalizer.normalize(value.strip().toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
-                .replaceAll("\\p{M}+", "");
+                .replaceAll("\\p{M}+", "")
+                .replaceAll("[_-]+", " ")
+                .replaceAll("\\s+", " ")
+                .strip();
     }
 
     public record StagePoint(double x, double y) {

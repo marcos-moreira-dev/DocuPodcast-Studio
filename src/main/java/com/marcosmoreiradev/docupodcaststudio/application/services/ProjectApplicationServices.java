@@ -8,6 +8,7 @@ import com.marcosmoreiradev.docupodcaststudio.application.project.InspectProject
 import com.marcosmoreiradev.docupodcaststudio.application.project.SaveProjectUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.project.ValidateProjectPayloadUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.project.ValidateProjectWorkspaceIntegrityUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.ReconcilePdfOperationAttemptsUseCase;
 
 /** Project-related use cases. */
 public record ProjectApplicationServices(
@@ -17,7 +18,9 @@ public record ProjectApplicationServices(
         ValidateProjectPayloadUseCase validateProjectPayload,
         LoadProjectWorkspaceArtifactsUseCase loadProjectWorkspaceArtifacts,
         ValidateProjectWorkspaceIntegrityUseCase validateProjectWorkspaceIntegrity,
+        ReconcilePdfOperationAttemptsUseCase reconcilePdfOperationAttempts,
         InspectProjectIntegrityUseCase inspectProjectIntegrity,
-        ProjectRoundTripUseCase projectRoundTrip
+        ProjectRoundTripUseCase projectRoundTrip,
+        BatchApplicationServices batch
 ) {
 }

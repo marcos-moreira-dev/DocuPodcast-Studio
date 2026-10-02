@@ -109,6 +109,22 @@ final class RecentProjectsStoreTest {
         assertTrue(!persisted.contains("Missing\t"));
     }
 
+    @Test
+    void expressBatchChildrenNeverPolluteGeneralRecentProjects() throws Exception {
+        RecentProjectsStore store = new RecentProjectsStore(temp.resolve("recent-projects.txt"));
+        Path batchRoot = temp.resolve("serie");
+        Path child = batchRoot.resolve("proyectos/episodio/episodio.docupodcast.json");
+        Files.createDirectories(child.getParent());
+        Files.writeString(batchRoot.resolve("serie.docupodcast-batch.json"), "{}");
+        Files.writeString(child, "{}");
+
+        assertTrue(store.remember(child, "Episodio Express").isEmpty());
+
+        Files.writeString(store.storeFile(), "Episodio Express\tEstudio documental\t" + child);
+        assertTrue(store.load().isEmpty());
+        assertTrue(Files.readString(store.storeFile()).isBlank());
+    }
+
     private static void writeProject(Path projectFile) {
         try {
             Files.writeString(projectFile, "{}");

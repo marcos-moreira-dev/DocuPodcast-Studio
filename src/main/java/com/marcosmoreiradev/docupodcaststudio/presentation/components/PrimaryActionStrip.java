@@ -29,7 +29,7 @@ public final class PrimaryActionStrip extends HBox {
         getStyleClass().add(AppStyles.UI_PRIMARY_ACTION_STRIP);
         setAlignment(Pos.CENTER_LEFT);
 
-        Button button = new Button();
+        Button button = ActionButtonFactory.primary("");
         button.textProperty().bind(actionLabel);
         button.getStyleClass().add(AppStyles.UI_PRIMARY_ACTION_BUTTON);
         button.setOnAction(event -> action.run());

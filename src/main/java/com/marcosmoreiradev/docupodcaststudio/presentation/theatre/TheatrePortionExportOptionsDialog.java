@@ -1,7 +1,11 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.theatre;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioDialogShell;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
+
 import com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy;
-import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoResolutionPreset;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.SimpleVideoResolutionPreset;
 import com.marcosmoreiradev.docupodcaststudio.application.video.TheatreExportScope;
 import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreProjectLayer;
 import com.marcosmoreiradev.docupodcaststudio.presentation.notification.DialogStyler;
@@ -25,12 +29,12 @@ public final class TheatrePortionExportOptionsDialog {
                                                       List<TheatreProjectLayer.Scene> scenes,
                                                       List<VideoEncoderPolicy> availableEncoderPolicies,
                                                       VideoEncoderPolicy defaultEncoderPolicy) {
-        Dialog<TheatrePortionExportOptions> dialog = new Dialog<>();
+        Dialog<TheatrePortionExportOptions> dialog = StudioDialogShell.dialog();
         dialog.setTitle("Exportar porcion de obra");
         dialog.setHeaderText("Elige que parte de la obra exportar");
         DialogStyler.apply(dialog, owner);
 
-        ComboBox<ScopeType> scopeType = new ComboBox<>();
+        ComboBox<ScopeType> scopeType = StudioFormControls.comboBox();
         scopeType.getItems().setAll(ScopeType.SCENE, ScopeType.ACT);
         scopeType.setValue((scenes == null || scenes.isEmpty()) && acts != null && !acts.isEmpty()
                 ? ScopeType.ACT : ScopeType.SCENE);
@@ -48,7 +52,7 @@ public final class TheatrePortionExportOptionsDialog {
             }
         });
 
-        ComboBox<ScopeItem> scopeItem = new ComboBox<>();
+        ComboBox<ScopeItem> scopeItem = StudioFormControls.comboBox();
         scopeItem.setMaxWidth(Double.MAX_VALUE);
         styleCombo(scopeItem);
         scopeItem.setConverter(new StringConverter<>() {
@@ -80,7 +84,7 @@ public final class TheatrePortionExportOptionsDialog {
         refreshScopeItems.run();
         scopeType.valueProperty().addListener((obs, oldValue, newValue) -> refreshScopeItems.run());
 
-        ComboBox<TheatrePortionExportOptions.Output> output = new ComboBox<>();
+        ComboBox<TheatrePortionExportOptions.Output> output = StudioFormControls.comboBox();
         output.getItems().setAll(TheatrePortionExportOptions.Output.THEATRE_MAP, TheatrePortionExportOptions.Output.CLEAN_VIDEO);
         output.setValue(TheatrePortionExportOptions.Output.THEATRE_MAP);
         output.setMaxWidth(Double.MAX_VALUE);
@@ -99,9 +103,10 @@ public final class TheatrePortionExportOptionsDialog {
             }
         });
 
-        ComboBox<SimpleVideoResolutionPreset> resolution = new ComboBox<>();
+        ComboBox<SimpleVideoResolutionPreset> resolution = StudioFormControls.comboBox();
         resolution.getItems().setAll(SimpleVideoResolutionPreset.UHD_4K, SimpleVideoResolutionPreset.QHD_2K,
-                SimpleVideoResolutionPreset.FULL_HD_1080, SimpleVideoResolutionPreset.HD_720);
+                SimpleVideoResolutionPreset.FULL_HD_1080, SimpleVideoResolutionPreset.HD_720,
+                SimpleVideoResolutionPreset.LOW_540);
         resolution.setValue(SimpleVideoResolutionPreset.defaultPreset());
         resolution.setMaxWidth(Double.MAX_VALUE);
         styleCombo(resolution);
@@ -117,7 +122,7 @@ public final class TheatrePortionExportOptionsDialog {
             }
         });
 
-        ComboBox<Integer> fps = new ComboBox<>();
+        ComboBox<Integer> fps = StudioFormControls.comboBox();
         fps.getItems().setAll(24, 30, 48, 60);
         fps.setValue(30);
         fps.setMaxWidth(Double.MAX_VALUE);
@@ -126,7 +131,7 @@ public final class TheatrePortionExportOptionsDialog {
         List<VideoEncoderPolicy> encoders = availableEncoderPolicies == null || availableEncoderPolicies.isEmpty()
                 ? List.of(VideoEncoderPolicy.CPU_X264, VideoEncoderPolicy.AUTO)
                 : availableEncoderPolicies;
-        ComboBox<VideoEncoderPolicy> encoder = new ComboBox<>();
+        ComboBox<VideoEncoderPolicy> encoder = StudioFormControls.comboBox();
         encoder.getItems().setAll(encoders);
         encoder.setValue(encoders.contains(defaultEncoderPolicy) ? defaultEncoderPolicy : encoders.get(0));
         encoder.setMaxWidth(Double.MAX_VALUE);

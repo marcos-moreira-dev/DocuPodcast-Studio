@@ -47,6 +47,33 @@ public final class FluxLicenseAcceptanceStore {
         return acceptance;
     }
 
+    public ModelLicenseAcceptance accept(Path applicationRoot, ImageModelPackageProfile profile) throws IOException {
+        if (profile == ImageModelPackageProfile.ADVANCED_FLUX_KONTEXT) return accept(applicationRoot);
+        if (profile != ImageModelPackageProfile.HIGH_QUALITY_FLUX) throw new IllegalArgumentException("No es un modelo FLUX");
+        Path path = file(applicationRoot).resolveSibling(".flux-dev-license-acceptance.properties");
+        Files.createDirectories(path.getParent());
+        var value = new ModelLicenseAcceptance(profile.recommendedRepository(), profile.providerUrl(), Instant.now());
+        Properties properties = new Properties();
+        properties.setProperty("modelId", value.modelId());
+        properties.setProperty("licenseUrl", value.licenseUrl());
+        properties.setProperty("acceptedAt", value.acceptedAt().toString());
+        try (OutputStream out = Files.newOutputStream(path)) { properties.store(out, "Local acknowledgment, not authentication"); }
+        return value;
+    }
+
+    public boolean accepted(Path applicationRoot, ImageModelPackageProfile profile) {
+        if (profile == ImageModelPackageProfile.ADVANCED_FLUX_KONTEXT) return accepted(applicationRoot);
+        if (profile != ImageModelPackageProfile.HIGH_QUALITY_FLUX) return false;
+        Path path = file(applicationRoot).resolveSibling(".flux-dev-license-acceptance.properties");
+        try (InputStream in = Files.newInputStream(path)) {
+            Properties properties = new Properties();
+            properties.load(in);
+            Instant.parse(properties.getProperty("acceptedAt", ""));
+            return profile.recommendedRepository().equals(properties.getProperty("modelId"))
+                    && profile.providerUrl().equals(properties.getProperty("licenseUrl"));
+        } catch (IOException | RuntimeException failure) { return false; }
+    }
+
     public void revoke(Path applicationRoot) throws IOException {
         Files.deleteIfExists(file(applicationRoot));
     }

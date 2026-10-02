@@ -15,6 +15,15 @@ final class LocalImageAssetFileRepositoryTest {
     Path temp;
 
     @Test
+    void rejectsGenerationMetadataAsImage() throws Exception {
+        Path metadata = Files.writeString(temp.resolve("generation.properties"), "status=accepted");
+        org.junit.jupiter.api.Assertions.assertThrows(java.io.IOException.class,
+                () -> new LocalImageAssetFileRepository().importImage(temp.resolve("project.json"),
+                        metadata, "IMG-001", "metadata", "test", ""));
+        org.junit.jupiter.api.Assertions.assertFalse(Files.exists(temp.resolve("media")));
+    }
+
+    @Test
     void importsImageAsRelativeProjectAsset() throws Exception {
         Path source = temp.resolve("foto.png");
         Files.write(source, new byte[] {1, 2, 3, 4});

@@ -11,6 +11,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ImageEnhancementProfilesTest {
     @Test
     void outputProfilesExposeDeliveryResolutions() {
+        assertEquals(960, ImageEnhancementOutputProfile.LOW_540.width());
+        assertEquals(540, ImageEnhancementOutputProfile.LOW_540.height());
         assertEquals(1280, ImageEnhancementOutputProfile.HD_720.width());
         assertEquals(720, ImageEnhancementOutputProfile.HD_720.height());
         assertEquals(1920, ImageEnhancementOutputProfile.FHD_1080.width());

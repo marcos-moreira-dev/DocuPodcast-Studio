@@ -1,9 +1,11 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.welcome;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls;
+
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionButtonFactory;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.EmptyStateView;
-import com.marcosmoreiradev.docupodcaststudio.presentation.components.InfoBadge;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.IconView;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.InfoBadge;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.LucideIconView;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.RibbonIconCatalog;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
@@ -43,6 +45,7 @@ public final class WelcomeWorkspaceView extends StackPane {
     private final Runnable openProject;
     private final Runnable newProject;
     private final Runnable openTechnicalProblemExpress;
+    private final Runnable openDocumentVideoBatch;
     private final Runnable openExamples;
     private final Runnable initialSetup;
     private final Runnable openGuide;
@@ -75,7 +78,7 @@ public final class WelcomeWorkspaceView extends StackPane {
                                 Runnable openGuide,
                                 ObservableList<RecentProjectEntry> recentProjects,
                                 Consumer<Path> openRecentProject) {
-        this(openDocument, openProject, newProject, null, openExamples, initialSetup, openGuide,
+        this(openDocument, openProject, newProject, null, null, openExamples, initialSetup, openGuide,
                 recentProjects, openRecentProject);
     }
 
@@ -83,6 +86,7 @@ public final class WelcomeWorkspaceView extends StackPane {
                                 Runnable openProject,
                                 Runnable newProject,
                                 Runnable openTechnicalProblemExpress,
+                                Runnable openDocumentVideoBatch,
                                 Runnable openExamples,
                                 Runnable initialSetup,
                                 Runnable openGuide,
@@ -92,27 +96,24 @@ public final class WelcomeWorkspaceView extends StackPane {
         this.openProject = openProject == null ? () -> { } : openProject;
         this.newProject = newProject == null ? () -> { } : newProject;
         this.openTechnicalProblemExpress = openTechnicalProblemExpress == null ? () -> { } : openTechnicalProblemExpress;
+        this.openDocumentVideoBatch = openDocumentVideoBatch == null ? () -> { } : openDocumentVideoBatch;
         this.openExamples = openExamples == null ? () -> { } : openExamples;
         this.initialSetup = initialSetup == null ? () -> { } : initialSetup;
         this.openGuide = openGuide == null ? () -> { } : openGuide;
         this.recentProjects = recentProjects == null ? FXCollections.observableArrayList() : recentProjects;
         this.openRecentProject = openRecentProject == null ? path -> { } : openRecentProject;
         getStyleClass().addAll("welcome-root", "welcome-desktop-home", "welcome-modern-home");
-        getChildren().add(scrollableHome());
-    }
-
-    private ScrollPane scrollableHome() {
-        ScrollPane scroll = new ScrollPane(stage());
-        scroll.setFitToWidth(true);
-        scroll.setFitToHeight(true);
-        scroll.getStyleClass().add("welcome-scroll");
-        return scroll;
+        getChildren().add(stage());
     }
 
     private StackPane stage() {
         StackPane stage = new StackPane();
         stage.getStyleClass().add("welcome-stage");
-        stage.getChildren().addAll(decorativeLayer(), desktopGrid());
+        StackPane grid = new StackPane(desktopGrid());
+        grid.setAlignment(Pos.TOP_CENTER);
+        grid.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        stage.getChildren().addAll(decorativeLayer(), grid);
+        StackPane.setAlignment(grid, Pos.TOP_CENTER);
         return stage;
     }
 
@@ -151,7 +152,8 @@ public final class WelcomeWorkspaceView extends StackPane {
 
     private HBox desktopGrid() {
         HBox grid = new HBox(34);
-        grid.setAlignment(Pos.CENTER);
+        grid.setAlignment(Pos.TOP_CENTER);
+        grid.setMaxHeight(Double.MAX_VALUE);
         grid.getStyleClass().add("welcome-desktop-grid");
 
         Node actions = startActions();
@@ -163,19 +165,34 @@ public final class WelcomeWorkspaceView extends StackPane {
     }
 
     private VBox startActions() {
-        VBox column = new VBox(18);
+        VBox column = new VBox(12);
         column.setAlignment(Pos.TOP_LEFT);
+        column.setMaxHeight(Double.MAX_VALUE);
         column.getStyleClass().add("welcome-start-column");
-        column.getChildren().addAll(
-                sectionTitle("Inicio"),
+
+        VBox commands = new VBox(18,
                 commandRow(AppCommandId.OPEN_SETTINGS, "Configuración inicial", "Prepara Voz local simple para escuchar rápido. Voz IA avanzada y Video local quedan como mejoras posteriores.", initialSetup),
-                commandRow(AppCommandId.OPEN_SOURCE_DOCUMENT, "Abrir documento", "Importar Word/DOCX, PDF con texto u OCR local, Markdown o TXT.", openDocument),
                 commandRow(AppCommandId.OPEN_PROJECT, "Abrir proyecto", "Abrir un proyecto existente.", openProject),
-                commandRow(AppCommandId.NEW_PROJECT, "Nuevo proyecto", "Crear un proyecto vacío y preparar la fuente.", newProject),
+                commandRow(AppCommandId.NEW_PROJECT, "Nuevo proyecto", "Crear primero el proyecto y después elegir su fuente documental.", newProject),
                 commandRow(AppCommandId.PREPARE_TECHNICAL_PROBLEM, "Problema Técnico Express", "Abrir una ventana aislada para importar imágenes, escribir con tableta y exportar PNG.", openTechnicalProblemExpress),
+                commandRow(AppCommandId.CREATE_DOCUMENT_VIDEO_BATCH, "Documentos a audio o video Express", "Procesar una carpeta de Word/PDF y exportar un audio o video por documento.", openDocumentVideoBatch),
                 commandRow(AppCommandId.OPEN_EXAMPLE_PROJECT, "Probar ejemplo", "Crear un proyecto demo incluido.", openExamples),
                 commandRow(AppCommandId.OPEN_GUIDE, "Guía rápida", "Consulta los pasos básicos cuando necesites orientación.", openGuide)
         );
+        commands.getStyleClass().add("welcome-start-actions");
+
+        ScrollPane scroll = StudioViewportControls.scrollPane(commands);
+        scroll.setFitToWidth(true);
+        scroll.setFitToHeight(false);
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scroll.setPannable(false);
+        scroll.setMinHeight(0);
+        scroll.setMaxHeight(Double.MAX_VALUE);
+        scroll.getStyleClass().add("welcome-start-scroll");
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+
+        column.getChildren().addAll(sectionTitle("Inicio"), scroll);
         return column;
     }
 
@@ -184,7 +201,7 @@ public final class WelcomeWorkspaceView extends StackPane {
         row.setAlignment(Pos.CENTER_LEFT);
         row.getStyleClass().add("welcome-command-row");
 
-        Node icon = IconView.sideDock(RibbonIconCatalog.iconFor(commandId));
+        Node icon = IconView.welcome(RibbonIconCatalog.iconFor(commandId));
         icon.getStyleClass().add("welcome-command-icon");
 
         VBox text = new VBox(3);
@@ -192,6 +209,11 @@ public final class WelcomeWorkspaceView extends StackPane {
         Node actionTitle = action == null
                 ? commandLabel(title)
                 : ActionButtonFactory.secondary(title, action);
+        if (actionTitle instanceof javafx.scene.control.ButtonBase button) {
+            // The row owns the large product illustration. Suppress the compact
+            // action glyph so the same intent is not represented twice.
+            button.setGraphic(null);
+        }
         actionTitle.getStyleClass().add("welcome-command-title");
         Label body = new Label(detail);
         body.setWrapText(true);
@@ -217,15 +239,15 @@ public final class WelcomeWorkspaceView extends StackPane {
         prefix.getStyleClass().add("welcome-prefix");
         Label title = new Label("DocuPodcast Studio");
         title.getStyleClass().add("welcome-title");
-        Label subtitle = new Label("Abre documentos y empieza escuchando rápido con Voz local simple; luego mejora con Voz IA avanzada, visuales y video MP4 cuando lo necesites.");
+        Label subtitle = new Label("Crea un proyecto, elige su fuente y empieza escuchando rápido con Voz local simple; luego mejora con Voz IA avanzada, visuales y video MP4 cuando lo necesites.");
         subtitle.setWrapText(true);
         subtitle.getStyleClass().add("welcome-subtitle");
 
         VBox steps = new VBox(12);
         steps.getStyleClass().add("welcome-step-panel");
         steps.getChildren().addAll(
-                step("1", "Escucha rápido", "Configuración inicial prioriza Voz local simple para probar documentos sin una descarga pesada."),
-                step("2", "Abre el documento", "DOCX, PDF con texto u OCR local, Markdown o TXT entran como documento protegido."),
+                step("1", "Crea el proyecto", "Todo documento debe pertenecer a un proyecto antes de entrar a DocuPodcast Studio."),
+                step("2", "Elige la fuente", "DOCX, PDF con texto u OCR local, Markdown o TXT entran como documento protegido del proyecto."),
                 step("3", "Escucha y estudia", "La lectura se controla desde Documento; genera audio desde el fragmento actual, pausa, reanuda y vuelve cuando necesites."),
                 step("4", "Exporta", "Genera audio final o video MP4 cuando el proyecto, audio y visuales estén listos.")
         );

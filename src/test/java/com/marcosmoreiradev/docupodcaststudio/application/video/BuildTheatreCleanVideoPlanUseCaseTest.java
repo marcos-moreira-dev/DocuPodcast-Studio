@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.application.video;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.video.SimpleVideoResolutionPreset;
+
 import com.marcosmoreiradev.docupodcaststudio.domain.assets.ProjectAssetKind;
 import com.marcosmoreiradev.docupodcaststudio.domain.assets.ProjectAssetReference;
 import com.marcosmoreiradev.docupodcaststudio.domain.audio.AudioGenerationStage;
@@ -98,7 +100,8 @@ final class BuildTheatreCleanVideoPlanUseCaseTest {
                 project, script, StoryboardDocument.createForScript(script), List.of(job), projectDirectory, settings);
 
         SimpleVideoFrame first = plan.frames().getFirst();
-        assertEquals(2.0 + settings.silenceAfterFrameSeconds(), first.frameDurationSeconds(), 0.0001);
+        assertEquals(0.25, first.silenceAfterSeconds(), 0.0001);
+        assertEquals(2.25, first.frameDurationSeconds(), 0.0001);
         assertEquals(2, first.visualParts().size());
         assertEquals("media/images/a.png", first.visualParts().get(0).imageRelativePath());
         assertEquals("media/images/a-to-b.png", first.visualParts().get(1).imageRelativePath());

@@ -17,16 +17,20 @@ import java.util.List;
 
 /** Styled act/scene scope controls embedded in Export Center. */
 public final class TheatrePortionExportOptionsPane extends VBox {
+    public void setPresentationMode(String mode) {
+        companion.setValue(java.util.Arrays.stream(TheatreMapCompanionMode.values())
+                .filter(value -> value.frameMode().equals(mode)).findFirst().orElse(TheatreMapCompanionMode.FRAGMENT_VISUALS));
+    }
     private static final ScopeItem ALL_ACT = new ScopeItem("", "Todo el acto", true);
 
     private final List<TheatreProjectLayer.Scene> scenes;
-    private final ComboBox<TheatreProjectLayer.TheatreAct> act = new ComboBox<>();
-    private final ComboBox<ScopeItem> scope = new ComboBox<>();
-    private final ComboBox<TheatrePortionExportOptions.Output> output = new ComboBox<>();
-    private final ComboBox<TheatreMapCompanionMode> companion = new ComboBox<>();
+    private final ComboBox<TheatreProjectLayer.TheatreAct> act = StudioFormControls.comboBox();
+    private final ComboBox<ScopeItem> scope = StudioFormControls.comboBox();
+    private final ComboBox<TheatrePortionExportOptions.Output> output = StudioFormControls.comboBox();
+    private final ComboBox<TheatreMapCompanionMode> companion = StudioFormControls.comboBox();
     private final VBox companionField;
     private final VBox unassignedField;
-    private final CheckBox renderUnassigned = new CheckBox("Renderizar fragmentos sin imagen ni lienzo");
+    private final CheckBox renderUnassigned = StudioFormControls.checkBox("Renderizar fragmentos sin imagen ni lienzo");
     private final VideoEncodingOptionsPane video;
 
     public TheatrePortionExportOptionsPane(List<TheatreProjectLayer.TheatreAct> acts,
@@ -101,7 +105,6 @@ public final class TheatrePortionExportOptionsPane extends VBox {
             }
         });
         companionField = labelled("Acompanamiento", companion);
-        renderUnassigned.getStyleClass().addAll(StudioFormControls.FORM_CONTROL, StudioFormControls.FORM_TOGGLE);
         StudioFormControls.installTooltip(renderUnassigned,
                 "Usa fondo negro con texto blanco en los fragmentos sin visual asignado.");
         unassignedField = new VBox(4, renderUnassigned,

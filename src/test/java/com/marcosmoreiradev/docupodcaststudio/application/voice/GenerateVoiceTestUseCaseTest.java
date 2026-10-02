@@ -18,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -92,6 +93,53 @@ final class GenerateVoiceTestUseCaseTest {
         throw new AssertionError("Expected missing sample to fail loudly");
     }
 
+    @Test
+    void piperCannotSilentlyPresentItsPackagedVoiceAsTheSelectedCharacter() throws Exception {
+        Path projectFile = tempDir.resolve("Obra/Obra.docupodcast.json");
+        Files.createDirectories(projectFile.getParent().resolve("voices/samples"));
+        Files.writeString(projectFile.getParent().resolve("voices/samples/S-NEUTRAL.wav"),
+                "sample", StandardCharsets.UTF_8);
+        VoiceLibrary library = testLibrary()
+                .withReferenceSample(sample("S-NEUTRAL", VoiceReferenceTone.NEUTRAL));
+        AudioEngineDescriptor piper = new AudioEngineDescriptor("piper", "Voz local simple",
+                "piper", true, true, "", "Piper listo",
+                java.util.Set.of(com.marcosmoreiradev.docupodcaststudio.media.api.EngineFeature.PACKAGED_VOICE),
+                false);
+
+        VoiceGeneratedTestResult result = realUseCase().generate(projectFile, library,
+                new VoiceGeneratedTestRequest(TEST_ADVANCED_VOICE_ID, VoiceReferenceTone.HAPPY,
+                        "Frase editable.", piper));
+
+        assertFalse(result.generated());
+        assertTrue(result.userMessage().contains("Coqui XTTS o Qwen3-TTS"));
+    }
+
+    @Test
+    void transportsResolvedToneAsProviderNeutralPerformanceStyle() throws Exception {
+        Path projectFile = tempDir.resolve("Obra/Obra.docupodcast.json");
+        Files.createDirectories(projectFile.getParent().resolve("voices/samples"));
+        Files.writeString(projectFile.getParent().resolve("voices/samples/S-ANGRY.wav"),
+                "sample", StandardCharsets.UTF_8);
+        VoiceLibrary library = testLibrary()
+                .withReferenceSample(sample("S-ANGRY", VoiceReferenceTone.ANGRY));
+        AtomicReference<VoiceTestSynthesisRequest> submitted = new AtomicReference<>();
+        VoiceTestSynthesisGateway gateway = request -> {
+            submitted.set(request);
+            Files.createDirectories(request.outputFile().getParent());
+            Files.write(request.outputFile(), fakeWavBytes());
+            return VoiceTestSynthesisResult.generated(Files.size(request.outputFile()), "ok", "ok");
+        };
+
+        VoiceGeneratedTestResult result = new GenerateVoiceTestUseCase(
+                new VoiceCapabilityPolicy(), new ResolveVoiceToneReferenceUseCase(), gateway)
+                .generate(projectFile, library, new VoiceGeneratedTestRequest(
+                        TEST_ADVANCED_VOICE_ID, VoiceReferenceTone.ANGRY,
+                        "¡Escúchame ahora!", advancedReadyEngine()));
+
+        assertTrue(result.generated());
+        assertTrue("ANGRY".equals(submitted.get().performanceStyleId()));
+    }
+
     private static GenerateVoiceTestUseCase realUseCase() {
         VoiceTestSynthesisGateway fakeGateway = request -> {
             Files.createDirectories(request.outputFile().getParent());
@@ -116,7 +164,11 @@ final class GenerateVoiceTestUseCaseTest {
 
     private static AudioEngineDescriptor advancedReadyEngine() {
         return new AudioEngineDescriptor("local-process", "Voz IA avanzada", "xtts", true, true,
-                "xtts-wrapper", "Runtime avanzado listo");
+                "xtts-wrapper", "Runtime avanzado listo",
+                java.util.Set.of(
+                        com.marcosmoreiradev.docupodcaststudio.media.api.EngineFeature.REFERENCE_VOICE,
+                        com.marcosmoreiradev.docupodcaststudio.media.api.EngineFeature.EXPRESSIVE_STYLE),
+                false);
     }
 
     private static VoiceLibrary testLibrary() {

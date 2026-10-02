@@ -6,7 +6,7 @@ public record TheatreAiModuleDescriptor(
         String group,
         String title,
         String description
-) {
+) implements com.marcosmoreiradev.docupodcaststudio.presentation.components.admin.AdminModuleSpec<TheatreAiModuleId> {
     public TheatreAiModuleDescriptor {
         id = id == null ? TheatreAiModuleId.HOME : id;
         group = clean(group, "OPERACION");

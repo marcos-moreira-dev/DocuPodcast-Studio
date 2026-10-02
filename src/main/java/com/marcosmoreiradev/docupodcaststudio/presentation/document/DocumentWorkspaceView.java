@@ -1,11 +1,21 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.document;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioNavigationControls;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PdfNarrationFocusMetadata;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
+
+import com.marcosmoreiradev.docupodcaststudio.ink.DrawingFeatureCatalog;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PdfRegionCaptureRequest;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PdfRegionCaptureResult;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PdfVisualReadingProjection;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PdfVisualTextHighlight;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PdfVisualTextTarget;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PdfViewportSelection;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PreparedPdfSource;
+import com.marcosmoreiradev.docupodcaststudio.application.document.ResolvePdfPlaybackHighlightUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.StudyProblemSourceDraft;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlock;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentSentenceSpan;
@@ -19,14 +29,20 @@ import com.marcosmoreiradev.docupodcaststudio.domain.playback.PlaybackManifest;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.ProjectMode;
 import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationScriptDocument;
 import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationSegment;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.AppIcon;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionButtonFactory;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.ResponsiveActionGroup;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFeedbackControls;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.EmptyStateView;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.FloatingReadingControlBar;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.RailReadingControlBar;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.SourceVisualBlockView;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.DocuPodcastShellViewModel;
+import com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow.DocumentAudioAction;
 import com.marcosmoreiradev.docupodcaststudio.presentation.sidedock.SideDockContext;
 import com.marcosmoreiradev.docupodcaststudio.presentation.sidedock.SideDockModuleId;
 import com.marcosmoreiradev.docupodcaststudio.presentation.sidedock.SideDockModuleRegistry;
+import com.marcosmoreiradev.docupodcaststudio.presentation.sidedock.SideDockSplitCoordinator;
 import com.marcosmoreiradev.docupodcaststudio.presentation.sidedock.StaticSideDockModule;
 import com.marcosmoreiradev.docupodcaststudio.presentation.sidedock.WorkspaceSideDock;
 import com.marcosmoreiradev.docupodcaststudio.presentation.theatre.IntervencionNumberingScene;
@@ -57,6 +73,7 @@ import javafx.scene.control.ComboBoxBase;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Slider;
@@ -67,7 +84,9 @@ import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
@@ -84,21 +103,25 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Workspace that previews a normalized imported document with reusable SideDock modules. */
 public final class DocumentWorkspaceView extends BorderPane {
+    private static final Logger LOGGER = LoggerFactory.getLogger(DocumentWorkspaceView.class);
     private static final String READING_SIZE_CLASS_PREFIX = "document-reader-size-";
 
     private final DocuPodcastShellViewModel viewModel;
     private static final double DOCUMENT_PAGE_MAX_WIDTH = 1280.0;
-    private static final double ACTIVE_READING_TOP_OFFSET = 78.0;
+    private static final double ACTIVE_READING_GAP_BELOW_PLAYBAR = 30.0;
     // Legacy guard label kept for source tests: large docs no longer render the whole document.
     private static final int LARGE_DOCUMENT_INITIAL_RENDER_LIMIT = 650;
     private static final int LARGE_DOCUMENT_WINDOW_SIZE = 260;
 
     private final VBox content = new VBox(10);
     private final StackPane pageHost = new StackPane(content);
-    private final ScrollPane documentScroll = new ScrollPane(pageHost);
+    private final ScrollPane documentScroll = StudioViewportControls.scrollPane(pageHost);
     private final PdfVisualDocumentView pdfVisualView;
     private final PdfVisibleTextPreparationCoordinator pdfVisibleTextPreparation;
     private final StringProperty selectedBlockId = new SimpleStringProperty("");
@@ -112,9 +135,14 @@ public final class DocumentWorkspaceView extends BorderPane {
     private final IntervencionBoundaryStore intervencionBoundaryStore;
     private Set<String> focusedTheatreSceneBlockIds = Set.of();
     private final ActiveReadingAnchor readingAnchor = ActiveReadingAnchor.defaultAnchor();
+    private final ResolvePdfPlaybackHighlightUseCase pdfPlaybackHighlight =
+            new ResolvePdfPlaybackHighlightUseCase();
     private String activePlaybackBlockId = "";
     private String activePlaybackUnitId = "";
+    private String activePlaybackSegmentId = "";
+    private long playbackVisualSequence;
     private ReadableDocument renderedDocument;
+    private PreparedPdfSource renderedPdfSource;
     private DocumentRenderWindow renderedWindow = DocumentRenderWindow.all(0);
     private boolean autoWindowSwitchInProgress;
     private int nextPdfRegionCaptureIndex = 1;
@@ -122,9 +150,13 @@ public final class DocumentWorkspaceView extends BorderPane {
     private final BooleanSupplier saveProjectRequest;
     private final BooleanSupplier saveProjectBeforeAudioRequest;
     private final BooleanSupplier audioEngineBeforeGenerationRequest;
+    private final Consumer<PdfVisualTextTarget> narrateFromPdfTargetRequest;
+    private final Consumer<DocumentAudioAction> documentAudioActionRequest;
     private final DocumentWorkspaceMode mode;
     private FloatingReadingControlBar floatingReadingControls;
     private RailReadingControlBar railReadingControls;
+    private DocumentContextDetailsPanel contextDetailsPanel;
+    private final WorkspaceSideDock documentSideDock;
 
     public DocumentWorkspaceView(DocuPodcastShellViewModel viewModel) {
         this(viewModel, () -> false);
@@ -150,13 +182,37 @@ public final class DocumentWorkspaceView extends BorderPane {
                                  BooleanSupplier saveProjectBeforeAudioRequest,
                                  BooleanSupplier audioEngineBeforeGenerationRequest,
                                  DocumentWorkspaceMode mode) {
+        this(viewModel, saveProjectRequest, saveProjectBeforeAudioRequest,
+                audioEngineBeforeGenerationRequest, mode, null);
+    }
+
+    public DocumentWorkspaceView(DocuPodcastShellViewModel viewModel,
+                                 BooleanSupplier saveProjectRequest,
+                                 BooleanSupplier saveProjectBeforeAudioRequest,
+                                 BooleanSupplier audioEngineBeforeGenerationRequest,
+                                 DocumentWorkspaceMode mode,
+                                 Consumer<PdfVisualTextTarget> narrateFromPdfTargetRequest) {
+        this(viewModel, saveProjectRequest, saveProjectBeforeAudioRequest,
+                audioEngineBeforeGenerationRequest, mode, narrateFromPdfTargetRequest, null);
+    }
+
+    public DocumentWorkspaceView(DocuPodcastShellViewModel viewModel,
+                                 BooleanSupplier saveProjectRequest,
+                                 BooleanSupplier saveProjectBeforeAudioRequest,
+                                 BooleanSupplier audioEngineBeforeGenerationRequest,
+                                 DocumentWorkspaceMode mode,
+                                 Consumer<PdfVisualTextTarget> narrateFromPdfTargetRequest,
+                                 Consumer<DocumentAudioAction> documentAudioActionRequest) {
         this.viewModel = viewModel;
         this.intervencionBoundaryStore = viewModel == null ? new IntervencionBoundaryStore() : viewModel.intervencionBoundaryStore();
         this.saveProjectRequest = saveProjectRequest == null ? () -> false : saveProjectRequest;
         this.saveProjectBeforeAudioRequest = saveProjectBeforeAudioRequest == null ? this.saveProjectRequest : saveProjectBeforeAudioRequest;
         this.audioEngineBeforeGenerationRequest = audioEngineBeforeGenerationRequest == null ? () -> true : audioEngineBeforeGenerationRequest;
+        this.narrateFromPdfTargetRequest = narrateFromPdfTargetRequest;
+        this.documentAudioActionRequest = documentAudioActionRequest;
         this.mode = mode == null ? DocumentWorkspaceMode.READING : mode;
-        this.pdfVisibleTextPreparation = new PdfVisibleTextPreparationCoordinator(viewModel, this::pdfOcrCacheDirectory);
+        this.pdfVisibleTextPreparation = new PdfVisibleTextPreparationCoordinator(
+                viewModel, this::pdfOcrCacheDirectory, this::refreshPdfReadingProjection);
         getStyleClass().add("document-workspace");
         getStyleClass().add(this.mode == DocumentWorkspaceMode.THEATRE_SCRIPT
                 ? "document-workspace-theatre-script"
@@ -188,18 +244,26 @@ public final class DocumentWorkspaceView extends BorderPane {
             }
         });
         this.pdfVisualView = new PdfVisualDocumentView(
-                viewModel.applicationServices().document().buildPdfVisualDocument(),
-                viewModel.applicationServices().document().renderPdfVisualPage(),
+                viewModel.projectWorkspace().document().buildPdfVisualDocument(),
+                viewModel.projectWorkspace().document().renderPdfVisualPage(),
                 viewModel::readingZoomPercent,
                 this::capturePdfRegionSelection);
         pdfVisualView.setTextTargetSelectionHandler(this::selectPdfTextTarget);
+        pdfVisualView.setManualDescriptionRequestHandler(
+                this::defineManualDescriptionForPdfTarget);
+        pdfVisualView.setContentDescriptionRequestHandler(
+                this::viewContentAndDescriptionForPdfTarget);
+        pdfVisualView.setNarrateFromTargetRequestHandler(
+                this::narrateFromPdfTarget);
+        pdfVisualView.setEmptyTextTargetSelectionHandler(
+                this::clearPdfSelectionFromEmptyPageArea);
         pdfVisualView.setTextPreparationRequestHandler(this::preparePdfTextPageNow);
         pdfVisualView.setVisible(false);
         pdfVisualView.setManaged(false);
         pdfVisualView.documentProgressProperty().addListener((obs, oldValue, newValue) ->
                 viewModel.updatePdfVisualDocumentProgress(newValue == null ? 0.0 : newValue.doubleValue()));
         pdfVisualView.visiblePageNumberProperty().addListener((obs, oldValue, newValue) ->
-                preparePdfVisibleTextPage(newValue == null ? 0 : newValue.intValue()));
+                observePdfVisiblePage(newValue == null ? 0 : newValue.intValue()));
         viewModel.readingFontSizeProperty().addListener((obs, oldValue, newValue) -> {
             applyReadingFontSizeClass(newValue.intValue());
             pdfVisualView.refreshZoom();
@@ -221,18 +285,21 @@ public final class DocumentWorkspaceView extends BorderPane {
         documentSurface.getStyleClass().add("document-surface");
         documentSurface.setMinWidth(240);
 
-        Node leftDock = buildSideDock();
+        documentSideDock = buildSideDock();
+        Region leftDock = documentSideDock;
         TheatreSideDock theatreSideDock = null;
         DocumentStudySideDock documentStudySideDock = null;
         NarrativeVideoSideDock narrativeVideoSideDock = null;
         ObservableBooleanValue activeRightDockExpanded;
         SplitPane splitPane;
+        Region rightDockItem;
         if (mode == DocumentWorkspaceMode.THEATRE_SCRIPT) {
             theatreSideDock = buildTheatreSideDock();
             SplitPane.setResizableWithParent(leftDock, Boolean.FALSE);
             SplitPane.setResizableWithParent(documentSurface, Boolean.TRUE);
             SplitPane.setResizableWithParent(theatreSideDock, Boolean.FALSE);
-            splitPane = new SplitPane(leftDock, documentSurface, theatreSideDock);
+            splitPane = StudioViewportControls.splitPane(leftDock, documentSurface, theatreSideDock);
+            rightDockItem = theatreSideDock;
             activeRightDockExpanded = theatreSideDock.expandedProperty();
         } else {
             theatreSideDock = buildTheatreSideDock();
@@ -290,7 +357,8 @@ public final class DocumentWorkspaceView extends BorderPane {
             SplitPane.setResizableWithParent(leftDock, Boolean.FALSE);
             SplitPane.setResizableWithParent(documentSurface, Boolean.TRUE);
             SplitPane.setResizableWithParent(rightDockHost, Boolean.FALSE);
-            splitPane = new SplitPane(leftDock, documentSurface, rightDockHost);
+            splitPane = StudioViewportControls.splitPane(leftDock, documentSurface, rightDockHost);
+            rightDockItem = rightDockHost;
             activeRightDockExpanded = Bindings.createBooleanBinding(
                     () -> currentProjectUsesTheatreDock()
                             ? finalTheatreSideDock.expandedProperty().get()
@@ -303,25 +371,43 @@ public final class DocumentWorkspaceView extends BorderPane {
                     finalDocumentStudySideDock.expandedProperty());
         }
         splitPane.getStyleClass().add("document-split");
-        if (mode == DocumentWorkspaceMode.THEATRE_SCRIPT) {
-            splitPane.setDividerPositions(0.19, 0.68); // splitPane.setDividerPositions(0.19, 0.55)
-        } else {
-            splitPane.setDividerPositions(0.20, 0.78);
-        }
+        SideDockSplitCoordinator.install(splitPane, leftDock, rightDockItem,
+                SideDockSplitCoordinator.MAXIMIZED_LEFT_DOCK_WIDTH,
+                documentSurface.getMinWidth());
         installFloatingControlResponsiveness(readingControls, readingStage, activeRightDockExpanded);
         setCenter(splitPane);
 
-        ChangeListener<ReadableDocument> documentListener = (obs, oldValue, newValue) -> render(newValue);
+        ChangeListener<ReadableDocument> documentListener = (obs, oldValue, newValue) -> {
+            renderActiveSource();
+        };
         viewModel.currentDocumentProperty().addListener(documentListener);
+        viewModel.currentPreparedPdfSourceProperty().addListener((obs, oldValue, newValue) ->
+                renderActiveSource());
         viewModel.currentScriptProperty().addListener((obs, oldValue, newValue) -> {
-            render(viewModel.currentDocumentProperty().get());
+            renderActiveSource();
             syncActivePlaybackCue(viewModel.playbackCursorProperty().get());
         });
         viewModel.focusedTheatreSceneIdProperty().addListener((obs, oldValue, newValue) ->
-                render(viewModel.currentDocumentProperty().get()));
+                renderActiveSource());
         intervencionBoundaryStore.revisionProperty().addListener((obs, oldValue, newValue) ->
-                render(viewModel.currentDocumentProperty().get()));
-        viewModel.playbackCursorProperty().addListener((obs, oldValue, newValue) -> syncActivePlaybackCue(newValue));
+                renderActiveSource());
+        viewModel.playbackCursorProperty().addListener((obs, oldValue, newValue) -> {
+            if (newValue != null && newValue.paused()
+                    && (oldValue == null || !oldValue.paused())) {
+                // Cancel both pulses of any sentence scroll already queued before
+                // the user pressed pause. From here the viewport belongs to them.
+                playbackVisualSequence++;
+            }
+            syncActivePlaybackCue(newValue);
+        });
+        viewModel.activePlaybackCueProperty().addListener((obs, oldValue, newValue) ->
+                syncActivePlaybackCue(newValue, true));
+        viewModel.currentPlaybackManifestProperty().addListener((obs, oldValue, newValue) -> {
+            // The manifest may arrive after the cursor during incremental audio
+            // generation. Force cue/unit resolution once its metadata exists.
+            activePlaybackUnitId = "";
+            syncActivePlaybackCue(viewModel.playbackCursorProperty().get());
+        });
         selectedBlockId.addListener((obs, oldValue, newValue) -> updateSelectionStyles());
         viewModel.selectedDocumentTextRangeProperty().addListener((obs, oldValue, newValue) -> {
             updateSelectionStyles();
@@ -330,7 +416,7 @@ public final class DocumentWorkspaceView extends BorderPane {
         });
         viewModel.technicalProblemPreparationActiveProperty().addListener((obs, oldValue, newValue) -> {
             ReadableDocument document = viewModel.currentDocumentProperty().get();
-            if (shouldUsePdfVisualDocument(document)) {
+            if (hasPdfSource()) {
                 pdfVisualView.setRegionSelectionActive(Boolean.TRUE.equals(newValue));
             } else {
                 render(document);
@@ -344,8 +430,14 @@ public final class DocumentWorkspaceView extends BorderPane {
             updatePdfPinnedSelection();
             scrollToDocumentBlock(normalized);
         });
+        viewModel.requestedPdfRegionReviewIdProperty().addListener(
+                (obs, oldValue, newValue) -> openRequestedPdfRegionReview(newValue));
+        viewModel.documentMediaRevisionProperty().addListener(
+                (obs, oldValue, newValue) -> {
+                    if (hasPdfSource()) refreshPdfReadingProjection();
+                });
         documentScroll.vvalueProperty().addListener((obs, oldValue, newValue) -> maybeAdvanceRenderWindowForScroll(newValue == null ? 0.0 : newValue.doubleValue()));
-        render(viewModel.currentDocumentProperty().get());
+        renderActiveSource();
     }
 
     private void installFloatingControlResponsiveness(FloatingReadingControlBar controls, StackPane readingStage,
@@ -382,43 +474,63 @@ public final class DocumentWorkspaceView extends BorderPane {
         }
     }
 
-    private Node buildSideDock() {
+    private WorkspaceSideDock buildSideDock() {
         SideDockModuleRegistry registry = new SideDockModuleRegistry()
                 .register(StaticSideDockModule.of(
                         SideDockModuleId.DOCUMENT_CONTEXT_DETAILS,
                         "Fragmento",
-                        "Seleccion seleccionado y acciones basicas.",
-                        "Texto",
-                        () -> new DocumentContextDetailsPanel(viewModel)))
+                        "Selección actual, revisión y acciones de lectura.",
+                        AppIcon.PRODUCT_DOCUMENT_FRAGMENT,
+                        this::contextDetailsPanel))
                 .register(StaticSideDockModule.of(
                         SideDockModuleId.DOCUMENT_INDEX,
-                        "Índice",
-                        "Árbol del documento: raíz, secciones y hojas para saltar sin modificar la fuente.",
-                        "Árbol",
+                        "Índices y preferencias del documento",
+                        "Títulos, secciones y preferencias de lectura del documento.",
+                        AppIcon.PRODUCT_DOCUMENT_INDEX_PREFERENCES,
                     () -> new DocumentIndexPanel(
                             viewModel.currentDocumentProperty(),
+                            viewModel.currentPreparedPdfSourceProperty(),
                             selectedBlockId,
                             this::selectBlock,
-                            viewModel.applicationServices().document().buildDocumentOutline(),
-                            viewModel.applicationServices().document().buildPdfEnhancedOutline(),
-                            viewModel.applicationServices().document().searchPdfText(),
+                            viewModel.projectWorkspace().document().buildDocumentOutline(),
+                            viewModel.projectWorkspace().document().buildPdfEnhancedOutline(),
+                            viewModel.projectWorkspace().document().searchPdfText(),
                             this::showPdfSearchHighlight,
                             this::scrollPdfVisualToPage,
-                            this::pdfOcrCacheDirectory,
-                            viewModel.applicationServices().document().resolvePdfNarratableDocument(),
-                            document -> viewModel.replaceCurrentDocumentFromApplication(document, "Texto OCR del PDF guardado como fragmentos narrables."))))
+                            (ignored, scope, start, end, completed, status) ->
+                                    pdfVisibleTextPreparation.prepareScope(
+                                            viewModel.currentPreparedPdfSourceProperty().get(),
+                                            scope, start, end, completed, status))
+                            .withReadingPreferences(viewModel.projectWorkspace().document()
+                                    .openPreparedPdfWorkspace().readingPreferences())))
                 .register(StaticSideDockModule.of(
                         SideDockModuleId.DOCUMENT_AUDIO_NARRATION,
                         "Audio",
-                        "Origen de audio usable para la selección: voz local/probada o archivo del computador.",
-                        "Audio",
-                        () -> new DocumentAudioNarrationPanel(viewModel)));
+                        "Voz y audio de la selección actual.",
+                        AppIcon.PRODUCT_DOCUMENT_AUDIO,
+                        () -> new DocumentAudioNarrationPanel(
+                                viewModel, documentAudioActionRequest)));
         return new WorkspaceSideDock(
                 new SideDockContext(WorkspaceKind.DOCUMENT_READER, "Documento"),
                 registry,
                 true,
                 WorkspaceSideDock.RailPlacement.LEFT,
                 this::railReadingControl);
+    }
+
+    private void openRequestedPdfRegionReview(String regionId) {
+        if (regionId == null || regionId.isBlank() || !hasPdfSource()) {
+            return;
+        }
+        PreparedPdfSource source = viewModel.currentPreparedPdfSourceProperty().get();
+        PdfVisualReadingProjection projection = pdfProjection(source);
+        projection.targetForRegion(regionId).ifPresentOrElse(target -> {
+            selectPdfTextTarget(target);
+            documentSideDock.activateModule(SideDockModuleId.DOCUMENT_CONTEXT_DETAILS);
+            viewModel.updateStatusMessage(
+                    "Contenido dudoso listo para revisar en el panel Fragmento.");
+        }, () -> viewModel.updateStatusMessage(
+                "La región dudosa ya no está disponible. Reprocesa la página para actualizarla."));
     }
 
     private DocumentStudySideDock buildDocumentStudySideDock() {
@@ -483,11 +595,13 @@ public final class DocumentWorkspaceView extends BorderPane {
     }
 
     private void render(ReadableDocument document) {
+        renderedPdfSource = null;
         ReadableDocument previousDocument = renderedDocument;
         renderedDocument = document;
         activePlaybackBlockId = "";
         activePlaybackUnitId = "";
-        resetPdfRegionSelectionIfSourceChanged(document);
+        activePlaybackSegmentId = "";
+        resetPdfRegionSelectionIfSourceChanged((Path) null);
         if (document == null) {
             showBlockDocumentReader();
             pdfVisualView.clear();
@@ -498,11 +612,6 @@ public final class DocumentWorkspaceView extends BorderPane {
             return;
         }
         rebuildBlockIndex(document);
-        if (shouldUsePdfVisualDocument(document)) {
-            showPdfVisualDocument(document, samePdfVisualSource(previousDocument, document) && pdfVisualView.isVisible());
-            renderedWindow = DocumentRenderWindow.all(document.blocks().size());
-            return;
-        }
         showBlockDocumentReader();
         pdfVisualView.clear();
         viewModel.updatePdfVisualDocumentProgress(0.0);
@@ -511,11 +620,36 @@ public final class DocumentWorkspaceView extends BorderPane {
         renderWindow(document, renderedWindow);
     }
 
-    private boolean shouldUsePdfVisualDocument(ReadableDocument document) {
-        return document != null && document.format() == SourceDocumentFormat.PDF;
+    private void renderActiveSource() {
+        PreparedPdfSource pdf = viewModel.currentPreparedPdfSourceProperty().get();
+        if (pdf != null) {
+            renderPdf(pdf);
+        } else {
+            if (renderedPdfSource != null) pdfVisibleTextPreparation.closeProject();
+            render(viewModel.currentDocumentProperty().get());
+        }
     }
 
-    private void showPdfVisualDocument(ReadableDocument document, boolean reuseVisualDocument) {
+    private void renderPdf(PreparedPdfSource source) {
+        boolean reuse = renderedPdfSource != null
+                && Objects.equals(renderedPdfSource.sourcePath(), source.sourcePath())
+                && pdfVisualView.isVisible();
+        renderedDocument = null;
+        renderedPdfSource = source;
+        activePlaybackBlockId = "";
+        activePlaybackUnitId = "";
+        activePlaybackSegmentId = "";
+        resetPdfRegionSelectionIfSourceChanged(source.sourcePath());
+        blockIndexById.clear();
+        renderedWindow = DocumentRenderWindow.all(0);
+        showPdfVisualDocument(source, reuse);
+    }
+
+    private boolean hasPdfSource() {
+        return renderedPdfSource != null || viewModel.currentPreparedPdfSourceProperty().get() != null;
+    }
+
+    private void showPdfVisualDocument(PreparedPdfSource source, boolean reuseVisualDocument) {
         documentScroll.setVisible(false);
         documentScroll.setManaged(false);
         pdfVisualView.setVisible(true);
@@ -524,10 +658,10 @@ public final class DocumentWorkspaceView extends BorderPane {
         blockNodes.clear();
         sentenceNodes.clear();
         sentenceSpanIndex.clear();
-        pdfVisualView.setReadingProjection(pdfProjection(document));
+        pdfVisualView.setReadingProjection(pdfProjection(source));
         if (!reuseVisualDocument) {
-            pdfVisualView.showDocument(document);
-            preparePdfVisibleTextPage(1);
+            pdfVisualView.showDocument(source.workspace());
+            observePdfVisiblePage(1);
         }
         viewModel.updatePdfVisualDocumentProgress(pdfVisualView.documentProgressProperty().get());
         pdfVisualView.setRegionSelectionActive(viewModel.technicalProblemPreparationActiveProperty().get());
@@ -535,25 +669,35 @@ public final class DocumentWorkspaceView extends BorderPane {
         syncActivePlaybackCue(viewModel.playbackCursorProperty().get());
     }
 
-    private boolean samePdfVisualSource(ReadableDocument previous, ReadableDocument current) {
-        return shouldUsePdfVisualDocument(previous) && shouldUsePdfVisualDocument(current)
-                && Objects.equals(previous.sourcePath(), current.sourcePath());
-    }
-
-    private void preparePdfVisibleTextPage(int page) {
+    private void observePdfVisiblePage(int page) {
         viewModel.updatePdfVisiblePageNumber(page);
-        ReadableDocument document = renderedDocument == null ? viewModel.currentDocumentProperty().get() : renderedDocument;
-        if (shouldUsePdfVisualDocument(document)) {
-            viewModel.updateStatusMessage("Pagina PDF " + page + " lista. Haz clic en la hoja para analizar OCR.");
+        PreparedPdfSource source = renderedPdfSource == null
+                ? viewModel.currentPreparedPdfSourceProperty().get() : renderedPdfSource;
+        if (source != null) {
+            pdfVisibleTextPreparation.observeVisiblePage(source, page);
+            var state = viewModel.projectWorkspace().document()
+                    .openPreparedPdfWorkspace().pageViewerState(source.workspace(), page);
+            viewModel.updateStatusMessage(switch (state) {
+                case PREPARED -> "Página PDF " + page + " preparada.";
+                case TECHNICAL_FAILURE -> "Página PDF " + page
+                        + ": el análisis anterior no pudo completarse. Requiere reintento explícito.";
+                case SEMANTIC_REJECTION -> "Página PDF " + page
+                        + ": no pudo interpretarse con suficiente fiabilidad.";
+                case CANCELLED -> "Página PDF " + page
+                        + ": el análisis anterior fue cancelado.";
+                case NOT_PREPARED -> "Página PDF " + page
+                        + " no preparada. Usa Procesar para analizarla.";
+            });
         }
     }
 
     private void preparePdfTextPageNow(int page) {
         viewModel.updatePdfVisiblePageNumber(page);
-        ReadableDocument document = renderedDocument == null ? viewModel.currentDocumentProperty().get() : renderedDocument;
-        if (shouldUsePdfVisualDocument(document)) {
+        PreparedPdfSource source = renderedPdfSource == null
+                ? viewModel.currentPreparedPdfSourceProperty().get() : renderedPdfSource;
+        if (source != null) {
             viewModel.updateStatusMessage("Analizando pagina PDF " + page + " por clic...");
-            pdfVisibleTextPreparation.preparePageNow(document, page);
+            pdfVisibleTextPreparation.preparePageNow(source, page);
         }
     }
 
@@ -593,8 +737,7 @@ public final class DocumentWorkspaceView extends BorderPane {
         documentScroll.setManaged(true);
     }
 
-    private void resetPdfRegionSelectionIfSourceChanged(ReadableDocument document) {
-        Path next = shouldUsePdfVisualDocument(document) ? document.sourcePath() : null;
+    private void resetPdfRegionSelectionIfSourceChanged(Path next) {
         if (Objects.equals(pdfRegionSelectionSourcePath, next)) {
             return;
         }
@@ -662,31 +805,43 @@ public final class DocumentWorkspaceView extends BorderPane {
     private Node largeDocumentNotice(DocumentRenderWindow window) {
         VBox notice = new VBox(8);
         notice.getStyleClass().add("document-large-preview-notice");
+        notice.setMinWidth(0);
+        notice.setMaxWidth(Double.MAX_VALUE);
         Label title = new Label("Documento grande abierto");
         title.getStyleClass().add("document-large-preview-title");
+        title.setMinWidth(0);
+        title.setMaxWidth(Double.MAX_VALUE);
+        title.setWrapText(true);
         Label detail = new Label(window.humanRangeLabel()
                 + ". DocuPodcast carga solo una ventana cercana al punto actual para mantener fluido el lector. La fuente completa permanece disponible para lectura, búsqueda interna, audio y capas del proyecto.");
         detail.setWrapText(true);
+        detail.setMinWidth(0);
+        detail.setMaxWidth(Double.MAX_VALUE);
         detail.getStyleClass().add("document-large-preview-detail");
-        HBox actions = new HBox(8);
+        FlowPane actions = new FlowPane(8, 8);
         actions.getStyleClass().add("document-large-preview-actions");
-        Button previous = new Button("Bloques anteriores");
+        actions.setMinWidth(0);
+        actions.setMaxWidth(Double.MAX_VALUE);
+        Button previous = ActionButtonFactory.secondary("Bloques anteriores");
         previous.getStyleClass().add("document-large-preview-button");
         previous.setDisable(!window.hasPrevious());
         previous.setOnAction(event -> renderWindowAroundIndex(Math.max(0, window.startInclusive() - 1), true));
-        Button next = new Button("Siguientes bloques");
+        Button next = ActionButtonFactory.secondary("Siguientes bloques");
         next.getStyleClass().add("document-large-preview-button");
         next.setDisable(!window.hasNext());
         next.setOnAction(event -> renderWindowAroundIndex(Math.min(window.totalBlocks() - 1, window.endExclusive()), true));
-        Button beginning = new Button("Inicio del documento");
+        Button beginning = ActionButtonFactory.secondary("Inicio del documento");
         beginning.getStyleClass().add("document-large-preview-button-secondary");
         beginning.setDisable(!window.hasPrevious());
         beginning.setOnAction(event -> renderWindowAroundIndex(0, true));
-        Button end = new Button("Final del documento");
+        Button end = ActionButtonFactory.secondary("Final del documento");
         end.getStyleClass().add("document-large-preview-button-secondary");
         end.setDisable(!window.hasNext());
         end.setOnAction(event -> renderWindowAroundIndex(Math.max(0, window.totalBlocks() - 1), true));
         actions.getChildren().addAll(previous, next, beginning, end);
+        // The notice drives compaction so expanded labels cannot impose their preferred width
+        // on the action row. FlowPane can wrap the 40 px icon buttons when space is tighter still.
+        ResponsiveActionGroup.install(notice, 520, previous, next, beginning, end);
         notice.getChildren().addAll(title, detail, actions);
         return notice;
     }
@@ -763,6 +918,10 @@ public final class DocumentWorkspaceView extends BorderPane {
     }
 
     private void runPrimaryActionFromPlaybar() {
+        if (documentAudioActionRequest != null) {
+            documentAudioActionRequest.accept(DocumentAudioAction.FAST_LISTEN);
+            return;
+        }
         boolean needsProjectContainer = viewModel.currentDocumentProperty().get() != null
                 && viewModel.projectOpenProperty().get()
                 && viewModel.currentProjectFile().isEmpty();
@@ -825,7 +984,7 @@ public final class DocumentWorkspaceView extends BorderPane {
     }
 
     private CheckBox problemCheckBox(DocumentBlock block) {
-        CheckBox checkBox = new CheckBox();
+        CheckBox checkBox = StudioFormControls.checkBox();
         checkBox.getStyleClass().add("document-problem-checkbox");
         checkBox.setSelected(technicalProblemSelection.contains(block.id()));
         checkBox.setTooltip(new Tooltip("Incluir este bloque en el problema tecnico"));
@@ -859,7 +1018,7 @@ public final class DocumentWorkspaceView extends BorderPane {
         technicalProblemSelection.clear();
         pdfRegionCaptureSelection.clear();
         ReadableDocument document = renderedDocument == null ? viewModel.currentDocumentProperty().get() : renderedDocument;
-        if (!shouldUsePdfVisualDocument(document)) {
+        if (!hasPdfSource()) {
             renderWindow(document, renderedWindow);
         }
         viewModel.updateStatusMessage("Seleccion de problema tecnico limpia.");
@@ -867,7 +1026,7 @@ public final class DocumentWorkspaceView extends BorderPane {
 
     private void openTechnicalProblemDialog() {
         ReadableDocument document = renderedDocument == null ? viewModel.currentDocumentProperty().get() : renderedDocument;
-        if (shouldUsePdfVisualDocument(document)) {
+        if (hasPdfSource()) {
             openPdfTechnicalProblemDialog();
             return;
         }
@@ -876,8 +1035,11 @@ public final class DocumentWorkspaceView extends BorderPane {
             viewModel.updateStatusMessage("Marca bloques del documento antes de generar un problema tecnico.");
             return;
         }
-        Map<String, Path> sourceCropPreviews = viewModel.applicationServices().document().prepareStudySourceCrops().prepare(document, selectedBlocks);
-        TechnicalProblemDialog.show(getScene() == null ? null : getScene().getWindow(), selectedBlocks, sourceCropPreviews)
+        Map<String, Path> sourceCropPreviews = Map.of();
+        TechnicalProblemDialog.show(getScene() == null ? null : getScene().getWindow(), selectedBlocks,
+                        sourceCropPreviews,
+                        viewModel.inkInputProviders().create(DrawingFeatureCatalog.DOCUMENT_PROBLEM),
+                        viewModel.drawingFeatures().require(DrawingFeatureCatalog.DOCUMENT_PROBLEM))
                 .ifPresent(result -> {
                     try {
                         List<StudyProblemSourceDraft> sources = new java.util.ArrayList<>(selectedBlocks.stream()
@@ -909,7 +1071,9 @@ public final class DocumentWorkspaceView extends BorderPane {
         List<StudyProblemSourceDraft> sourceDrafts = regions.stream()
                 .map(PdfRegionCaptureDraft::toStudySourceDraft)
                 .toList();
-        TechnicalProblemDialog.showForDrafts(getScene() == null ? null : getScene().getWindow(), sourceDrafts)
+        TechnicalProblemDialog.showForDrafts(getScene() == null ? null : getScene().getWindow(), sourceDrafts,
+                        viewModel.inkInputProviders().create(DrawingFeatureCatalog.DOCUMENT_PROBLEM),
+                        viewModel.drawingFeatures().require(DrawingFeatureCatalog.DOCUMENT_PROBLEM))
                 .ifPresent(result -> {
                     try {
                         List<StudyProblemSourceDraft> sources = new java.util.ArrayList<>(sourceDrafts);
@@ -943,17 +1107,18 @@ public final class DocumentWorkspaceView extends BorderPane {
     }
 
     private void capturePdfRegionSelection(PdfViewportSelection selection) {
-        ReadableDocument document = renderedDocument == null ? viewModel.currentDocumentProperty().get() : renderedDocument;
-        if (!shouldUsePdfVisualDocument(document) || selection == null) {
+        PreparedPdfSource source = renderedPdfSource == null
+                ? viewModel.currentPreparedPdfSourceProperty().get() : renderedPdfSource;
+        if (source == null || selection == null) {
             return;
         }
-        Path sourcePath = document.sourcePath();
+        Path sourcePath = source.sourcePath();
         String regionId = nextPdfRegionId();
         viewModel.updateStatusMessage("Capturando region PDF " + regionId + "...");
         Task<PdfRegionCaptureResult> task = new Task<>() {
             @Override
             protected PdfRegionCaptureResult call() throws Exception {
-                return viewModel.applicationServices().document().capturePdfVisualRegion().capture(new PdfRegionCaptureRequest(
+                return viewModel.projectWorkspace().document().capturePdfVisualRegion().capture(new PdfRegionCaptureRequest(
                         sourcePath,
                         selection,
                         null,
@@ -1007,6 +1172,14 @@ public final class DocumentWorkspaceView extends BorderPane {
             text.getStyleClass().add("document-block-text");
             return text;
         }
+        if (block.type() == com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlockType.IMAGE_NOTICE) {
+            String description = block.metadata().getOrDefault("description", "").strip();
+            Label text = new Label(description.isBlank()
+                    ? block.text() : "Imagen: " + description);
+            text.setWrapText(true);
+            text.getStyleClass().add("document-block-text");
+            return text;
+        }
         return sentenceFlow(block);
     }
 
@@ -1055,22 +1228,36 @@ public final class DocumentWorkspaceView extends BorderPane {
     private Node sentenceFlow(DocumentBlock block) {
         java.util.List<DocumentSentenceSpan> spans = DocumentSentenceSplitter.split(block);
         if (spans.isEmpty()) {
-            Label text = new Label(block.text());
+            Label text = new Label(theatreDisplayText(block));
             text.setWrapText(true);
             text.getStyleClass().add("document-block-text");
             return text;
         }
         TextFlow flow = new TextFlow();
         flow.getStyleClass().add("document-block-text-flow");
+        String speaker = theatreSpeaker(block);
+        if (!speaker.isBlank()) {
+            Text prefix = new Text(speaker + ": ");
+            prefix.getStyleClass().add("document-theatre-speaker-prefix");
+            Tooltip.install(prefix, new Tooltip("Personaje. El audio comienza después de los dos puntos."));
+            flow.getChildren().add(prefix);
+        }
         for (int i = 0; i < spans.size(); i++) {
             DocumentSentenceSpan span = spans.get(i);
             Text sentence = new Text(span.text());
             sentence.getStyleClass().add("document-sentence");
             sentence.setOnMouseClicked(event -> {
-                selectSentence(span);
+                if (wholeBlockTextSelection(viewModel.currentProjectModeProperty().get())) {
+                    selectBlock(span.blockId());
+                } else {
+                    selectSentence(span);
+                }
                 event.consume();
             });
-            Tooltip.install(sentence, new Tooltip("Seleccionar oración para voz, audio, emoción o imagen"));
+            Tooltip.install(sentence, new Tooltip(
+                    wholeBlockTextSelection(viewModel.currentProjectModeProperty().get())
+                            ? "Seleccionar intervención teatral completa"
+                            : "Seleccionar oración para voz, audio, emoción o imagen"));
             sentenceNodes.put(span.id(), sentence);
             sentenceSpanIndex.put(span.id(), span);
             flow.getChildren().add(sentence);
@@ -1079,6 +1266,18 @@ public final class DocumentWorkspaceView extends BorderPane {
             }
         }
         return flow;
+    }
+
+    static String theatreDisplayText(DocumentBlock block) {
+        if (block == null) return "";
+        String speaker = theatreSpeaker(block);
+        return speaker.isBlank() ? block.text() : speaker + ": " + block.text();
+    }
+
+    private static String theatreSpeaker(DocumentBlock block) {
+        if (block == null || !block.originalStyle().startsWith("theatre-")) return "";
+        if (Boolean.parseBoolean(block.metadata().getOrDefault("theatreStageDirection", "false"))) return "Acotación";
+        return block.metadata().getOrDefault("characterName", "").strip();
     }
 
     private void selectSentence(DocumentSentenceSpan span) {
@@ -1096,15 +1295,53 @@ public final class DocumentWorkspaceView extends BorderPane {
         if (target == null || !target.available()) {
             return;
         }
-        selectedBlockId.set(target.blockId());
-        if (target.kind() == com.marcosmoreiradev.docupodcaststudio.application.document.PdfVisualTextTargetKind.SENTENCE
-                && target.range() != null) {
-            viewModel.selectDocumentTextRange(target.range(), target.text());
-        } else {
-            viewModel.selectDocumentBlock(target.blockId());
-        }
+        selectedBlockId.set("");
+        viewModel.selectPdfRegion(target);
         pdfVisualView.showPinnedTextTarget(target);
         pdfVisualView.scrollToTextTarget(target, pdfTextViewportTopOffset());
+    }
+
+    private DocumentContextDetailsPanel contextDetailsPanel() {
+        if (contextDetailsPanel == null) {
+            contextDetailsPanel = new DocumentContextDetailsPanel(
+                    viewModel,
+                    () -> requestDocumentAudioAction(DocumentAudioAction.PLAY_SELECTION),
+                    () -> requestDocumentAudioAction(DocumentAudioAction.PROCESS_FRAGMENT));
+        }
+        return contextDetailsPanel;
+    }
+
+    private void requestDocumentAudioAction(DocumentAudioAction action) {
+        if (documentAudioActionRequest != null) {
+            documentAudioActionRequest.accept(action);
+            return;
+        }
+        if (action == DocumentAudioAction.PLAY_SELECTION) {
+            viewModel.playFromSelectedSegment();
+        } else if (action == DocumentAudioAction.PROCESS_FRAGMENT) {
+            viewModel.generateAudioChunkForSelectedFragment();
+        } else if (action == DocumentAudioAction.GENERATE_SELECTION) {
+            viewModel.generateAudioChunksFromSelectedFragment();
+        }
+    }
+
+    private void defineManualDescriptionForPdfTarget(
+            PdfVisualTextTarget target) {
+        selectPdfTextTarget(target);
+        contextDetailsPanel().defineManualDescription();
+    }
+
+    private void viewContentAndDescriptionForPdfTarget(
+            PdfVisualTextTarget target) {
+        selectPdfTextTarget(target);
+        contextDetailsPanel().viewContentAndDescription();
+    }
+
+    private void narrateFromPdfTarget(PdfVisualTextTarget target) {
+        selectPdfTextTarget(target);
+        if (narrateFromPdfTargetRequest != null) {
+            narrateFromPdfTargetRequest.accept(target);
+        }
     }
 
     private void selectBlock(String blockId) {
@@ -1124,8 +1361,10 @@ public final class DocumentWorkspaceView extends BorderPane {
             return;
         }
         ReadableDocument document = renderedDocument == null ? viewModel.currentDocumentProperty().get() : renderedDocument;
-        if (shouldUsePdfVisualDocument(document)) {
-            sourcePageForBlock(document, blockId).ifPresent(pdfVisualView::scrollToPage);
+        if (hasPdfSource()) {
+            PreparedPdfSource source = viewModel.currentPreparedPdfSourceProperty().get();
+            if (source != null) pdfProjection(source).highlightForRegion(blockId)
+                    .ifPresent(value -> pdfVisualView.scrollToPage(value.pageNumber()));
             return;
         }
         if (document == null || !largeDocument(document)) {
@@ -1175,15 +1414,63 @@ public final class DocumentWorkspaceView extends BorderPane {
         if (node == null) {
             return;
         }
+        Platform.runLater(() -> scrollNodeNearReadingTopNow(node));
+    }
+
+    private void scrollNodeNearReadingTopNow(Node node) {
+        if (node == null || node.getScene() == null || pageHost.getScene() == null) {
+            return;
+        }
+        Bounds viewport = documentScroll.getViewportBounds();
+        double scrollableHeight = Math.max(1.0,
+                pageHost.getBoundsInLocal().getHeight() - viewport.getHeight());
+        Bounds nodeSceneBounds = node.localToScene(node.getBoundsInLocal());
+        Bounds hostSceneBounds = pageHost.localToScene(pageHost.getBoundsInLocal());
+        double nodeY = nodeSceneBounds.getMinY() - hostSceneBounds.getMinY();
+        double target = (nodeY - activeReadingTopOffset()) / scrollableHeight;
+        documentScroll.setVvalue(Math.max(0.0, Math.min(1.0, target)));
+    }
+
+    private void schedulePlaybackScroll(Node node, long sequence) {
+        if (node == null) return;
         Platform.runLater(() -> {
-            Bounds viewport = documentScroll.getViewportBounds();
-            double scrollableHeight = Math.max(1.0, pageHost.getBoundsInLocal().getHeight() - viewport.getHeight());
-            Bounds nodeSceneBounds = node.localToScene(node.getBoundsInLocal());
-            Bounds hostSceneBounds = pageHost.localToScene(pageHost.getBoundsInLocal());
-            double nodeY = nodeSceneBounds.getMinY() - hostSceneBounds.getMinY();
-            double target = (nodeY - ACTIVE_READING_TOP_OFFSET) / scrollableHeight;
-            documentScroll.setVvalue(Math.max(0.0, Math.min(1.0, target)));
+            if (!playbackAutoScrollAllowed(viewModel.playbackCursorProperty().get(),
+                    sequence, playbackVisualSequence) || node.getScene() == null) return;
+            pageHost.applyCss();
+            pageHost.layout();
+            scrollNodeNearReadingTopNow(node);
+            // ScrollPane applies its viewport transform on the following pulse.
+            // Reassert the same geometric anchor after that pulse so the narrated
+            // sentence remains 30 px below the floating playbar.
+            Platform.runLater(() -> {
+                if (playbackAutoScrollAllowed(viewModel.playbackCursorProperty().get(),
+                        sequence, playbackVisualSequence)) {
+                    scrollNodeNearReadingTopNow(node);
+                }
+            });
         });
+    }
+
+    static boolean playbackAutoScrollAllowed(
+            PlaybackCursor cursor, long requestedSequence, long currentSequence) {
+        return cursor != null && cursor.playing()
+                && requestedSequence == currentSequence;
+    }
+
+    private double activeReadingTopOffset() {
+        Node playbar = floatingReadingControls;
+        if (playbar == null || !playbar.isVisible() || playbar.getScene() == null
+                || documentScroll.getScene() == null) {
+            return 78.0;
+        }
+        Bounds barBounds = playbar.localToScene(playbar.getBoundsInLocal());
+        Bounds viewportBounds = documentScroll.localToScene(
+                documentScroll.getBoundsInLocal());
+        if (barBounds == null || viewportBounds == null) {
+            return 78.0;
+        }
+        return Math.max(30.0, barBounds.getMaxY() - viewportBounds.getMinY()
+                + ACTIVE_READING_GAP_BELOW_PLAYBAR);
     }
 
     private void updateSelectionStyles() {
@@ -1225,47 +1512,135 @@ public final class DocumentWorkspaceView extends BorderPane {
 
     // syncActivePlaybackBlock: compatibility label for T37 source guard; current implementation follows cue/unit when available.
     private void syncActivePlaybackCue(PlaybackCursor cursor) {
-        String segmentId = segmentId(cursor);
-        String nextBlockId = blockIdForPlaybackSegment(segmentId);
         PlaybackCue cue = cueForCursor(cursor).orElse(null);
+        syncActivePlaybackCue(cue, false);
+    }
+
+    private void syncActivePlaybackCue(PlaybackCue cue, boolean force) {
+        String segmentId = cue == null ? "" : normalize(cue.segmentId());
+        String nextBlockId = blockIdForPlaybackSegment(segmentId);
         String nextUnitId = cue == null ? "" : cue.unitId();
-        boolean unitChanged = !nextUnitId.equals(activePlaybackUnitId);
-        if (!nextBlockId.equals(activePlaybackBlockId)) {
-            activePlaybackBlockId = nextBlockId;
-            ensureBlockRendered(nextBlockId);
+        boolean transitionChanged = !segmentId.equals(activePlaybackSegmentId)
+                || !nextBlockId.equals(activePlaybackBlockId)
+                || !nextUnitId.equals(activePlaybackUnitId);
+        if (!force && !transitionChanged) return;
+        activePlaybackSegmentId = segmentId;
+        activePlaybackBlockId = nextBlockId;
+        activePlaybackUnitId = nextUnitId;
+        long sequence = ++playbackVisualSequence;
+        if (cue == null) {
             updateActiveReadingStyles();
-            scrollToActiveReadingBlock(nextBlockId);
-            updatePdfVisualReadingHighlight(nextBlockId, nextUnitId);
+            return;
         }
-        if (unitChanged) {
-            activePlaybackUnitId = nextUnitId;
-            updateActiveReadingStyles();
-            sentenceForCueUnit(nextUnitId, nextBlockId).ifPresent(this::selectSentence);
-            updatePdfVisualReadingHighlight(nextBlockId, nextUnitId);
+        updatePdfNarrationFocus(segmentId);
+        ensureBlockRendered(nextBlockId);
+        updateActiveReadingStyles();
+        boolean wholeTheatreBlock = wholeBlockPlaybackHighlight(
+                viewModel.currentProjectModeProperty().get());
+        Optional<DocumentSentenceSpan> sentence = sentenceForCue(
+                cue, nextBlockId);
+        if (wholeTheatreBlock) {
+            if (viewModel.playbackCursorProperty().get().playing()) {
+                scrollToActiveReadingBlock(nextBlockId);
+            }
+            selectPlaybackBlock(nextBlockId);
+        } else if (sentence.isPresent()) {
+            DocumentSentenceSpan span = sentence.orElseThrow();
+            selectSentenceFromPlayback(span, segmentId);
+            Node sentenceNode = sentenceNodes.get(span.id());
+            if (sentenceNode != null
+                    && viewModel.playbackCursorProperty().get().playing()) {
+                schedulePlaybackScroll(sentenceNode, sequence);
+            }
+        } else {
+            if (viewModel.playbackCursorProperty().get().playing()) {
+                scrollToActiveReadingBlock(nextBlockId);
+            }
+            selectPlaybackBlock(nextBlockId);
         }
+        updatePdfVisualReadingHighlight(segmentId, nextBlockId,
+                wholeTheatreBlock ? "" : nextUnitId, cue, sequence);
+    }
+
+    private void selectSentenceFromPlayback(
+            DocumentSentenceSpan span, String narrationSegmentId) {
+        if (span == null || span.blank()) return;
+        selectedBlockId.set(span.blockId());
+        viewModel.focusDocumentTextRangeDuringPlayback(
+                span.range(), span.text(), narrationSegmentId);
+        updateSelectionStyles();
+        updateSentenceSelectionStyles();
+    }
+
+    private void selectPlaybackBlock(String blockId) {
+        if (hasPdfSource() || blockId == null || blockId.isBlank()) return;
+        ReadableDocument document = viewModel.currentDocumentProperty().get();
+        if (document == null || document.blockById(blockId).isEmpty()) return;
+        selectedBlockId.set(blockId);
+        viewModel.selectDocumentBlock(blockId);
+        updateSelectionStyles();
+        updateSentenceSelectionStyles();
+    }
+
+    private void updatePdfNarrationFocus(String segmentId) {
+        if (!hasPdfSource() || segmentId == null || segmentId.isBlank()) {
+            pdfVisualView.clearNarrationFocus();
+            return;
+        }
+        NarrationScriptDocument script = viewModel.currentScriptProperty().get();
+        if (script == null || script.empty()) {
+            pdfVisualView.clearNarrationFocus();
+            return;
+        }
+        script.segments().stream()
+                .filter(segment -> segment.id().equals(segmentId))
+                .findFirst()
+                .flatMap(segment -> PdfNarrationFocusMetadata.decode(
+                        segment.metadata().get(PdfNarrationFocusMetadata.KEY)))
+                .ifPresentOrElse(pdfVisualView::showNarrationFocus,
+                        pdfVisualView::clearNarrationFocus);
     }
 
     private Optional<PlaybackCue> cueForCursor(PlaybackCursor cursor) {
         PlaybackManifest manifest = viewModel.currentPlaybackManifestProperty().get();
-        if (manifest == null || manifest.emptyManifest() || cursor == null) {
-            return Optional.empty();
-        }
-        Optional<PlaybackCue> byPosition = manifest.cueAt(cursor.positionSeconds())
-                .filter(cue -> cue.segmentId().equals(cursor.segmentId()));
-        return byPosition.isPresent() ? byPosition : manifest.cueForSegment(cursor.segmentId());
+        return PlaybackVisualCueResolver.resolve(
+                cursor,
+                viewModel.activePlaybackCueProperty().get(),
+                manifest);
     }
 
-    private Optional<DocumentSentenceSpan> sentenceForCueUnit(String unitId, String blockId) {
-        int unitIndex = unitIndex(unitId);
-        if (unitIndex < 0 || blockId == null || blockId.isBlank()) {
+    private Optional<DocumentSentenceSpan> sentenceForCue(
+            PlaybackCue cue, String blockId) {
+        if (cue == null || blockId == null || blockId.isBlank()) {
             return Optional.empty();
         }
         ReadableDocument document = viewModel.currentDocumentProperty().get();
         return document == null ? Optional.empty() : document.blockById(blockId)
                 .flatMap(block -> {
                     java.util.List<DocumentSentenceSpan> spans = DocumentSentenceSplitter.split(block);
-                    return unitIndex < spans.size() ? Optional.of(spans.get(unitIndex)) : Optional.empty();
+                    int unitIndex = unitIndex(cue.unitId());
+                    if (unitIndex >= 0 && unitIndex < spans.size()) {
+                        return Optional.of(spans.get(unitIndex));
+                    }
+                    String spoken = normalizeComparableText(cue.spokenText());
+                    if (!spoken.isBlank()) {
+                        Optional<DocumentSentenceSpan> byText = spans.stream()
+                                .filter(span -> {
+                                    String candidate = normalizeComparableText(span.text());
+                                    return candidate.equals(spoken)
+                                            || candidate.contains(spoken)
+                                            || spoken.contains(candidate);
+                                }).findFirst();
+                        if (byText.isPresent()) return byText;
+                    }
+                    return spans.size() == 1 ? Optional.of(spans.getFirst())
+                            : Optional.empty();
                 });
+    }
+
+    private static String normalizeComparableText(String value) {
+        return normalize(value).replaceAll("\\s+", " ")
+                .toLowerCase(java.util.Locale.ROOT);
     }
 
     private static int unitIndex(String unitId) {
@@ -1295,17 +1670,20 @@ public final class DocumentWorkspaceView extends BorderPane {
         if (script == null || script.empty()) {
             return "";
         }
-        return script.segments().stream()
-                .filter(segment -> segment.id().equals(segmentId))
-                .findFirst()
-                .flatMap(this::firstSourceBlockId)
-                .orElse("");
-    }
-
-    private Optional<String> firstSourceBlockId(NarrationSegment segment) {
-        return segment.sourceBlockIds().stream()
-                .filter(id -> id != null && !id.isBlank())
+        Optional<NarrationSegment> segment = script.segments().stream()
+                .filter(candidate -> candidate.id().equals(segmentId))
                 .findFirst();
+        if (segment.isEmpty()) return "";
+        if (hasPdfSource()) {
+            return ResolvePdfPlaybackHighlightUseCase.primaryRegionId(
+                    segment.orElseThrow());
+        }
+        NarrationSegment wordSegment = segment.orElseThrow();
+        return wordSegment.sourceBlockIds().stream()
+                .filter(id -> !id.isBlank())
+                .findFirst()
+                .orElseGet(() -> wordSegment.metadata()
+                        .getOrDefault("sourceBlockId", "").strip());
     }
 
     private void ensureBlockRendered(String blockId) {
@@ -1313,7 +1691,7 @@ public final class DocumentWorkspaceView extends BorderPane {
             return;
         }
         ReadableDocument document = renderedDocument == null ? viewModel.currentDocumentProperty().get() : renderedDocument;
-        if (shouldUsePdfVisualDocument(document)) {
+        if (hasPdfSource()) {
             return;
         }
         if (document == null || !largeDocument(document)) {
@@ -1327,7 +1705,9 @@ public final class DocumentWorkspaceView extends BorderPane {
 
 
     private void updateActiveReadingStyles() {
-        boolean sentenceCueActive = activePlaybackUnitId != null && !activePlaybackUnitId.isBlank();
+        boolean sentenceCueActive = !wholeBlockPlaybackHighlight(
+                viewModel.currentProjectModeProperty().get())
+                && activePlaybackUnitId != null && !activePlaybackUnitId.isBlank();
         for (Map.Entry<String, Node> entry : blockNodes.entrySet()) {
             boolean active = entry.getKey().equals(activePlaybackBlockId) && !sentenceCueActive;
             if (active && !entry.getValue().getStyleClass().contains("document-block-active-reading")) {
@@ -1336,6 +1716,14 @@ public final class DocumentWorkspaceView extends BorderPane {
                 entry.getValue().getStyleClass().remove("document-block-active-reading");
             }
         }
+    }
+
+    static boolean wholeBlockPlaybackHighlight(ProjectMode mode) {
+        return mode == ProjectMode.THEATRE_PRODUCTION;
+    }
+
+    static boolean wholeBlockTextSelection(ProjectMode mode) {
+        return mode == ProjectMode.THEATRE_PRODUCTION;
     }
 
     private void scrollToActiveReadingBlock(String blockId) {
@@ -1348,8 +1736,10 @@ public final class DocumentWorkspaceView extends BorderPane {
             return;
         }
         ReadableDocument document = viewModel.currentDocumentProperty().get();
-        if (shouldUsePdfVisualDocument(document)) {
-            sourcePageForBlock(document, blockId).ifPresent(pdfVisualView::scrollToPage);
+        if (hasPdfSource()) {
+            PreparedPdfSource source = viewModel.currentPreparedPdfSourceProperty().get();
+            if (source != null) pdfProjection(source).highlightForRegion(blockId)
+                    .ifPresent(value -> pdfVisualView.scrollToPage(value.pageNumber()));
             return;
         }
         if (document == null || document.blocks().isEmpty()) {
@@ -1380,9 +1770,11 @@ public final class DocumentWorkspaceView extends BorderPane {
                 .flatMap(block -> parsePositiveInt(block.metadata().getOrDefault("sourcePage", "")));
     }
 
-    private void updatePdfVisualReadingHighlight(String blockId, String unitId) {
-        ReadableDocument document = viewModel.currentDocumentProperty().get();
-        if (!shouldUsePdfVisualDocument(document)) {
+    private void updatePdfVisualReadingHighlight(
+            String segmentId, String blockId, String unitId,
+            PlaybackCue cue, long sequence) {
+        PreparedPdfSource source = viewModel.currentPreparedPdfSourceProperty().get();
+        if (source == null) {
             pdfVisualView.clearTextHighlight();
             return;
         }
@@ -1390,58 +1782,90 @@ public final class DocumentWorkspaceView extends BorderPane {
             pdfVisualView.clearTextHighlight();
             return;
         }
-        PdfVisualReadingProjection projection = pdfProjection(document);
-        Optional<DocumentSentenceSpan> span = sentenceForCueUnit(unitId, blockId);
-        if (span.isPresent()) {
-            projection.targetForRange(span.get().range())
-                    .map(PdfVisualTextTarget::highlight)
-                    .ifPresentOrElse(this::showPdfPlaybackHighlight,
-                            () -> projection.highlightForBlock(blockId)
-                                    .ifPresentOrElse(this::showPdfPlaybackHighlight, pdfVisualView::clearTextHighlight));
-            return;
+        PdfVisualReadingProjection projection = pdfProjection(source);
+        NarrationScriptDocument script = viewModel.currentScriptProperty().get();
+        NarrationSegment segment = script == null
+                ? null : script.segmentById(segmentId).orElse(null);
+        Optional<PdfVisualTextTarget> resolved = pdfPlaybackHighlight.resolveTarget(
+                projection, segment, blockId, unitId);
+        boolean followPlayback = viewModel.playbackCursorProperty().get() != null
+                && viewModel.playbackCursorProperty().get().playing();
+        if (resolved.isPresent()) {
+            PdfVisualTextTarget target = resolved.orElseThrow();
+            pdfVisualView.showPlaybackTextTarget(target, sequence);
+            if (followPlayback) {
+                pdfVisualView.scrollToTextHighlight(target.highlight(), pdfTextViewportTopOffset());
+            }
+            if (LOGGER.isDebugEnabled()) {
+                String readingOrder = segment == null ? "" : segment.metadata()
+                        .getOrDefault("pdfReadingOrder", "");
+                String regionType = segment == null ? "" : segment.metadata()
+                        .getOrDefault("sourceBlockType", "");
+                String text = segment == null ? "" : segment.narrationText()
+                        .replaceAll("\\s+", " ").strip();
+                if (text.length() > 120) text = text.substring(0, 117) + "...";
+                var painted = pdfVisualView.playbackVisualSnapshot();
+                LOGGER.debug("PLAYBACK_ACTIVE sequence={} segmentId={} unitId={} audioAssetId={} "
+                                + "page={} sourceRegionId={} readingOrder={} regionType={} "
+                                + "expectedVisualRegionId={} paintedVisualRegionId={} bbox={} "
+                                + "identityMatches={} timestampNanos={} text='{}'",
+                        sequence, segmentId, unitId, cue == null ? "" : cue.audioClipId(),
+                        target.pageNumber(), blockId, readingOrder, regionType,
+                        target.regionId(), painted.paintedRegionId(), target.region(),
+                        painted.identityMatches(), System.nanoTime(), text);
+            }
+        } else {
+            pdfPlaybackHighlight.resolve(projection, segment, blockId, unitId)
+                    .ifPresentOrElse(highlight -> {
+                                pdfVisualView.showTextHighlight(highlight);
+                                if (followPlayback) {
+                                    pdfVisualView.scrollToTextHighlight(
+                                            highlight, pdfTextViewportTopOffset());
+                                }
+                            },
+                            pdfVisualView::clearTextHighlight);
         }
-        projection.highlightForBlock(blockId)
-                .ifPresentOrElse(this::showPdfPlaybackHighlight, pdfVisualView::clearTextHighlight);
+        if (followPlayback) {
+            resolved.ifPresent(target -> {
+                        viewModel.followPdfPlaybackTarget(target);
+                        pdfVisualView.showPinnedTextTarget(target);
+                    });
+        }
     }
 
-    private void showPdfPlaybackHighlight(PdfVisualTextHighlight highlight) {
-        pdfVisualView.showTextHighlight(highlight);
-        pdfVisualView.scrollToTextHighlight(highlight, pdfTextViewportTopOffset());
+    private PdfVisualReadingProjection pdfProjection(PreparedPdfSource source) {
+        return viewModel.projectWorkspace().document().buildPdfVisualReadingProjection()
+                .build(source.workspace());
     }
 
-    private PdfVisualReadingProjection pdfProjection(ReadableDocument document) {
-        return viewModel.applicationServices().document().buildPdfVisualReadingProjection().build(document);
+    private void refreshPdfReadingProjection() {
+        PreparedPdfSource source = viewModel.currentPreparedPdfSourceProperty().get();
+        if (source == null) return;
+        pdfVisualView.setReadingProjection(pdfProjection(source));
+        updatePdfPinnedSelection();
+        syncActivePlaybackCue(viewModel.playbackCursorProperty().get());
     }
 
     private void updatePdfPinnedSelection() {
-        ReadableDocument document = viewModel.currentDocumentProperty().get();
-        if (!shouldUsePdfVisualDocument(document)) {
+        PreparedPdfSource source = viewModel.currentPreparedPdfSourceProperty().get();
+        if (source == null) {
             pdfVisualView.clearPinnedTextTarget();
             return;
         }
-        PdfVisualReadingProjection projection = pdfProjection(document);
-        DocumentTextRange range = viewModel.selectedDocumentTextRangeProperty().get();
-        if (range != null) {
-            projection.targetForRange(range).ifPresentOrElse(
+        PdfVisualReadingProjection projection = pdfProjection(source);
+        var selection = viewModel.selectedPdfRegionProperty().get();
+        if (selection != null) {
+            projection.targetForSelection(selection).ifPresentOrElse(
                     pdfVisualView::showPinnedTextTarget,
-                    () -> projection.targetForBlock(range.blockId()).ifPresentOrElse(
-                            pdfVisualView::showPinnedTextTarget,
-                            pdfVisualView::clearPinnedTextTarget));
+                    () -> projection.targetForRegion(selection.regionId()).ifPresentOrElse(
+                            pdfVisualView::showPinnedTextTarget, pdfVisualView::clearPinnedTextTarget));
             return;
         }
-        String blockId = selectedBlockId.get();
-        if (blockId == null || blockId.isBlank()) {
-            pdfVisualView.clearPinnedTextTarget();
-            return;
-        }
-        projection.targetForBlock(blockId).ifPresentOrElse(
-                pdfVisualView::showPinnedTextTarget,
-                pdfVisualView::clearPinnedTextTarget);
+        pdfVisualView.clearPinnedTextTarget();
     }
 
     private void showPdfSearchHighlight(PdfVisualTextHighlight highlight) {
-        ReadableDocument document = viewModel.currentDocumentProperty().get();
-        if (!shouldUsePdfVisualDocument(document) || highlight == null || !highlight.available()) {
+        if (!hasPdfSource() || highlight == null || !highlight.available()) {
             return;
         }
         pdfVisualView.showTextHighlight(highlight);
@@ -1472,9 +1896,17 @@ public final class DocumentWorkspaceView extends BorderPane {
         }
     }
 
+    private void clearPdfSelectionFromEmptyPageArea() {
+        if (viewModel.selectedPdfRegionProperty().get() != null) {
+            viewModel.clearSelectedDocumentBlock();
+            pdfVisualView.clearPinnedTextTarget();
+        }
+    }
+
     private void clearSelectionFromWorkspacePointerPress(MouseEvent event) {
         if (event.getClickCount() != 1 || !hasDocumentSelection()
                 || targetInsideDocumentBlock(event.getTarget())
+                || targetInsidePdfVisualDocument(event.getTarget())
                 || targetInsideWorkspaceSideDock(event.getTarget())) {
             return;
         }
@@ -1520,6 +1952,20 @@ public final class DocumentWorkspaceView extends BorderPane {
         return false;
     }
 
+    private static boolean targetInsidePdfVisualDocument(Object target) {
+        if (!(target instanceof Node node)) {
+            return false;
+        }
+        Node current = node;
+        while (current != null) {
+            if (current instanceof PdfVisualDocumentView) {
+                return true;
+            }
+            current = current.getParent();
+        }
+        return false;
+    }
+
     private boolean targetInsideDocumentBlock(Object target) {
         if (!(target instanceof Node node)) {
             return false;
@@ -1537,7 +1983,19 @@ public final class DocumentWorkspaceView extends BorderPane {
     }
 
     private boolean hasDocumentSelection() {
-        return !selectedBlockId.get().isBlank() || viewModel.selectedDocumentTextRangeProperty().get() != null;
+        return hasDocumentSelection(selectedBlockId.get(),
+                viewModel.selectedDocumentTextRangeProperty().get(),
+                viewModel.selectedPdfRegionProperty().get());
+    }
+
+    static boolean hasDocumentSelection(
+            String blockId,
+            DocumentTextRange textRange,
+            com.marcosmoreiradev.docupodcaststudio.application.document
+                    .PdfRegionSelectionRef pdfRegion) {
+        return blockId != null && !blockId.isBlank()
+                || textRange != null
+                || pdfRegion != null;
     }
 
     private boolean canClearSelectionFromBlankDocumentClick() {
@@ -1582,14 +2040,36 @@ public final class DocumentWorkspaceView extends BorderPane {
     }
 
     private ContextMenu paragraphContextMenu(DocumentBlock block) {
-        MenuItem copyText = new MenuItem("Copiar texto");
-        copyText.setOnAction(event -> {
+        boolean secondary = block != null
+                && (block.type() == com.marcosmoreiradev.docupodcaststudio.domain.document
+                .DocumentBlockType.IMAGE_NOTICE
+                || block.type() == com.marcosmoreiradev.docupodcaststudio.domain.document
+                .DocumentBlockType.TABLE_NOTICE);
+        boolean hasDescription = block != null
+                && !block.metadata().getOrDefault("description", "").isBlank();
+        Runnable select = () -> {
+            if (block != null) selectBlock(block.id());
+        };
+        Runnable copy = () -> {
             ClipboardContent content = new ClipboardContent();
             content.putString(block == null ? "" : block.text());
             Clipboard.getSystemClipboard().setContent(content);
-            viewModel.updateStatusMessage("Texto del parrafo copiado.");
-        });
-        return new ContextMenu(copyText);
+            viewModel.updateStatusMessage("Texto de la selección copiado.");
+        };
+        return DocumentSelectionContextMenuFactory.create(
+                secondary, hasDescription,
+                () -> {
+                    select.run();
+                    viewModel.playFromSelectedSegment();
+                }, copy,
+                secondary ? () -> {
+                    select.run();
+                    contextDetailsPanel().viewContentAndDescription();
+                } : null,
+                secondary ? () -> {
+                    select.run();
+                    contextDetailsPanel().defineManualDescription();
+                } : null);
     }
 
     private String readableKind(DocumentBlock block) {

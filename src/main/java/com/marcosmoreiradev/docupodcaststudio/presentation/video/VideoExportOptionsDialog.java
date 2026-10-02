@@ -1,7 +1,11 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.video;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioDialogShell;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
+
 import com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy;
-import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoResolutionPreset;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.SimpleVideoResolutionPreset;
 import com.marcosmoreiradev.docupodcaststudio.presentation.notification.DialogStyler;
 import javafx.geometry.Insets;
 import javafx.scene.control.ButtonType;
@@ -20,17 +24,18 @@ public final class VideoExportOptionsDialog {
     public Optional<VideoExportOptions> show(Window owner,
                                              List<VideoEncoderPolicy> availableEncoderPolicies,
                                              VideoEncoderPolicy defaultEncoderPolicy) {
-        Dialog<VideoExportOptions> dialog = new Dialog<>();
+        Dialog<VideoExportOptions> dialog = StudioDialogShell.dialog();
         dialog.setTitle("Exportar video");
         dialog.setHeaderText("Elige las propiedades del video final");
         DialogStyler.apply(dialog, owner);
 
-        ComboBox<SimpleVideoResolutionPreset> resolution = new ComboBox<>();
+        ComboBox<SimpleVideoResolutionPreset> resolution = StudioFormControls.comboBox();
         resolution.getItems().setAll(
                 SimpleVideoResolutionPreset.UHD_4K,
                 SimpleVideoResolutionPreset.QHD_2K,
                 SimpleVideoResolutionPreset.FULL_HD_1080,
-                SimpleVideoResolutionPreset.HD_720);
+                SimpleVideoResolutionPreset.HD_720,
+                SimpleVideoResolutionPreset.LOW_540);
         resolution.setValue(SimpleVideoResolutionPreset.defaultPreset());
         resolution.setMaxWidth(Double.MAX_VALUE);
         styleCombo(resolution);
@@ -46,7 +51,7 @@ public final class VideoExportOptionsDialog {
             }
         });
 
-        ComboBox<Integer> framesPerSecond = new ComboBox<>();
+        ComboBox<Integer> framesPerSecond = StudioFormControls.comboBox();
         framesPerSecond.getItems().setAll(24, 30, 48, 60);
         framesPerSecond.setValue(30);
         framesPerSecond.setMaxWidth(Double.MAX_VALUE);
@@ -55,7 +60,7 @@ public final class VideoExportOptionsDialog {
         List<VideoEncoderPolicy> encoders = availableEncoderPolicies == null || availableEncoderPolicies.isEmpty()
                 ? List.of(VideoEncoderPolicy.CPU_X264, VideoEncoderPolicy.AUTO)
                 : availableEncoderPolicies;
-        ComboBox<VideoEncoderPolicy> encoder = new ComboBox<>();
+        ComboBox<VideoEncoderPolicy> encoder = StudioFormControls.comboBox();
         encoder.getItems().setAll(encoders);
         encoder.setValue(encoders.contains(defaultEncoderPolicy) ? defaultEncoderPolicy : encoders.get(0));
         encoder.setMaxWidth(Double.MAX_VALUE);

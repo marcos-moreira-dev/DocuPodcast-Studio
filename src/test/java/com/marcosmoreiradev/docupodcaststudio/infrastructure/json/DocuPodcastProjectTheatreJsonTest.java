@@ -2,6 +2,7 @@ package com.marcosmoreiradev.docupodcaststudio.infrastructure.json;
 
 import com.marcosmoreiradev.docupodcaststudio.domain.project.DocuPodcastProject;
 import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreProjectLayer;
+import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreInterventionState;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -126,6 +127,34 @@ final class DocuPodcastProjectTheatreJsonTest {
         assertEquals(0, opened.theatre().objectImages().size());
         assertEquals(0, opened.theatre().textActionPlacements().size());
         assertEquals(0, opened.theatre().objects().size());
+    }
+
+    @Test
+    void loadsSilentInteractionCompatibilityEventFromAuditedProjectJson() throws Exception {
+        TheatreInterventionState state = new TheatreInterventionState(
+                "INTERVENCION-10201",
+                TheatreInterventionState.InheritanceMode.RESET,
+                "",
+                List.of(),
+                List.of(),
+                List.of(new TheatreInterventionState.StageEvent(
+                        TheatreInterventionState.EventType.INTERACT,
+                        "VIRREY_ELECTO", "", "GUARDIA_VERDE_2", "", "")),
+                "", "", "NEUTRAL");
+        DocuPodcastProject project = DocuPodcastProject.createNew("Obra")
+                .withTheatre(TheatreProjectLayer.empty().withInterventionStates(List.of(state)));
+        String compatible = new DocuPodcastProjectJsonWriter().write(project)
+                .replace("\"type\": \"INTERACT\"", "\"kind\": \"SILENT_INTERACTION\"")
+                .replace("\"characterId\": \"VIRREY_ELECTO\"", "\"source\": \"VIRREY_ELECTO\"")
+                .replace("\"targetCharacterId\": \"GUARDIA_VERDE_2\"", "\"target\": \"GUARDIA_VERDE_2\"");
+
+        DocuPodcastProject opened = new DocuPodcastProjectJsonReader().read(compatible);
+        TheatreInterventionState.StageEvent event = opened.theatre()
+                .interventionStates().getFirst().events().getFirst();
+
+        assertEquals(TheatreInterventionState.EventType.INTERACT, event.type());
+        assertEquals("VIRREY_ELECTO", event.characterId());
+        assertEquals("GUARDIA_VERDE_2", event.targetCharacterId());
     }
 
     @Test

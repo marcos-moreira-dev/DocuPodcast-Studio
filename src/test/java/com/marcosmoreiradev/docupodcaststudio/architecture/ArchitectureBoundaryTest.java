@@ -45,6 +45,7 @@ final class ArchitectureBoundaryTest {
             .that().resideOutsideOfPackages(
                     "..presentation..",
                     "..bootstrap..",
+                    "..ink..",
                     BASE_PACKAGE
             )
             .should().dependOnClassesThat().resideInAnyPackage("javafx..");
@@ -100,4 +101,57 @@ final class ArchitectureBoundaryTest {
                     "..domain.study..",
                     "..application.narrative.."
             );
+
+    @ArchTest
+    static final ArchRule desktop_layers_do_not_depend_on_local_media_adapters = noClasses()
+            .that().resideInAnyPackage("..domain..", "..application..", "..presentation..")
+            .should().dependOnClassesThat().resideInAPackage("..localmedia..");
+
+    @ArchTest
+    static final ArchRule transversal_ink_does_not_depend_on_document_product = noClasses()
+            .that().resideInAPackage("..presentation.ink..")
+            .should().dependOnClassesThat().resideInAPackage("..presentation.document..");
+
+    @ArchTest
+    static final ArchRule administrative_shell_does_not_know_product_modules = noClasses()
+            .that().resideInAPackage("..presentation.components.admin..")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "..presentation.voice..",
+                    "..presentation.theatre..",
+                    "..presentation.settings..");
+
+    @ArchTest
+    static final ArchRule presentation_does_not_use_root_application_locator = noClasses()
+            .that().resideInAPackage("..presentation..")
+            .should().dependOnClassesThat().haveFullyQualifiedName(
+                    "com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices");
+
+    @ArchTest
+    static final ArchRule engine_administration_is_confined_to_settings = noClasses()
+            .that().resideInAPackage("..presentation..")
+            .and().resideOutsideOfPackage("..presentation.settings..")
+            .should().dependOnClassesThat().haveFullyQualifiedName(
+                    "com.marcosmoreiradev.docupodcaststudio.media.api.EngineAdministration")
+            .orShould().dependOnClassesThat().haveFullyQualifiedName(
+                    "com.marcosmoreiradev.docupodcaststudio.media.api.EngineAdministrationRegistry")
+            .orShould().dependOnClassesThat().haveFullyQualifiedName(
+                    "com.marcosmoreiradev.docupodcaststudio.presentation.settings.EngineAdministrationPane")
+            .orShould().dependOnClassesThat().haveFullyQualifiedName(
+                    "com.marcosmoreiradev.docupodcaststudio.presentation.settings.EngineAdministrationController");
+
+    @ArchTest
+    static final ArchRule neutral_media_service_does_not_know_process_or_http_protocols = noClasses()
+            .that().resideInAPackage("..application.media..")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "..application.process..", "java.net.http..");
+
+    @ArchTest
+    static final ArchRule content_analysis_consumers_are_confined_to_document_study = noClasses()
+            .that().resideOutsideOfPackages(
+                    "..application.document..", "..application.documentstudy..",
+                    "..application.media..",
+                    "..media.api..",
+                    "..localmedia..")
+            .should().dependOnClassesThat().haveFullyQualifiedName(
+                    "com.marcosmoreiradev.docupodcaststudio.media.api.ContentAnalysisRequest");
 }

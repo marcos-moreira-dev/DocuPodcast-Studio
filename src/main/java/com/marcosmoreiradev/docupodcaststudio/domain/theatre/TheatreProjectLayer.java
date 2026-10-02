@@ -31,7 +31,8 @@ public record TheatreProjectLayer(
         List<CameraCue> cameraCues,
         List<StageBackdrop> stageBackdrops,
         List<StageBackdropAssignment> stageBackdropAssignments,
-        List<ChoralVoiceAssignment> choralVoiceAssignments
+        List<ChoralVoiceAssignment> choralVoiceAssignments,
+        List<TheatreInterventionState> interventionStates
 ) {
     public static final String DEFAULT_CAMERA_ID = "CERCA_CENTRO_NIVEL";
     public static final String STAGE_BACKDROP_SCOPE_SCENE = "SCENE";
@@ -58,6 +59,35 @@ public record TheatreProjectLayer(
         stageBackdrops = copy(stageBackdrops);
         stageBackdropAssignments = copy(stageBackdropAssignments);
         choralVoiceAssignments = copy(choralVoiceAssignments);
+        interventionStates = copy(interventionStates);
+    }
+
+    /** Compatibility constructor for projects and callers created before deterministic stage state. */
+    public TheatreProjectLayer(
+            List<Intervencion> intervenciones,
+            List<CharacterProfile> characters,
+            List<VoiceRoleAlias> voiceRoleAliases,
+            List<CharacterImage> characterImages,
+            List<IntervencionVisual> intervencionesVisuales,
+            List<IntermediateFrame> intermediateFrames,
+            List<TheatreAct> acts,
+            List<Scene> scenes,
+            List<SpatialPosition> positions,
+            List<TheatreAction> actions,
+            List<TextActionPlacement> textActionPlacements,
+            List<ObjectImage> objectImages,
+            List<TheatreObject> objects,
+            List<TheatreAudioTrack> audioTracks,
+            List<CameraReference> cameraReferences,
+            List<CameraCue> cameraCues,
+            List<StageBackdrop> stageBackdrops,
+            List<StageBackdropAssignment> stageBackdropAssignments,
+            List<ChoralVoiceAssignment> choralVoiceAssignments
+    ) {
+        this(intervenciones, characters, voiceRoleAliases, characterImages, intervencionesVisuales,
+                intermediateFrames, acts, scenes, positions, actions, textActionPlacements, objectImages, objects,
+                audioTracks, cameraReferences, cameraCues, stageBackdrops, stageBackdropAssignments,
+                choralVoiceAssignments, List.of());
     }
 
     /** Compatibility constructor for callers created before theatre choral voice metadata. */
@@ -225,35 +255,56 @@ public record TheatreProjectLayer(
         return new TheatreProjectLayer(intervenciones, characters, voiceRoleAliases, characterImages,
                 intervencionesVisuales, intermediateFrames, acts, scenes, positions, actions, placements, objectImages,
                 objects, audioTracks, cameraReferences, cameraCues, stageBackdrops, stageBackdropAssignments,
-                choralVoiceAssignments);
+                choralVoiceAssignments, interventionStates);
     }
 
     public TheatreProjectLayer withIntervencionesVisuales(List<IntervencionVisual> visuals) {
         return new TheatreProjectLayer(intervenciones, characters, voiceRoleAliases, characterImages,
                 visuals, intermediateFrames, acts, scenes, positions, actions, textActionPlacements, objectImages,
                 objects, audioTracks, cameraReferences, cameraCues, stageBackdrops, stageBackdropAssignments,
-                choralVoiceAssignments);
+                choralVoiceAssignments, interventionStates);
+    }
+
+    public TheatreProjectLayer withCharacterImages(List<CharacterImage> images) {
+        return new TheatreProjectLayer(intervenciones, characters, voiceRoleAliases, images,
+                intervencionesVisuales, intermediateFrames, acts, scenes, positions, actions,
+                textActionPlacements, objectImages, objects, audioTracks, cameraReferences, cameraCues,
+                stageBackdrops, stageBackdropAssignments, choralVoiceAssignments, interventionStates);
+    }
+
+    public TheatreProjectLayer withObjectImages(List<ObjectImage> images) {
+        return new TheatreProjectLayer(intervenciones, characters, voiceRoleAliases, characterImages,
+                intervencionesVisuales, intermediateFrames, acts, scenes, positions, actions,
+                textActionPlacements, images, objects, audioTracks, cameraReferences, cameraCues,
+                stageBackdrops, stageBackdropAssignments, choralVoiceAssignments, interventionStates);
+    }
+
+    public TheatreProjectLayer withScenes(List<Scene> updatedScenes) {
+        return new TheatreProjectLayer(intervenciones, characters, voiceRoleAliases, characterImages,
+                intervencionesVisuales, intermediateFrames, acts, updatedScenes, positions, actions,
+                textActionPlacements, objectImages, objects, audioTracks, cameraReferences, cameraCues,
+                stageBackdrops, stageBackdropAssignments, choralVoiceAssignments, interventionStates);
     }
 
     public TheatreProjectLayer withIntermediateFrames(List<IntermediateFrame> frames) {
         return new TheatreProjectLayer(intervenciones, characters, voiceRoleAliases, characterImages,
                 intervencionesVisuales, frames, acts, scenes, positions, actions, textActionPlacements, objectImages,
                 objects, audioTracks, cameraReferences, cameraCues, stageBackdrops, stageBackdropAssignments,
-                choralVoiceAssignments);
+                choralVoiceAssignments, interventionStates);
     }
 
     public TheatreProjectLayer withAudioTracks(List<TheatreAudioTrack> tracks) {
         return new TheatreProjectLayer(intervenciones, characters, voiceRoleAliases, characterImages,
                 intervencionesVisuales, intermediateFrames, acts, scenes, positions, actions, textActionPlacements,
                 objectImages, objects, tracks, cameraReferences, cameraCues, stageBackdrops, stageBackdropAssignments,
-                choralVoiceAssignments);
+                choralVoiceAssignments, interventionStates);
     }
 
     public TheatreProjectLayer withCameraReferences(List<CameraReference> references) {
         return new TheatreProjectLayer(intervenciones, characters, voiceRoleAliases, characterImages,
                 intervencionesVisuales, intermediateFrames, acts, scenes, positions, actions, textActionPlacements,
                 objectImages, objects, audioTracks, references, cameraCues, stageBackdrops, stageBackdropAssignments,
-                choralVoiceAssignments);
+                choralVoiceAssignments, interventionStates);
     }
 
     public TheatreProjectLayer withCameraCues(List<CameraCue> cues) {
@@ -267,21 +318,28 @@ public record TheatreProjectLayer(
         return new TheatreProjectLayer(intervenciones, characters, voiceRoleAliases, characterImages,
                 intervencionesVisuales, intermediateFrames, acts, scenes, positions, actions, textActionPlacements,
                 objectImages, objects, audioTracks, cameraReferences, cameraCues, backdrops,
-                stageBackdropAssignments, choralVoiceAssignments);
+                stageBackdropAssignments, choralVoiceAssignments, interventionStates);
     }
 
     public TheatreProjectLayer withStageBackdropAssignments(List<StageBackdropAssignment> assignments) {
         return new TheatreProjectLayer(intervenciones, characters, voiceRoleAliases, characterImages,
                 intervencionesVisuales, intermediateFrames, acts, scenes, positions, actions, textActionPlacements,
                 objectImages, objects, audioTracks, cameraReferences, cameraCues, stageBackdrops, assignments,
-                choralVoiceAssignments);
+                choralVoiceAssignments, interventionStates);
     }
 
     public TheatreProjectLayer withChoralVoiceAssignments(List<ChoralVoiceAssignment> assignments) {
         return new TheatreProjectLayer(intervenciones, characters, voiceRoleAliases, characterImages,
                 intervencionesVisuales, intermediateFrames, acts, scenes, positions, actions, textActionPlacements,
                 objectImages, objects, audioTracks, cameraReferences, cameraCues, stageBackdrops,
-                stageBackdropAssignments, assignments);
+                stageBackdropAssignments, assignments, interventionStates);
+    }
+
+    public TheatreProjectLayer withInterventionStates(List<TheatreInterventionState> states) {
+        return new TheatreProjectLayer(intervenciones, characters, voiceRoleAliases, characterImages,
+                intervencionesVisuales, intermediateFrames, acts, scenes, positions, actions, textActionPlacements,
+                objectImages, objects, audioTracks, cameraReferences, cameraCues, stageBackdrops,
+                stageBackdropAssignments, choralVoiceAssignments, states);
     }
 
     private static <T> List<T> copy(List<T> value) {

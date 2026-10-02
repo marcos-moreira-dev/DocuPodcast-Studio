@@ -1,12 +1,22 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.theatre;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeSourceChooser;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioCollectionControls;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
+
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionButtonFactory;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.ResponsiveActionGroup;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.AppIcon;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.CollapsibleModuleSplitPane;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ImageFullscreenViewer;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.SectionHeader;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.SidePanelToggleButton;
 import com.marcosmoreiradev.docupodcaststudio.application.voice.VoiceAssignmentOption;
+import com.marcosmoreiradev.docupodcaststudio.application.voice.VoiceAssignmentReadinessContext;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.ReadableDocument;
 import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationScriptDocument;
 import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreProjectLayer;
@@ -53,7 +63,7 @@ public final class TheatreCharactersPanel extends BorderPane {
     private final DocuPodcastShellViewModel viewModel;
     private final ObjectProperty<TheatreCharacterPresentation> selectedCharacter = new SimpleObjectProperty<>();
     private final ObjectProperty<TheatreProjectLayer.Scene> selectedScene = new SimpleObjectProperty<>();
-    private final ListView<TheatreCharacterPresentation> characters = new ListView<>();
+    private final ListView<TheatreCharacterPresentation> characters = StudioCollectionControls.listView();
     private final VBox acts = new VBox(8);
     private final Set<String> expandedActIds = new LinkedHashSet<>();
     private final Set<String> expandedSceneIds = new LinkedHashSet<>();
@@ -107,7 +117,7 @@ public final class TheatreCharactersPanel extends BorderPane {
         body.getStyleClass().add("document-context-body");
         body.setMaxWidth(Double.MAX_VALUE);
 
-        ScrollPane scroll = new ScrollPane(body);
+        ScrollPane scroll = StudioViewportControls.scrollPane(body);
         scroll.setFitToWidth(true);
         scroll.setFitToHeight(true);
         scroll.getStyleClass().add("document-context-scroll");
@@ -440,6 +450,7 @@ public final class TheatreCharactersPanel extends BorderPane {
         HBox actions = new HBox(6, noteButton, replace, viewFull, delete);
         actions.getStyleClass().add("theatre-scene-character-image-actions");
         actions.setAlignment(Pos.CENTER_LEFT);
+        ResponsiveActionGroup.install(actions, 360, noteButton, replace, viewFull, delete);
 
         VBox copy = new VBox(5, note, actions);
         copy.setMinWidth(0);
@@ -538,7 +549,7 @@ public final class TheatreCharactersPanel extends BorderPane {
     }
 
     private File chooseImageFile(String title) {
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle(title);
         chooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("Imagenes compatibles (*.png, *.jpg, *.jpeg, *.webp, *.gif)", "*.png", "*.jpg", "*.jpeg", "*.webp", "*.gif"),
@@ -605,7 +616,7 @@ public final class TheatreCharactersPanel extends BorderPane {
         title.getStyleClass().add("theatre-character-dialog-title");
         title.setWrapText(true);
 
-        TextField name = new TextField(creating ? "Acto " + (viewModel.theatreActs().size() + 1) : act.displayName());
+        TextField name = StudioFormControls.textField(creating ? "Acto " + (viewModel.theatreActs().size() + 1) : act.displayName());
         name.getStyleClass().add("theatre-object-name-field");
         name.setPromptText("Nombre del acto");
         name.setMaxWidth(Double.MAX_VALUE);
@@ -641,7 +652,7 @@ public final class TheatreCharactersPanel extends BorderPane {
         title.getStyleClass().add("theatre-character-dialog-title");
         title.setWrapText(true);
 
-        TextField name = new TextField(creating ? "" : scene.displayName());
+        TextField name = StudioFormControls.textField(creating ? "" : scene.displayName());
         name.getStyleClass().add("theatre-object-name-field");
         name.setPromptText("Nombre de la escena");
         name.setMaxWidth(Double.MAX_VALUE);
@@ -784,7 +795,7 @@ public final class TheatreCharactersPanel extends BorderPane {
         title.getStyleClass().add("theatre-character-dialog-title");
         title.setWrapText(true);
 
-        ComboBox<VoiceAssignmentOption> voice = new ComboBox<>();
+        ComboBox<VoiceAssignmentOption> voice = StudioFormControls.comboBox();
         voice.getItems().setAll(choices);
         voice.setMaxWidth(Double.MAX_VALUE);
         selectedVoiceChoice(character).ifPresentOrElse(
@@ -852,8 +863,13 @@ public final class TheatreCharactersPanel extends BorderPane {
         String currentVoiceId = selectedVoiceChoice(character)
                 .map(TheatreProjectLayer.VoiceRoleAlias::voiceProfileId)
                 .orElse("");
-        return viewModel.applicationServices().voice().buildVoiceAssignmentOptions()
-                .build(viewModel.activeVoiceLibraryProperty().get(), viewModel.audioEngineDescriptor(), usedByOthers, currentVoiceId);
+        var roots = viewModel.runtimeWorkspace();
+        VoiceAssignmentReadinessContext readiness = new VoiceAssignmentReadinessContext(
+                roots.installationRoot(), roots.runtimeRoot(),
+                viewModel.currentProjectDirectory().orElse(roots.runtimeRoot()));
+        return viewModel.administrationWorkspace().voice().buildVoiceAssignmentOptions()
+                .build(viewModel.activeVoiceLibraryProperty().get(), viewModel.audioEngineDescriptor(),
+                        usedByOthers, currentVoiceId, readiness);
     }
 
     private Optional<TheatreProjectLayer.VoiceRoleAlias> selectedVoiceChoice(TheatreCharacterPresentation character) {

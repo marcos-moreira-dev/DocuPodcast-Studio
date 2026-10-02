@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
+import com.marcosmoreiradev.docupodcaststudio.application.WorkspaceApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.domain.assets.ProjectAssetReference;
 import com.marcosmoreiradev.docupodcaststudio.domain.assignment.NarrativeLayerAssignment;
 import com.marcosmoreiradev.docupodcaststudio.domain.assignment.NarrativeLayerKind;
@@ -25,9 +25,9 @@ import java.util.stream.Collectors;
 
 /** Handles image asset cleanup and removal from projects for the shell. */
 public final class ProjectImageManagementWorkflow {
-    private final ApplicationServices applicationServices;
+    private final WorkspaceApplicationServices applicationServices;
 
-    public ProjectImageManagementWorkflow(ApplicationServices applicationServices) {
+    public ProjectImageManagementWorkflow(WorkspaceApplicationServices applicationServices) {
         this.applicationServices = Objects.requireNonNull(applicationServices, "applicationServices");
     }
 
@@ -66,7 +66,7 @@ public final class ProjectImageManagementWorkflow {
         }
         for (ProjectAssetReference image : imageAssets) {
             deleteAssetFileIfPresent(image, projectFile);
-            project = applicationServices.assets().removeProjectAsset().remove(project, image.id());
+            project = applicationServices.project().assets().removeProjectAsset().remove(project, image.id());
         }
         project = project.withNarrativeLayerAssignments(keptLayers);
         StoryboardDocument storyboard = currentStoryboard;
@@ -100,7 +100,7 @@ public final class ProjectImageManagementWorkflow {
         boolean deleted = false;
         if (!stillUsed) {
             session.project().assets().byId(assetId).ifPresent(asset -> deleteAssetFileIfPresent(asset, projectFile));
-            project = applicationServices.assets().removeProjectAsset().remove(project, assetId);
+            project = applicationServices.project().assets().removeProjectAsset().remove(project, assetId);
             deleted = true;
         }
         session.replaceProject(project, true);
@@ -116,7 +116,7 @@ public final class ProjectImageManagementWorkflow {
             StoryboardDocument currentStoryboard,
             ProjectAssetCatalog assets,
             List<NarrativeLayerAssignment> narrativeLayerAssignments) {
-        return applicationServices.storyboard().buildStoryboardFromImageLayers().build(
+        return applicationServices.generation().storyboard().buildStoryboardFromImageLayers().build(
                 script, currentStoryboard, assets, narrativeLayerAssignments);
     }
 

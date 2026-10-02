@@ -13,11 +13,14 @@ import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreProjectLayer
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 final class BuildTheatreAudioTrackTimelineUseCaseTest {
     private final BuildTheatreAudioTrackTimelineUseCase useCase = new BuildTheatreAudioTrackTimelineUseCase();
@@ -71,6 +74,25 @@ final class BuildTheatreAudioTrackTimelineUseCaseTest {
         assertEquals("SEG-INTRO", entry.startSegmentId());
         assertEquals(0.375, entry.track().fadeDurationSeconds(), 0.001);
         assertEquals("TRACK-INTRO", timeline.affectingSegment("SEG-INTRO").orElseThrow().track().id());
+    }
+
+    @Test
+    void indexesLargePlaybackManifestInsteadOfScanningItForEverySegment() {
+        ArrayList<NarrationSegment> segments = new ArrayList<>();
+        ArrayList<PlaybackCue> cues = new ArrayList<>();
+        for (int index = 0; index < 2_000; index++) {
+            String id = "SEG-" + index;
+            segments.add(NarrationSegment.of(id, NarrationSegmentType.PARAGRAPH,
+                    id, "Texto narrable " + index, List.of("B-" + index)));
+            cues.add(cue(id, index, index + 1));
+        }
+        NarrationScriptDocument script = NarrationScriptDocument.create(
+                "Documento grande", "es", "source.docx", segments);
+        PlaybackManifest manifest = new PlaybackManifest(
+                "PLAYBACK-LARGE", "JOB-LARGE", cues, "", Instant.now());
+
+        assertTimeoutPreemptively(Duration.ofSeconds(2), () ->
+                useCase.execute(project(List.of()), script, manifest));
     }
 
     private static DocuPodcastProject project(List<TheatreProjectLayer.TheatreAudioTrack> tracks) {

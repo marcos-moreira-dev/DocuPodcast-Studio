@@ -2,6 +2,7 @@ package com.marcosmoreiradev.docupodcaststudio.application.render;
 
 import com.marcosmoreiradev.docupodcaststudio.application.reading.PreparedReadingProjection;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreChoralVoiceFingerprint;
+import com.marcosmoreiradev.docupodcaststudio.application.voice.EffectiveVoiceAssignmentResolver;
 import com.marcosmoreiradev.docupodcaststudio.domain.assignment.NarrativeLayerAssignment;
 import com.marcosmoreiradev.docupodcaststudio.domain.assignment.NarrativeLayerKind;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentSentenceSpan;
@@ -18,6 +19,7 @@ import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreProjectLayer
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -30,6 +32,23 @@ import java.util.Optional;
  * document fragments/oraciones with effective voice, audio clip and visual resources.</p>
  */
 public final class BuildNarrationRenderPlanUseCase {
+    private final EffectiveVoiceAssignmentResolver voiceResolver;
+    private final NarrationSynthesisGranularityPolicy granularityPolicy;
+
+    public BuildNarrationRenderPlanUseCase() {
+        this(new EffectiveVoiceAssignmentResolver(), new NarrationSynthesisGranularityPolicy());
+    }
+
+    public BuildNarrationRenderPlanUseCase(EffectiveVoiceAssignmentResolver voiceResolver) {
+        this(voiceResolver, new NarrationSynthesisGranularityPolicy());
+    }
+
+    BuildNarrationRenderPlanUseCase(EffectiveVoiceAssignmentResolver voiceResolver,
+                                    NarrationSynthesisGranularityPolicy granularityPolicy) {
+        this.voiceResolver = Objects.requireNonNull(voiceResolver, "voiceResolver");
+        this.granularityPolicy = Objects.requireNonNull(granularityPolicy, "granularityPolicy");
+    }
+
     public NarrationRenderPlan build(PreparedReadingProjection projection, DocuPodcastProject project) {
         Objects.requireNonNull(projection, "projection");
         return build(projection.narrationScript(), project);
@@ -72,21 +91,28 @@ public final class BuildNarrationRenderPlanUseCase {
             if (!segment.narratable()) {
                 continue;
             }
+            boolean wholeSemanticSegment = granularityPolicy.resolve(project)
+                    == NarrationSynthesisGranularityPolicy.Granularity.SEMANTIC_SEGMENT;
             boolean choralAudio = choralAudioFor(segment, theatre, project).isPresent();
-            List<DocumentSentenceSpan> spans = choralAudio
-                    ? List.of(new DocumentSentenceSpan(segment.id() + ":S001", 0,
-                    new DocumentTextRange(segment.id(), 0, segment.narrationText().length()), segment.narrationText()))
+            List<DocumentSentenceSpan> spans = wholeSemanticSegment || choralAudio
+                    ? wholeSegmentSpan(segment)
                     : DocumentSentenceSplitter.split(segment.id(), segment.narrationText());
             if (spans.isEmpty()) {
-                spans = List.of(new DocumentSentenceSpan(segment.id() + ":S001", 0,
-                        new com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentTextRange(segment.id(), 0, segment.narrationText().length()),
-                        segment.narrationText()));
+                spans = wholeSegmentSpan(segment);
             }
             for (DocumentSentenceSpan span : spans) {
                 units.add(unitFor(segment, span, layers, roleVoices, theatre, project));
             }
         }
         return new NarrationRenderPlan("RENDER-" + script.id(), script.id(), units, Instant.now());
+    }
+
+    private static List<DocumentSentenceSpan> wholeSegmentSpan(NarrationSegment segment) {
+        return List.of(new DocumentSentenceSpan(
+                segment.id() + ":S001",
+                0,
+                new DocumentTextRange(segment.id(), 0, segment.narrationText().length()),
+                segment.narrationText()));
     }
 
     private NarrationRenderUnit unitFor(NarrationSegment segment,
@@ -108,10 +134,15 @@ public final class BuildNarrationRenderPlanUseCase {
         NarrationRenderSourceKind sourceKind = choralAudio.isPresent() || humanAudio.isPresent()
                 ? NarrationRenderSourceKind.AUDIO_CLIP
                 : NarrationRenderSourceKind.TEXT_TO_SPEECH;
-        String voiceProfileId = voice.map(NarrativeLayerAssignment::targetId)
-                .or(() -> theatreVoiceFor(segment.characterId(), theatreVoices))
-                .orElse(segment.voiceProfileId());
-        String performanceStyleId = emotion.map(NarrativeLayerAssignment::targetId).orElse(segment.performanceStyleId());
+        String theatreVoice = defaultStageDirectionVoice(segment, project, theatreVoices)
+                .orElseGet(() -> theatreVoiceFor(segment.characterId(), theatreVoices).orElse(""));
+        String voiceProfileId = voiceResolver.resolve(
+                voice.map(NarrativeLayerAssignment::targetId),
+                Optional.ofNullable(theatreVoice).filter(value -> !value.isBlank()),
+                effectiveDocumentDefaultVoice(segment, project),
+                EffectiveVoiceAssignmentResolver.DEFAULT_NARRATOR_VOICE_ID).voiceProfileId();
+        String performanceStyleId = emotion.map(NarrativeLayerAssignment::targetId)
+                .orElseGet(() -> effectiveDocumentDefaultTone(segment, project));
         String audioAssetId = choralAudio.or(() -> humanAudio.map(NarrativeLayerAssignment::targetId)).orElse("");
         String imageAssetId = image.map(NarrativeLayerAssignment::targetId).orElse("");
         DocumentTextRange documentRange = matching.stream()
@@ -135,6 +166,74 @@ public final class BuildNarrationRenderPlanUseCase {
                 imageAssetId,
                 appliedLayerIds
         );
+    }
+
+    /**
+     * Gives stage directions a stable voice that is not used by a character.
+     * A manually assigned non-narrator alias remains authoritative. Older
+     * projects commonly persisted VOC-NARRATOR for CHR-ACOTACION; that value is
+     * treated as the legacy placeholder and upgraded at render time.
+     */
+    private static Optional<String> defaultStageDirectionVoice(
+            NarrationSegment segment,
+            DocuPodcastProject project,
+            List<TheatreProjectLayer.VoiceRoleAlias> theatreVoices) {
+        if (segment == null || !"true".equalsIgnoreCase(
+                segment.metadata().getOrDefault("theatreStageDirection", "false"))) {
+            return Optional.empty();
+        }
+        Optional<String> assigned = theatreVoiceFor(segment.characterId(), theatreVoices)
+                .filter(voice -> !EffectiveVoiceAssignmentResolver.DEFAULT_NARRATOR_VOICE_ID
+                        .equalsIgnoreCase(voice));
+        if (assigned.isPresent() || project == null) {
+            return assigned;
+        }
+        LinkedHashSet<String> usedByCharacters = new LinkedHashSet<>();
+        theatreVoices.stream()
+                .filter(alias -> !"CHR-ACOTACION".equalsIgnoreCase(alias.characterId()))
+                .map(TheatreProjectLayer.VoiceRoleAlias::voiceProfileId)
+                .filter(voice -> voice != null && !voice.isBlank())
+                .forEach(usedByCharacters::add);
+        List<String> preferred = List.of(
+                "VOC-PRESET-MUJER-ADULTA-CALIDA-NARRATIVA",
+                "VOC-PRESET-HOMBRE-ADULTO-PERSONAJE-NARRATIVO");
+        return java.util.stream.Stream.concat(
+                        preferred.stream(),
+                        project.voiceLibrary().voices().stream().map(voice -> voice.id()))
+                .filter(voice -> !EffectiveVoiceAssignmentResolver.DEFAULT_NARRATOR_VOICE_ID
+                        .equalsIgnoreCase(voice))
+                .filter(voice -> !usedByCharacters.contains(voice))
+                .filter(voice -> project.voiceLibrary().voiceById(voice).isPresent())
+                .filter(voice -> project.voiceLibrary().referenceSampleSetByVoiceId(voice).isPresent())
+                .findFirst();
+    }
+
+    private static String effectiveDocumentDefaultVoice(
+            NarrationSegment segment,
+            DocuPodcastProject project) {
+        String segmentVoice = segment == null || segment.voiceProfileId() == null
+                ? "" : segment.voiceProfileId().strip();
+        if (project == null
+                || (!segmentVoice.isBlank()
+                && !EffectiveVoiceAssignmentResolver.DEFAULT_NARRATOR_VOICE_ID
+                .equalsIgnoreCase(segmentVoice))) {
+            return segmentVoice;
+        }
+        String projectVoice = project.documentDefaultVoiceProfileId();
+        return projectVoice.isBlank() ? segmentVoice : projectVoice;
+    }
+
+    private static String effectiveDocumentDefaultTone(
+            NarrationSegment segment,
+            DocuPodcastProject project) {
+        String segmentTone = segment == null || segment.performanceStyleId() == null
+                ? "" : segment.performanceStyleId().strip();
+        if (project == null || (!segmentTone.isBlank()
+                && !"STY-NEUTRAL".equalsIgnoreCase(segmentTone))) {
+            return segmentTone;
+        }
+        String projectTone = project.documentDefaultVoiceToneId();
+        return projectTone.isBlank() ? segmentTone : projectTone;
     }
 
     private static Optional<String> choralAudioFor(NarrationSegment segment,

@@ -6,6 +6,8 @@ import com.marcosmoreiradev.docupodcaststudio.domain.audio.AudioJobSnapshot;
 import com.marcosmoreiradev.docupodcaststudio.domain.audio.AudioJobState;
 import com.marcosmoreiradev.docupodcaststudio.domain.audio.AudioSegmentSnapshot;
 import com.marcosmoreiradev.docupodcaststudio.domain.audio.AudioSegmentStatus;
+import com.marcosmoreiradev.docupodcaststudio.domain.audio.AudioSourceFingerprint;
+import com.marcosmoreiradev.docupodcaststudio.domain.document.pdf.PdfRegionRevisionRef;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.json.SimpleJsonParser;
 
 import java.io.IOException;
@@ -144,7 +146,8 @@ public final class AudioJobFileRepository implements AudioJobRepository {
                     stringOrDefault(segment.get("audioRelativePath"), ""),
                     doubleOrDefault(segment.get("durationSeconds"), 0.0),
                     intOrDefault(segment.get("attempts"), 0),
-                    stringOrDefault(segment.get("errorMessage"), "")
+                    stringOrDefault(segment.get("errorMessage"), ""),
+                    fingerprint(segment)
             );
             segments.add(withMeasuredDuration(snapshot, projectDirectory, jobDir));
         }
@@ -222,7 +225,15 @@ public final class AudioJobFileRepository implements AudioJobRepository {
                     .append(field(3, "audioRelativePath", segment.audioRelativePath(), true))
                     .append(decimalField(3, "durationSeconds", segment.durationSeconds(), true))
                     .append(numberField(3, "attempts", segment.attempts(), true))
-                    .append(field(3, "errorMessage", segment.errorMessage(), false))
+                    .append(field(3, "errorMessage", segment.errorMessage(), true))
+                    .append(field(3, "sourceRegionRefs", regionRefs(segment.sourceFingerprint()), true))
+                    .append(numberField(3, "sourceFirstPage", segment.sourceFingerprint().firstPage(), true))
+                    .append(numberField(3, "sourceLastPage", segment.sourceFingerprint().lastPage(), true))
+                    .append(field(3, "sourceTextSha256", segment.sourceFingerprint().textSha256(), true))
+                    .append(field(3, "sourceVoiceSha256", segment.sourceFingerprint().voiceConfigurationSha256(), true))
+                    .append(field(3, "sourcePreprocessingSha256", segment.sourceFingerprint().preprocessingSha256(), true))
+                    .append(field(3, "sourceDerivedTreatmentSha256",
+                            segment.sourceFingerprint().derivedTreatmentSha256(), false))
                     .append("    }");
             if (i < segments.size() - 1) {
                 out.append(',');
@@ -231,6 +242,42 @@ public final class AudioJobFileRepository implements AudioJobRepository {
         }
         out.append("  ]\n}\n");
         return out.toString();
+    }
+
+    private static AudioSourceFingerprint fingerprint(Map<String, Object> segment) throws IOException {
+        String text = stringOrDefault(segment.get("sourceTextSha256"), "");
+        String voice = stringOrDefault(segment.get("sourceVoiceSha256"), "");
+        String preprocessing = stringOrDefault(segment.get("sourcePreprocessingSha256"), "");
+        String derived = stringOrDefault(segment.get("sourceDerivedTreatmentSha256"), "");
+        if (text.isBlank() || voice.isBlank() || preprocessing.isBlank()) {
+            return AudioSourceFingerprint.untraceable();
+        }
+        return new AudioSourceFingerprint(
+                parseRegionRefs(stringOrDefault(segment.get("sourceRegionRefs"), "")),
+                intOrDefault(segment.get("sourceFirstPage"), 0),
+                intOrDefault(segment.get("sourceLastPage"), 0),
+                text, voice, preprocessing, derived);
+    }
+
+    private static String regionRefs(AudioSourceFingerprint fingerprint) {
+        return fingerprint.sourceRegions().stream()
+                .map(ref -> ref.regionId() + "|" + ref.pageNumber() + "|" + ref.revision())
+                .collect(java.util.stream.Collectors.joining(";"));
+    }
+
+    private static List<PdfRegionRevisionRef> parseRegionRefs(String raw) {
+        if (raw == null || raw.isBlank()) return List.of();
+        ArrayList<PdfRegionRevisionRef> refs = new ArrayList<>();
+        for (String item : raw.split(";")) {
+            String[] parts = item.split("\\|", -1);
+            if (parts.length != 3) continue;
+            try {
+                refs.add(new PdfRegionRevisionRef(parts[0], Integer.parseInt(parts[1]), Long.parseLong(parts[2])));
+            } catch (IllegalArgumentException ignored) {
+                // A malformed old provenance entry makes only that entry unusable.
+            }
+        }
+        return List.copyOf(refs);
     }
 
     private static String field(String name, String value, boolean comma) {

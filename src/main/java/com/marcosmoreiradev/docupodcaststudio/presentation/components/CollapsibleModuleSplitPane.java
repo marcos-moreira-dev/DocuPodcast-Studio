@@ -23,7 +23,7 @@ public final class CollapsibleModuleSplitPane extends BorderPane {
     private final BorderPane primarySlot = new BorderPane();
     private final Node primary;
     private final Node secondary;
-    private final SplitPane split = new SplitPane();
+    private final SplitPane split = StudioViewportControls.splitPane();
     private final HBox collapsedContent = new HBox();
     private final double dividerPosition;
     private final boolean showPrimaryCollapsedStrip;

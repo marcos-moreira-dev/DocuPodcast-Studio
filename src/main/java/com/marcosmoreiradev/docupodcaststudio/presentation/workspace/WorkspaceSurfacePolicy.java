@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.workspace;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.compatibility.LegacyWorkspaceRouteMapper;
+
 import java.util.EnumSet;
 import java.util.Set;
 
@@ -12,23 +14,22 @@ import java.util.Set;
  * while the GUI is refactored, but they must not compete in normal navigation.</p>
  */
 public final class WorkspaceSurfacePolicy {
-    private static final Set<WorkspaceKind> PRODUCT_SURFACES = EnumSet.of(
-            WorkspaceKind.WELCOME_HOME,
-            WorkspaceKind.DOCUMENT_READER,
-            WorkspaceKind.THEATRE_SCRIPT,
-            WorkspaceKind.VOICE_LIBRARY,
-            WorkspaceKind.NARRATIVE_VISUAL_PRODUCTION,
-            WorkspaceKind.THEATRE_IMAGE_GENERATION
-    );
+    private final Set<WorkspaceKind> productSurfaces;
+    private final LegacyWorkspaceRouteMapper legacyRoutes;
 
-    private static final Set<WorkspaceKind> LEGACY_INTERNAL_SURFACES = EnumSet.of(
-            WorkspaceKind.SCRIPT_EDITOR,
-            WorkspaceKind.AUDIO_JOBS,
-            WorkspaceKind.STORYBOARD
-    );
+    public WorkspaceSurfacePolicy() {
+        this(ProjectExperienceRegistry.official(), new LegacyWorkspaceRouteMapper());
+    }
+
+    WorkspaceSurfacePolicy(ProjectExperienceRegistry experiences, LegacyWorkspaceRouteMapper legacyRoutes) {
+        EnumSet<WorkspaceKind> surfaces = EnumSet.of(WorkspaceKind.WELCOME_HOME);
+        experiences.experiences().forEach(experience -> surfaces.addAll(experience.workspaces()));
+        this.productSurfaces = Set.copyOf(surfaces);
+        this.legacyRoutes = legacyRoutes;
+    }
 
     public boolean isPrimarySurface(WorkspaceKind workspaceKind) {
-        return workspaceKind != null && PRODUCT_SURFACES.contains(workspaceKind);
+        return workspaceKind != null && productSurfaces.contains(workspaceKind);
     }
 
     /** Legacy name kept for existing source tests and policies. */
@@ -38,7 +39,7 @@ public final class WorkspaceSurfacePolicy {
 
     /** Explicit product quarantine label: these surfaces may exist in code but are not product navigation. */
     public boolean isLegacyInternalSurface(WorkspaceKind workspaceKind) {
-        return workspaceKind != null && LEGACY_INTERNAL_SURFACES.contains(workspaceKind);
+        return legacyRoutes.isHistoricalInternal(workspaceKind);
     }
 
     public boolean isVisibleInMainNavigation(WorkspaceKind workspaceKind) {
@@ -53,16 +54,16 @@ public final class WorkspaceSurfacePolicy {
             return persistedWorkspace;
         }
         if (isAdvancedSurface(persistedWorkspace)) {
-            return WorkspaceKind.DOCUMENT_READER;
+            return legacyRoutes.productDestination(persistedWorkspace);
         }
         return WorkspaceKind.WELCOME_HOME;
     }
 
     public Set<WorkspaceKind> primarySurfaces() {
-        return Set.copyOf(PRODUCT_SURFACES);
+        return productSurfaces;
     }
 
     public Set<WorkspaceKind> advancedSurfaces() {
-        return Set.copyOf(LEGACY_INTERNAL_SURFACES);
+        return legacyRoutes.historicalInternalKinds();
     }
 }

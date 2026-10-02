@@ -4,6 +4,7 @@ package com.marcosmoreiradev.docupodcaststudio.domain.audio;
 public enum AudioGenerationStage {
     NONE("Sin etapa"),
     PREPARING_WORKSPACE("Preparando carpeta de trabajo"),
+    WAITING_FOR_RESOURCES("Esperando recursos"),
     GENERATING_SEGMENTS("Generando segmentos"),
     MERGING_SEGMENTS("Uniendo segmentos"),
     EXPORT_READY("Salida lista"),

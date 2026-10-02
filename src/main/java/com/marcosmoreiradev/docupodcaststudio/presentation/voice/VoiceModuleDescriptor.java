@@ -6,7 +6,7 @@ public record VoiceModuleDescriptor(
         String group,
         String title,
         String description
-) {
+) implements com.marcosmoreiradev.docupodcaststudio.presentation.components.admin.AdminModuleSpec<VoiceModuleId> {
     public VoiceModuleDescriptor {
         id = id == null ? VoiceModuleId.HOME : id;
         group = clean(group, "OPERACIÓN");

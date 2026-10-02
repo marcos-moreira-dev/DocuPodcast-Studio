@@ -95,6 +95,31 @@ final class ExportCenterCoordinatorTest {
     }
 
     @Test
+    void documentaryMissingNarrationIsPreparableButNotReadyOnlyExecutable() {
+        List<ExportTargetPresentation> targets = coordinator.targets(state(
+                ProjectMode.DOCUMENTARY_STUDIO, report(
+                        blocked(ExportableArtifactKind.PODCAST_WAV,
+                                "Prepara la lectura antes de generar o exportar audio final."),
+                        blocked(ExportableArtifactKind.DOCUMENT_TEXT_AUDIO_VIDEO,
+                                "Prepara la lectura del documento antes de exportar video documental texto+audio."))));
+
+        assertTrue(targets.stream().allMatch(ExportTargetPresentation::preparable));
+        assertFalse(targets.get(1).executable());
+    }
+
+    @Test
+    void unsavedDocumentaryProjectRemainsHardBlocked() {
+        List<ExportTargetPresentation> targets = coordinator.targets(state(
+                ProjectMode.DOCUMENTARY_STUDIO, report(
+                        blocked(ExportableArtifactKind.PODCAST_WAV,
+                                "Guarda el proyecto antes de exportar audio final."),
+                        blocked(ExportableArtifactKind.DOCUMENT_TEXT_AUDIO_VIDEO,
+                                "Guarda el proyecto antes de exportar video documental texto+audio."))));
+
+        assertTrue(targets.stream().noneMatch(ExportTargetPresentation::preparable));
+    }
+
+    @Test
     void selectedTargetReadinessIgnoresBlockedHiddenSupportArtifacts() {
         ExportCenterState state = state(ProjectMode.THEATRE_PRODUCTION, report(
                 exportable(ExportableArtifactKind.PODCAST_WAV, DocuPodcastExportFormat.WAV),

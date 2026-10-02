@@ -16,7 +16,7 @@ final class OperationalSettingsUseCaseTest {
         assertEquals(18, settings.readingDocument().baseFontSize());
         assertEquals(5, settings.playbackBuffer().initialReadySegments());
         assertEquals(10, settings.playbackBuffer().lookaheadSegments());
-        assertEquals("mock", settings.tts().engineMode());
+        assertEquals("piper", settings.tts().engineMode());
         assertEquals("2K", settings.video().resolutionPreset());
         assertEquals("AUTO", settings.compute().policy().name());
         assertEquals("AUTO", settings.compute().videoEncoderPolicy().name());

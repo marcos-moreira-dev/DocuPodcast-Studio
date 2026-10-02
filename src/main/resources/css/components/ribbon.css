@@ -151,6 +151,23 @@
     -fx-padding: 5;
 }
 
+/* Authored PNGs read directly; the framed badge remains for ordinary glyphs. */
+.ui-ribbon-button-icon.ui-icon-product,
+.ui-ribbon-button-primary .ui-ribbon-button-icon.ui-icon-product {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+    -fx-padding: 0;
+    -fx-min-width: 48px;
+    -fx-pref-width: 48px;
+    -fx-max-width: 48px;
+    -fx-min-height: 48px;
+    -fx-pref-height: 48px;
+    -fx-max-height: 48px;
+}
+
 /* Ribbon collapse is session-only and must not reserve the full command band. */
 .ui-ribbon-surface.ui-ribbon-expanded {
     -fx-min-height: 148px;

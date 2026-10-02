@@ -2,6 +2,8 @@ package com.marcosmoreiradev.docupodcaststudio.application.project;
 
 import com.marcosmoreiradev.docupodcaststudio.application.document.ImportedDocumentWorkspaceRepository;
 import com.marcosmoreiradev.docupodcaststudio.application.document.MaterializedImportedDocument;
+import com.marcosmoreiradev.docupodcaststudio.application.document.BlockDocumentSource;
+import com.marcosmoreiradev.docupodcaststudio.application.document.ProjectDocumentSource;
 import com.marcosmoreiradev.docupodcaststudio.application.script.MaterializedNarrationScript;
 import com.marcosmoreiradev.docupodcaststudio.application.script.NarrationScriptWorkspaceRepository;
 import com.marcosmoreiradev.docupodcaststudio.application.storyboard.MaterializedStoryboard;
@@ -48,7 +50,10 @@ final class LoadProjectWorkspaceArtifactsUseCaseTest {
 
     private record DocumentRepo(ReadableDocument document) implements ImportedDocumentWorkspaceRepository {
         @Override public MaterializedImportedDocument materialize(ReadableDocument document, ReadingProfile activeReadingProfile, Path projectFile) { throw new UnsupportedOperationException(); }
-        @Override public Optional<ReadableDocument> load(Path projectFile) { return Optional.of(document); }
+        @Override public MaterializedImportedDocument materialize(ProjectDocumentSource source, ReadingProfile activeReadingProfile, Path projectFile) { throw new UnsupportedOperationException(); }
+        @Override public Optional<ProjectDocumentSource> load(Path projectFile) {
+            return Optional.of(new BlockDocumentSource(document));
+        }
     }
 
     private record ScriptRepo(NarrationScriptDocument script) implements NarrationScriptWorkspaceRepository {

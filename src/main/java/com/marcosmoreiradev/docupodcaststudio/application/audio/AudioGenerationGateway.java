@@ -10,7 +10,7 @@ import java.time.Duration;
 public interface AudioGenerationGateway {
     /** Describes the engine currently behind this gateway. */
     default AudioEngineDescriptor engineDescriptor() {
-        return AudioEngineDescriptor.mock();
+        return AudioEngineDescriptor.unavailable("unconfigured", "Motor de voz", "No hay un motor de voz registrado.");
     }
 
     String submit(AudioGenerationRequest request, Consumer<AudioJobStatusDto> statusConsumer);

@@ -1,10 +1,12 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
+import com.marcosmoreiradev.docupodcaststudio.application.WorkspaceApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.application.storyboard.UpsertTheatreStoryboardFrameVariantUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.storyboard.TheatreVisualVariant;
+import com.marcosmoreiradev.docupodcaststudio.application.storyboard.TheatreDrawingVaultItem;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreCameraApplicationPolicy;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreCameraReferenceResolver;
+import com.marcosmoreiradev.docupodcaststudio.application.video.TheatreSceneryComposition;
 import com.marcosmoreiradev.docupodcaststudio.domain.assets.ProjectAssetReference;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.DocuPodcastProject;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.ProjectMode;
@@ -16,6 +18,8 @@ import com.marcosmoreiradev.docupodcaststudio.presentation.shell.ProjectSession;
 import com.marcosmoreiradev.docupodcaststudio.presentation.theatre.TheatreFrameSketchContext;
 
 import java.io.IOException;
+
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -50,7 +54,7 @@ public final class TheatreStoryboardFrameWorkflow {
         String drawnStateUri = relativeUri(projectDirectory, binding.drawnStatePath()).orElse("");
         String interventionId = interventionIdForSegment(project.theatre(), segment.get()).orElse("");
         String sceneId = sceneIdForIntervention(project.theatre(), interventionId);
-        boolean applyCamera = new TheatreCameraApplicationPolicy().applies(storyboard, segment.get().id());
+        boolean applyCamera = new TheatreCameraApplicationPolicy().appliesToSegment(storyboard, segment.get());
         Optional<TheatreCameraReferenceResolver.ResolvedCamera> camera = applyCamera
                 ? new TheatreCameraReferenceResolver().resolve(project, interventionId, projectDirectory.orElse(null))
                 : Optional.empty();
@@ -65,10 +69,11 @@ public final class TheatreStoryboardFrameWorkflow {
                 binding.activeVariant(),
                 camera.map(resolved -> resolved.absolutePath().toUri().toString()).orElse(""),
                 camera.map(resolved -> resolved.reference().displayName()).orElse(""),
-                sceneObjectPreviews(project, projectDirectory, sceneId)));
+                sceneObjectPreviews(project, projectDirectory, sceneId),
+                loadDrawingVault(session)));
     }
 
-    public FrameResult save(ApplicationServices services,
+    public FrameResult save(WorkspaceApplicationServices services,
                             ProjectSession session,
                             StoryboardDocument storyboard,
                             NarrationScriptDocument script,
@@ -76,17 +81,28 @@ public final class TheatreStoryboardFrameWorkflow {
                             Path framePng,
                             String inkStateJson,
                             boolean activateDrawn,
+                            List<TheatreDrawingVaultItem> drawingVault,
                             Optional<Path> projectDirectory) throws IOException {
         Path projectFile = session.projectFile().orElseThrow(() -> new IOException("Guarda el proyecto antes de guardar frames dibujados."));
-        var result = services.storyboard().upsertTheatreStoryboardFrameVariant().upsertDrawnFrame(
-                session.project(), projectFile, storyboard, script, segmentId, framePng, inkStateJson, activateDrawn);
+        var result = services.generation().storyboard().upsertTheatreStoryboardFrameVariant().upsertDrawnFrame(
+                session.project(), projectFile, storyboard, script, segmentId, framePng, inkStateJson,
+                activateDrawn, drawingVault);
         session.replaceProject(result.project(), true);
         session.setStoryboard(result.storyboard());
         return FrameResult.from(segmentId, result.project(), result.storyboard(), result.activeAsset(), result.activeVariant(), projectDirectory,
                 "Frame dibujado guardado para " + segmentId + ". Variante activa: " + result.activeVariant() + ".");
     }
 
-    public FrameResult toggle(ApplicationServices services,
+    private static List<TheatreDrawingVaultItem> loadDrawingVault(ProjectSession session) {
+        if (session == null || session.projectFile().isEmpty()) return List.of();
+        try {
+            return new UpsertTheatreStoryboardFrameVariantUseCase().loadDrawingVault(session.projectFile().get());
+        } catch (IOException ignored) {
+            return List.of();
+        }
+    }
+
+    public FrameResult toggle(WorkspaceApplicationServices services,
                               ProjectSession session,
                               StoryboardDocument storyboard,
                               NarrationScriptDocument script,
@@ -97,14 +113,15 @@ public final class TheatreStoryboardFrameWorkflow {
         String currentVariant = binding.metadata().getOrDefault(UpsertTheatreStoryboardFrameVariantUseCase.ACTIVE_VISUAL_VARIANT,
                 UpsertTheatreStoryboardFrameVariantUseCase.VARIANT_OFFICIAL);
         List<TheatreVisualVariant> available = List.of(TheatreVisualVariant.OFFICIAL,
-                        TheatreVisualVariant.GENERATED, TheatreVisualVariant.DRAWN).stream()
+                        TheatreVisualVariant.GENERATED, TheatreVisualVariant.DRAWN,
+                        TheatreVisualVariant.SCENERY).stream()
                 .filter(variant -> hasAsset(session.project(), binding.metadata(), variant))
                 .toList();
         if (available.size() < 2) throw new IOException("No hay otra variante visual disponible para alternar.");
         TheatreVisualVariant current = TheatreVisualVariant.fromMetadata(currentVariant);
         int currentIndex = available.indexOf(current);
         String nextVariant = available.get((currentIndex < 0 ? 0 : currentIndex + 1) % available.size()).metadataValue();
-        var result = services.storyboard().upsertTheatreStoryboardFrameVariant().activateVariant(
+        var result = services.generation().storyboard().upsertTheatreStoryboardFrameVariant().activateVariant(
                 session.project(), storyboard, script, segmentId, nextVariant);
         session.replaceProject(result.project(), true);
         session.setStoryboard(result.storyboard());
@@ -112,19 +129,55 @@ public final class TheatreStoryboardFrameWorkflow {
                 "Variante visual activa para " + segmentId + ": " + result.activeVariant() + ".");
     }
 
-    public FrameResult activate(ApplicationServices services,
+    public FrameResult activate(WorkspaceApplicationServices services,
                                 ProjectSession session,
                                 StoryboardDocument storyboard,
                                 NarrationScriptDocument script,
                                 String segmentId,
                                 String variant,
                                 Optional<Path> projectDirectory) throws IOException {
-        var result = services.storyboard().upsertTheatreStoryboardFrameVariant().activateVariant(
+        var result = services.generation().storyboard().upsertTheatreStoryboardFrameVariant().activateVariant(
                 session.project(), storyboard, script, segmentId, variant);
         session.replaceProject(result.project(), true);
         session.setStoryboard(result.storyboard());
         return FrameResult.from(segmentId, result.project(), result.storyboard(), result.activeAsset(), result.activeVariant(), projectDirectory,
                 "Variante visual activa para " + segmentId + ": " + result.activeVariant() + ".");
+    }
+
+    public FrameResult materializeScenery(WorkspaceApplicationServices services,
+                                          ProjectSession session,
+                                          StoryboardDocument storyboard,
+                                          NarrationScriptDocument script,
+                                          String segmentId,
+                                          Optional<Path> projectDirectory) throws IOException {
+        Path projectFile = session.projectFile()
+                .orElseThrow(() -> new IOException("Guarda el proyecto antes de crear la variante de escenografía."));
+        Path root = projectDirectory.orElseGet(() -> projectFile.toAbsolutePath().normalize().getParent());
+        NarrationSegment segment = script.segmentById(segmentId)
+                .orElseThrow(() -> new IOException("No existe el segmento de storyboard: " + segmentId));
+        String interventionId = interventionIdForSegment(session.project().theatre(), segment)
+                .orElseThrow(() -> new IOException("El segmento no está asociado a una intervención teatral."));
+        TheatreProjectLayer.TextActionPlacement placement = session.project().theatre().textActionPlacements().stream()
+                .filter(value -> value.intervencionId().equals(interventionId))
+                .findFirst()
+                .orElseThrow(() -> new IOException("La intervención no tiene posiciones teatrales configuradas."));
+
+        TheatreSceneryComposition composer = new TheatreSceneryComposition();
+        var composition = composer.resolve(session.project(), placement, root);
+        Path temporary = Files.createTempFile("docupodcast-scenery-", ".png");
+        try {
+            composer.writePng(composition, 1600, 900, temporary);
+            var result = services.generation().storyboard().upsertTheatreStoryboardFrameVariant()
+                    .upsertSceneryFrame(session.project(), projectFile, storyboard, script,
+                            segmentId, temporary, true);
+            session.replaceProject(result.project(), true);
+            session.setStoryboard(result.storyboard());
+            return FrameResult.from(segmentId, result.project(), result.storyboard(), result.activeAsset(),
+                    result.activeVariant(), projectDirectory,
+                    "Variante Personajes y escenografía creada y activada para " + segmentId + ".");
+        } finally {
+            Files.deleteIfExists(temporary);
+        }
     }
 
     private static boolean hasAsset(DocuPodcastProject project, Map<String, String> metadata,
@@ -133,6 +186,7 @@ public final class TheatreStoryboardFrameWorkflow {
             case OFFICIAL -> UpsertTheatreStoryboardFrameVariantUseCase.OFFICIAL_IMAGE_ASSET_ID;
             case GENERATED -> UpsertTheatreStoryboardFrameVariantUseCase.GENERATED_IMAGE_ASSET_ID;
             case DRAWN -> UpsertTheatreStoryboardFrameVariantUseCase.DRAWN_FRAME_ASSET_ID;
+            case SCENERY -> UpsertTheatreStoryboardFrameVariantUseCase.SCENERY_IMAGE_ASSET_ID;
         };
         return project.assets().byId(metadata.getOrDefault(key, "")).filter(ProjectAssetReference::isImage).isPresent();
     }

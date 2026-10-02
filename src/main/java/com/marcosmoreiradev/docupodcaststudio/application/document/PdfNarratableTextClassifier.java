@@ -1,6 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.application.document;
 
-import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlockType;
+import com.marcosmoreiradev.docupodcaststudio.domain.document.pdf.PdfNarratability;
+import com.marcosmoreiradev.docupodcaststudio.domain.document.pdf.PdfRegionType;
 
 import java.util.Locale;
 
@@ -36,22 +37,59 @@ public final class PdfNarratableTextClassifier {
         return letters >= Math.max(3, normalized.length() / 5);
     }
 
-    public static DocumentBlockType classify(String text, int index) {
+    public static PdfNarratabilityDecision decide(String text, double confidence) {
         String normalized = normalize(text);
-        if (index == 1) {
-            return DocumentBlockType.TITLE;
+        double safeConfidence = Double.isFinite(confidence)
+                ? Math.max(0.0, Math.min(1.0, confidence))
+                : 0.0;
+        if (normalized.isBlank()) {
+            return new PdfNarratabilityDecision(PdfNarratability.NON_NARRATABLE, java.util.List.of("empty-text"));
         }
+        if (pageNumberLike(normalized)) {
+            return new PdfNarratabilityDecision(PdfNarratability.NON_NARRATABLE, java.util.List.of("page-number"));
+        }
+        if (tableLike(normalized)) {
+            return new PdfNarratabilityDecision(PdfNarratability.NON_NARRATABLE, java.util.List.of("table-like"));
+        }
+        long letters = normalized.chars().filter(Character::isLetter).count();
+        long digits = normalized.chars().filter(Character::isDigit).count();
+        long operators = normalized.chars().filter(ch -> "+=*/<>^_|[]{}".indexOf(ch) >= 0).count();
+        long words = java.util.Arrays.stream(normalized.split("\\s+"))
+                .filter(token -> token.chars().anyMatch(Character::isLetter))
+                .count();
+        if (looksMathOnly(normalized, letters, digits, operators, words)) {
+            return new PdfNarratabilityDecision(PdfNarratability.NON_NARRATABLE, java.util.List.of("math-like"));
+        }
+        if (narratableProse(normalized) && safeConfidence >= 0.65) {
+            return new PdfNarratabilityDecision(PdfNarratability.NARRATABLE,
+                    java.util.List.of("prose-shape", "ocr-confidence>=0.65"));
+        }
+        java.util.ArrayList<String> reasons = new java.util.ArrayList<>();
+        if (safeConfidence < 0.65) reasons.add("ocr-confidence<0.65");
+        if (!narratableProse(normalized)) reasons.add("weak-prose-signal");
+        if (reasons.isEmpty()) reasons.add("conflicting-signals");
+        return new PdfNarratabilityDecision(PdfNarratability.UNCERTAIN, reasons);
+    }
+
+    public static PdfRegionType classify(String text, int index) {
+        String normalized = normalize(text);
         String lower = normalized.toLowerCase(Locale.ROOT);
-        if (lower.equals("contents") || lower.equals("table of contents") || lower.startsWith("chapter ")) {
-            return DocumentBlockType.HEADING;
+        if (lower.equals("contents") || lower.equals("table of contents")
+                || lower.equals("contenido") || lower.equals("índice") || lower.equals("indice")
+                || lower.startsWith("chapter ") || lower.startsWith("capítulo ") || lower.startsWith("capitulo ")) {
+            return PdfRegionType.HEADING;
         }
         if (normalized.matches("^(\\d+)(\\.\\d+){0,3}\\s+\\p{Lu}.*") && normalized.length() <= 140) {
             return normalized.chars().filter(ch -> ch == '.').count() >= 1
-                    ? DocumentBlockType.SUBHEADING
-                    : DocumentBlockType.HEADING;
+                    ? PdfRegionType.SUBHEADING
+                    : PdfRegionType.HEADING;
         }
         if (normalized.matches("^([*\\-]|\\d+[.)])\\s+.+")) {
-            return DocumentBlockType.LIST_ITEM;
+            return PdfRegionType.LIST;
+        }
+        if (lower.matches("^(la pregunta|intuici[oó]n|nota|advertencia"
+                + "|lectura conceptual|idea clave|ejemplo)\\b.*")) {
+            return PdfRegionType.SIDEBAR;
         }
         long letters = normalized.chars().filter(Character::isLetter).count();
         long digits = normalized.chars().filter(Character::isDigit).count();
@@ -60,8 +98,8 @@ public final class PdfNarratableTextClassifier {
                 .filter(token -> token.chars().anyMatch(Character::isLetter))
                 .count();
         return looksMathOnly(normalized, letters, digits, operators, words)
-                ? DocumentBlockType.MATH_NOTICE
-                : DocumentBlockType.PARAGRAPH;
+                ? PdfRegionType.MATH
+                : PdfRegionType.PARAGRAPH;
     }
 
     private static boolean pageNumberLike(String text) {

@@ -5,6 +5,8 @@ import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlockType;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.ReadableDocument;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.SourceDocumentFormat;
 import com.marcosmoreiradev.docupodcaststudio.domain.fragment.FragmentId;
+import com.marcosmoreiradev.docupodcaststudio.domain.reading.ImageNarrationPolicy;
+import com.marcosmoreiradev.docupodcaststudio.domain.reading.DocumentListeningPreferences;
 import com.marcosmoreiradev.docupodcaststudio.domain.reading.ReadingProfile;
 import com.marcosmoreiradev.docupodcaststudio.domain.reading.TableNarrationPolicy;
 import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationScriptDocument;
@@ -27,6 +29,8 @@ import java.util.Objects;
  */
 public final class BuildNarrationScriptUseCase {
     private final TableNarrationTextBuilder tableNarration = new TableNarrationTextBuilder();
+    public BuildNarrationScriptUseCase() {
+    }
 
     public NarrationScriptDocument build(ReadableDocument document, String language) {
         return build(document, language, false);
@@ -38,29 +42,52 @@ public final class BuildNarrationScriptUseCase {
 
     public NarrationScriptDocument build(ReadableDocument document, String language, boolean readAfterColon, ReadingProfile profile) {
         TableNarrationPolicy tablePolicy = profile == null ? TableNarrationPolicy.IGNORE_TABLES : profile.tablePolicy();
-        return build(document, language, readAfterColon, tablePolicy);
+        ImageNarrationPolicy imagePolicy = profile == null
+                ? ImageNarrationPolicy.IGNORE_IMAGES
+                : profile.imagePolicy();
+        return build(document, language, readAfterColon, tablePolicy, imagePolicy);
     }
 
     public NarrationScriptDocument build(ReadableDocument document, String language, boolean readAfterColon, TableNarrationPolicy tablePolicy) {
+        return build(document, language, readAfterColon, tablePolicy, ImageNarrationPolicy.IGNORE_IMAGES);
+    }
+
+    private NarrationScriptDocument build(
+            ReadableDocument document,
+            String language,
+            boolean readAfterColon,
+            TableNarrationPolicy tablePolicy,
+            ImageNarrationPolicy imagePolicy
+    ) {
         Objects.requireNonNull(document, "document");
+        if (document.format() == SourceDocumentFormat.PDF) {
+            throw new IllegalArgumentException(
+                    "PDF narration must use BuildPreparedPdfNarrationUseCase");
+        }
         TableNarrationPolicy safeTablePolicy = tablePolicy == null ? TableNarrationPolicy.IGNORE_TABLES : tablePolicy;
+        ImageNarrationPolicy safeImagePolicy = imagePolicy == null
+                ? ImageNarrationPolicy.IGNORE_IMAGES
+                : imagePolicy;
         List<NarrationSegment> segments = new ArrayList<>();
         int index = 1;
         for (DocumentBlock block : document.blocks()) {
-            if (document.format() == SourceDocumentFormat.PDF && !pdfOcrNarratable(block)) {
+            if (block.metadata().containsKey(com.marcosmoreiradev.docupodcaststudio.application.theatre.grammar.TheatreGrammarDocumentBuilder.INTERVENTION_ID)) {
+                segments.add(com.marcosmoreiradev.docupodcaststudio.application.theatre.grammar.TheatreGrammarDocumentBuilder.segment(block));
                 continue;
             }
-            if (!includedInNarration(block, safeTablePolicy)) {
+            if (!includedInNarration(block, safeTablePolicy, safeImagePolicy)) {
                 continue;
             }
             String speakerId = characterIdFor(block.text());
-            String narrationText = narrationTextFor(block, readAfterColon, safeTablePolicy);
+            String narrationText = narrationTextFor(block, readAfterColon, safeTablePolicy, safeImagePolicy);
             if (narrationText.isBlank()) {
                 continue;
             }
-            boolean secondary = block.type() == DocumentBlockType.TABLE_NOTICE;
+            boolean secondary = block.type() == DocumentBlockType.TABLE_NOTICE
+                    || block.type() == DocumentBlockType.IMAGE_NOTICE;
+            String segmentId = "SEG-%03d".formatted(index++);
             segments.add(new NarrationSegment(
-                    "SEG-%03d".formatted(index++),
+                    segmentId,
                     segmentTypeFor(block.type()),
                     titleFor(block),
                     narrationText,
@@ -74,35 +101,91 @@ public final class BuildNarrationScriptUseCase {
         return NarrationScriptDocument.create(document.title(), language, document.title(), segments);
     }
 
-    private static boolean pdfOcrNarratable(DocumentBlock block) {
-        return block != null
-                && Boolean.parseBoolean(block.metadata().getOrDefault("ocr", "false"))
-                && "ocr-local".equalsIgnoreCase(block.metadata().getOrDefault("extractionMode", ""));
-    }
-
-    private static boolean includedInNarration(DocumentBlock block, TableNarrationPolicy tablePolicy) {
+    private static boolean includedInNarration(
+            DocumentBlock block,
+            TableNarrationPolicy tablePolicy,
+            ImageNarrationPolicy imagePolicy
+    ) {
         if (block == null || block.type() == DocumentBlockType.EMPTY || block.type() == DocumentBlockType.IGNORED) {
             return false;
         }
         if (block.type() == DocumentBlockType.TABLE_NOTICE) {
-            return tablePolicy != TableNarrationPolicy.IGNORE_TABLES;
+            return !tablePolicy.skips();
+        }
+        if (block.type() == DocumentBlockType.IMAGE_NOTICE) {
+            return switch (imagePolicy) {
+                case IGNORE_IMAGES -> false;
+                case READ_DESCRIPTION_OR_OMIT ->
+                        imageDescriptionAdmitted(block);
+                case ANNOUNCE_IMAGE_WITHOUT_DESCRIPTION -> true;
+            };
+        }
+        if (block.type() == DocumentBlockType.MATH_NOTICE) {
+            return !tablePolicy.skips() && (block.metadataValue("sourceMathText")
+                    .filter(value -> !value.isBlank())
+                    .or(() -> block.metadataValue("plainText"))
+                    .isPresent() || !block.text().isBlank());
         }
         return block.narratable();
     }
 
-    private String narrationTextFor(DocumentBlock block, boolean readAfterColon, TableNarrationPolicy tablePolicy) {
+    private static boolean imageDescriptionAdmitted(DocumentBlock block) {
+        if (block.metadataValue("description").filter(value -> !value.isBlank()).isEmpty()) {
+            return false;
+        }
+        String state = block.metadata().getOrDefault("descriptionState", "").strip();
+        if ("REJECTED".equalsIgnoreCase(state) || "STALE".equalsIgnoreCase(state)) {
+            return false;
+        }
+        if (!"DRAFT".equalsIgnoreCase(state)) return true;
+        return DocumentListeningPreferences.QUALITY_MODEL.equals(
+                block.metadata().getOrDefault("descriptionSource", ""))
+                && Boolean.parseBoolean(block.metadata().getOrDefault(
+                "ttsSafetyValidated", "false"))
+                && "DRAFT_POLICY_VALIDATED".equals(block.metadata().getOrDefault(
+                "automaticAdmission", ""));
+    }
+
+    private String narrationTextFor(
+            DocumentBlock block,
+            boolean readAfterColon,
+            TableNarrationPolicy tablePolicy,
+            ImageNarrationPolicy imagePolicy
+    ) {
         if (block.type() == DocumentBlockType.TABLE_NOTICE) {
-            return tablePolicy == TableNarrationPolicy.READ_STRUCTURED
-                    ? tableNarration.structuredText(block)
-                    : tableNarration.summaryText(block);
+            return switch (tablePolicy.canonical()) {
+                case READ_ALL, READ_TEXTUAL_CONTENT ->
+                        tableNarration.structuredText(block);
+                case SUMMARIZE -> tableNarration.summaryText(block);
+                case ANNOUNCE_ONLY -> "Tabla detectada.";
+                case SKIP -> "";
+                default -> throw new IllegalStateException(
+                        "Política de tabla no normalizada");
+            };
+        }
+        if (block.type() == DocumentBlockType.IMAGE_NOTICE) {
+            String description = block.metadataValue("description").orElse("").strip();
+            if (!description.isBlank()) {
+                return "Imagen: " + description + ".";
+            }
+            return imagePolicy == ImageNarrationPolicy.ANNOUNCE_IMAGE_WITHOUT_DESCRIPTION
+                    ? "Imagen sin descripción textual."
+                    : "";
+        }
+        if (block.type() == DocumentBlockType.TITLE
+                || block.type() == DocumentBlockType.HEADING
+                || block.type() == DocumentBlockType.SUBHEADING) {
+            // Speaker-prefix trimming is useful for dialogue paragraphs, never
+            // for structural titles such as "0.9 Algoritmo: la película".
+            return block.text().strip();
         }
         String text = ReadAfterColonTextPolicy.narrationText(block.text(), readAfterColon);
         return switch (block.type()) {
-            case TITLE -> "Tema principal: " + text + ".";
-            case HEADING -> "Nuevo tema: " + text + ".";
-            case SUBHEADING -> "Ahora veremos: " + text + ".";
+            case TITLE, HEADING, SUBHEADING -> throw new IllegalStateException(
+                    "Los títulos se resuelven antes de aplicar reglas de diálogo");
             case IMAGE_NOTICE -> text.startsWith("Imagen") ? text : "Imagen: " + text;
-            case MATH_NOTICE -> "";
+            case MATH_NOTICE -> block.metadataValue("sourceMathText")
+                    .orElse(text);
             case LIST_ITEM, PARAGRAPH -> text;
             case TABLE_NOTICE -> "";
             case IGNORED, EMPTY -> "";
@@ -114,10 +197,21 @@ public final class BuildNarrationScriptUseCase {
         metadata.put("sourceBlockType", block.type().name());
         metadata.put("sourceBlockId", block.id());
         metadata.put("generationSource", "document-workspace");
+        if (block.type() == DocumentBlockType.TITLE
+                || block.type() == DocumentBlockType.HEADING
+                || block.type() == DocumentBlockType.SUBHEADING) {
+            // A heading is both document structure and spoken content. Preserve
+            // its exact source text: presentation may style it as a title, while
+            // TTS, playback and export still receive a normal narratable segment.
+            metadata.put("semanticRole", "DOCUMENT_TITLE");
+            metadata.put("audioNarration", "EXACT_SOURCE_TEXT");
+        }
         if (secondary) {
             metadata.put("secondaryReadUnit", "true");
             metadata.put("sourceVisualReadUnit", "true");
-            metadata.put("tableNarrationPolicy", tablePolicy.name());
+            if (block.type() == DocumentBlockType.TABLE_NOTICE) {
+                metadata.put("tableNarrationPolicy", tablePolicy.name());
+            }
         } else {
             metadata.put("fragmentId", FragmentId.fromBlockId(block.id()).value());
         }
@@ -162,4 +256,5 @@ public final class BuildNarrationScriptUseCase {
             case PARAGRAPH, IGNORED, EMPTY -> NarrationSegmentType.PARAGRAPH;
         };
     }
+
 }

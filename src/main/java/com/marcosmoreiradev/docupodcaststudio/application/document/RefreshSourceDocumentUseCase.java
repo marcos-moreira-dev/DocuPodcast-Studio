@@ -27,12 +27,16 @@ public final class RefreshSourceDocumentUseCase {
     public RefreshSourceDocumentResult refresh(ReadableDocument currentDocument) throws IOException {
         Objects.requireNonNull(currentDocument, "currentDocument");
         SourceDocumentSnapshot previous = SourceDocumentSnapshot.from(currentDocument);
+        if (currentDocument.blocks().stream().anyMatch(b -> b.metadata().containsKey("theatreGrammarInterventionId"))) {
+            return new RefreshSourceDocumentResult(null, SourceDocumentChangeReport.unsupported(previous,
+                    "Actualiza esta gramática desde Teatro → Refrescar obra o Importar gramática para conservar su configuración y sus parlamentos."));
+        }
         Path sourcePath = currentDocument.sourcePath();
         if (!Files.exists(sourcePath)) {
             return new RefreshSourceDocumentResult(null, SourceDocumentChangeReport.missing(previous));
         }
         try {
-            ReadableDocument refreshed = documentSourceImportService.importSource(sourcePath);
+            ReadableDocument refreshed = documentSourceImportService.importBlockSource(sourcePath);
             SourceDocumentChangeReport report = SourceDocumentChangeReport.compare(previous, SourceDocumentSnapshot.from(refreshed));
             return new RefreshSourceDocumentResult(refreshed, report);
         } catch (SourceDocumentRequirementException ex) {

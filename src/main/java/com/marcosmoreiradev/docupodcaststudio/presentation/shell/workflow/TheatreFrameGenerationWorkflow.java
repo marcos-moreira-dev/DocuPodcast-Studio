@@ -1,32 +1,26 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
+import com.marcosmoreiradev.docupodcaststudio.application.WorkspaceApplicationServices;
+import com.marcosmoreiradev.docupodcaststudio.application.media.MediaCapabilityService;
 import com.marcosmoreiradev.docupodcaststudio.application.image.ImageAspectStrategy;
 import com.marcosmoreiradev.docupodcaststudio.application.image.ImageEnhancementOutputProfile;
-import com.marcosmoreiradev.docupodcaststudio.application.process.AiModelResourceGuard;
-import com.marcosmoreiradev.docupodcaststudio.application.process.AiModelResourceGuard.AiModelResourceKind;
-import com.marcosmoreiradev.docupodcaststudio.application.process.GenerationAttemptPolicy;
-import com.marcosmoreiradev.docupodcaststudio.application.process.GenerationTaskKind;
-import com.marcosmoreiradev.docupodcaststudio.application.theatre.ComfyUiConnectionSettings;
+import com.marcosmoreiradev.docupodcaststudio.application.theatre.ImageGenerationWorkspaceSettings;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.FrameGenerationMode;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreFrameGenerationRequest;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreFrameGenerationResult;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreGeneratedFrameCandidate;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreImageGenerationPreset;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreImageGenerationUnit;
-import com.marcosmoreiradev.docupodcaststudio.application.visual.ComfyUiVisualEngineClient;
-import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualConditioningReference;
-import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualConditioningRole;
-import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualEngineRequest;
-import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualEngineResult;
+import com.marcosmoreiradev.docupodcaststudio.presentation.theatre.TheatreExperienceController;
 import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationScriptDocument;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.ProjectSession;
+import com.marcosmoreiradev.docupodcaststudio.media.api.MediaReference;
+import com.marcosmoreiradev.docupodcaststudio.media.api.MediaReferenceRole;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -36,21 +30,16 @@ import java.util.function.Consumer;
 
 /** Generates reviewable theatrical still frames from intervention context. */
 public final class TheatreFrameGenerationWorkflow {
-    private final ApplicationServices services;
+    private final WorkspaceApplicationServices services;
     private final TheatreGenerationUnitPlanner planner = new TheatreGenerationUnitPlanner();
-    private final TheatreImageGenerationWorkflow imageWorkflow;
-    private final ComfyUiVisualEngineClient visualEngineClient;
-    private final AiModelResourceGuard resourceGuard;
+    private final TheatreExperienceController imageWorkflow;
+    private final MediaCapabilityService mediaCapabilities;
 
-    public TheatreFrameGenerationWorkflow(ApplicationServices services) {
-        this(services, visualClientFrom(services));
-    }
-
-    public TheatreFrameGenerationWorkflow(ApplicationServices services, ComfyUiVisualEngineClient visualEngineClient) {
+    public TheatreFrameGenerationWorkflow(WorkspaceApplicationServices services,
+                                          MediaCapabilityService mediaCapabilities) {
         this.services = Objects.requireNonNull(services, "services");
-        this.visualEngineClient = Objects.requireNonNull(visualEngineClient, "visualEngineClient");
-        this.imageWorkflow = new TheatreImageGenerationWorkflow(services, visualEngineClient);
-        this.resourceGuard = AiModelResourceGuard.global();
+        this.mediaCapabilities = Objects.requireNonNull(mediaCapabilities, "media capabilities");
+        this.imageWorkflow = new TheatreExperienceController(services, mediaCapabilities);
     }
 
     public Estimate estimate(ProjectSession session, NarrationScriptDocument script, TheatreFrameGenerationRequest request) {
@@ -87,8 +76,7 @@ public final class TheatreFrameGenerationWorkflow {
         ArrayList<TheatreGeneratedFrameCandidate> candidates = new ArrayList<>();
         ArrayList<String> warnings = new ArrayList<>();
         int pending = 0;
-        try (AiModelResourceGuard.Lease ignored = resourceGuard.acquire(AiModelResourceKind.IMAGE,
-                "frames " + request.scope().kind().name().toLowerCase(Locale.ROOT))) {
+        {
             boolean needsIntermediates = request.mode() == FrameGenerationMode.DOUBLE_STOP_MOTION;
             boolean supportsIntermediates = !needsIntermediates || supportsIntermediateGeneration(request.preset());
             if (needsIntermediates && !supportsIntermediates) {
@@ -113,7 +101,7 @@ public final class TheatreFrameGenerationWorkflow {
                     continue;
                 }
                 progress(progress, "Generando frame principal de " + unit.interventionId() + ".");
-                TheatreGeneratedFrameCandidate generated = generateFrame(session, projectFile, request.connectionSettings(), request.preset(),
+                TheatreGeneratedFrameCandidate generated = generateFrame(session, projectFile, request.workspaceSettings(), request.preset(),
                         request.outputProfile(), request.aspectRatio(), root, unit, 1, false, "", List.of(), progress);
                 candidates.add(generated);
                 principalCandidates[i] = generated;
@@ -141,9 +129,9 @@ public final class TheatreFrameGenerationWorkflow {
                         }
                         TheatreImageGenerationUnit transition = transitionUnit(unit, next);
                         progress(progress, "Generando frame intermedio " + unit.interventionId() + " -> " + next.interventionId() + ".");
-                        List<VisualConditioningReference> references = transitionReferences(
+                        List<MediaReference> references = transitionReferences(
                                 principalCandidates[i], principalCandidates[i + 1], unit.interventionId(), next.interventionId());
-                        candidates.add(generateFrame(session, projectFile, request.connectionSettings(), request.preset(),
+                        candidates.add(generateFrame(session, projectFile, request.workspaceSettings(), request.preset(),
                                 request.outputProfile(), request.aspectRatio(), root, transition, 2, true, next.interventionId(),
                                 references, progress));
                     }
@@ -169,7 +157,7 @@ public final class TheatreFrameGenerationWorkflow {
 
     private TheatreGeneratedFrameCandidate generateFrame(ProjectSession session,
                                                          Path projectFile,
-                                                         ComfyUiConnectionSettings settings,
+                                                         ImageGenerationWorkspaceSettings settings,
                                                          TheatreImageGenerationPreset preset,
                                                          ImageEnhancementOutputProfile outputProfile,
                                                          com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreImageAspectRatio aspectRatio,
@@ -178,29 +166,16 @@ public final class TheatreFrameGenerationWorkflow {
                                                          int frameIndex,
                                                          boolean transition,
                                                          String nextInterventionId,
-                                                         List<VisualConditioningReference> transitionReferences,
+                                                         List<MediaReference> transitionReferences,
                                                          Consumer<String> progress) throws IOException {
         Path interventionDir = root.resolve(safe(unit.actName()))
                 .resolve(safe(unit.sceneName()))
                 .resolve(safe(transition ? baseInterventionId(unit.interventionId()) : unit.interventionId()));
         Files.createDirectories(interventionDir);
-        VisualEngineRequest request = transition
-                ? TheatreImageGenerationWorkflow.visualEngineRequest(unit, preset, outputProfile, aspectRatio,
-                        interventionDir.resolve(".raw"),
-                        safe(unit.interventionId()) + "-" + safe(unit.segmentId()) + "-" + aspectRatio.workflowId())
-                        .withConditioningReferences(transitionReferences)
-                : imageWorkflow.visualEngineRequest(session, unit, preset, outputProfile, aspectRatio,
-                        interventionDir.resolve(".raw"),
-                        safe(unit.interventionId()) + "-" + safe(unit.segmentId()) + "-" + aspectRatio.workflowId());
-        var workflow = TheatreImageGenerationWorkflow.workflowSpec(preset, request);
-        java.time.Duration timeout = preset != null && preset.fluxCompatible()
-                ? java.time.Duration.ofMinutes(45) : settings.timeout();
-        VisualEngineResult result = visualEngineClient.generate(settings.baseUrl(), timeout, request, workflow,
-                attemptPolicy(), GenerationTaskKind.IMAGE_FRAME, progress);
-        Path generated = result.outputPath();
-        Path framePath = interventionDir.resolve("frame-" + String.format(Locale.ROOT, "%03d", frameIndex) + ".png");
-        Files.move(generated, framePath, StandardCopyOption.REPLACE_EXISTING);
-        var imported = services.storyboard().importImageAsset().importImage(session.project(), projectFile, framePath);
+        String filenamePrefix = "frame-" + String.format(Locale.ROOT, "%03d", frameIndex);
+        Path framePath = imageWorkflow.generateRaw(session, unit, settings, preset, outputProfile, aspectRatio,
+                interventionDir, filenamePrefix, transitionReferences, progress);
+        var imported = services.generation().storyboard().importImageAsset().importImage(session.project(), projectFile, framePath);
         session.replaceProject(imported.project(), true);
         return new TheatreGeneratedFrameCandidate(
                 unit.interventionId() + "#frame-" + frameIndex,
@@ -232,26 +207,26 @@ public final class TheatreFrameGenerationWorkflow {
                 null);
     }
 
-    private static List<VisualConditioningReference> transitionReferences(TheatreGeneratedFrameCandidate previous,
-                                                                          TheatreGeneratedFrameCandidate next,
-                                                                          String previousInterventionId,
-                                                                          String nextInterventionId) {
+    private static List<MediaReference> transitionReferences(TheatreGeneratedFrameCandidate previous,
+                                                              TheatreGeneratedFrameCandidate next,
+                                                              String previousInterventionId,
+                                                              String nextInterventionId) {
         if (previous == null || next == null) {
             return List.of();
         }
         return List.of(
-                new VisualConditioningReference(
+                new MediaReference(
                         previous.assetId(),
-                        "Frame anterior " + previousInterventionId,
                         previous.outputPath(),
-                        VisualConditioningRole.PREVIOUS_FRAME,
-                        1.0),
-                new VisualConditioningReference(
+                        MediaReferenceRole.START_FRAME,
+                        1.0,
+                        java.util.Map.of("label", "Frame anterior " + previousInterventionId)),
+                new MediaReference(
                         next.assetId(),
-                        "Frame siguiente " + nextInterventionId,
                         next.outputPath(),
-                        VisualConditioningRole.NEXT_FRAME,
-                        1.0));
+                        new MediaReferenceRole("end-frame"),
+                        1.0,
+                        java.util.Map.of("label", "Frame siguiente " + nextInterventionId)));
     }
 
     private static boolean supportsIntermediateGeneration(TheatreImageGenerationPreset preset) {
@@ -281,8 +256,9 @@ public final class TheatreFrameGenerationWorkflow {
         json.append("  \"preset\": \"").append(escape(request.preset().name())).append("\",\n");
         json.append("  \"outputProfile\": \"").append(escape(request.outputProfile().name())).append("\",\n");
         json.append("  \"aspectRatio\": \"").append(escape(request.aspectRatio().label())).append("\",\n");
-        json.append("  \"targetWidth\": ").append(request.aspectRatio().widthFor(request.outputProfile())).append(",\n");
-        json.append("  \"targetHeight\": ").append(request.aspectRatio().heightFor(request.outputProfile())).append(",\n");
+        var delivery = request.aspectRatio().deliveryDimensions(request.outputProfile());
+        json.append("  \"targetWidth\": ").append(delivery.width()).append(",\n");
+        json.append("  \"targetHeight\": ").append(delivery.height()).append(",\n");
         json.append("  \"aspectStrategy\": \"").append(escape(ImageAspectStrategy.OUTPAINT_TO_TARGET.name())).append("\",\n");
         json.append("  \"intermediatePolicy\": \"").append(escape(request.mode() == FrameGenerationMode.DOUBLE_STOP_MOTION
                 ? "source-target-reference"
@@ -322,10 +298,6 @@ public final class TheatreFrameGenerationWorkflow {
         return cancelled != null && cancelled.getAsBoolean();
     }
 
-    private GenerationAttemptPolicy attemptPolicy() throws IOException {
-        return GenerationAttemptPolicy.fromSettings(services.settings().loadOperationalSettings().load());
-    }
-
     private static void progress(Consumer<String> progress, String message) {
         if (progress != null) {
             progress.accept(message);
@@ -360,10 +332,4 @@ public final class TheatreFrameGenerationWorkflow {
     public record Estimate(int interventions, int frames, int pending) {
     }
 
-    private static ComfyUiVisualEngineClient visualClientFrom(ApplicationServices services) {
-        if (services == null || services.visual() == null) {
-            return new ComfyUiVisualEngineClient();
-        }
-        return services.visual().comfyUiVisualEngineClient();
-    }
 }

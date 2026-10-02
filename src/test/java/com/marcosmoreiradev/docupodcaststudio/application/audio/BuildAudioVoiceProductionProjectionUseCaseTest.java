@@ -101,6 +101,21 @@ final class BuildAudioVoiceProductionProjectionUseCaseTest {
     }
 
     @Test
+    void exposesTheProjectDefaultVoiceForNarratorFragments() {
+        FragmentId fragmentId = FragmentId.fromBlockId("B001");
+        VoiceLibrary library = VoiceLibrary.defaults().withVoice(
+                voice("VOC-MARIA", VoiceEngineType.MOCK));
+        DocuPodcastProject project = DocuPodcastProject.createNew("Documento")
+                .withDocumentDefaultVoiceProfileId("VOC-MARIA");
+
+        FragmentAudioVoiceState state = useCase.build(
+                projection(fragmentId), script("VOC-NARRATOR"), project,
+                library, List.of()).fragmentById(fragmentId).orElseThrow();
+
+        assertEquals("VOC-MARIA", state.voiceProfileId());
+    }
+
+    @Test
     void engineReadinessBlocksWhenNoDocumentEngineIsUsable() {
         FragmentId fragmentId = FragmentId.fromBlockId("B001");
         List<AudioEngineReadinessUiItem> readiness = List.of(new AudioEngineReadinessUiItem(

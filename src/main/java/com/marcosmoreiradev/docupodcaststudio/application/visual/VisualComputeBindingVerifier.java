@@ -74,7 +74,8 @@ public final class VisualComputeBindingVerifier {
             return true;
         }
         java.util.Set<String> ignored = java.util.Set.of(
-                "gpu", "device", "local", "nvidia", "intel", "amd", "graphics", "adapter");
+                "gpu", "device", "local", "nvidia", "intel", "amd", "graphics", "adapter",
+                "vram", "ram", "memory");
         java.util.List<String> identity = java.util.Arrays.stream(expectedName.split("[^a-z0-9]+"))
                 .filter(token -> token.length() >= 3)
                 .filter(token -> !ignored.contains(token))

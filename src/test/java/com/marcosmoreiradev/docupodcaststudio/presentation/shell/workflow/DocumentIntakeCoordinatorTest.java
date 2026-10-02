@@ -1,6 +1,5 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlock;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlockType;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.ReadableDocument;
@@ -26,7 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 final class DocumentIntakeCoordinatorTest {
     @Test
     void attachingPrimarySourcePreservesProjectTitleAndClearsDerivedArtifacts() {
-        DocumentIntakeCoordinator coordinator = new DocumentIntakeCoordinator(applicationServices());
+        DocumentIntakeCoordinator coordinator = new DocumentIntakeCoordinator(
+                WorkspaceTestServices.empty());
         ProjectSession session = ProjectSession.newUnsaved(DocuPodcastProject.createNew("Proyecto editorial"));
         NarrationScriptDocument script = script();
         session.setNarrationScript(script);
@@ -55,8 +55,4 @@ final class DocumentIntakeCoordinatorTest {
                         "Texto anterior.", List.of("B0"))));
     }
 
-    private static ApplicationServices applicationServices() {
-        return new ApplicationServices(null, null, null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null);
-    }
 }

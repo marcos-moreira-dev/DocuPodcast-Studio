@@ -34,4 +34,15 @@ final class ValidateProjectPayloadUseCaseTest {
 
         assertTrue(useCase.validate(project).valid());
     }
+
+    @Test
+    void audioProjectRemainsOpenableAfterGeneratedAudioWasDeleted() {
+        DocuPodcastProject base = DocuPodcastProject.createNew("Lectura pendiente de regenerar");
+        DocuPodcastProject project = base
+                .withMetadata(base.metadata().withKind(ProjectKind.AUDIO_PROJECT))
+                .withAsset(new ProjectAssetReference("SCRIPT-001", ProjectAssetKind.NARRATION_SCRIPT,
+                        "Lectura", "script/narration-script.json", "application/json", "Guion", "", ""));
+
+        assertTrue(useCase.validate(project).valid());
+    }
 }

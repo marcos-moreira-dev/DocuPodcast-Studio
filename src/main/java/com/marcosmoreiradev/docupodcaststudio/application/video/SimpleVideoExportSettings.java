@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.application.video;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.video.SimpleVideoResolutionPreset;
+
 import com.marcosmoreiradev.docupodcaststudio.application.compute.ComputeDevicePolicy;
 import com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy;
 
@@ -11,6 +13,7 @@ public record SimpleVideoExportSettings(
         boolean preferEmbeddedFfmpeg,
         boolean blockMainWorkspaceDuringRender,
         ComputeDevicePolicy computePolicy,
+        String selectedDeviceId,
         VideoEncoderPolicy encoderPolicy,
         boolean renderUnassignedVisuals,
         boolean includeInferredFrames
@@ -20,7 +23,25 @@ public record SimpleVideoExportSettings(
         framesPerSecond = Math.max(1, framesPerSecond);
         silenceAfterFrameSeconds = Math.max(0.0, silenceAfterFrameSeconds);
         computePolicy = computePolicy == null ? ComputeDevicePolicy.AUTO : computePolicy;
+        selectedDeviceId = selectedDeviceId == null ? "" : selectedDeviceId.strip();
         encoderPolicy = encoderPolicy == null ? VideoEncoderPolicy.AUTO : encoderPolicy;
+    }
+
+    /** Compatibility constructor used before selected device identity reached video. */
+    public SimpleVideoExportSettings(
+            SimpleVideoResolutionPreset resolution,
+            int framesPerSecond,
+            double silenceAfterFrameSeconds,
+            boolean preferEmbeddedFfmpeg,
+            boolean blockMainWorkspaceDuringRender,
+            ComputeDevicePolicy computePolicy,
+            VideoEncoderPolicy encoderPolicy,
+            boolean renderUnassignedVisuals,
+            boolean includeInferredFrames) {
+        this(resolution, framesPerSecond, silenceAfterFrameSeconds,
+                preferEmbeddedFfmpeg, blockMainWorkspaceDuringRender,
+                computePolicy, "", encoderPolicy, renderUnassignedVisuals,
+                includeInferredFrames);
     }
 
     public SimpleVideoExportSettings(
@@ -33,7 +54,21 @@ public record SimpleVideoExportSettings(
             VideoEncoderPolicy encoderPolicy
     ) {
         this(resolution, framesPerSecond, silenceAfterFrameSeconds, preferEmbeddedFfmpeg,
-                blockMainWorkspaceDuringRender, computePolicy, encoderPolicy, false, false);
+                blockMainWorkspaceDuringRender, computePolicy, "", encoderPolicy, false, false);
+    }
+
+    public SimpleVideoExportSettings(
+            SimpleVideoResolutionPreset resolution,
+            int framesPerSecond,
+            double silenceAfterFrameSeconds,
+            boolean preferEmbeddedFfmpeg,
+            boolean blockMainWorkspaceDuringRender,
+            ComputeDevicePolicy computePolicy,
+            String selectedDeviceId,
+            VideoEncoderPolicy encoderPolicy) {
+        this(resolution, framesPerSecond, silenceAfterFrameSeconds,
+                preferEmbeddedFfmpeg, blockMainWorkspaceDuringRender,
+                computePolicy, selectedDeviceId, encoderPolicy, false, false);
     }
 
     public SimpleVideoExportSettings(
@@ -47,7 +82,7 @@ public record SimpleVideoExportSettings(
             boolean renderUnassignedVisuals
     ) {
         this(resolution, framesPerSecond, silenceAfterFrameSeconds, preferEmbeddedFfmpeg,
-                blockMainWorkspaceDuringRender, computePolicy, encoderPolicy, renderUnassignedVisuals, false);
+                blockMainWorkspaceDuringRender, computePolicy, "", encoderPolicy, renderUnassignedVisuals, false);
     }
 
     public SimpleVideoExportSettings(
@@ -69,6 +104,7 @@ public record SimpleVideoExportSettings(
                 true,
                 true,
                 ComputeDevicePolicy.AUTO,
+                "",
                 VideoEncoderPolicy.AUTO,
                 false,
                 false
@@ -77,12 +113,14 @@ public record SimpleVideoExportSettings(
 
     public SimpleVideoExportSettings withRenderUnassignedVisuals(boolean enabled) {
         return new SimpleVideoExportSettings(resolution, framesPerSecond, silenceAfterFrameSeconds,
-                preferEmbeddedFfmpeg, blockMainWorkspaceDuringRender, computePolicy, encoderPolicy, enabled, includeInferredFrames);
+                preferEmbeddedFfmpeg, blockMainWorkspaceDuringRender, computePolicy,
+                selectedDeviceId, encoderPolicy, enabled, includeInferredFrames);
     }
 
     public SimpleVideoExportSettings withIncludeInferredFrames(boolean enabled) {
         return new SimpleVideoExportSettings(resolution, framesPerSecond, silenceAfterFrameSeconds,
-                preferEmbeddedFfmpeg, blockMainWorkspaceDuringRender, computePolicy, encoderPolicy,
+                preferEmbeddedFfmpeg, blockMainWorkspaceDuringRender, computePolicy,
+                selectedDeviceId, encoderPolicy,
                 renderUnassignedVisuals, enabled);
     }
 

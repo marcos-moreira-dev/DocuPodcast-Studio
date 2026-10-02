@@ -14,8 +14,14 @@ public record DocumentStudyApplicationServices(
         BuildDocumentStudyTextVideoPlanUseCase buildDocumentStudyTextVideoPlan,
         BuildDocumentStudyVideoPlanUseCase buildDocumentStudyVideoPlan,
         BuildDocumentStudyVideoAudioOverlayPlanUseCase buildDocumentStudyVideoAudioOverlayPlan,
-        StudyProblemPdfExporter studyProblemPdfExporter
+        StudyProblemPdfExporter studyProblemPdfExporter,
+        com.marcosmoreiradev.docupodcaststudio.application.documentstudy.PrepareDocumentIllustrationsUseCase prepareIllustrations
 ) {
+    public DocumentStudyApplicationServices(BuildDocumentStudyProjectionUseCase a, BuildStudyProblemsProjectionUseCase b,
+            BuildDocumentStudyTextVideoPlanUseCase c, BuildDocumentStudyVideoPlanUseCase d,
+            BuildDocumentStudyVideoAudioOverlayPlanUseCase e, StudyProblemPdfExporter f) {
+        this(a, b, c, d, e, f, null);
+    }
     public DocumentStudyApplicationServices(
             BuildDocumentStudyProjectionUseCase buildDocumentStudyProjection,
             BuildStudyProblemsProjectionUseCase buildStudyProblemsProjection,

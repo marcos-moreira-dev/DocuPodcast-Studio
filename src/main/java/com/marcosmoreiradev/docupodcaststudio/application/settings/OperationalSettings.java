@@ -19,6 +19,8 @@ public record OperationalSettings(
         TtsEngineSettings tts,
         VideoRenderSettings video,
         ImageGenerationSettings imageGeneration,
+        ImageSuperResolutionSettings imageSuperResolution,
+        MediaEngineSelectionSettings mediaEngines,
         FrameGenerationSettings frameGeneration,
         ComputeSettings compute,
         OcrSettings ocr,
@@ -31,6 +33,9 @@ public record OperationalSettings(
         tts = tts == null ? TtsEngineSettings.defaults() : tts;
         video = video == null ? VideoRenderSettings.defaults() : video;
         imageGeneration = imageGeneration == null ? ImageGenerationSettings.defaults() : imageGeneration;
+        imageSuperResolution = imageSuperResolution == null
+                ? ImageSuperResolutionSettings.defaults() : imageSuperResolution;
+        mediaEngines = mediaEngines == null ? MediaEngineSelectionSettings.defaults() : mediaEngines;
         frameGeneration = frameGeneration == null ? FrameGenerationSettings.defaults() : frameGeneration;
         compute = compute == null ? ComputeSettings.defaults() : compute;
         ocr = ocr == null ? OcrSettings.defaults() : ocr;
@@ -45,11 +50,50 @@ public record OperationalSettings(
                 TtsEngineSettings.defaults(),
                 VideoRenderSettings.defaults(),
                 ImageGenerationSettings.defaults(),
+                ImageSuperResolutionSettings.defaults(),
+                MediaEngineSelectionSettings.defaults(),
                 FrameGenerationSettings.defaults(),
                 ComputeSettings.defaults(),
                 OcrSettings.defaults(),
                 StorageSettings.defaults(),
                 DiagnosticSettings.defaults());
+    }
+
+    /** Compatibility constructor for callers created before super-resolution settings existed. */
+    public OperationalSettings(
+            ReadingDocumentSettings readingDocument,
+            PlaybackBufferSettings playbackBuffer,
+            TtsEngineSettings tts,
+            VideoRenderSettings video,
+            ImageGenerationSettings imageGeneration,
+            MediaEngineSelectionSettings mediaEngines,
+            FrameGenerationSettings frameGeneration,
+            ComputeSettings compute,
+            OcrSettings ocr,
+            StorageSettings storage,
+            DiagnosticSettings diagnostics
+    ) {
+        this(readingDocument, playbackBuffer, tts, video, imageGeneration,
+                ImageSuperResolutionSettings.defaults(), mediaEngines, frameGeneration,
+                compute, ocr, storage, diagnostics);
+    }
+
+    /** Compatibility constructor for settings writers that still update the v1 sections. */
+    public OperationalSettings(
+            ReadingDocumentSettings readingDocument,
+            PlaybackBufferSettings playbackBuffer,
+            TtsEngineSettings tts,
+            VideoRenderSettings video,
+            ImageGenerationSettings imageGeneration,
+            FrameGenerationSettings frameGeneration,
+            ComputeSettings compute,
+            OcrSettings ocr,
+            StorageSettings storage,
+            DiagnosticSettings diagnostics
+    ) {
+        this(readingDocument, playbackBuffer, tts, video, imageGeneration,
+                ImageSuperResolutionSettings.defaults(), MediaEngineSelectionSettings.defaults(),
+                frameGeneration, compute, ocr, storage, diagnostics);
     }
 
     /** Compatibility constructor for callers created before OCR runtime became configurable. */
@@ -64,7 +108,8 @@ public record OperationalSettings(
             StorageSettings storage,
             DiagnosticSettings diagnostics
     ) {
-        this(readingDocument, playbackBuffer, tts, video, imageGeneration, frameGeneration,
+        this(readingDocument, playbackBuffer, tts, video, imageGeneration,
+                ImageSuperResolutionSettings.defaults(), MediaEngineSelectionSettings.defaults(), frameGeneration,
                 compute, OcrSettings.defaults(), storage, diagnostics);
     }
 
@@ -79,7 +124,8 @@ public record OperationalSettings(
             DiagnosticSettings diagnostics
     ) {
         this(readingDocument, playbackBuffer, tts, video,
-                ImageGenerationSettings.defaults(), FrameGenerationSettings.defaults(),
+                ImageGenerationSettings.defaults(), ImageSuperResolutionSettings.defaults(),
+                MediaEngineSelectionSettings.defaults(), FrameGenerationSettings.defaults(),
                 compute, OcrSettings.defaults(), storage, diagnostics);
     }
 
@@ -93,8 +139,32 @@ public record OperationalSettings(
             DiagnosticSettings diagnostics
     ) {
         this(readingDocument, playbackBuffer, tts, video,
-                ImageGenerationSettings.defaults(), FrameGenerationSettings.defaults(),
+                ImageGenerationSettings.defaults(), ImageSuperResolutionSettings.defaults(),
+                MediaEngineSelectionSettings.defaults(), FrameGenerationSettings.defaults(),
                 ComputeSettings.defaults(), OcrSettings.defaults(), storage, diagnostics);
+    }
+
+    /** Neutral selections persisted separately from the provider-specific v1 sections. */
+    public record MediaEngineSelectionSettings(
+            String voiceEngineId,
+            String imageEngineId,
+            String videoGenerationEngineId,
+            String videoRenderEngineId
+    ) {
+        public MediaEngineSelectionSettings {
+            voiceEngineId = normalizeId(voiceEngineId);
+            imageEngineId = normalizeId(imageEngineId);
+            videoGenerationEngineId = normalizeId(videoGenerationEngineId);
+            videoRenderEngineId = normalizeId(videoRenderEngineId);
+        }
+
+        public static MediaEngineSelectionSettings defaults() {
+            return new MediaEngineSelectionSettings("", "", "", "");
+        }
+
+        private static String normalizeId(String value) {
+            return normalize(value).toLowerCase(Locale.ROOT).replace('_', '-');
+        }
     }
 
     public record ReadingDocumentSettings(
@@ -146,7 +216,7 @@ public record OperationalSettings(
         public static final String DEFAULT_PIPER_DEFAULT_VOICE_METADATA_URL = "https://huggingface.co/rhasspy/piper-voices/resolve/main/es/es_ES/sharvard/medium/es_ES-sharvard-medium.onnx.json?download=1";
 
         public TtsEngineSettings {
-            engineMode = normalize(engineMode).isBlank() ? "mock" : normalize(engineMode).toLowerCase(Locale.ROOT);
+            engineMode = normalize(engineMode).isBlank() ? "piper" : normalize(engineMode).toLowerCase(Locale.ROOT);
             commandTemplate = normalize(commandTemplate);
             displayName = normalize(displayName).isBlank() ? "Motor TTS local" : normalize(displayName);
             language = normalize(language).isBlank() ? "es" : normalize(language).toLowerCase(Locale.ROOT);
@@ -166,7 +236,7 @@ public record OperationalSettings(
         }
 
         public static TtsEngineSettings defaults() {
-            return new TtsEngineSettings("mock", "", "Motor TTS local", "es", "VOC-NARRATOR", 180, 3,
+            return new TtsEngineSettings("piper", "", "Motor TTS local", "es", "VOC-NARRATOR", 180, 3,
                     "", "", "", "");
         }
 
@@ -203,6 +273,24 @@ public record OperationalSettings(
         public static VideoRenderSettings defaults() {
             return new VideoRenderSettings("", "2K", true, 5.0, "");
         }
+
+        /** Updates user-facing render preferences while preserving adapter compatibility fields. */
+        public VideoRenderSettings withPresentationPreferences(String resolution, double silentBlockSeconds) {
+            return new VideoRenderSettings(ffmpegExecutable, resolution, preferEmbeddedFfmpeg,
+                    silentBlockSeconds, ffmpegDownloadUrl);
+        }
+
+        public VideoRenderSettings withRuntimePreference(boolean preferManagedRuntime) {
+            return new VideoRenderSettings(ffmpegExecutable, resolutionPreset, preferManagedRuntime,
+                    silentVisualBlockSeconds, ffmpegDownloadUrl);
+        }
+
+        public String configuredRendererExecutable() { return ffmpegExecutable; }
+
+        public boolean preferBundledRenderer() { return preferEmbeddedFfmpeg; }
+
+        /** Provider-neutral alias used by the settings presentation. */
+        public boolean preferManagedVideoRuntime() { return preferEmbeddedFfmpeg; }
     }
 
     public record ComputeSettings(
@@ -210,7 +298,9 @@ public record OperationalSettings(
             String selectedDeviceId,
             boolean allowGpuForTts,
             boolean allowGpuForVideo,
-            VideoEncoderPolicy videoEncoderPolicy
+            VideoEncoderPolicy videoEncoderPolicy,
+            boolean allowGpuForContentAnalysis,
+            boolean allowRamOffloadForContentAnalysis
     ) {
         public ComputeSettings {
             policy = policy == null ? ComputeDevicePolicy.AUTO : policy;
@@ -219,13 +309,32 @@ public record OperationalSettings(
         }
 
         public ComputeSettings(String policy, String selectedDeviceId, boolean allowGpuForTts,
-                               boolean allowGpuForVideo, String videoEncoderPolicy) {
+                               boolean allowGpuForVideo, String videoEncoderPolicy,
+                               boolean allowGpuForContentAnalysis,
+                               boolean allowRamOffloadForContentAnalysis) {
             this(ComputeDevicePolicy.from(policy), selectedDeviceId, allowGpuForTts,
-                    allowGpuForVideo, VideoEncoderPolicy.from(videoEncoderPolicy));
+                    allowGpuForVideo, VideoEncoderPolicy.from(videoEncoderPolicy),
+                    allowGpuForContentAnalysis, allowRamOffloadForContentAnalysis);
+        }
+
+        /** Compatibility constructor for settings created before document analysis compute policy. */
+        public ComputeSettings(ComputeDevicePolicy policy, String selectedDeviceId,
+                               boolean allowGpuForTts, boolean allowGpuForVideo,
+                               VideoEncoderPolicy videoEncoderPolicy) {
+            this(policy, selectedDeviceId, allowGpuForTts, allowGpuForVideo,
+                    videoEncoderPolicy, true, true);
+        }
+
+        /** Compatibility constructor for string-based settings forms and tests. */
+        public ComputeSettings(String policy, String selectedDeviceId, boolean allowGpuForTts,
+                               boolean allowGpuForVideo, String videoEncoderPolicy) {
+            this(policy, selectedDeviceId, allowGpuForTts, allowGpuForVideo,
+                    videoEncoderPolicy, true, true);
         }
 
         public static ComputeSettings defaults() {
-            return new ComputeSettings(ComputeDevicePolicy.AUTO, "", true, true, VideoEncoderPolicy.AUTO);
+            return new ComputeSettings(ComputeDevicePolicy.AUTO, "", true, true,
+                    VideoEncoderPolicy.AUTO, true, true);
         }
     }
 

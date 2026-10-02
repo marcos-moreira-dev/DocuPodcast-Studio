@@ -30,12 +30,14 @@ import java.util.function.Supplier;
 
 /** Vertical rail + single active module, inspired by the DMS SideDock. */
 public final class WorkspaceSideDock extends BorderPane {
-    private static final double DEFAULT_COLLAPSED_MIN_WIDTH = 74.0;
-    private static final double DEFAULT_COLLAPSED_PREF_WIDTH = 78.0;
-    private static final double DEFAULT_COLLAPSED_MAX_WIDTH = 84.0;
-    private static final double FOOTER_RAIL_MIN_WIDTH = 88.0;
-    private static final double FOOTER_RAIL_PREF_WIDTH = 92.0;
-    private static final double FOOTER_RAIL_MAX_WIDTH = 96.0;
+    public static final double COLLAPSED_MIN_WIDTH = 84.0;
+    public static final double COLLAPSED_WIDTH = 88.0;
+    public static final double COLLAPSED_MAX_WIDTH = 92.0;
+    public static final double FOOTER_MIN_WIDTH = 92.0;
+    public static final double FOOTER_WIDTH = 96.0;
+    public static final double FOOTER_MAX_WIDTH = 100.0;
+    public static final double EXPANDED_MIN_WIDTH = 320.0;
+    public static final double EXPANDED_PREFERRED_WIDTH = 400.0;
 
     public enum RailPlacement {
         LEFT,
@@ -114,6 +116,13 @@ public final class WorkspaceSideDock extends BorderPane {
         render();
     }
 
+    public void activateModule(SideDockModuleId moduleId) {
+        if (moduleId == null || modules.stream().noneMatch(module -> module.id() == moduleId)) {
+            return;
+        }
+        activate(moduleId);
+    }
+
     private void activate(SideDockModuleId moduleId) {
         if (moduleId == activeModuleId.get() && !collapsed && expanded.get()) {
             return;
@@ -128,72 +137,38 @@ public final class WorkspaceSideDock extends BorderPane {
         render();
     }
 
-    private static AppIcon iconFor(SideDockModule module) {
-        String key = ((module == null ? "" : module.iconText()) + " " + (module == null ? "" : module.title()))
-                .toLowerCase(java.util.Locale.ROOT);
-        if (key.contains("audio")) {
-            return AppIcon.AUDIO;
-        }
-        if (key.contains("imagen")) {
-            return AppIcon.IMAGE;
-        }
-        if (key.contains("ajuste") || key.contains("configuracion") || key.contains("configuraciÃ³n")) {
-            return AppIcon.SETTINGS;
-        }
-        if (key.contains("video")) {
-            return AppIcon.VIDEO;
-        }
-        if (key.contains("personaje")) {
-            return AppIcon.VOICE;
-        }
-        if (key.contains("mapa")) {
-            return AppIcon.STORYBOARD;
-        }
-        if (key.contains("accion") || key.contains("acción")) {
-            return AppIcon.PREPARE;
-        }
-        if (key.contains("objeto")) {
-            return AppIcon.BUNDLE;
-        }
-        if (key.contains("indice") || key.contains("índice") || key.contains("seccion") || key.contains("sección")) {
-            return AppIcon.INDEX_TREE;
-        }
-        if (key.contains("texto") || key.contains("fragmento")) {
-            return AppIcon.TEXT;
-        }
-        return AppIcon.DEFAULT;
-    }
-
     private void render() {
         VBox rail = new VBox(4);
         getStyleClass().remove("workspace-side-dock-collapsed");
         getStyleClass().remove("workspace-side-dock-expanded");
         rail.getStyleClass().add("side-dock-rail");
         rail.setPadding(new Insets(4));
-        rail.setPrefWidth(76);
-        rail.setMinWidth(72);
-        boolean hasRailFooter = false;
+        rail.setPrefWidth(COLLAPSED_WIDTH);
+        rail.setMinWidth(COLLAPSED_MIN_WIDTH);
+        rail.setMaxWidth(COLLAPSED_MAX_WIDTH);
         for (SideDockModule module : modules) {
-            Button button = ActionButtonFactory.sideDockRail(iconFor(module), () -> activate(module.id()));
-            button.setMinWidth(64);
-            button.setPrefWidth(68);
-            button.setMaxWidth(68);
+            Button button = ActionButtonFactory.sideDockRail(module.icon(), () -> activate(module.id()));
+            button.setMinWidth(72);
+            button.setPrefWidth(76);
+            button.setMaxWidth(80);
             button.setAlignment(Pos.CENTER);
             button.setTooltip(new Tooltip(module.title() + " - " + module.tooltip()));
+            button.setAccessibleText(module.title());
             button.getStyleClass().add("side-dock-rail-button");
-            if (module.id() == activeModuleId.get()) {
+            // Keep the remembered module internally so it can be restored, but do
+            // not advertise a visible selection while the dock itself is closed.
+            if (!collapsed && module.id() == activeModuleId.get()) {
                 button.getStyleClass().add("side-dock-rail-button-active");
             }
             rail.getChildren().add(button);
         }
         Node footer = railFooterContent.get();
         if (footer != null) {
-            hasRailFooter = true;
             detachFromPreviousParent(footer);
             rail.getStyleClass().add("side-dock-rail-with-footer");
-            rail.setMinWidth(FOOTER_RAIL_MIN_WIDTH);
-            rail.setPrefWidth(FOOTER_RAIL_PREF_WIDTH);
-            rail.setMaxWidth(FOOTER_RAIL_MAX_WIDTH);
+            rail.setMinWidth(FOOTER_MIN_WIDTH);
+            rail.setPrefWidth(FOOTER_WIDTH);
+            rail.setMaxWidth(FOOTER_MAX_WIDTH);
             Region spacer = new Region();
             VBox.setVgrow(spacer, Priority.ALWAYS);
             rail.getChildren().addAll(spacer, footer);
@@ -212,15 +187,15 @@ public final class WorkspaceSideDock extends BorderPane {
         expanded.set(active != null && !collapsed);
         if (active == null || collapsed) {
             getStyleClass().add("workspace-side-dock-collapsed");
-            setMinWidth(hasRailFooter ? FOOTER_RAIL_MIN_WIDTH : DEFAULT_COLLAPSED_MIN_WIDTH);
-            setPrefWidth(hasRailFooter ? FOOTER_RAIL_PREF_WIDTH : DEFAULT_COLLAPSED_PREF_WIDTH);
-            setMaxWidth(hasRailFooter ? FOOTER_RAIL_MAX_WIDTH : DEFAULT_COLLAPSED_MAX_WIDTH);
+            setMinWidth(footer == null ? COLLAPSED_MIN_WIDTH : FOOTER_MIN_WIDTH);
+            setPrefWidth(footer == null ? COLLAPSED_WIDTH : FOOTER_WIDTH);
+            setMaxWidth(footer == null ? COLLAPSED_MAX_WIDTH : FOOTER_MAX_WIDTH);
             setCenter(null);
             return;
         }
         getStyleClass().add("workspace-side-dock-expanded");
-        setMinWidth(292);
-        setPrefWidth(318);
+        setMinWidth(EXPANDED_MIN_WIDTH);
+        setPrefWidth(EXPANDED_PREFERRED_WIDTH);
         setMaxWidth(Double.MAX_VALUE);
         BorderPane frame = new BorderPane();
         frame.getStyleClass().add("side-dock-module-frame");

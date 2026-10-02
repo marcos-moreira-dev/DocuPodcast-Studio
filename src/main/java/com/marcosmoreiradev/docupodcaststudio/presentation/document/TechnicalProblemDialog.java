@@ -1,34 +1,53 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.document;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeSourceChooser;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeDialogResponse;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioDialogShell;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls;
+
+import com.marcosmoreiradev.docupodcaststudio.ink.DrawingFeatureCatalog;
+import com.marcosmoreiradev.docupodcaststudio.ink.DrawingProfile;
+import com.marcosmoreiradev.docupodcaststudio.ink.DrawingToolId;
+import com.marcosmoreiradev.docupodcaststudio.ink.canvas.InkCanvasExportOptions;
+import com.marcosmoreiradev.docupodcaststudio.ink.canvas.InkCanvasExportResult;
+import com.marcosmoreiradev.docupodcaststudio.ink.canvas.InkImageFileStore;
 import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.StudyProblemDetail;
 import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.StudyProblemSourceDraft;
 import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.StudyProblemSourceProjection;
-import com.marcosmoreiradev.docupodcaststudio.application.ink.InkImageCrop;
-import com.marcosmoreiradev.docupodcaststudio.application.ink.InkPlacedImage;
-import com.marcosmoreiradev.docupodcaststudio.application.ink.InkWorkspaceState;
-import com.marcosmoreiradev.docupodcaststudio.application.ink.InkWorkspaceStateSerializer;
+import com.marcosmoreiradev.docupodcaststudio.ink.model.InkImageCrop;
+import com.marcosmoreiradev.docupodcaststudio.ink.model.InkPlacedImage;
+import com.marcosmoreiradev.docupodcaststudio.ink.model.InkWorkspaceState;
+import com.marcosmoreiradev.docupodcaststudio.ink.model.InkWorkspaceStateSerializer;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlock;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionButtonFactory;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.AppStyles;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioNavigationControls;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.LucideIconView;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.InkRealtimeStrokeEngine;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.canvas.InkCanvasSurface;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.canvas.InkCanvasViewportCoordinateMapper;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputCapabilities;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputCursor;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputListener;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputProvider;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputProviderFactory;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputSample;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioCanvasToolbar;
+import com.marcosmoreiradev.docupodcaststudio.ink.InkRealtimeStrokeEngine;
+import com.marcosmoreiradev.docupodcaststudio.ink.canvas.InkCanvasViewport;
+import com.marcosmoreiradev.docupodcaststudio.ink.canvas.InkCanvasZoomPane;
+import com.marcosmoreiradev.docupodcaststudio.ink.controls.InkPressureIndicator;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputCapabilities;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputCursor;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputListener;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputProvider;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.NoopInkInputProvider;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputSample;
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Cursor;
 import javafx.scene.control.Alert;
@@ -47,6 +66,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.control.ToggleButton;
+import javafx.scene.control.ToggleGroup;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.PixelReader;
@@ -59,22 +79,19 @@ import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
+import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 import javafx.util.Duration;
 
-import javax.imageio.ImageIO;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.awt.Graphics2D;
@@ -83,22 +100,21 @@ import java.awt.image.BufferedImage;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Base64;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
 /** Modal resolver for technical problems. */
 public final class TechnicalProblemDialog {
-    private static final int MAX_UNDO_SNAPSHOTS = 50;
     private static final double DIALOG_PREF_WIDTH = 1220;
     private static final double DIALOG_PREF_HEIGHT = 760;
     private static final double CANVAS_TITLE_BAND_HEIGHT = 64.0;
+
+    private enum CanvasTool {
+        NONE, PEN, STRAIGHT_LINE, ANGLE_MEASURE, ERASER, PAN, REGION, TEXT
+    }
 
     public record TechnicalProblemResult(String title, String solutionText, WritableImage canvasSnapshot,
                                          Map<String, Path> sourceCropPaths, String notes, Path externalPngTarget,
@@ -111,7 +127,9 @@ public final class TechnicalProblemDialog {
         }
     }
 
-    private final Dialog<TechnicalProblemResult> dialog = new Dialog<>();
+    private final Dialog<TechnicalProblemResult> dialog = StudioDialogShell.dialog();
+    private final DrawingProfile drawingProfile;
+    private final Map<String, javafx.beans.property.DoubleProperty> sourceOpacities = new HashMap<>();
     private final List<StatementSource> statementSources;
     private final List<StudyProblemSourceDraft> additionalSourceDrafts = new ArrayList<>();
     private final Map<String, Path> sourceCropPaths;
@@ -119,26 +137,30 @@ public final class TechnicalProblemDialog {
     private final Path existingCanvasStatePath;
     private final boolean editMode;
     private final boolean expressMode;
-    private final TextField title = new TextField();
-    private final TextArea solutionText = new TextArea();
-    private final TextArea notes = new TextArea();
-    private final InkCanvasSurface drawingSurface = new InkCanvasSurface();
-    private final InkInputProvider inkInputProvider = InkInputProviderFactory.createLectureStudioOnly();
-    private final ColorPicker penColor = new ColorPicker(Color.BLACK);
-    private final ColorPicker backgroundColor = new ColorPicker(Color.WHITE);
-    private final Slider penWidth = new Slider(1, 24, 3);
+    private final TextField title = StudioFormControls.textField();
+    private final TextArea solutionText = StudioFormControls.textArea();
+    private final TextArea notes = StudioFormControls.textArea();
+    private final StudyProblemCanvasSurface drawingSurface = new StudyProblemCanvasSurface();
+    private final InkInputProvider inkInputProvider;
+    private TechnicalProblemEditorController<CanvasUndoSnapshot> editorController;
+    private InkCanvasViewport inkViewport;
+    private final ColorPicker penColor = StudioFormControls.colorPicker(Color.BLACK);
+    private final ColorPicker backgroundColor = StudioFormControls.colorPicker(Color.WHITE);
+    private final Slider penWidth = StudioFormControls.slider(1, 24, 3);
     private final Circle penWidthPreview = new Circle(3);
-    private final Slider canvasZoom = new Slider(50, 200, 100);
+    private final Slider canvasZoom = StudioFormControls.slider(50, 200, 100);
     private final Label canvasZoomValue = new Label("100%");
-    private final ToggleButton eraser = new ToggleButton("Borrador");
-    private final Deque<CanvasUndoSnapshot> undo = new ArrayDeque<>();
-    private final Deque<CanvasUndoSnapshot> redo = new ArrayDeque<>();
+    private final ToggleButton eraser = StudioFormControls.toggleButton("Borrador");
     private final BooleanProperty canvasTouched = new SimpleBooleanProperty(false);
     private final BooleanProperty canvasMode = new SimpleBooleanProperty(true);
     private final BooleanProperty drawMode = new SimpleBooleanProperty(true);
     private final BooleanProperty canvasRegionSelectionMode = new SimpleBooleanProperty(false);
     private final BooleanProperty imageInteractionMode = new SimpleBooleanProperty(false);
+    private final ObjectProperty<CanvasTool> activeCanvasTool = new SimpleObjectProperty<>(CanvasTool.PEN);
     private final List<CanvasImageItem> canvasImages = new ArrayList<>();
+    private com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.CanvasStrokeSelection vectorSelection;
+    private boolean vectorClipboard;
+    private Button imageRotateHandle;
     private final List<Label> imageResizeHandles = new ArrayList<>();
     private SplitPane problemSplit;
     private BorderPane rootPane;
@@ -148,16 +170,37 @@ public final class TechnicalProblemDialog {
     private Node existingSolutionNode;
     private Node toolBarNode;
     private Node titleNode;
-    private Label inputDiagnosticLabel;
+    private InkPressureIndicator inputDiagnosticLabel;
     private VBox statementVisuals;
     private TextArea statementTextArea;
     private Button transferAllButton;
     private HBox statementActions;
     private Label canvasTitleLabel;
     private ScrollPane canvasScroll;
+    private InkCanvasZoomPane canvasZoomPane;
     private Button collapseStatementButton;
     private Button restoreStatementButton;
     private Button fullscreenButton;
+    private final javafx.scene.control.ComboBox<String> textFont = StudioFormControls.comboBox();
+    private final javafx.scene.control.ComboBox<String> textEffect = StudioFormControls.comboBox();
+    private final ColorPicker shapeFillColor = StudioFormControls.colorPicker(Color.LIGHTBLUE);
+    private HBox shapeFillActions;
+    private final BooleanProperty objectSelectionVisible = new SimpleBooleanProperty(false);
+    private final BooleanProperty regionSelectionVisible = new SimpleBooleanProperty(false);
+    private Button fillShapeButton;
+    private Button clearShapeFillButton;
+    private final ColorPicker textColor = StudioFormControls.colorPicker(Color.BLACK);
+    private final ColorPicker textEffectColor = StudioFormControls.colorPicker(Color.BLACK);
+    private FlowPane textStyleBar;
+    private boolean syncingTextStyle;
+    private TextArea canvasTextEditor;
+
+    private Node toolbarShellNode;
+    private boolean secondaryPanning;
+    private boolean canvasDisposed;
+    private final PauseTransition canvasTrimDebounce = new PauseTransition(Duration.seconds(3));
+    private double panSceneX;
+    private double panSceneY;
     private Button deleteImageButton;
     private Button enlargeImageButton;
     private Button shrinkImageButton;
@@ -180,22 +223,17 @@ public final class TechnicalProblemDialog {
     private boolean pendingCanvasGrowWidth;
     private boolean pendingCanvasGrowHeight;
     private final PauseTransition canvasGrowDebounce = new PauseTransition(Duration.millis(160));
+    private final List<Node> measurementOverlayNodes = new ArrayList<>();
+    private int draggedAnglePoint = -1;
+    private final List<Point2D> angleMeasurementPoints = new ArrayList<>();
+    private final Label measurementStatus = new Label("Medición: selecciona Medir ángulo para comenzar.");
+    private Point2D straightLineStart;
     private boolean statementCollapsed;
     private boolean resolverFullscreen;
     private boolean statementCollapsedBeforeFullscreen;
-    private boolean stageMaximizedBeforeFullscreen;
-    private double stageXBeforeFullscreen;
-    private double stageYBeforeFullscreen;
-    private double stageWidthBeforeFullscreen;
-    private double stageHeightBeforeFullscreen;
-    private double restoredDivider = 0.38;
+    private double restoredDivider = 0.25;
     private InkRealtimeStrokeEngine inkEngine;
     private double currentInputPressure = 1.0;
-    private double currentInputRawPressure = Double.NaN;
-    private double lastComparableRawPressure = Double.NaN;
-    private boolean inputPressureVaried;
-    private InkInputCursor currentInputCursor = InkInputCursor.UNKNOWN;
-    private String currentInputSource = "";
     private boolean currentInputEraser;
     private boolean imageCropMode;
     private Rectangle imageCropSelectionRectangle;
@@ -206,7 +244,10 @@ public final class TechnicalProblemDialog {
     private ButtonType saveAndExportButtonType;
     private Path externalPngTarget;
 
-    private TechnicalProblemDialog(Window owner, List<DocumentBlock> sourceBlocks, Map<String, Path> sourceCropPaths) {
+    private TechnicalProblemDialog(Window owner, List<DocumentBlock> sourceBlocks, Map<String, Path> sourceCropPaths,
+                                   InkInputProvider inkInputProvider, DrawingProfile drawingProfile) {
+        this.drawingProfile = java.util.Objects.requireNonNull(drawingProfile, "drawing profile");
+        this.inkInputProvider = inkInputProvider == null ? NoopInkInputProvider.INSTANCE : inkInputProvider;
         this.statementSources = new ArrayList<>(statementSources(sourceBlocks, sourceCropPaths));
         this.sourceCropPaths = sourceCropPaths == null ? Map.of() : Map.copyOf(sourceCropPaths);
         this.existingSolutionImagePath = null;
@@ -216,7 +257,10 @@ public final class TechnicalProblemDialog {
         initialize(owner, "Problema tecnico", "Problema tecnico", "Guardar");
     }
 
-    private TechnicalProblemDialog(Window owner, List<StudyProblemSourceDraft> sourceDrafts, boolean draftMode) {
+    private TechnicalProblemDialog(Window owner, List<StudyProblemSourceDraft> sourceDrafts, boolean draftMode,
+                                   InkInputProvider inkInputProvider, DrawingProfile drawingProfile) {
+        this.drawingProfile = java.util.Objects.requireNonNull(drawingProfile, "drawing profile");
+        this.inkInputProvider = inkInputProvider == null ? NoopInkInputProvider.INSTANCE : inkInputProvider;
         this.statementSources = new ArrayList<>(statementSourcesFromDrafts(sourceDrafts));
         this.sourceCropPaths = sourceCropPathsFromDrafts(sourceDrafts);
         this.existingSolutionImagePath = null;
@@ -226,7 +270,10 @@ public final class TechnicalProblemDialog {
         initialize(owner, "Problema tecnico", "Problema tecnico", "Guardar");
     }
 
-    private TechnicalProblemDialog(Window owner, StudyProblemDetail detail) {
+    private TechnicalProblemDialog(Window owner, StudyProblemDetail detail, InkInputProvider inkInputProvider,
+                                   DrawingProfile drawingProfile) {
+        this.drawingProfile = java.util.Objects.requireNonNull(drawingProfile, "drawing profile");
+        this.inkInputProvider = inkInputProvider == null ? NoopInkInputProvider.INSTANCE : inkInputProvider;
         this.statementSources = new ArrayList<>(statementSources(detail));
         this.sourceCropPaths = Map.of();
         this.existingSolutionImagePath = detail == null ? null : detail.solutionImagePath();
@@ -242,7 +289,10 @@ public final class TechnicalProblemDialog {
         }
     }
 
-    private TechnicalProblemDialog(Window owner, boolean expressMode) {
+    private TechnicalProblemDialog(Window owner, boolean expressMode, InkInputProvider inkInputProvider,
+                                   DrawingProfile drawingProfile) {
+        this.drawingProfile = java.util.Objects.requireNonNull(drawingProfile, "drawing profile");
+        this.inkInputProvider = inkInputProvider == null ? NoopInkInputProvider.INSTANCE : inkInputProvider;
         this.statementSources = new ArrayList<>();
         this.sourceCropPaths = Map.of();
         this.existingSolutionImagePath = null;
@@ -253,19 +303,25 @@ public final class TechnicalProblemDialog {
     }
 
     private void initialize(Window owner, String dialogTitle, String header, String saveLabel) {
+        editorController = new TechnicalProblemEditorController<>(drawingProfile, inkInputProvider,
+                () -> snapshotUndoState(false), this::restoreUndoSnapshot,
+                (state, destination, exportProfile) -> destination);
+        inkViewport = new InkCanvasViewport(drawingSurface, drawingProfile);
         dialog.setTitle(dialogTitle);
-        dialog.setHeaderText(header);
-        dialogHeaderText = header == null ? "" : header;
+        dialogHeaderText = expressMode ? null : header;
+        dialog.setHeaderText(dialogHeaderText);
         if (owner != null) {
             dialog.initOwner(owner);
         }
-        saveButtonType = new ButtonType(saveLabel, ButtonBar.ButtonData.OK_DONE);
+        saveButtonType = NativeDialogResponse.button(saveLabel,
+                expressMode ? ButtonBar.ButtonData.CANCEL_CLOSE : ButtonBar.ButtonData.OK_DONE);
         if (editMode) {
             saveAndExportButtonType = null;
             dialog.getDialogPane().getButtonTypes().addAll(saveButtonType, ButtonType.CANCEL);
         } else {
-            saveAndExportButtonType = new ButtonType(expressMode ? "Exportar PNG..." : "Guardar + exportar PNG...", ButtonBar.ButtonData.APPLY);
-            dialog.getDialogPane().getButtonTypes().addAll(saveButtonType, saveAndExportButtonType, ButtonType.CANCEL);
+            saveAndExportButtonType = NativeDialogResponse.button(expressMode ? "Exportar PNG..." : "Guardar + exportar PNG...", ButtonBar.ButtonData.APPLY);
+            dialog.getDialogPane().getButtonTypes().addAll(saveButtonType, saveAndExportButtonType);
+            if (!expressMode) dialog.getDialogPane().getButtonTypes().add(ButtonType.CANCEL);
         }
         dialog.getDialogPane().getStyleClass().add("technical-problem-dialog");
         dialog.getDialogPane().setContent(content());
@@ -285,30 +341,46 @@ public final class TechnicalProblemDialog {
             installDialogButtonHandlers();
             Platform.runLater(this::resetInkCoordinateState);
         });
+        title.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+            if (event.getCode() == KeyCode.ENTER) event.consume();
+        });
+        dialog.setOnCloseRequest(event -> {
+            ButtonType close = com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeDialogResponse.button("Cerrar", ButtonBar.ButtonData.OK_DONE);
+            Alert confirmation = com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeDecisionDialog.create(
+                    dialog.getDialogPane().getScene().getWindow(), Alert.AlertType.CONFIRMATION,
+                    "¿Seguro que quieres cerrar el ejercicio?", close, ButtonType.CANCEL);
+            if (confirmation.showAndWait().orElse(ButtonType.CANCEL) != close) event.consume();
+        });
         dialog.setOnHidden(event -> disposeCanvasInput());
         dialog.getDialogPane().addEventFilter(KeyEvent.KEY_PRESSED, this::handleDialogKeyPressed);
         canvasGrowDebounce.setOnFinished(event -> runPendingCanvasGrowth());
+        canvasTrimDebounce.setOnFinished(event -> trimUnusedCanvas());
         initializeCanvas();
     }
 
-    public static Optional<TechnicalProblemResult> show(Window owner, List<DocumentBlock> sourceBlocks) {
-        return show(owner, sourceBlocks, Map.of());
+    public static Optional<TechnicalProblemResult> show(Window owner, List<DocumentBlock> sourceBlocks,
+                                                        Map<String, Path> sourceCropPaths,
+                                                        InkInputProvider inputProvider,
+                                                        DrawingProfile drawingProfile) {
+        return new TechnicalProblemDialog(owner, sourceBlocks, sourceCropPaths, inputProvider, drawingProfile).dialog.showAndWait();
     }
 
-    public static Optional<TechnicalProblemResult> show(Window owner, List<DocumentBlock> sourceBlocks, Map<String, Path> sourceCropPaths) {
-        return new TechnicalProblemDialog(owner, sourceBlocks, sourceCropPaths).dialog.showAndWait();
+    public static Optional<TechnicalProblemResult> showForDrafts(Window owner,
+                                                                 List<StudyProblemSourceDraft> sourceDrafts,
+                                                                 InkInputProvider inputProvider,
+                                                                 DrawingProfile drawingProfile) {
+        return new TechnicalProblemDialog(owner, sourceDrafts, true, inputProvider, drawingProfile).dialog.showAndWait();
     }
 
-    public static Optional<TechnicalProblemResult> showForDrafts(Window owner, List<StudyProblemSourceDraft> sourceDrafts) {
-        return new TechnicalProblemDialog(owner, sourceDrafts, true).dialog.showAndWait();
+    public static Optional<TechnicalProblemResult> showForEdit(Window owner, StudyProblemDetail detail,
+                                                               InkInputProvider inputProvider,
+                                                               DrawingProfile drawingProfile) {
+        return new TechnicalProblemDialog(owner, detail, inputProvider, drawingProfile).dialog.showAndWait();
     }
 
-    public static Optional<TechnicalProblemResult> showForEdit(Window owner, StudyProblemDetail detail) {
-        return new TechnicalProblemDialog(owner, detail).dialog.showAndWait();
-    }
-
-    public static Optional<TechnicalProblemResult> showExpress(Window owner) {
-        return new TechnicalProblemDialog(owner, true).dialog.showAndWait();
+    public static Optional<TechnicalProblemResult> showExpress(Window owner, InkInputProvider inputProvider,
+                                                               DrawingProfile drawingProfile) {
+        return new TechnicalProblemDialog(owner, true, inputProvider, drawingProfile).dialog.showAndWait();
     }
 
     private boolean shouldExportCanvas(ButtonType button) {
@@ -320,8 +392,8 @@ public final class TechnicalProblemDialog {
         markTitleContentBounds();
         boolean needsCanvas = shouldExportCanvas(button);
         boolean externalRequested = saveAndExportButtonType != null && button == saveAndExportButtonType && externalPngTarget != null;
-        StudyProblemCanvasExportResult internalExport = needsCanvas ? exportCanvas(StudyProblemCanvasExportOptions.internalPersistence()) : null;
-        StudyProblemCanvasExportResult externalExport = externalRequested ? exportCanvas(StudyProblemCanvasExportOptions.premiumExternal()) : null;
+        InkCanvasExportResult internalExport = needsCanvas ? exportCanvas(InkCanvasExportOptions.internalPersistence()) : null;
+        InkCanvasExportResult externalExport = externalRequested ? exportCanvas(InkCanvasExportOptions.premiumExternal()) : null;
         String canvasStateJson = shouldPersistCanvasState(needsCanvas) ? canvasStateJson() : "";
         List<String> warnings = new ArrayList<>();
         if (internalExport != null) {
@@ -368,7 +440,17 @@ public final class TechnicalProblemDialog {
     }
 
     private void handleDialogKeyPressed(KeyEvent event) {
-        if (event.getCode() == KeyCode.ESCAPE && resolverFullscreen) {
+        if (event.getCode() == KeyCode.DELETE && !textInputOwnsShortcut(event)
+                && canvasRegionSelectionMode.get() && vectorSelection != null && vectorSelection.hasSelection()) {
+            vectorSelection.deleteSelection(); event.consume(); return;
+        }
+        if (event.getCode() == KeyCode.DELETE && !textInputOwnsShortcut(event)
+                && canInteractWithCanvasImages() && selectedCanvasImage != null) {
+            deleteSelectedImage();
+            event.consume();
+            return;
+        }
+        if ((event.getCode() == KeyCode.ESCAPE || event.getCode() == KeyCode.F11) && resolverFullscreen) {
             toggleResolverFullscreen();
             event.consume();
             return;
@@ -408,7 +490,7 @@ public final class TechnicalProblemDialog {
 
     private Path chooseExternalPngTarget() {
         Window owner = dialog.getDialogPane().getScene() == null ? null : dialog.getDialogPane().getScene().getWindow();
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle("Exportar solucion PNG");
         chooser.setInitialFileName(safePngFileName(title.getText()));
         chooser.getExtensionFilters().setAll(new FileChooser.ExtensionFilter("PNG (*.png)", "*.png"));
@@ -451,27 +533,39 @@ public final class TechnicalProblemDialog {
         VBox titleBox = new VBox(4, titleLabel, title);
         titleBox.getStyleClass().add("technical-problem-title-box");
         titleNode = titleBox;
-        root.setTop(titleBox);
+
         BorderPane.setMargin(titleBox, new Insets(0, 0, 10, 0));
 
         statementNode = statementPane();
         resolverNode = resolverPane();
-        problemSplit = new SplitPane(statementNode, resolverNode);
+        problemSplit = StudioViewportControls.splitPane(statementNode, resolverNode);
         problemSplit.getStyleClass().add("technical-problem-split");
         problemSplit.setDividerPositions(restoredDivider);
         SplitPane.setResizableWithParent(statementNode, Boolean.TRUE);
         SplitPane.setResizableWithParent(resolverNode, Boolean.TRUE);
         root.setCenter(problemSplit);
+        HBox restorePanelRow = new HBox(restoreStatementButton);
+        restorePanelRow.setAlignment(Pos.CENTER_LEFT);
+        root.setBottom(restorePanelRow);
         return root;
+    }
+
+    private Button panelFoldButton(String symbol, String description) {
+        Button button = ActionButtonFactory.secondary("");
+        button.setText(symbol);
+        button.setGraphic(null);
+        button.getStyleClass().add(AppStyles.UI_RIBBON_COLLAPSE_TOGGLE);
+        button.setStyle("-fx-min-width: 22; -fx-pref-width: 22; -fx-max-width: 22; -fx-padding: 0;");
+        button.setAccessibleText(description);
+        StudioFormControls.installTooltip(button, description);
+        button.setOnAction(event -> toggleStatementCollapsed());
+        return button;
     }
 
     private BorderPane statementPane() {
         Label heading = new Label(expressMode ? "Banco de imagenes" : "Enunciado");
         heading.getStyleClass().add("technical-problem-section-title");
-        collapseStatementButton = ActionButtonFactory.secondary(
-                expressMode ? "Ocultar banco" : "Ocultar enunciado",
-                expressMode ? "Ocultar el banco de imagenes y dejar mas espacio para dibujar." : "Ocultar el enunciado y dejar mas espacio para resolver.",
-                this::toggleStatementCollapsed);
+        collapseStatementButton = panelFoldButton("◂", "Plegar recursos y páginas");
         Button loadExternalImage = ActionButtonFactory.secondary(
                 "Cargar imagen externa",
                 expressMode ? "Agregar una imagen al banco de referencia." : "Agregar una imagen del disco como fuente visual del problema.",
@@ -485,16 +579,16 @@ public final class TechnicalProblemDialog {
             transferAllButton.getStyleClass().add("technical-problem-transfer-all");
             statementActions.getChildren().add(transferAllButton);
         }
-        statementActions.getChildren().add(collapseStatementButton);
+
         statementActions.setAlignment(Pos.CENTER_LEFT);
         statementActions.getStyleClass().add("technical-problem-statement-actions");
         HBox header = new HBox(8, heading);
         header.setAlignment(Pos.CENTER_LEFT);
         header.getStyleClass().add("technical-problem-statement-header");
-        VBox headerBox = new VBox(6, statementActions, header);
+        VBox headerBox = new VBox(8, statementActions, header);
         headerBox.getStyleClass().add("technical-problem-statement-header-box");
 
-        statementTextArea = new TextArea(expressMode
+        statementTextArea = StudioFormControls.textArea(expressMode
                 ? "Importa imagenes para usarlas como referencia o transferirlas al lienzo."
                 : combinedStatementText());
         statementTextArea.setEditable(false);
@@ -506,22 +600,160 @@ public final class TechnicalProblemDialog {
                 .map(this::sourceVisualNode)
                 .flatMap(Optional::stream)
                 .forEach(statementVisuals.getChildren()::add);
-        VBox content = new VBox(10, statementTextArea, statementVisuals);
+        VBox content = expressMode ? new VBox(10, statementVisuals)
+                : new VBox(10, statementTextArea, statementVisuals);
         content.getStyleClass().add("technical-problem-statement");
-        ScrollPane scroll = new ScrollPane(content);
+        ScrollPane scroll = StudioViewportControls.scrollPane(content);
         scroll.setFitToWidth(true);
         scroll.setPrefViewportWidth(460);
         scroll.setPrefViewportHeight(560);
         scroll.getStyleClass().add("technical-problem-statement-scroll");
-        BorderPane pane = new BorderPane(scroll);
-        pane.setTop(headerBox);
+        BorderPane resources = new BorderPane(scroll);
+        resources.setTop(headerBox);
+        javafx.scene.control.Tab resourcesTab = StudioNavigationControls.tab("Recursos", resources);
+        javafx.scene.control.Tab pagesTab = StudioNavigationControls.tab("Páginas", pageNavigator());
+        resourcesTab.setClosable(false);
+        pagesTab.setClosable(false);
+        javafx.scene.control.TabPane tabs = StudioNavigationControls.tabPane(resourcesTab, pagesTab, canvasSettingsTab());
+        tabs.setMinWidth(0);
+        tabs.getStyleClass().add("technical-notebook-tabs");
+        pagesTab.setOnSelectionChanged(event -> {
+            if (pagesTab.isSelected()) Platform.runLater(this::refreshPageThumbnail);
+        });
+        BorderPane pane = new BorderPane(tabs);
+        HBox fold = new HBox(collapseStatementButton);
+        fold.setAlignment(Pos.CENTER_RIGHT);
+        pane.setBottom(fold);
         pane.getStyleClass().add("technical-problem-statement-pane");
         return pane;
     }
 
+    private javafx.scene.control.Tab canvasSettingsTab() {
+        javafx.scene.control.ComboBox<String> paper = com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls.comboBox();
+        paper.getItems().setAll("En blanco", "A líneas", "A cuadros", "Isométrico", "Polar");
+        paper.setValue("En blanco");
+        List<String> patterns = List.of("blank", "ruled", "grid", "isometric", "polar");
+        paper.setOnAction(event -> {
+            int index = paper.getSelectionModel().getSelectedIndex();
+            if (index >= 0 && drawingSurface != null && !patterns.get(index).equals(drawingSurface.paperPattern())) {
+                drawingSurface.setPaperPattern(patterns.get(index));
+                canvasTouched.set(true);
+                refreshPageThumbnail();
+            }
+        });
+        Label help = new Label("La plantilla es el fondo de la hoja. Se guarda con el lienzo y aparece en la exportación.");
+        help.setWrapText(true);
+        VBox body = new VBox(10, titleNode, new Label("Notas internas del estudio"), notes,
+                new Label("Plantilla de hoja"), paper, help);
+        body.setPadding(new Insets(12));
+        ScrollPane settingsScroll = StudioViewportControls.scrollPane(body);
+        settingsScroll.setFitToWidth(true);
+        javafx.scene.control.Tab tab = StudioNavigationControls.tab("Lienzo", settingsScroll);
+        tab.setClosable(false);
+        tab.setOnSelectionChanged(event -> {
+            if (tab.isSelected() && drawingSurface != null) {
+                int index = patterns.indexOf(drawingSurface.paperPattern());
+                paper.getSelectionModel().select(Math.max(0, index));
+            }
+        });
+        return tab;
+    }
+
+    private ImageView pageThumbnail;
+    private final List<String> notebookPages = new ArrayList<>();
+    private final List<Image> notebookThumbnails = new ArrayList<>();
+    private int currentPage;
+    private VBox pageList;
+
+    private Node pageNavigator() {
+        pageList = new VBox(8);
+        Button add = ActionButtonFactory.secondary("Nueva página", "Crear una hoja vacía.", this::addNotebookPage);
+        Button previous = ActionButtonFactory.secondary("Anterior", "Ir a la página anterior.", () -> selectNotebookPage(currentPage - 1));
+        Button next = ActionButtonFactory.secondary("Siguiente", "Ir a la página siguiente.", () -> selectNotebookPage(currentPage + 1));
+        FlowPane navigation = new FlowPane(6, 6, previous, next);
+        navigation.setPadding(new Insets(8));
+        VBox content = new VBox(10, add, pageList);
+        content.setPadding(new Insets(12));
+        ScrollPane viewport = StudioViewportControls.scrollPane(content);
+        viewport.setFitToWidth(true);
+        BorderPane pane = new BorderPane(viewport);
+        pane.setBottom(navigation);
+        return pane;
+    }
+
+    private void ensureNotebook() {
+        if (notebookPages.isEmpty()) {
+            notebookPages.add("");
+            notebookThumbnails.add(null);
+        }
+    }
+
+    private void addNotebookPage() {
+        ensureNotebook();
+        notebookPages.set(currentPage, canvasPageStateJson(false));
+        refreshPageThumbnail();
+        notebookPages.add("");
+        notebookThumbnails.add(null);
+        selectNotebookPage(notebookPages.size() - 1);
+    }
+
+    private void selectNotebookPage(int index) {
+        ensureNotebook();
+        if (index < 0 || index >= notebookPages.size() || index == currentPage) return;
+        notebookPages.set(currentPage, canvasPageStateJson(false));
+        refreshPageThumbnail();
+        currentPage = index;
+        String state = notebookPages.get(index);
+        clearAngleMeasurement();
+        if (state.isBlank()) {
+            clearCanvasImages();
+            drawingSurface.resetForEditableState(1024, 1024, backgroundColor.getValue());
+        } else if (!restoreCanvasJson(state)) {
+            throw new IllegalStateException("No se pudo recuperar la página " + (index + 1));
+        }
+        editorController.restore(snapshotUndoState(false));
+        canvasScroll.setVvalue(0);
+        canvasScroll.setHvalue(0);
+        canvasTouched.set(true);
+        refreshPageThumbnail();
+    }
+
+    private void rebuildPageList() {
+        if (pageList == null) return;
+        pageList.getChildren().clear();
+        for (int i = 0; i < notebookPages.size(); i++) {
+            final int index = i;
+            ImageView thumb = new ImageView(notebookThumbnails.get(i));
+            thumb.setPreserveRatio(true);
+            thumb.setFitWidth(140);
+            thumb.setFitHeight(170);
+            Button page = ActionButtonFactory.secondary("Página " + (i + 1), "Abrir página " + (i + 1), () -> selectNotebookPage(index));
+            page.setGraphic(thumb);
+            page.setContentDisplay(ContentDisplay.TOP);
+            page.setMaxWidth(180);
+            if (i == currentPage) page.setStyle("-fx-border-color: -docu-accent;");
+            pageList.getChildren().add(page);
+        }
+    }
+
+    private void refreshPageThumbnail() {
+        if (drawingSurface == null) return;
+        ensureNotebook();
+        pageThumbnail = new ImageView();
+        flushInk();
+        double scale = Math.min(200.0 / drawingSurface.logicalWidth(), 240.0 / drawingSurface.logicalHeight());
+        javafx.scene.SnapshotParameters parameters = new javafx.scene.SnapshotParameters();
+        parameters.setTransform(new javafx.scene.transform.Scale(scale, scale));
+        parameters.setViewport(new javafx.geometry.Rectangle2D(0, 0,
+                Math.ceil(drawingSurface.logicalWidth() * scale), Math.ceil(drawingSurface.logicalHeight() * scale)));
+        pageThumbnail.setImage(drawingSurface.snapshot(parameters, null));
+        notebookThumbnails.set(currentPage, pageThumbnail.getImage());
+        rebuildPageList();
+    }
+
     private void loadExternalImage() {
         Window owner = dialog.getDialogPane().getScene() == null ? null : dialog.getDialogPane().getScene().getWindow();
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle("Cargar imagenes externas");
         chooser.getExtensionFilters().setAll(
                 new FileChooser.ExtensionFilter("Imagenes", "*.png", "*.jpg", "*.jpeg", "*.webp", "*.bmp"),
@@ -558,7 +790,7 @@ public final class TechnicalProblemDialog {
         if (failures.isEmpty()) {
             return;
         }
-        Alert alert = new Alert(Alert.AlertType.WARNING, "", ButtonType.OK);
+        Alert alert = NativeDialogResponse.alert(Alert.AlertType.WARNING, "", ButtonType.OK);
         alert.setTitle("Cargar imagenes externas");
         alert.setHeaderText("Algunas imagenes no estan disponibles");
         Label message = new Label("Se cargaron " + loaded + " imagen(es). No se pudieron cargar:\n"
@@ -573,15 +805,7 @@ public final class TechnicalProblemDialog {
     }
 
     private static Path copyExternalImageAsPng(Path source) throws IOException {
-        BufferedImage input = ImageIO.read(source.toFile());
-        if (input == null || input.getWidth() <= 0 || input.getHeight() <= 0) {
-            throw new IOException("El archivo no parece ser una imagen compatible.");
-        }
-        Path temp = Files.createTempFile("docupodcast-study-external-", ".png");
-        if (!ImageIO.write(input, "png", temp.toFile())) {
-            throw new IOException("No se pudo convertir la imagen a PNG.");
-        }
-        return temp.toAbsolutePath().normalize();
+        return InkImageFileStore.normalizedTempPng(source, "docupodcast-study-external-");
     }
 
     private void ensureTransferAllButtonVisible() {
@@ -593,7 +817,7 @@ public final class TechnicalProblemDialog {
                 "Colocar todas las capturas e imagenes del enunciado en el lienzo.",
                 this::transferAllSourceImages);
         transferAllButton.getStyleClass().add("technical-problem-transfer-all");
-        int index = Math.max(0, statementActions.getChildren().size() - 1);
+        int index = statementActions.getChildren().size();
         statementActions.getChildren().add(index, transferAllButton);
     }
 
@@ -610,13 +834,46 @@ public final class TechnicalProblemDialog {
         Button transfer = ActionButtonFactory.secondary(
                 "Transferir imagen al lienzo",
                 "Colocar esta imagen en el lienzo para moverla, escalarla o escribir encima.",
-                () -> transferSourceImage(image));
-        VBox box = new VBox(7, imageView, transfer);
+                () -> transferSourceImage(source, image));
+        Slider opacity = StudioFormControls.slider(0, 100, sourceOpacity(source.id()).get() * 100);
+        opacity.setAccessibleText("Opacidad de la imagen");
+        StudioFormControls.installTooltip(opacity, "0%: transparente. 100%: totalmente visible.");
+        opacity.setMinWidth(60);
+        opacity.setMaxWidth(Double.MAX_VALUE);
+        Label percent = new Label();
+        percent.textProperty().bind(opacity.valueProperty().asString("%.0f%%"));
+        percent.setMinWidth(40);
+        imageView.opacityProperty().bind(sourceOpacity(source.id()));
+        sourceOpacity(source.id()).addListener((o, before, value) -> opacity.setValue(value.doubleValue() * 100));
+        opacity.valueChangingProperty().addListener((o, before, dragging) -> { if (dragging) rememberUndo(); });
+        opacity.valueProperty().addListener((o, before, value) -> {
+            double alpha = value.doubleValue() / 100;
+            if (Math.abs(sourceOpacity(source.id()).get() - alpha) < 0.000001) return;
+            if (!opacity.isValueChanging()) rememberUndo();
+            sourceOpacity(source.id()).set(alpha);
+            for (CanvasImageItem item : canvasImages) {
+                if (source.id().equals(item.sourceId)) item.view.setOpacity(alpha);
+            }
+            canvasTouched.set(true);
+        });
+        HBox opacityRow = new HBox(6, new Label("Opacidad"), opacity, percent);
+        opacityRow.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(opacity, Priority.ALWAYS);
+        VBox box = new VBox(7, imageView, opacityRow, transfer);
         imageView.fitWidthProperty().bind(javafx.beans.binding.Bindings.createDoubleBinding(
-                () -> Math.max(180.0, Math.min(720.0, box.getWidth() <= 0 ? 560.0 : box.getWidth() - 18.0)),
+                () -> 0.7 * Math.max(180.0, Math.min(720.0, box.getWidth() <= 0 ? 560.0 : box.getWidth() - 18.0)),
                 box.widthProperty()));
         box.getStyleClass().add("technical-problem-source-image-box");
         return Optional.of(box);
+    }
+
+    private javafx.beans.property.DoubleProperty sourceOpacity(String id) {
+        return sourceOpacities.computeIfAbsent(id, key -> new javafx.beans.property.SimpleDoubleProperty(1));
+    }
+
+    private static double readOpacity(String value) {
+        try { double alpha = Double.parseDouble(value); return Double.isFinite(alpha) ? Math.max(0, Math.min(1, alpha)) : 1; }
+        catch (RuntimeException invalid) { return 1; }
     }
 
     private Image sourceImage(StatementSource source) {
@@ -629,40 +886,24 @@ public final class TechnicalProblemDialog {
         if (source.imageBase64() == null || source.imageBase64().isBlank()) {
             return null;
         }
-        try {
-            return new Image(new ByteArrayInputStream(Base64.getDecoder().decode(source.imageBase64())));
-        } catch (IllegalArgumentException ex) {
-            return null;
-        }
+        return InkImageFileStore.decodePngBase64(source.imageBase64());
     }
 
     private VBox resolverPane() {
-        ToggleButton modeSwitch = StudioFormControls.toggle("Lienzo/texto: lienzo",
-                "Cambiar entre escritura textual y lienzo manuscrito para resolver el problema.");
-        modeSwitch.selectedProperty().bindBidirectional(canvasMode);
-        modeSwitch.textProperty().bind(javafx.beans.binding.Bindings.when(canvasMode)
-                .then("Lienzo/texto: lienzo")
-                .otherwise("Lienzo/texto: texto"));
-        ToggleButton drawSwitch = StudioFormControls.toggle("Panear/dibujar: dibujar",
-                "Alternar entre dibujar trazos y panear el lienzo sin dibujar.");
-        drawSwitch.selectedProperty().bindBidirectional(drawMode);
-        drawSwitch.textProperty().bind(javafx.beans.binding.Bindings.when(drawMode)
-                .then("Panear/dibujar: dibujar")
-                .otherwise("Panear/dibujar: panear"));
+        canvasMode.set(true);
         canvasMode.addListener((obs, oldValue, newValue) -> updateImageInteractionMode());
         drawMode.addListener((obs, oldValue, newValue) -> {
-            if (!Boolean.TRUE.equals(newValue)) {
-                imageInteractionMode.set(false);
-            } else if (canvasRegionSelectionMode.get()) {
+            if (Boolean.TRUE.equals(newValue) && canvasRegionSelectionMode.get()) {
                 canvasRegionSelectionMode.set(false);
             }
             updateImageInteractionMode();
             resetInkCoordinateState();
         });
         canvasRegionSelectionMode.addListener((obs, oldValue, newValue) -> {
+            if (vectorSelection != null) vectorSelection.setActive(Boolean.TRUE.equals(newValue));
             if (Boolean.TRUE.equals(newValue)) {
                 drawMode.set(false);
-                imageInteractionMode.set(false);
+                imageInteractionMode.set(true);
                 selectCanvasImage(null);
             } else {
                 hideCanvasRegionSelection();
@@ -678,25 +919,20 @@ public final class TechnicalProblemDialog {
         selectRegionButton = StudioFormControls.toggle("Seleccionar region",
                 "Seleccionar una zona del lienzo para copiar, mover o eliminar tinta e imagenes.");
         selectRegionButton.selectedProperty().bindBidirectional(canvasRegionSelectionMode);
-        restoreStatementButton = ActionButtonFactory.secondary(
-                "Mostrar enunciado",
-                "Restaurar el panel del enunciado.",
-                this::toggleStatementCollapsed);
+        restoreStatementButton = panelFoldButton("▸", "Mostrar recursos y páginas");
         restoreStatementButton.getStyleClass().add("technical-problem-statement-restore");
         setNodeVisible(restoreStatementButton, false);
-        modeSwitch.setMinWidth(168);
-        drawSwitch.setMinWidth(188);
         selectRegionButton.setMinWidth(156);
         fullscreenButton.setMinWidth(156);
-        restoreStatementButton.setMinWidth(156);
-        inputDiagnosticLabel = new Label(inputDiagnosticText());
-        inputDiagnosticLabel.getStyleClass().add("technical-problem-input-diagnostic");
-        StudioFormControls.installTooltip(inputDiagnosticLabel, inputDiagnosticTooltip());
-        FlowPane mode = new FlowPane(8, 8, modeSwitch, drawSwitch, selectRegionButton,
-                fullscreenButton, restoreStatementButton, inputDiagnosticLabel);
+
+        inputDiagnosticLabel = new InkPressureIndicator(editorController.inputStatusProperty());
+        FlowPane mode = new FlowPane(8, 8, fullscreenButton);
         mode.setAlignment(Pos.CENTER_LEFT);
         mode.getStyleClass().addAll("technical-problem-mode-toggle", "technical-problem-mode-flow");
-        modeBarNode = mode;
+        mode.getChildren().add(inputDiagnosticLabel);
+        VBox modeSection = new VBox(0, mode);
+
+        modeBarNode = modeSection;
 
         solutionText.setWrapText(true);
         solutionText.setPromptText("Escribe la solucion, notas o pasos algebraicos aqui.");
@@ -706,88 +942,180 @@ public final class TechnicalProblemDialog {
         notes.setPrefRowCount(3);
         notes.getStyleClass().add("technical-problem-notes");
 
-        ScrollPane canvasScroll = canvasPane();
-        StackPane resolverStack = new StackPane(solutionText, canvasScroll);
+        Node canvasEditor = canvasPane();
+        StackPane resolverStack = new StackPane(canvasEditor);
         VBox.setVgrow(resolverStack, Priority.ALWAYS);
         solutionText.visibleProperty().bind(canvasMode.not());
         solutionText.managedProperty().bind(solutionText.visibleProperty());
-        canvasScroll.visibleProperty().bind(canvasMode);
-        canvasScroll.managedProperty().bind(canvasScroll.visibleProperty());
+        canvasEditor.visibleProperty().bind(canvasMode);
+        canvasEditor.managedProperty().bind(canvasEditor.visibleProperty());
 
         existingSolutionNode = existingSolutionImageNode();
+        mode.getChildren().clear();
         toolBarNode = toolBar();
-        VBox resolver = new VBox(8, mode, existingSolutionNode, toolBarNode, resolverStack, notes);
+        textStyleBar = textStyleToolbar();
+        ((VBox) toolBarNode).getChildren().add(textStyleBar);
+        VBox toolbarBody = new VBox(0, toolBarNode);
+        Button foldTools = ActionButtonFactory.secondary("");
+        foldTools.setText("▲");
+        foldTools.getStyleClass().add(AppStyles.UI_RIBBON_COLLAPSE_TOGGLE);
+        foldTools.setAccessibleText("Ocultar o mostrar herramientas");
+        StudioFormControls.installTooltip(foldTools, "Plegar o desplegar herramientas para ampliar el lienzo.");
+        foldTools.setOnAction(event -> {
+            boolean show = !toolbarBody.isVisible();
+            setNodeVisible(toolbarBody, show);
+            foldTools.setText(show ? "▲" : "▼");
+        });
+        javafx.scene.layout.Region foldSpacer = new javafx.scene.layout.Region();
+        HBox.setHgrow(foldSpacer, Priority.ALWAYS);
+        HBox foldRow = new HBox(foldSpacer, foldTools);
+        foldRow.setAlignment(Pos.CENTER_RIGHT);
+        VBox toolbarShell = new VBox(0, toolbarBody, foldRow);
+        toolbarShellNode = toolbarShell;
+        toolbarShell.getStyleClass().add("technical-problem-toolbar-shell");
+        VBox resolver = new VBox(4, toolbarShell, existingSolutionNode, resolverStack);
         resolver.getStyleClass().add("technical-problem-resolver");
         resolver.setPrefWidth(620);
         resolver.setMinWidth(420);
         return resolver;
     }
 
-    private String inputDiagnosticText() {
-        InkInputCapabilities capabilities = inkInputProvider.capabilities();
-        String provider = capabilities.providerName() == null || capabilities.providerName().isBlank()
-                ? "Proveedor de tinta desconocido"
-                : capabilities.providerName();
-        if (!currentInputSource.isBlank()) {
-            if (currentInputSource.startsWith("LectureStudio") || currentInputSource.startsWith("Windows Pointer")) {
-                if (currentInputCursor == InkInputCursor.MOUSE) {
-                    return "Entrada: " + currentInputSource + " MOUSE - sin presion variable";
-                }
-                if (currentInputCursor == InkInputCursor.PEN || currentInputCursor == InkInputCursor.ERASER) {
-                    String cursor = currentInputCursor == InkInputCursor.ERASER ? "ERASER" : "PEN";
-                    return "Entrada: " + currentInputSource + " " + cursor
-                            + " - raw " + formatDiagnosticNumber(currentInputRawPressure)
-                            + " - presion " + Math.round(normalizedInputPressure() * 100.0) + "%"
-                            + (inputPressureVaried ? " - variable" : " - fija");
-                }
+    private HBox textFieldGroup(String caption, Node... controls) {
+        Label label = new Label(caption);
+        label.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
+        HBox field = new HBox(6, label);
+        field.getChildren().addAll(controls);
+        field.setAlignment(Pos.CENTER_LEFT);
+        return field;
+    }
+
+    private FlowPane textStyleToolbar() {
+        com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFontControls.configure(textFont);
+        textFont.setPrefWidth(170);
+        textEffect.getItems().setAll("Sin efecto", "Sombra", "Borde sólido");
+        textEffect.setValue("Sin efecto");
+        textEffect.setPrefWidth(150);
+        FlowPane bar = new FlowPane(10, 4,
+                StudioCanvasToolbar.group("Formato de texto", textFieldGroup("Fuente", textFont)),
+                textFieldGroup("Color", textColor), textFieldGroup("Estilo", textEffect),
+                textFieldGroup("Color del efecto", textEffectColor));
+        bar.setPadding(new Insets(4, 8, 4, 8));
+        textFont.setOnAction(e -> applySelectedTextStyle());
+        textEffect.setOnAction(e -> applySelectedTextStyle());
+        textColor.setOnAction(e -> applySelectedTextStyle());
+        textEffectColor.setOnAction(e -> applySelectedTextStyle());
+        setNodeVisible(bar, false);
+        return bar;
+    }
+
+    private void updateTextStyleVisibility() {
+        setNodeVisible(textStyleBar, activeCanvasTool.get() == CanvasTool.TEXT
+                || (selectedCanvasImage != null && selectedCanvasImage.text != null));
+    }
+
+    private void syncTextStyle() {
+        if (selectedCanvasImage != null && selectedCanvasImage.text != null) {
+            syncingTextStyle = true;
+            try {
+                var spec = selectedCanvasImage.text;
+                textFont.setValue(spec.family()); textColor.setValue(Color.web(spec.color()));
+                textEffect.setValue(spec.effect()); textEffectColor.setValue(Color.web(spec.effectColor()));
+            } finally { syncingTextStyle = false; }
+        }
+        updateTextStyleVisibility();
+    }
+
+    private com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.CanvasTextObject textSpec(String value, double angle) {
+        return new com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.CanvasTextObject(value,
+                textFont.getValue() == null ? "System" : textFont.getValue(), cssColor(textColor.getValue()),
+                textEffect.getValue() == null ? "Sin efecto" : textEffect.getValue(), cssColor(textEffectColor.getValue()), angle);
+    }
+
+    private void applySelectedTextStyle() {
+        if (syncingTextStyle || selectedCanvasImage == null || selectedCanvasImage.text == null) return;
+        rememberUndo();
+        updateTextObject(selectedCanvasImage, textSpec(selectedCanvasImage.text.text(), selectedCanvasImage.text.angle()));
+    }
+
+    private void updateTextObject(CanvasImageItem item,
+            com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.CanvasTextObject spec) {
+        double scale = item.view.getFitWidth() / item.view.getImage().getWidth();
+        item.text = spec;
+        Image rendered = spec.render();
+        item.view.setImage(rendered);
+        item.view.setFitWidth(rendered.getWidth() * scale);
+        item.originalImage = rendered;
+        item.cropActive = false;
+        updateResizeHandles();
+        canvasTouched.set(true);
+    }
+
+    private CanvasImageItem addTextObject(String value, double x, double y) {
+        var spec = textSpec(value, 0);
+        Image rendered = spec.render();
+        CanvasImageItem item = addCanvasImage(rendered, x, y, rendered.getWidth()/2, false);
+        item.text = spec;
+        canvasTouched.set(true);
+        return item;
+    }
+
+    private void handleCanvasTextClick(MouseEvent event) {
+        if (event.getButton() != javafx.scene.input.MouseButton.PRIMARY || canvasTextEditor != null) return;
+        Point2D point = drawingSurface.sceneToLocal(event.getSceneX(), event.getSceneY());
+        if (point.getX() < 0 || point.getY() < CANVAS_TITLE_BAND_HEIGHT
+                || point.getX() > drawingSurface.logicalWidth() || point.getY() > drawingSurface.logicalHeight()) return;
+        CanvasImageItem hit = canvasImageAt(point);
+        if (hit != null && hit.text != null && (imageInteractionMode.get() || activeCanvasTool.get() == CanvasTool.TEXT)) {
+            selectCanvasImage(hit);
+            if (event.getClickCount() == 2) editCanvasText(hit, point);
+            event.consume();
+        } else if (activeCanvasTool.get() == CanvasTool.TEXT && hit == null) {
+            editCanvasText(null, point);
+            event.consume();
+        } else if (activeCanvasTool.get() == CanvasTool.NONE && hit == null
+                && event.isStillSincePress() && !imageCropMode) {
+            // Resize/rotation handles and scroll controls are not empty canvas.
+            Node target = event.getTarget() instanceof Node node ? node : null;
+            for (Node current = target; current != null && current != drawingSurface; current = current.getParent()) {
+                if (current instanceof javafx.scene.control.Control) return;
+            }
+            if (target != null && descendantOf(target, drawingSurface)) {
+                selectCanvasImage(null);
             }
         }
-        if (capabilities.nativeProvider()) {
-            return "Entrada: " + provider;
-        }
-        String pressure = capabilities.nativeProvider() && capabilities.pressure()
-                ? " · presion " + Math.round(normalizedInputPressure() * 100.0) + "%"
-                : "";
-        return "Entrada: " + provider + pressure;
     }
 
-    private static String formatDiagnosticNumber(double value) {
-        return Double.isFinite(value) ? String.format(Locale.ROOT, "%.3f", value) : "n/a";
-    }
-
-    private void refreshInputDiagnostic() {
-        if (inputDiagnosticLabel == null) {
-            return;
-        }
-        String text = inputDiagnosticText();
-        if (!text.equals(inputDiagnosticLabel.getText())) {
-            inputDiagnosticLabel.setText(text);
-            StudioFormControls.installTooltip(inputDiagnosticLabel, inputDiagnosticTooltip());
-        }
-    }
-
-    private String inputDiagnosticTooltip() {
-        InkInputCapabilities capabilities = inkInputProvider.capabilities();
-        StringBuilder text = new StringBuilder("Proveedor: ")
-                .append(capabilities.providerName())
-                .append(".");
-        if (capabilities.nativeProvider()) {
-            text.append(" Presion: ").append(capabilities.pressure() ? "si" : "no")
-                    .append("; borrador: ").append(capabilities.eraserCursor() ? "si" : "no")
-                    .append("; tilt: ").append(capabilities.tilt() ? "si" : "no")
-                    .append(".");
-        } else {
-            text.append(" Sin presion ni borrador nativo.");
-            if ("JavaFX mouse".equals(capabilities.providerName())) {
-                text.append(" La entrada llega por JavaFX y Windows puede coalescer eventos, reduciendo puntos por segundo.");
-            } else {
-                text.append(" Esta pantalla usa solo LectureStudio stylus; no hay fallback de mouse para escribir.");
+    private void editCanvasText(CanvasImageItem item, Point2D point) {
+        TextArea editor = StudioFormControls.textArea(item == null ? "" : item.text.text());
+        canvasTextEditor = editor;
+        editor.setWrapText(true);
+        editor.setPromptText("Escribe aquí · Ctrl+Enter para aceptar · Escape para cancelar");
+        editor.setManaged(false);
+        editor.resizeRelocate(item == null ? point.getX() : item.view.getLayoutX(),
+                item == null ? point.getY() : item.view.getLayoutY(), 420, 140);
+        drawingSurface.inkInputLayer().getChildren().add(editor);
+        editor.toFront();
+        java.util.function.Consumer<Boolean> finish = accept -> {
+            if (canvasTextEditor != editor) return;
+            canvasTextEditor = null;
+            String value = editor.getText();
+            drawingSurface.inkInputLayer().getChildren().remove(editor);
+            if (accept && !value.isBlank() && (item == null || !value.equals(item.text.text()))) {
+                rememberUndo();
+                CanvasImageItem result = item;
+                if (result == null) result = addTextObject(value, point.getX(), point.getY());
+                else updateTextObject(result, new com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.CanvasTextObject(
+                        value, item.text.family(), item.text.color(), item.text.effect(), item.text.effectColor(), item.text.angle()));
+                imageInteractionMode.set(true);
+                selectCanvasImage(result);
             }
-        }
-        if (!capabilities.fallbackReason().isBlank()) {
-            text.append(" ").append(capabilities.fallbackReason());
-        }
-        return text.toString();
+        };
+        editor.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+            if (e.getCode() == KeyCode.ESCAPE) { finish.accept(false); e.consume(); }
+            else if (e.getCode() == KeyCode.ENTER && e.isControlDown()) { finish.accept(true); e.consume(); }
+        });
+        editor.focusedProperty().addListener((obs, before, focused) -> { if (before && !focused) finish.accept(true); });
+        Platform.runLater(() -> { editor.requestFocus(); editor.selectAll(); });
     }
 
     private Node existingSolutionImageNode() {
@@ -801,53 +1129,136 @@ public final class TechnicalProblemDialog {
         return label;
     }
 
-    private FlowPane toolBar() {
+    private VBox toolBar() {
+        ToggleButton textTool = canvasToolButton("type", "Agregar texto", "Clic para insertar texto; doble clic para editarlo.", CanvasTool.TEXT);
+        ToggleButton penTool = canvasToolButton("pencil", "Lápiz",
+                "Dibujar a mano alzada con ratón o tableta.", CanvasTool.PEN);
+        ToggleButton lineTool = canvasToolButton("minus", "Línea",
+                "Trazar una línea recta desde el punto inicial hasta el final.", CanvasTool.STRAIGHT_LINE);
+        ToggleButton angleTool = canvasToolButton("ruler", "Medir ángulo",
+                "Medir un ángulo arrastrando tres puntos. La guía es temporal y no se exporta.", CanvasTool.ANGLE_MEASURE);
+        ToggleButton panTool = canvasToolButton("hand", "Mover lienzo",
+                "Desplazar y ampliar el lienzo. Al volver a dibujar se retira el espacio sobrante, conservando un margen de 300 px.", CanvasTool.PAN);
+        lineTool.setDisable(!drawingProfile.supports(DrawingToolId.STRAIGHT_LINE));
+        angleTool.setDisable(!drawingProfile.supports(DrawingToolId.ANGLE_MEASURE));
         Button undoButton = iconToolButton("undo-2", "Deshacer (Ctrl+Z).", this::undo, false);
         Button redoButton = iconToolButton("redo-2", "Rehacer (Ctrl+Y).", this::redo, false);
         Button clearStrokesButton = ActionButtonFactory.secondary(
                 "Limpiar trazos",
                 "Limpiar solo trazos; conserva imagenes.",
                 this::clearInkStrokes);
-        Button clearCanvasButton = iconToolButton("trash-2", "Limpiar lienzo completo; elimina trazos e imagenes.", this::clearCanvas, true);
-        CheckBox imageInteraction = new CheckBox("Interactuar con imagenes");
+        Button clearCanvasButton = namedToolButton("trash-2", "Vaciar lienzo", "Eliminar todos los trazos y objetos; se puede deshacer.", this::clearCanvas, true);
+        CheckBox imageInteraction = StudioFormControls.checkBox("Editar objetos");
         imageInteraction.selectedProperty().bindBidirectional(imageInteractionMode);
-        imageInteraction.disableProperty().bind(drawMode.not().or(canvasRegionSelectionMode));
+
         imageInteraction.getStyleClass().add("technical-problem-image-interaction");
         StudioFormControls.installTooltip(imageInteraction,
-                "Activado: clic y arrastre seleccionan imagenes; la tinta no dibuja. Desactivado: puedes escribir encima.");
-        shrinkImageButton = iconToolButton("zoom-out", "Reducir la imagen seleccionada.", () -> resizeSelectedImage(0.85), false);
-        enlargeImageButton = iconToolButton("zoom-in", "Ampliar la imagen seleccionada.", () -> resizeSelectedImage(1.15), false);
-        deleteImageButton = iconToolButton("trash-2", "Eliminar la imagen seleccionada.", this::deleteSelectedImage, true);
+                "Incluye imágenes y formas al seleccionar una región de tinta. Fuera de Seleccionar región, permite editar objetos individualmente; desactiva para dibujar encima.");
+        shrinkImageButton = namedToolButton("minimize-2", "Reducir", "Reducir el objeto seleccionado al 85%.", () -> resizeSelectedImage(0.85), false);
+        enlargeImageButton = namedToolButton("maximize-2", "Ampliar", "Ampliar el objeto seleccionado al 115%.", () -> resizeSelectedImage(1.15), false);
+        deleteImageButton = namedToolButton("trash-2", "Eliminar objeto", "Eliminar el objeto seleccionado.", this::deleteSelectedImage, true);
         cropImageButton = ActionButtonFactory.secondary("Recortar imagen", "Recortar la imagen seleccionada trazando un rectangulo sobre ella.", this::startImageCropMode);
         restoreImageCropButton = ActionButtonFactory.secondary("Restaurar recorte", "Volver a mostrar la imagen completa seleccionada.", this::restoreSelectedImageCrop);
         copyRegionButton = iconToolButton("copy", "Copiar la region seleccionada.", this::copyCanvasRegionSelection, false);
-        pasteRegionButton = iconToolButton("clipboard-paste", "Pegar la ultima region copiada como imagen editable.", this::pasteCanvasRegionSelection, false);
-        moveRegionButton = iconToolButton("move-horizontal", "Mover la region seleccionada.", this::moveCanvasRegionSelection, false);
-        deleteRegionButton = iconToolButton("trash-2", "Eliminar la region seleccionada.", this::deleteCanvasRegionSelection, true);
+        pasteRegionButton = iconToolButton("clipboard-paste", "Pegar los trazos copiados como tinta editable.", this::pasteCanvasRegionSelection, false);
+        moveRegionButton = namedToolButton("move", "Desplazar región", "Desplazar la selección 24 px a la derecha y abajo. También puedes arrastrarla.", this::moveCanvasRegionSelection, false);
+        deleteRegionButton = namedToolButton("trash-2", "Eliminar región", "Eliminar el contenido seleccionado.", this::deleteCanvasRegionSelection, true);
         Label widthLabel = new Label("Grosor");
         StudioFormControls.colorPicker(penColor, "Color del lapiz.");
         StudioFormControls.colorPicker(backgroundColor, "Color de fondo del lienzo.");
         configurePenWidthSlider();
         configureCanvasZoomSlider();
-        eraser.getStyleClass().addAll(StudioFormControls.FORM_CONTROL, StudioFormControls.FORM_TOGGLE);
         eraser.setGraphic(LucideIconView.of("eraser"));
         eraser.setContentDisplay(ContentDisplay.LEFT);
+        eraser.setText("Borrador");
         StudioFormControls.installTooltip(eraser, "Borrar solo la tinta del lienzo sin afectar imagenes ni fondo.");
+        eraser.setUserData(CanvasTool.ERASER);
+        selectRegionButton.setGraphic(LucideIconView.of("scan"));
+        selectRegionButton.setContentDisplay(ContentDisplay.LEFT);
+        selectRegionButton.setText("Seleccionar región");
+        selectRegionButton.setUserData(CanvasTool.REGION);
+        measurementStatus.getStyleClass().add("technical-problem-measurement-status");
+        measurementStatus.setAccessibleText("Resultado de la medición angular");
+        ToggleGroup toolGroup = new ToggleGroup();
+        for (ToggleButton tool : List.of(penTool, lineTool, angleTool, eraser, panTool, selectRegionButton, textTool)) {
+            tool.setToggleGroup(toolGroup);
+            tool.setMinHeight(36);
+        }
+        penTool.setSelected(true);
+        toolGroup.selectedToggleProperty().addListener((obs, previous, selected) -> {
+            if (selected == null) {
+                activateCanvasTool(CanvasTool.NONE);
+                return;
+            }
+            Object value = selected.getUserData();
+            if (value instanceof CanvasTool tool) activateCanvasTool(tool);
+        });
         for (Button button : List.of(cropImageButton, restoreImageCropButton)) {
             button.setMinWidth(96);
         }
-        FlowPane tools = new FlowPane(8, 8,
-                new Label("Lapiz"), penColor,
-                new Label("Fondo"), backgroundColor,
-                widthLabel, penWidth, penWidthPreview,
-                new Label("Zoom lienzo"), canvasZoom, canvasZoomValue,
-                eraser,
-                undoButton, redoButton, clearStrokesButton, clearCanvasButton,
-                imageInteraction, shrinkImageButton, enlargeImageButton, deleteImageButton,
-                cropImageButton, restoreImageCropButton,
-                copyRegionButton, pasteRegionButton, moveRegionButton, deleteRegionButton);
-        tools.setAlignment(Pos.CENTER_LEFT);
-        tools.getStyleClass().addAll("technical-problem-tools", "technical-problem-tools-flow");
+        StudioCanvasToolbar tools = new StudioCanvasToolbar("Herramientas del lienzo de problema técnico");
+        javafx.scene.control.ComboBox<TechnicalShape> shapes = com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls.comboBox();
+        shapes.getItems().setAll(TechnicalShape.values());
+        shapes.setPromptText("Formas…");
+        shapes.setAccessibleText("Insertar forma");
+        shapes.setPrefWidth(175);
+        shapes.setCellFactory(list -> shapeCell());
+        shapes.setButtonCell(shapeCell());
+        shapes.setOnAction(event -> {
+            TechnicalShape selected = shapes.getValue();
+            if (selected != null) {
+                insertShape(selected);
+                shapes.getSelectionModel().clearSelection();
+            }
+        });
+        penWidth.setMinWidth(90); penWidth.setPrefWidth(90); penWidth.setMaxWidth(90);
+        canvasZoom.setMinWidth(90); canvasZoom.setPrefWidth(90); canvasZoom.setMaxWidth(90);
+        Button rotateLeft = namedToolButton("rotate-ccw", "Girar izquierda", "Girar objeto 15° a la izquierda.", () -> rotateSelectedImage(-15), false);
+        Button rotateRight = namedToolButton("rotate-cw", "Girar derecha", "Girar objeto 15° a la derecha.", () -> rotateSelectedImage(15), false);
+        for (Button rotate : List.of(rotateLeft, rotateRight)) {
+            rotate.visibleProperty().bind(deleteImageButton.visibleProperty());
+            rotate.managedProperty().bind(rotate.visibleProperty());
+            rotate.disableProperty().bind(deleteImageButton.disableProperty());
+        }
+
+        measurementStatus.visibleProperty().bind(activeCanvasTool.isEqualTo(CanvasTool.ANGLE_MEASURE));
+        measurementStatus.managedProperty().bind(measurementStatus.visibleProperty());
+        fillShapeButton = ActionButtonFactory.secondary("Rellenar figura", "Selecciona una forma cerrada y aplica el color de relleno.", this::fillSelectedShape);
+        fillShapeButton.setGraphic(LucideIconView.of("paint-bucket"));
+        clearShapeFillButton = ActionButtonFactory.secondary("Sin relleno", "Dejar transparente el interior de la figura seleccionada.", () -> applyShapeFill("transparent"));
+        shapeFillColor.setAccessibleText("Color de relleno de figura");
+        shapeFillActions = StudioCanvasToolbar.group("Relleno", fillShapeButton, shapeFillColor, clearShapeFillButton);
+        clearStrokesButton.setGraphic(LucideIconView.of("eraser"));
+        restoreImageCropButton.setGraphic(LucideIconView.of("refresh-cw"));
+        StudioFormControls.installTooltip(inputDiagnosticLabel, "Presión detectada de la tableta; no es una acción.");
+        tools.addRow(StudioCanvasToolbar.group("Seleccionar", selectRegionButton, imageInteraction),
+                StudioCanvasToolbar.group("Dibujar", penTool, lineTool, eraser), shapes, textTool, angleTool, panTool,
+                StudioCanvasToolbar.group("Historial", undoButton, redoButton));
+        var strokeProperties = StudioCanvasToolbar.group("Trazo", textFieldGroup("Color", penColor), textFieldGroup("Grosor", penWidth, penWidthPreview));
+        strokeProperties.visibleProperty().bind(activeCanvasTool.isEqualTo(CanvasTool.PEN)
+                .or(activeCanvasTool.isEqualTo(CanvasTool.STRAIGHT_LINE)).or(activeCanvasTool.isEqualTo(CanvasTool.ERASER)));
+        strokeProperties.managedProperty().bind(strokeProperties.visibleProperty());
+        tools.addRow(strokeProperties, StudioCanvasToolbar.group("Lienzo", textFieldGroup("Fondo", backgroundColor)),
+                StudioCanvasToolbar.group("Vista", textFieldGroup("Zoom", canvasZoom, canvasZoomValue), fullscreenButton), inputDiagnosticLabel,
+                StudioCanvasToolbar.group("Limpiar", clearStrokesButton, clearCanvasButton));
+        var objectActions = tools.addRow("Objeto seleccionado", shrinkImageButton, enlargeImageButton, deleteImageButton,
+                cropImageButton, restoreImageCropButton, rotateLeft, rotateRight,
+                namedToolButton("arrow-up", "Subir", "Subir una capa los objetos seleccionados.", () -> reorderCanvasObjects(1), false),
+                namedToolButton("arrow-down", "Bajar", "Bajar una capa los objetos seleccionados.", () -> reorderCanvasObjects(-1), false),
+                namedToolButton("layers", "Al frente", "Traer los objetos seleccionados al frente.", () -> reorderCanvasObjects(2), false),
+                namedToolButton("layers", "Al fondo", "Enviar los objetos seleccionados al fondo.", () -> reorderCanvasObjects(-2), false));
+        objectActions.visibleProperty().bind(objectSelectionVisible);
+        objectActions.managedProperty().bind(objectActions.visibleProperty());
+        var regionActions = tools.addRow("Región", copyRegionButton, pasteRegionButton, moveRegionButton, deleteRegionButton);
+        regionActions.visibleProperty().bind(regionSelectionVisible.or(pasteRegionButton.visibleProperty()));
+        regionActions.managedProperty().bind(regionActions.visibleProperty());
+        var fillRow = tools.addRow(shapeFillActions);
+        fillRow.visibleProperty().bind(shapeFillActions.visibleProperty());
+        fillRow.managedProperty().bind(fillRow.visibleProperty());
+        var measureRow = tools.addRow(measurementStatus);
+        measureRow.visibleProperty().bind(measurementStatus.visibleProperty());
+        measureRow.managedProperty().bind(measureRow.visibleProperty());
+        tools.getStyleClass().add("technical-problem-tools");
         imageInteractionMode.addListener((obs, oldValue, newValue) -> updateImageInteractionMode());
         updateImageButtons();
         updateCanvasRegionButtons();
@@ -857,6 +1268,83 @@ public final class TechnicalProblemDialog {
             canvasTouched.set(true);
         });
         return tools;
+    }
+
+    private javafx.scene.control.ListCell<TechnicalShape> shapeCell() {
+        return new javafx.scene.control.ListCell<>() {
+            @Override
+            protected void updateItem(TechnicalShape shape, boolean empty) {
+                super.updateItem(shape, empty);
+                setText(empty || shape == null ? "Formas…" : shape.label);
+                setGraphic(null);
+                if (!empty && shape != null) {
+                    javafx.scene.shape.SVGPath graphic = shape.graphic(Color.web("#20232A"), 4);
+                    graphic.setScaleX(0.20);
+                    graphic.setScaleY(0.20);
+                    setGraphic(new javafx.scene.Group(graphic));
+                }
+            }
+        };
+    }
+
+    private void insertShape(TechnicalShape shape) {
+        flushInk();
+        rememberUndo();
+        canvasMode.set(true);
+        canvasRegionSelectionMode.set(false);
+        drawMode.set(activeCanvasTool.get() != CanvasTool.NONE && activeCanvasTool.get() != CanvasTool.PAN);
+        imageInteractionMode.set(true);
+        double x = Math.max(24, Math.min(lastCanvasPointer.getX(), drawingSurface.logicalWidth() - 260));
+        double y = Math.max(CANVAS_TITLE_BAND_HEIGHT + 24, lastCanvasPointer.getY());
+        var spec = shape.object(penColor.getValue(), penStrokeWidth());
+        CanvasImageItem item = addCanvasImage(spec.render(), x, y, 240, false);
+        item.shape = spec;
+        selectCanvasImage(item);
+        updateImageInteractionMode();
+        canvasTouched.set(true);
+    }
+
+    private void reorderCanvasObjects(int direction) {
+        var picked = new java.util.HashSet<CanvasImageItem>();
+        if (canvasRegionSelectionMode.get() && vectorSelection != null) {
+            for (var object : vectorSelection.selectedObjects()) if (object instanceof CanvasImageItem item) picked.add(item);
+        } else if (selectedCanvasImage != null) picked.add(selectedCanvasImage);
+        if (picked.isEmpty()) return;
+        var order = com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.CanvasObjectOrder.reorder(canvasImages, picked, direction);
+        if (order.equals(canvasImages)) return;
+        rememberUndo();
+        canvasImages.clear(); canvasImages.addAll(order);
+        for (CanvasImageItem item : canvasImages) item.view.toFront();
+        canvasTouched.set(true);
+        if (vectorSelection != null) vectorSelection.refresh();
+        updateResizeHandles();
+    }
+
+    private void fillSelectedShape() { applyShapeFill(shapeFillColor.getValue().toString()); }
+
+    private void applyShapeFill(String color) {
+        if (selectedCanvasImage == null || selectedCanvasImage.shape == null || !selectedCanvasImage.shape.closed()) return;
+        CanvasImageItem item = selectedCanvasImage;
+        if (item.shape.fill().equals(color)) return;
+        rememberUndo();
+        double scale = item.view.getFitWidth() / item.view.getImage().getWidth();
+        item.shape = item.shape.filled(color);
+        Image rendered = item.shape.render();
+        item.view.setImage(rendered);
+        item.view.setFitWidth(rendered.getWidth() * scale);
+        updateResizeHandles();
+        canvasTouched.set(true);
+    }
+
+    private Button namedToolButton(String icon, String text, String tooltip, Runnable action, boolean warning) {
+        Button button = iconToolButton(icon, tooltip, action, warning);
+        button.setText(text);
+        button.setContentDisplay(ContentDisplay.LEFT);
+        button.getStyleClass().remove("technical-problem-icon-button");
+        button.setMinWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
+        button.setPrefWidth(javafx.scene.layout.Region.USE_COMPUTED_SIZE);
+        button.setMaxWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
+        return button;
     }
 
     private Button iconToolButton(String iconName, String tooltip, Runnable action, boolean warning) {
@@ -872,13 +1360,71 @@ public final class TechnicalProblemDialog {
         return button;
     }
 
+    private ToggleButton canvasToolButton(String iconName, String text, String tooltip, CanvasTool tool) {
+        ToggleButton button = StudioFormControls.toggleButton(text);
+        button.setGraphic(LucideIconView.of(iconName));
+        button.setContentDisplay(ContentDisplay.LEFT);
+        button.setUserData(tool);
+        StudioFormControls.installTooltip(button, tooltip);
+        return button;
+    }
+
+    private void updateToolCursor() {
+        String icon = switch (activeCanvasTool.get()) {
+            case PEN -> "pencil";
+            case STRAIGHT_LINE -> "minus";
+            case TEXT -> "type";
+            case ERASER -> "eraser";
+            case REGION -> "scan";
+            case ANGLE_MEASURE -> "ruler";
+            case PAN -> "hand";
+            case NONE -> null;
+        };
+        drawingSurface.setCursor(icon == null ? Cursor.DEFAULT
+                : com.marcosmoreiradev.docupodcaststudio.presentation.components.ToolIconCursor.of(icon));
+    }
+
+    private void activateCanvasTool(CanvasTool tool) {
+        canvasTrimDebounce.stop();
+        CanvasTool selected = tool == null ? CanvasTool.NONE : tool;
+        activeCanvasTool.set(selected);
+        updateToolCursor();
+        straightLineStart = null;
+        drawingSurface.clearLiveStroke();
+        boolean region = selected == CanvasTool.REGION;
+        boolean drawing = selected != CanvasTool.NONE && selected != CanvasTool.PAN && !region;
+        canvasRegionSelectionMode.set(region);
+        drawMode.set(drawing);
+        imageInteractionMode.set(region || selected == CanvasTool.TEXT || selected == CanvasTool.NONE);
+        updateTextStyleVisibility();
+        if (selected != CanvasTool.ANGLE_MEASURE) {
+            clearAngleMeasurement();
+            measurementStatus.setText("Medición: selecciona Medir ángulo para comenzar.");
+        } else {
+            clearAngleMeasurement();
+            Point2D center = new Point2D(drawingSurface.logicalWidth() / 2, CANVAS_TITLE_BAND_HEIGHT + 180);
+            if (canvasScroll != null && canvasScroll.getViewportBounds().getWidth() > 0) {
+                Bounds viewport = canvasScroll.getViewportBounds();
+                center = drawingSurface.sceneToLocal(canvasScroll.localToScene(viewport.getWidth() / 2, viewport.getHeight() / 2));
+            }
+            angleMeasurementPoints.addAll(List.of(center.add(-90, 0), center, center.add(0, -90)));
+            renderAngleMeasurement(null);
+
+        }
+        updateCanvasScrollMode();
+        updateImageInteractionMode();
+        if (selected != CanvasTool.PAN) canvasTrimDebounce.playFromStart();
+    }
+
     private void configurePenWidthSlider() {
         penWidth.setBlockIncrement(1);
         penWidth.setMajorTickUnit(4);
         penWidth.setMinorTickCount(0);
-        penWidth.setShowTickMarks(true);
+        penWidth.setShowTickMarks(false);
         penWidth.setSnapToTicks(false);
+        penWidth.setMinWidth(160);
         penWidth.setPrefWidth(160);
+        penWidth.setMaxWidth(160);
         StudioFormControls.slider(penWidth, "Grosor del trazo en pixeles.");
         penWidthPreview.setFill(Color.BLACK);
         penWidthPreview.setStroke(Color.web("#dbe3f1"));
@@ -894,21 +1440,24 @@ public final class TechnicalProblemDialog {
         canvasZoom.setBlockIncrement(10);
         canvasZoom.setMajorTickUnit(25);
         canvasZoom.setMinorTickCount(0);
-        canvasZoom.setShowTickMarks(true);
+        canvasZoom.setShowTickMarks(false);
         canvasZoom.setSnapToTicks(false);
+        canvasZoom.setMinWidth(150);
         canvasZoom.setPrefWidth(150);
+        canvasZoom.setMaxWidth(150);
         StudioFormControls.slider(canvasZoom, "Acercar o alejar el lienzo sin cambiar el tamano exportado.");
         canvasZoomValue.textProperty().bind(javafx.beans.binding.Bindings.createStringBinding(
                 () -> Math.round(canvasZoom.getValue()) + "%",
                 canvasZoom.valueProperty()));
         canvasZoomValue.getStyleClass().add("technical-problem-canvas-zoom-value");
         StudioFormControls.installTooltip(canvasZoomValue, "Zoom visual del lienzo.");
-        canvasZoom.valueProperty().addListener((obs, oldValue, newValue) -> Platform.runLater(() -> {
-            ensureCanvasTilesCoverViewport();
-        }));
+        canvasZoom.valueProperty().addListener((obs, oldValue, newValue) -> {
+            if (canvasZoomPane != null) canvasZoomPane.setZoom(newValue.doubleValue() / 100.0);
+        });
     }
 
-    private ScrollPane canvasPane() {
+    private Node canvasPane() {
+        updateToolCursor();
         drawingSurface.getStyleClass().add("technical-problem-canvas-surface");
         installImageResizeHandles();
         installCanvasRegionSelectionOverlay();
@@ -923,18 +1472,14 @@ public final class TechnicalProblemDialog {
         StackPane canvasFrame = new StackPane(drawingSurface, canvasTitleLabel);
         canvasFrame.getStyleClass().add("technical-problem-canvas-frame");
         canvasFrame.setPadding(new Insets(16));
-        Group scaledCanvas = new Group(canvasFrame);
-        scaledCanvas.scaleXProperty().bind(canvasZoom.valueProperty().divide(100.0));
-        scaledCanvas.scaleYProperty().bind(canvasZoom.valueProperty().divide(100.0));
-        Pane zoomHost = new Pane(scaledCanvas);
-        zoomHost.getStyleClass().add("technical-problem-canvas-zoom-host");
-        zoomHost.prefWidthProperty().bind(drawingSurface.widthProperty().add(32).multiply(canvasZoom.valueProperty().divide(100.0)));
-        zoomHost.prefHeightProperty().bind(drawingSurface.heightProperty().add(32).multiply(canvasZoom.valueProperty().divide(100.0)));
-        zoomHost.minWidthProperty().bind(zoomHost.prefWidthProperty());
-        zoomHost.minHeightProperty().bind(zoomHost.prefHeightProperty());
-        ScrollPane scroll = new ScrollPane(zoomHost);
-        scroll.setFitToWidth(false);
-        scroll.setFitToHeight(false);
+        canvasZoomPane = new InkCanvasZoomPane(canvasFrame,
+                () -> drawingSurface.logicalWidth() + 32.0,
+                () -> drawingSurface.logicalHeight() + 32.0);
+        canvasZoomPane.setOnZoomApplied(zoom -> {
+            editorController.zoomTo(zoom);
+            if (!ensureCanvasTilesCoverViewport()) editorController.resetInputCoordinates();
+        });
+        ScrollPane scroll = canvasZoomPane.scrollPane();
         scroll.setPannable(false);
         scroll.setPrefViewportHeight(520);
         scroll.getStyleClass().add("technical-problem-canvas-scroll");
@@ -954,10 +1499,50 @@ public final class TechnicalProblemDialog {
             ensureCanvasTilesCoverViewport();
         });
         canvasScroll = scroll;
+        scroll.addEventFilter(MouseEvent.ANY, this::handleSecondaryPan);
+        scroll.addEventFilter(MouseEvent.MOUSE_CLICKED, this::handleCanvasTextClick);
+        scroll.addEventFilter(javafx.scene.input.ContextMenuEvent.CONTEXT_MENU_REQUESTED, event -> event.consume());
         drawMode.addListener((obs, oldValue, newValue) -> updateCanvasScrollMode());
         updateCanvasScrollMode();
         Platform.runLater(this::ensureCanvasTilesCoverViewport);
-        return scroll;
+        return canvasZoomPane;
+    }
+
+    private void handleSecondaryPan(MouseEvent event) {
+        if (event.getEventType() == MouseEvent.MOUSE_PRESSED) canvasTrimDebounce.stop();
+        if (event.getEventType() == MouseEvent.MOUSE_RELEASED && activeCanvasTool.get() != CanvasTool.PAN)
+            canvasTrimDebounce.playFromStart();
+        if (event.getEventType() == MouseEvent.MOUSE_PRESSED
+                && event.getButton() == javafx.scene.input.MouseButton.SECONDARY) {
+            secondaryPanning = true;
+            canvasTrimDebounce.stop();
+            panSceneX = event.getSceneX();
+            panSceneY = event.getSceneY();
+            canvasScroll.setCursor(javafx.scene.Cursor.CLOSED_HAND);
+            drawingSurface.setCursor(Cursor.CLOSED_HAND);
+            event.consume();
+        } else if (secondaryPanning && event.getEventType() == MouseEvent.MOUSE_DRAGGED) {
+            Bounds content = canvasScroll.getContent().getBoundsInLocal();
+            Bounds viewport = canvasScroll.getViewportBounds();
+            double width = content.getWidth() - viewport.getWidth();
+            double height = content.getHeight() - viewport.getHeight();
+            if (width > 0) canvasScroll.setHvalue(Math.max(canvasScroll.getHmin(), Math.min(canvasScroll.getHmax(),
+                    canvasScroll.getHvalue() - (event.getSceneX() - panSceneX) / width
+                            * (canvasScroll.getHmax() - canvasScroll.getHmin()))));
+            if (height > 0) canvasScroll.setVvalue(Math.max(canvasScroll.getVmin(), Math.min(canvasScroll.getVmax(),
+                    canvasScroll.getVvalue() - (event.getSceneY() - panSceneY) / height
+                            * (canvasScroll.getVmax() - canvasScroll.getVmin()))));
+            panSceneX = event.getSceneX();
+            panSceneY = event.getSceneY();
+            event.consume();
+        } else if (event.getButton() == javafx.scene.input.MouseButton.SECONDARY
+                && (event.getEventType() == MouseEvent.MOUSE_RELEASED || event.getEventType() == MouseEvent.MOUSE_CLICKED)) {
+            secondaryPanning = false;
+            canvasScroll.setCursor(null);
+            updateToolCursor();
+            canvasTrimDebounce.playFromStart();
+            event.consume();
+        }
     }
 
     private static boolean descendantOf(Node target, Node ancestor) {
@@ -973,8 +1558,11 @@ public final class TechnicalProblemDialog {
 
     private void initializeCanvas() {
         fillBackground(Color.WHITE);
+        vectorSelection = new com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.CanvasStrokeSelection(drawingSurface, this::rememberUndo);
+        vectorSelection.setObjectAccess(() -> imageInteractionMode.get() ? List.copyOf(canvasImages) : List.of());
+        vectorSelection.setOnChanged(() -> { canvasTouched.set(true); updateCanvasRegionButtons(); });
         startInkEngine();
-        inkInputProvider.attach(drawingSurface.inkInputTarget(), new InkInputListener() {
+        editorController.attach(inkViewport, new InkInputListener() {
             @Override
             public void onHover(InkInputSample sample) {
                 updateInputState(sample);
@@ -1008,30 +1596,36 @@ public final class TechnicalProblemDialog {
                 return handleInkStrokeEnd(sample);
             }
         });
-        refreshInputDiagnostic();
-        Platform.runLater(this::refreshInputDiagnostic);
         Platform.runLater(this::loadExistingSolutionIntoCanvas);
     }
 
     private void disposeCanvasInput() {
-        inkInputProvider.detach();
+        canvasDisposed = true;
+        canvasGrowDebounce.stop();
+        canvasTrimDebounce.stop();
+        if (inputDiagnosticLabel != null) inputDiagnosticLabel.close();
+        editorController.detach();
         if (inkEngine != null) {
             inkEngine.stop();
             inkEngine = null;
         }
+        editorController.close();
     }
 
     private void resetInkCoordinateState() {
-        inkInputProvider.resetCoordinateState();
+        editorController.resetInputCoordinates();
     }
 
     private boolean handleInkStrokeStart(InkInputSample sample) {
+        canvasTrimDebounce.stop();
         updateInputState(sample);
         Point2D point = pointInsideCanvas(sample);
         if (point == null) {
             return false;
         }
         lastCanvasPointer = point;
+        if (activeCanvasTool.get() == CanvasTool.TEXT) return true;
+        if (canvasRegionSelectionMode.get() && vectorSelection != null) return false;
         if (canvasRegionSelectionMode.get()) {
             beginCanvasRegionSelection(point);
             return true;
@@ -1042,13 +1636,24 @@ public final class TechnicalProblemDialog {
         if (!canCaptureInkInput()) {
             return false;
         }
+        if (activeCanvasTool.get() == CanvasTool.ANGLE_MEASURE) {
+            draggedAnglePoint = -1;
+            for (int i = 0; i < angleMeasurementPoints.size(); i++) {
+                if (angleMeasurementPoints.get(i).distance(point) <= 16) draggedAnglePoint = i;
+            }
+            return true;
+        }
         if (pointerOnImageResizeHandle(point)) {
             return false;
         }
         selectCanvasImageUnderPointerForDrawing(point);
         rememberFastInkUndo();
-        redo.clear();
         if (insideTitleBand(point)) {
+            return true;
+        }
+        if (activeCanvasTool.get() == CanvasTool.STRAIGHT_LINE) {
+            straightLineStart = point;
+            drawingSurface.beginLiveStroke();
             return true;
         }
         if (inkEngine != null) {
@@ -1072,6 +1677,7 @@ public final class TechnicalProblemDialog {
             return false;
         }
         lastCanvasPointer = point;
+        if (canvasRegionSelectionMode.get() && vectorSelection != null) return false;
         if (canvasRegionSelectionMode.get()) {
             dragCanvasRegionSelection(point);
             return true;
@@ -1081,6 +1687,19 @@ public final class TechnicalProblemDialog {
         }
         if (!canCaptureInkInput()) {
             return false;
+        }
+        if (activeCanvasTool.get() == CanvasTool.ANGLE_MEASURE) {
+            if (draggedAnglePoint >= 0) {
+                angleMeasurementPoints.set(draggedAnglePoint, point);
+                renderAngleMeasurement(null);
+            }
+            return true;
+        }
+        if (activeCanvasTool.get() == CanvasTool.STRAIGHT_LINE && straightLineStart != null) {
+            drawingSurface.clearLiveStroke();
+            drawingSurface.previewLine(straightLineStart.getX(), straightLineStart.getY(),
+                    point.getX(), point.getY(), penColor.getValue(), penStrokeWidth(), false);
+            return true;
         }
         if (inkEngine != null) {
             inkEngine.move(
@@ -1097,6 +1716,7 @@ public final class TechnicalProblemDialog {
     }
 
     private boolean handleInkStrokeEnd(InkInputSample sample) {
+        if (activeCanvasTool.get() != CanvasTool.PAN) canvasTrimDebounce.playFromStart();
         updateInputState(sample);
         Point2D point = pointInsideCanvas(sample);
         if (point == null) {
@@ -1109,6 +1729,14 @@ public final class TechnicalProblemDialog {
             }
             if (!canCaptureInkInput()) {
                 return false;
+            }
+            if (activeCanvasTool.get() == CanvasTool.ANGLE_MEASURE) {
+                draggedAnglePoint = -1;
+                return true;
+            }
+            if (activeCanvasTool.get() == CanvasTool.STRAIGHT_LINE) {
+                commitStraightLine(point);
+                return true;
             }
             if (inkEngine != null) {
                 inkEngine.end(
@@ -1123,48 +1751,168 @@ public final class TechnicalProblemDialog {
             canvasTouched.set(true);
             return true;
         }
+        if (vectorSelection != null && canvasRegionSelectionMode.get()) return false;
         finishCanvasRegionSelection(point);
         return true;
+    }
+
+    private void commitStraightLine(Point2D end) {
+        Point2D start = straightLineStart;
+        straightLineStart = null;
+        drawingSurface.clearLiveStroke();
+        if (start == null || end == null || insideTitleBand(start) || insideTitleBand(end)
+                || start.distance(end) < 1.0) return;
+        long now = System.nanoTime();
+        drawingSurface.commitInkStroke(new StudyProblemCanvasSurface.InkStrokeState(
+                "DRAW", cssColor(penColor.getValue()), penStrokeWidth(),
+                List.of(new StudyProblemCanvasSurface.InkPointState(start.getX(), start.getY(), now, 1.0),
+                        new StudyProblemCanvasSurface.InkPointState(end.getX(), end.getY(), now + 1, 1.0))));
+        canvasTouched.set(true);
+    }
+
+    private void addAngleMeasurementPoint(Point2D point) {
+        if (point == null || insideTitleBand(point)) return;
+        if (angleMeasurementPoints.size() >= 3) return;
+        angleMeasurementPoints.add(point);
+        renderAngleMeasurement(null);
+        measurementStatus.setText(switch (angleMeasurementPoints.size()) {
+            case 1 -> "Medición: marca el vértice.";
+            case 2 -> "Medición: marca el segundo lado.";
+            default -> "Ángulo: " + Math.round(measuredAngleDegrees()) + "° · Haz clic para medir otro.";
+        });
+    }
+
+    private void previewAngleMeasurement(Point2D pointer) {
+        if (angleMeasurementPoints.size() == 2) renderAngleMeasurement(pointer);
+    }
+
+    private void renderAngleMeasurement(Point2D preview) {
+        removeMeasurementOverlayNodes();
+        for (int index = 0; index < angleMeasurementPoints.size(); index++) {
+            final int pointIndex = index;
+            Point2D point = angleMeasurementPoints.get(index);
+            Circle marker = new Circle(point.getX(), point.getY(), 5, Color.web("#4F46E5"));
+            marker.setRadius(7);
+            marker.setCursor(Cursor.MOVE);
+            marker.setOnMousePressed(event -> event.consume());
+            marker.setOnMouseDragged(event -> {
+                Point2D moved = drawingSurface.sceneToLocal(event.getSceneX(), event.getSceneY());
+                angleMeasurementPoints.set(pointIndex, moved);
+                marker.setCenterX(moved.getX());
+                marker.setCenterY(moved.getY());
+                refreshAngleLines();
+                event.consume();
+            });
+            measurementOverlayNodes.add(marker);
+        }
+        if (angleMeasurementPoints.size() >= 2) {
+            measurementOverlayNodes.add(measurementLine(angleMeasurementPoints.get(0), angleMeasurementPoints.get(1)));
+        }
+        Point2D third = angleMeasurementPoints.size() >= 3 ? angleMeasurementPoints.get(2) : preview;
+        if (angleMeasurementPoints.size() >= 2 && third != null) {
+            measurementOverlayNodes.add(measurementLine(angleMeasurementPoints.get(1), third));
+        }
+        Label angleLabel = new Label();
+        angleLabel.setMouseTransparent(true);
+        angleLabel.setStyle("-fx-background-color: white; -fx-text-fill: #302891; -fx-padding: 3;");
+        measurementOverlayNodes.add(angleLabel);
+        drawingSurface.inkInputLayer().getChildren().addAll(measurementOverlayNodes);
+        refreshAngleLines();
+    }
+
+    private void refreshAngleLines() {
+        if (angleMeasurementPoints.size() != 3) return;
+        int side = 0;
+        for (Node node : measurementOverlayNodes) {
+            if (node instanceof Line line) {
+                Point2D a = angleMeasurementPoints.get(side++ == 0 ? 0 : 2);
+                Point2D b = angleMeasurementPoints.get(1);
+                line.setStartX(a.getX()); line.setStartY(a.getY());
+                line.setEndX(b.getX()); line.setEndY(b.getY());
+            }
+        }
+        double degrees = measuredAngleDegrees();
+        String angle = String.format(java.util.Locale.ROOT, "Ángulo: %.1f°; %.3f rad", degrees, Math.toRadians(degrees));
+        measurementOverlayNodes.removeIf(node -> {
+            if (node instanceof javafx.scene.shape.Arc) {
+                drawingSurface.inkInputLayer().getChildren().remove(node);
+                return true;
+            }
+            return false;
+        });
+        Point2D vertex = angleMeasurementPoints.get(1);
+        Point2D a = angleMeasurementPoints.get(0).subtract(vertex);
+        Point2D b = angleMeasurementPoints.get(2).subtract(vertex);
+        double start = Math.toDegrees(Math.atan2(-a.getY(), a.getX()));
+        double finish = Math.toDegrees(Math.atan2(-b.getY(), b.getX()));
+        double sweep = ((finish - start + 540) % 360) - 180;
+        double radius = Math.min(30, Math.min(a.magnitude(), b.magnitude()) * 0.3);
+        javafx.scene.shape.Arc arc = new javafx.scene.shape.Arc(vertex.getX(), vertex.getY(), radius, radius, start, sweep);
+        arc.setFill(Color.TRANSPARENT);
+        arc.setStroke(Color.web("#4F46E5"));
+        arc.setStrokeWidth(1);
+        arc.setMouseTransparent(true);
+        measurementOverlayNodes.add(arc);
+        drawingSurface.inkInputLayer().getChildren().add(arc);
+        measurementStatus.setText(angle);
+        for (Node node : measurementOverlayNodes) {
+            if (node instanceof Label label) {
+                label.setText(angle);
+                label.relocate(angleMeasurementPoints.get(1).getX() + 12, angleMeasurementPoints.get(1).getY() + 12);
+            }
+        }
+    }
+
+    private Line measurementLine(Point2D start, Point2D end) {
+        Line line = new Line(start.getX(), start.getY(), end.getX(), end.getY());
+        line.setStroke(Color.web("#4F46E5"));
+        line.setStrokeWidth(1.0);
+        line.getStrokeDashArray().setAll(8.0, 6.0);
+        line.setMouseTransparent(true);
+        return line;
+    }
+
+    private double measuredAngleDegrees() {
+        if (angleMeasurementPoints.size() < 3) return 0.0;
+        Point2D first = angleMeasurementPoints.get(0);
+        Point2D vertex = angleMeasurementPoints.get(1);
+        Point2D third = angleMeasurementPoints.get(2);
+        Point2D a = first.subtract(vertex);
+        Point2D b = third.subtract(vertex);
+        double denominator = a.magnitude() * b.magnitude();
+        if (denominator <= 0.0001) return 0.0;
+        double cosine = Math.max(-1.0, Math.min(1.0, a.dotProduct(b) / denominator));
+        return Math.toDegrees(Math.acos(cosine));
+    }
+
+    private void clearAngleMeasurement() {
+        angleMeasurementPoints.clear();
+        removeMeasurementOverlayNodes();
+    }
+
+    private void removeMeasurementOverlayNodes() {
+        drawingSurface.inkInputLayer().getChildren().removeAll(measurementOverlayNodes);
+        measurementOverlayNodes.clear();
     }
 
     private void updateInputState(InkInputSample sample) {
         if (sample == null) {
             currentInputPressure = 1.0;
-            currentInputRawPressure = Double.NaN;
-            lastComparableRawPressure = Double.NaN;
-            inputPressureVaried = false;
-            currentInputCursor = InkInputCursor.UNKNOWN;
-            currentInputSource = "";
             currentInputEraser = false;
             return;
         }
         currentInputPressure = Math.max(0.0, Math.min(1.0, sample.pressure()));
-        currentInputRawPressure = sample.rawPressure();
-        currentInputCursor = sample.cursor();
-        currentInputSource = sample.inputSource();
-        if (Double.isFinite(currentInputRawPressure)) {
-            if (Double.isFinite(lastComparableRawPressure)
-                    && Math.abs(currentInputRawPressure - lastComparableRawPressure) > 0.01) {
-                inputPressureVaried = true;
-            }
-            lastComparableRawPressure = currentInputRawPressure;
-        }
         currentInputEraser = sample.requestsEraser() || sample.cursor() == InkInputCursor.ERASER;
-        refreshInputDiagnostic();
     }
 
     private Point2D pointInsideCanvas(InkInputSample sample) {
         if (sample == null) {
             return null;
         }
-        return InkCanvasViewportCoordinateMapper.mapInside(
-                        drawingSurface.inkInputTarget(),
-                        drawingSurface,
-                        sample.x(),
-                        sample.y(),
-                        drawingSurface.logicalWidth(),
-                        drawingSurface.logicalHeight())
-                .orElse(null);
+        return sample.x() >= 0 && sample.y() >= 0
+                && sample.x() <= drawingSurface.logicalWidth()
+                && sample.y() <= drawingSurface.logicalHeight()
+                ? new Point2D(sample.x(), sample.y()) : null;
     }
 
     private void startInkEngine() {
@@ -1233,12 +1981,12 @@ public final class TechnicalProblemDialog {
     }
 
     private double effectiveStrokeWidth(double pressure) {
-        return com.marcosmoreiradev.docupodcaststudio.presentation.ink.InkBrushMath
+        return com.marcosmoreiradev.docupodcaststudio.ink.InkBrushMath
                 .pressureWidth(penStrokeWidth(), pressure);
     }
 
     private boolean pressureSensitiveInputActive() {
-        InkInputCapabilities capabilities = inkInputProvider.capabilities();
+        InkInputCapabilities capabilities = editorController.inputCapabilities();
         return capabilities.nativeProvider() && capabilities.pressure();
     }
 
@@ -1259,7 +2007,6 @@ public final class TechnicalProblemDialog {
     private void clearInkStrokes() {
         flushInk();
         rememberUndo();
-        redo.clear();
         drawingSurface.clearStrokes();
         canvasTouched.set(true);
     }
@@ -1267,7 +2014,6 @@ public final class TechnicalProblemDialog {
     private void clearCanvas() {
         flushInk();
         rememberUndo();
-        redo.clear();
         drawingSurface.clearStrokes();
         for (CanvasImageItem item : List.copyOf(canvasImages)) {
             drawingSurface.imageLayer().getChildren().remove(item.view());
@@ -1277,6 +2023,8 @@ public final class TechnicalProblemDialog {
         imageCropMode = false;
         clearImageCropSelectionRectangle();
         hideCanvasRegionSelection();
+        clearAngleMeasurement();
+        measurementStatus.setText("Medición: selecciona Medir ángulo para comenzar.");
         selectCanvasImage(null);
         imageInteractionMode.set(false);
         updateImageInteractionMode();
@@ -1293,7 +2041,7 @@ public final class TechnicalProblemDialog {
             return;
         }
         boolean canvasConsumesPointer = drawMode.get() || canvasRegionSelectionMode.get();
-        canvasScroll.setPannable(!canvasConsumesPointer);
+        canvasScroll.setPannable(activeCanvasTool.get() == CanvasTool.PAN);
         canvasScroll.setHbarPolicy(canvasConsumesPointer ? ScrollPane.ScrollBarPolicy.NEVER : ScrollPane.ScrollBarPolicy.AS_NEEDED);
         canvasScroll.setVbarPolicy(canvasConsumesPointer ? ScrollPane.ScrollBarPolicy.NEVER : ScrollPane.ScrollBarPolicy.AS_NEEDED);
         if (!canvasConsumesPointer) {
@@ -1316,7 +2064,7 @@ public final class TechnicalProblemDialog {
 
     private boolean canInteractWithCanvasImages() {
         return canvasMode.get()
-                && drawMode.get()
+                && (drawMode.get() || activeCanvasTool.get() == CanvasTool.NONE)
                 && imageInteractionMode.get()
                 && !canvasRegionSelectionMode.get();
     }
@@ -1324,11 +2072,11 @@ public final class TechnicalProblemDialog {
     private boolean canCaptureInkInput() {
         return canvasMode.get()
                 && !imageCropMode
-                && !imageInteractionMode.get()
-                && (canvasRegionSelectionMode.get() || drawMode.get());
+                && (canvasRegionSelectionMode.get() || (!imageInteractionMode.get() && drawMode.get()));
     }
 
     private void updateInkInputLayerMode() {
+        if (vectorSelection != null) vectorSelection.refresh();
         boolean inkActive = canCaptureInkInput();
         boolean imageToolsActive = imageCropMode || canInteractWithCanvasImages();
         boolean layerInteractive = inkActive || imageToolsActive;
@@ -1348,7 +2096,7 @@ public final class TechnicalProblemDialog {
     }
 
     private void maybeGrowCanvasForScroll() {
-        if (canvasScroll == null || drawMode.get() || canvasRegionSelectionMode.get()
+        if (canvasScroll == null || canvasDisposed || (!secondaryPanning && activeCanvasTool.get() != CanvasTool.PAN)
                 || canvasGrowScheduled || suppressCanvasGrowEvents) {
             return;
         }
@@ -1368,7 +2116,7 @@ public final class TechnicalProblemDialog {
     }
 
     private void runPendingCanvasGrowth() {
-        if (canvasScroll == null || canvasGrowScheduled) {
+        if (canvasDisposed || canvasScroll == null || canvasGrowScheduled) {
             return;
         }
         boolean growWidth = pendingCanvasGrowWidth && drawingSurface.canGrowHorizontally();
@@ -1382,6 +2130,7 @@ public final class TechnicalProblemDialog {
         try {
             boolean grew = drawingSurface.growByScroll(growWidth, growHeight);
             if (grew) {
+                if (canvasZoomPane != null) canvasZoomPane.refreshContentExtent();
                 suppressCanvasGrowEvents = true;
                 if (growWidth) {
                     canvasScroll.setHvalue(0.78);
@@ -1389,7 +2138,9 @@ public final class TechnicalProblemDialog {
                 if (growHeight) {
                     canvasScroll.setVvalue(0.78);
                 }
-                ensureCanvasTilesCoverViewport();
+                if (!ensureCanvasTilesCoverViewport()) {
+                    Platform.runLater(editorController::resetInputCoordinates);
+                }
                 PauseTransition release = new PauseTransition(Duration.millis(220));
                 release.setOnFinished(event -> Platform.runLater(() -> suppressCanvasGrowEvents = false));
                 release.play();
@@ -1399,15 +2150,39 @@ public final class TechnicalProblemDialog {
         }
     }
 
-    private void ensureCanvasTilesCoverViewport() {
-        if (canvasScroll == null || canvasScroll.getViewportBounds().getWidth() <= 0
+    private boolean ensureCanvasTilesCoverViewport() {
+        if (canvasDisposed || canvasScroll == null || canvasScroll.getViewportBounds().getWidth() <= 0
                 || canvasScroll.getViewportBounds().getHeight() <= 0) {
-            return;
+            return false;
         }
-        double zoom = Math.max(0.1, canvasZoom.getValue() / 100.0);
-        drawingSurface.ensureLogicalSize(
-                Math.max(StudyProblemCanvasSurface.DEFAULT_WIDTH, (canvasScroll.getViewportBounds().getWidth() - 36) / zoom),
-                Math.max(StudyProblemCanvasSurface.DEFAULT_HEIGHT, (canvasScroll.getViewportBounds().getHeight() - 36) / zoom));
+        boolean grew = editorController.ensureViewportCoverage(
+                Math.max(1.0, canvasScroll.getViewportBounds().getWidth() - 36),
+                Math.max(1.0, canvasScroll.getViewportBounds().getHeight() - 36));
+        if (grew) {
+            if (canvasZoomPane != null) canvasZoomPane.refreshContentExtent();
+            editorController.resetInputCoordinates();
+        }
+        return grew;
+    }
+
+    private void trimUnusedCanvas() {
+        if (canvasDisposed || secondaryPanning || activeCanvasTool.get() == CanvasTool.PAN) return;
+        flushInk();
+        double zoom = canvasZoomPane.appliedZoom();
+        double width = Math.max(StudyProblemCanvasSurface.DEFAULT_WIDTH, canvasScroll.getViewportBounds().getWidth()/zoom);
+        double height = Math.max(StudyProblemCanvasSurface.DEFAULT_HEIGHT, canvasScroll.getViewportBounds().getHeight()/zoom);
+        double offsetX = canvasScroll.getHvalue() * Math.max(0, drawingSurface.logicalWidth()*zoom-canvasScroll.getViewportBounds().getWidth());
+        double offsetY = canvasScroll.getVvalue() * Math.max(0, drawingSurface.logicalHeight()*zoom-canvasScroll.getViewportBounds().getHeight());
+        suppressCanvasGrowEvents = true;
+        try {
+            if (drawingSurface.trimUnusedSpace(width, height, 300)) {
+                canvasZoomPane.refreshContentExtent();
+                canvasScroll.setHvalue(Math.min(1, offsetX/Math.max(1, drawingSurface.logicalWidth()*zoom-canvasScroll.getViewportBounds().getWidth())));
+                canvasScroll.setVvalue(Math.min(1, offsetY/Math.max(1, drawingSurface.logicalHeight()*zoom-canvasScroll.getViewportBounds().getHeight())));
+                editorController.resetInputCoordinates();
+                if (vectorSelection != null) vectorSelection.refresh();
+            }
+        } finally { suppressCanvasGrowEvents = false; }
     }
 
     private void installCanvasRegionSelectionOverlay() {
@@ -1481,56 +2256,20 @@ public final class TechnicalProblemDialog {
     }
 
     private void copyCanvasRegionSelection() {
-        CanvasRegionSelection selection = activeCanvasRegionSelection;
-        if (selection == null) {
-            return;
-        }
-        canvasRegionClipboard = drawingSurface.snapshotRegion(canvasImageViews(), selection.x(), selection.y(), selection.width(), selection.height());
-        updateCanvasRegionButtons();
+        if (vectorSelection == null) return;
+        vectorSelection.copy(); vectorClipboard = true; updateCanvasRegionButtons();
     }
 
     private void pasteCanvasRegionSelection() {
-        if (canvasRegionClipboard == null) {
-            return;
-        }
-        Point2D target = pasteTarget();
-        addCanvasImage(canvasRegionClipboard, target.getX(), target.getY(),
-                Math.min(canvasRegionClipboard.getWidth(), drawingSurface.logicalWidth() * 0.6), false);
-        canvasRegionSelectionMode.set(false);
-        imageInteractionMode.set(false);
-        selectCanvasImage(null);
-        canvasTouched.set(true);
+        if (vectorSelection != null) vectorSelection.paste();
     }
 
     private void deleteCanvasRegionSelection() {
-        CanvasRegionSelection selection = activeCanvasRegionSelection;
-        if (selection == null) {
-            return;
-        }
-        rememberUndo();
-        redo.clear();
-        drawingSurface.eraseRegion(selection.x(), selection.y(), selection.width(), selection.height());
-        removeImagesInside(selection);
-        canvasTouched.set(true);
-        hideCanvasRegionSelection();
+        if (vectorSelection != null) vectorSelection.deleteSelection();
     }
 
     private void moveCanvasRegionSelection() {
-        CanvasRegionSelection selection = activeCanvasRegionSelection;
-        if (selection == null) {
-            return;
-        }
-        canvasRegionClipboard = drawingSurface.snapshotRegion(canvasImageViews(), selection.x(), selection.y(), selection.width(), selection.height());
-        rememberUndo();
-        redo.clear();
-        drawingSurface.eraseRegion(selection.x(), selection.y(), selection.width(), selection.height());
-        removeImagesInside(selection);
-        addCanvasImage(canvasRegionClipboard, selection.x(), selection.y(), selection.width(), false);
-        canvasRegionSelectionMode.set(false);
-        imageInteractionMode.set(false);
-        selectCanvasImage(null);
-        canvasTouched.set(true);
-        hideCanvasRegionSelection();
+        if (vectorSelection != null) vectorSelection.translate(24, 24);
     }
 
     private Point2D pasteTarget() {
@@ -1565,7 +2304,7 @@ public final class TechnicalProblemDialog {
     }
 
     private void updateCanvasRegionButtons() {
-        boolean hasSelection = activeCanvasRegionSelection != null;
+        boolean hasSelection = vectorSelection != null ? vectorSelection.hasSelection() : activeCanvasRegionSelection != null;
         if (copyRegionButton != null) {
             setNodeVisible(copyRegionButton, canvasRegionSelectionMode.get() && hasSelection);
             copyRegionButton.setDisable(!hasSelection);
@@ -1579,8 +2318,8 @@ public final class TechnicalProblemDialog {
             moveRegionButton.setDisable(!hasSelection);
         }
         if (pasteRegionButton != null) {
-            setNodeVisible(pasteRegionButton, canvasRegionClipboard != null);
-            pasteRegionButton.setDisable(canvasRegionClipboard == null);
+            setNodeVisible(pasteRegionButton, vectorClipboard || canvasRegionClipboard != null);
+            pasteRegionButton.setDisable(!vectorClipboard && canvasRegionClipboard == null);
         }
         updateImageButtons();
     }
@@ -1595,42 +2334,25 @@ public final class TechnicalProblemDialog {
 
     private void rememberUndo() {
         flushInk();
-        rememberUndoSnapshot(snapshotUndoState(false));
+        editorController.checkpoint();
     }
 
     private void rememberFastInkUndo() {
         if (drawingSurface.vectorInkReliable()) {
-            rememberUndoSnapshot(snapshotUndoState(false));
+            editorController.checkpoint();
         } else {
             rememberUndo();
         }
     }
 
-    private void rememberUndoSnapshot(CanvasUndoSnapshot snapshot) {
-        undo.push(snapshot);
-        while (undo.size() > MAX_UNDO_SNAPSHOTS) {
-            undo.removeLast();
-        }
-    }
-
     private void undo() {
-        if (undo.isEmpty()) {
-            return;
-        }
         flushInk();
-        redo.push(snapshotUndoState(false));
-        restoreUndoSnapshot(undo.pop());
-        canvasTouched.set(true);
+        if (editorController.undo()) canvasTouched.set(true);
     }
 
     private void redo() {
-        if (redo.isEmpty()) {
-            return;
-        }
         flushInk();
-        undo.push(snapshotUndoState(false));
-        restoreUndoSnapshot(redo.pop());
-        canvasTouched.set(true);
+        if (editorController.redo()) canvasTouched.set(true);
     }
 
     private CanvasUndoSnapshot snapshotUndoState(boolean flush) {
@@ -1638,9 +2360,9 @@ public final class TechnicalProblemDialog {
             flushInk();
         }
         if (drawingSurface.vectorInkReliable()) {
-            return CanvasUndoSnapshot.vector(drawingSurface.inkStrokeStates(), drawingSurface.inkCommandStates());
+            return new CanvasUndoSnapshot(null, drawingSurface.inkStrokeStates(), drawingSurface.inkCommandStates(), snapshotImages(), sourceOpacities.entrySet().stream().collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, e -> e.getValue().get())));
         }
-        return CanvasUndoSnapshot.raster(drawingSurface.snapshotDrawing());
+        return new CanvasUndoSnapshot(drawingSurface.snapshotDrawing(), null, null, snapshotImages(), sourceOpacities.entrySet().stream().collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, e -> e.getValue().get())));
     }
 
     private void restoreUndoSnapshot(CanvasUndoSnapshot snapshot) {
@@ -1649,9 +2371,27 @@ public final class TechnicalProblemDialog {
         }
         if (!snapshot.vector()) {
             drawSnapshot(snapshot.raster());
-            return;
+        } else {
+            drawingSurface.restoreInkUndoState(snapshot.strokes(), snapshot.commands());
         }
-        drawingSurface.restoreInkUndoState(snapshot.strokes(), snapshot.commands());
+        clearCanvasImages();
+        sourceOpacities.forEach((id, alpha) -> alpha.set(snapshot.sourceOpacity().getOrDefault(id, 1.0)));
+        for (ImageUndoState image : snapshot.images()) {
+            CanvasImageItem item = addCanvasImage(image.image(), image.x(), image.y(), image.width(), false);
+            item.text = image.text();
+            item.shape = image.shape();
+            item.view.setOpacity(image.opacity());
+            item.sourceId = image.sourceId();
+            item.restoreCropMetadata(image.original(), image.originalX(), image.originalY(), image.originalWidth(), image.cropped());
+        }
+        if (vectorSelection != null) vectorSelection.refresh();
+    }
+
+    private List<ImageUndoState> snapshotImages() {
+        return canvasImages.stream().map(item -> new ImageUndoState(
+                item.view().getImage(), item.view().getLayoutX(), item.view().getLayoutY(),
+                item.view().getFitWidth(), item.originalImage(), item.originalLayoutX(),
+                item.originalLayoutY(), item.originalFitWidth(), item.isCropped(), item.text, item.shape, item.view.getOpacity(), item.sourceId)).toList();
     }
 
     private WritableImage snapshotCanvas() {
@@ -1659,13 +2399,18 @@ public final class TechnicalProblemDialog {
         return drawingSurface.snapshotWithImages(canvasImageViews());
     }
 
-    private StudyProblemCanvasExportResult exportCanvas(StudyProblemCanvasExportOptions options) {
+    private InkCanvasExportResult exportCanvas(InkCanvasExportOptions options) {
         flushInk();
+        drawingSurface.trimUnusedSpace(StudyProblemCanvasSurface.DEFAULT_WIDTH, StudyProblemCanvasSurface.DEFAULT_HEIGHT, 300);
         markTitleContentBounds();
+        if (options.fullLogicalCanvas()) {
+            options = new InkCanvasExportOptions(options.preferredScale(), options.maxPixelCount(), false, false,
+                    300, options.minWidth(), options.minHeight());
+        }
         return burnTitleIntoCanvas(drawingSurface.exportWithImages(canvasImageViews(), options), title.getText());
     }
 
-    private StudyProblemCanvasExportResult burnTitleIntoCanvas(StudyProblemCanvasExportResult base, String titleText) {
+    private InkCanvasExportResult burnTitleIntoCanvas(InkCanvasExportResult base, String titleText) {
         String normalizedTitle = titleText == null ? "" : titleText.strip();
         if (base == null || base.image() == null || normalizedTitle.isBlank()) {
             return base;
@@ -1690,7 +2435,7 @@ public final class TechnicalProblemDialog {
             graphics.dispose();
         }
         WritableImage output = bufferedToWritable(outputImage);
-        return new StudyProblemCanvasExportResult(
+        return new InkCanvasExportResult(
                 output,
                 scale,
                 base.cropped(),
@@ -1781,24 +2526,50 @@ public final class TechnicalProblemDialog {
         if (title.getText() == null || title.getText().isBlank()) {
             return;
         }
-        drawingSurface.markContentBounds(0, 0, Math.max(420.0, drawingSurface.logicalWidth() * 0.55),
+        javafx.scene.text.Text titleMeasure = new javafx.scene.text.Text(title.getText());
+        titleMeasure.setFont(javafx.scene.text.Font.font("System", javafx.scene.text.FontWeight.BOLD, 18));
+        drawingSurface.markContentBounds(0, 0, Math.max(420.0, titleMeasure.getLayoutBounds().getWidth() + 48),
                 CANVAS_TITLE_BAND_HEIGHT);
     }
 
     private boolean shouldPersistCanvasState(boolean needsCanvas) {
         return needsCanvas
                 || canvasTouched.get()
+                || !notes.getText().isBlank()
                 || !canvasImages.isEmpty()
                 || !drawingSurface.inkStrokeStates().isEmpty()
                 || !drawingSurface.inkCommandStates().isEmpty()
                 || (existingCanvasStatePath != null && Files.isRegularFile(existingCanvasStatePath));
     }
 
-    private String canvasStateJson() {
+    private String canvasStateJson() { return canvasPageStateJson(true); }
+
+    private String canvasPageStateJson(boolean includeNotebook) {
         flushInk();
         Map<String, String> metadata = new HashMap<>();
+        if (includeNotebook && notebookPages.size() > 1) {
+            metadata.put("notebook.count", Integer.toString(notebookPages.size()));
+            metadata.put("notebook.current", Integer.toString(currentPage));
+            for (int i = 0; i < notebookPages.size(); i++) {
+                if (i != currentPage) metadata.put("notebook.page." + i, notebookPages.get(i));
+                if (notebookThumbnails.get(i) != null) metadata.put("notebook.thumb." + i, imageToBase64(notebookThumbnails.get(i)));
+            }
+        }
+        for (int i = 0; i < canvasImages.size(); i++) {
+            if (canvasImages.get(i).text != null) metadata.put("textObject." + (i+1), canvasImages.get(i).text.encode());
+        }
+        for (int i = 0; i < canvasImages.size(); i++) {
+            if (canvasImages.get(i).shape != null) metadata.put("shapeObject." + (i+1), canvasImages.get(i).shape.encode());
+        }
+        sourceOpacities.forEach((id, alpha) -> metadata.put("sourceOpacity." + id, Double.toString(alpha.get())));
+        for (int i = 0; i < canvasImages.size(); i++) {
+            metadata.put("imageOpacity." + (i+1), Double.toString(canvasImages.get(i).view.getOpacity()));
+            metadata.put("imageSource." + (i+1), canvasImages.get(i).sourceId);
+        }
+        metadata.put("paperPattern", drawingSurface.paperPattern());
         metadata.put("consumer", "document-study.technical-problem");
         metadata.put("title", title.getText() == null ? "" : title.getText().strip());
+        metadata.put("notes", notes.getText() == null ? "" : notes.getText());
         return InkWorkspaceStateSerializer.toJson(InkWorkspaceState.create(
                 drawingSurface.logicalWidth(),
                 drawingSurface.logicalHeight(),
@@ -1841,67 +2612,60 @@ public final class TechnicalProblemDialog {
     private boolean restoreCanvasState(Path path) {
         try {
             String json = Files.readString(path, StandardCharsets.UTF_8);
+            if (!restoreCanvasJson(json)) return false;
+            var metadata = InkWorkspaceStateSerializer.fromJson(json).metadata();
+            if (metadata.containsKey("title")) title.setText(metadata.get("title"));
+            if (metadata.containsKey("notes")) notes.setText(metadata.get("notes"));
+            int count = Math.max(1, Integer.parseInt(metadata.getOrDefault("notebook.count", "1")));
+            currentPage = Math.max(0, Math.min(count - 1, Integer.parseInt(metadata.getOrDefault("notebook.current", "0"))));
+            notebookPages.clear(); notebookThumbnails.clear();
+            for (int i = 0; i < count; i++) {
+                notebookPages.add(i == currentPage ? canvasPageStateJson(false) : metadata.getOrDefault("notebook.page." + i, ""));
+                notebookThumbnails.add(imageFromBase64(metadata.getOrDefault("notebook.thumb." + i, "")));
+            }
+            rebuildPageList();
+            return true;
+        } catch (IOException | RuntimeException ex) { return false; }
+    }
+
+    private boolean restoreCanvasJson(String json) {
+        try {
             if (json == null || json.isBlank()) {
                 return false;
             }
-            double width = jsonDoubleValue(json, "width", StudyProblemCanvasSurface.DEFAULT_WIDTH);
-            double height = jsonDoubleValue(json, "height", StudyProblemCanvasSurface.DEFAULT_HEIGHT);
-            Color restoredBackground = parseColorValue(jsonStringValue(json, "background", "#ffffffff"));
-            drawingSurface.resetForEditableState(width, height, restoredBackground);
+            InkWorkspaceState state = InkWorkspaceStateSerializer.fromJson(json);
+            Color restoredBackground = parseColorValue(state.background());
+            drawingSurface.resetForEditableState(state.logicalWidth(), state.logicalHeight(), restoredBackground);
             backgroundColor.setValue(restoredBackground);
             clearCanvasImages();
-            for (String imageObject : jsonObjectsInArray(json, "images")) {
-                Image image = imageFromBase64(jsonStringValue(imageObject, "image", ""));
+            state.metadata().forEach((key, value) -> {
+                if (key.startsWith("sourceOpacity.")) sourceOpacity(key.substring("sourceOpacity.".length())).set(readOpacity(value));
+            });
+            for (InkPlacedImage placedImage : state.images()) {
+                Image image = imageFromBase64(placedImage.inlineImageData());
                 if (image == null || image.isError()) {
                     continue;
                 }
-                double x = jsonDoubleValue(imageObject, "x", 48.0);
-                double y = jsonDoubleValue(imageObject, "y", CANVAS_TITLE_BAND_HEIGHT + 24.0);
-                double fitWidth = jsonDoubleValue(imageObject, "fitWidth", Math.max(160.0, image.getWidth()));
+                double x = placedImage.x();
+                double y = placedImage.y();
+                double fitWidth = placedImage.fitWidth();
                 CanvasImageItem item = addCanvasImage(image, x, y, fitWidth, false);
-                Image original = imageFromBase64(jsonStringValue(imageObject, "originalImage", ""));
+                item.view.setOpacity(readOpacity(state.metadata().get("imageOpacity." + canvasImages.size())));
+                item.sourceId = state.metadata().getOrDefault("imageSource." + canvasImages.size(), "");
+                item.text = com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.CanvasTextObject.decode(
+                        state.metadata().get("textObject." + canvasImages.size()));
+                item.shape = com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.CanvasShapeObject.decode(
+                        state.metadata().get("shapeObject." + canvasImages.size()));
+                Image original = imageFromBase64(placedImage.inlineOriginalImageData());
                 item.restoreCropMetadata(
                         original == null || original.isError() ? image : original,
-                        jsonDoubleValue(imageObject, "originalLayoutX", x),
-                        jsonDoubleValue(imageObject, "originalLayoutY", y),
-                        jsonDoubleValue(imageObject, "originalFitWidth", fitWidth),
-                        jsonBooleanValue(imageObject, "cropActive", false));
+                        placedImage.originalLayoutX(),
+                        placedImage.originalLayoutY(),
+                        placedImage.originalFitWidth(),
+                        placedImage.crop().active());
             }
-            List<StudyProblemCanvasSurface.InkStrokeState> editableStrokes = new ArrayList<>();
-            for (String strokeObject : jsonObjectsInArray(json, "inkStrokes")) {
-                List<StudyProblemCanvasSurface.InkPointState> points = new ArrayList<>();
-                for (String pointObject : jsonObjectsInArray(strokeObject, "points")) {
-                    points.add(new StudyProblemCanvasSurface.InkPointState(
-                            jsonDoubleValue(pointObject, "x", 0),
-                            jsonDoubleValue(pointObject, "y", 0),
-                            (long) jsonDoubleValue(pointObject, "nanos", 0),
-                            jsonDoubleValue(pointObject, "pressure", 1)));
-                }
-                editableStrokes.add(new StudyProblemCanvasSurface.InkStrokeState(
-                        jsonStringValue(strokeObject, "type", "DRAW"),
-                        jsonStringValue(strokeObject, "color", "#000000ff"),
-                        jsonDoubleValue(strokeObject, "width", 1),
-                        points));
-            }
-            if (!editableStrokes.isEmpty()) {
-                drawingSurface.restoreInkStrokeStates(editableStrokes);
-            } else {
-                List<StudyProblemCanvasSurface.InkCommandState> strokes = new ArrayList<>();
-                for (String strokeObject : jsonObjectsInArray(json, "strokes")) {
-                    strokes.add(new StudyProblemCanvasSurface.InkCommandState(
-                            jsonStringValue(strokeObject, "type", "DRAW"),
-                            jsonDoubleValue(strokeObject, "x1", 0),
-                            jsonDoubleValue(strokeObject, "y1", 0),
-                            jsonDoubleValue(strokeObject, "x2", 0),
-                            jsonDoubleValue(strokeObject, "y2", 0),
-                            jsonDoubleValue(strokeObject, "controlX", 0),
-                            jsonDoubleValue(strokeObject, "controlY", 0),
-                            jsonStringValue(strokeObject, "color", "#000000ff"),
-                            jsonDoubleValue(strokeObject, "width", 1),
-                            jsonBooleanValue(strokeObject, "quadratic", false)));
-                }
-                drawingSurface.restoreInkCommandStates(strokes);
-            }
+            drawingSurface.setPaperPattern(state.metadata().getOrDefault("paperPattern", "blank"));
+            drawingSurface.restoreApplicationInkStrokes(state.strokes());
             canvasTouched.set(false);
             return true;
         } catch (IOException | RuntimeException ex) {
@@ -1917,32 +2681,6 @@ public final class TechnicalProblemDialog {
         selectedCanvasImage = null;
         updateResizeHandles();
         updateImageButtons();
-    }
-
-    private static StringBuilder appendJsonField(StringBuilder json, String name, String value) {
-        json.append('"').append(name).append("\":");
-        appendJsonString(json, value == null ? "" : value);
-        return json;
-    }
-
-    private static void appendJsonString(StringBuilder json, String value) {
-        json.append('"');
-        for (int i = 0; i < value.length(); i++) {
-            char c = value.charAt(i);
-            switch (c) {
-                case '\\' -> json.append("\\\\");
-                case '"' -> json.append("\\\"");
-                case '\n' -> json.append("\\n");
-                case '\r' -> json.append("\\r");
-                case '\t' -> json.append("\\t");
-                default -> json.append(c);
-            }
-        }
-        json.append('"');
-    }
-
-    private static String number(double value) {
-        return Double.isFinite(value) ? String.format(java.util.Locale.ROOT, "%.3f", value) : "0";
     }
 
     private static String cssColor(Color color) {
@@ -1962,177 +2700,16 @@ public final class TechnicalProblemDialog {
         }
     }
 
-    private static List<String> jsonObjectsInArray(String json, String field) {
-        int fieldIndex = json.indexOf("\"" + field + "\"");
-        if (fieldIndex < 0) {
-            return List.of();
-        }
-        int arrayStart = json.indexOf('[', fieldIndex);
-        if (arrayStart < 0) {
-            return List.of();
-        }
-        List<String> objects = new ArrayList<>();
-        boolean quoted = false;
-        boolean escaped = false;
-        int depth = 0;
-        int objectStart = -1;
-        for (int i = arrayStart + 1; i < json.length(); i++) {
-            char c = json.charAt(i);
-            if (escaped) {
-                escaped = false;
-                continue;
-            }
-            if (c == '\\' && quoted) {
-                escaped = true;
-                continue;
-            }
-            if (c == '"') {
-                quoted = !quoted;
-                continue;
-            }
-            if (quoted) {
-                continue;
-            }
-            if (c == '{') {
-                if (depth == 0) {
-                    objectStart = i;
-                }
-                depth++;
-            } else if (c == '}') {
-                depth--;
-                if (depth == 0 && objectStart >= 0) {
-                    objects.add(json.substring(objectStart, i + 1));
-                    objectStart = -1;
-                }
-            } else if (c == ']' && depth == 0) {
-                break;
-            }
-        }
-        return objects;
-    }
-
-    private static String jsonStringValue(String json, String field, String fallback) {
-        int start = json.indexOf("\"" + field + "\"");
-        if (start < 0) {
-            return fallback;
-        }
-        int colon = json.indexOf(':', start);
-        if (colon < 0) {
-            return fallback;
-        }
-        int quote = json.indexOf('"', colon + 1);
-        if (quote < 0) {
-            return fallback;
-        }
-        StringBuilder value = new StringBuilder();
-        boolean escaped = false;
-        for (int i = quote + 1; i < json.length(); i++) {
-            char c = json.charAt(i);
-            if (escaped) {
-                value.append(switch (c) {
-                    case 'n' -> '\n';
-                    case 'r' -> '\r';
-                    case 't' -> '\t';
-                    default -> c;
-                });
-                escaped = false;
-            } else if (c == '\\') {
-                escaped = true;
-            } else if (c == '"') {
-                return value.toString();
-            } else {
-                value.append(c);
-            }
-        }
-        return fallback;
-    }
-
-    private static double jsonDoubleValue(String json, String field, double fallback) {
-        int start = json.indexOf("\"" + field + "\"");
-        if (start < 0) {
-            return fallback;
-        }
-        int colon = json.indexOf(':', start);
-        if (colon < 0) {
-            return fallback;
-        }
-        int end = colon + 1;
-        while (end < json.length() && Character.isWhitespace(json.charAt(end))) {
-            end++;
-        }
-        int valueEnd = end;
-        while (valueEnd < json.length()) {
-            char c = json.charAt(valueEnd);
-            if (!(Character.isDigit(c) || c == '-' || c == '+' || c == '.' || c == 'E' || c == 'e')) {
-                break;
-            }
-            valueEnd++;
-        }
-        try {
-            return Double.parseDouble(json.substring(end, valueEnd));
-        } catch (RuntimeException ex) {
-            return fallback;
-        }
-    }
-
-    private static boolean jsonBooleanValue(String json, String field, boolean fallback) {
-        int start = json.indexOf("\"" + field + "\"");
-        if (start < 0) {
-            return fallback;
-        }
-        int colon = json.indexOf(':', start);
-        if (colon < 0) {
-            return fallback;
-        }
-        String tail = json.substring(colon + 1).stripLeading();
-        if (tail.startsWith("true")) {
-            return true;
-        }
-        if (tail.startsWith("false")) {
-            return false;
-        }
-        return fallback;
-    }
-
     private static String imageToBase64(Image image) {
-        BufferedImage buffered = imageToBufferedArgb(image);
-        if (buffered == null) {
-            return "";
-        }
-        try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
-            ImageIO.write(buffered, "png", output);
-            return Base64.getEncoder().encodeToString(output.toByteArray());
+        try {
+            return InkImageFileStore.encodePngBase64(image);
         } catch (IOException ex) {
             return "";
         }
     }
 
     private static Image imageFromBase64(String data) {
-        if (data == null || data.isBlank()) {
-            return null;
-        }
-        try {
-            return new Image(new ByteArrayInputStream(Base64.getDecoder().decode(data)));
-        } catch (RuntimeException ex) {
-            return null;
-        }
-    }
-
-    private static BufferedImage imageToBufferedArgb(Image image) {
-        WritableImage writable = writableCopy(image);
-        if (writable == null) {
-            return null;
-        }
-        int width = Math.max(1, (int) Math.ceil(writable.getWidth()));
-        int height = Math.max(1, (int) Math.ceil(writable.getHeight()));
-        BufferedImage output = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-        PixelReader reader = writable.getPixelReader();
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                output.setRGB(x, y, reader.getArgb(x, y));
-            }
-        }
-        return output;
+        return InkImageFileStore.decodePngBase64(data);
     }
 
     private static WritableImage writableCopy(Image image) {
@@ -2192,29 +2769,31 @@ public final class TechnicalProblemDialog {
             return;
         }
         if (!resolverFullscreen) {
-            stageMaximizedBeforeFullscreen = stage.isMaximized();
-            stageXBeforeFullscreen = stage.getX();
-            stageYBeforeFullscreen = stage.getY();
-            stageWidthBeforeFullscreen = stage.getWidth();
-            stageHeightBeforeFullscreen = stage.getHeight();
             statementCollapsedBeforeFullscreen = statementCollapsed;
             if (!statementCollapsed) {
                 toggleStatementCollapsed();
             }
-            stage.setMaximized(true);
+            canvasMode.set(true);
             resolverFullscreen = true;
+            // Route Escape through the editor so it restores the chrome without closing the dialog.
+            stage.setFullScreenExitKeyCombination(new javafx.scene.input.KeyCodeCombination(KeyCode.ESCAPE));
+            stage.setFullScreenExitHint("Presione Escape o F11 para salir de pantalla completa");
+            if (!Boolean.TRUE.equals(stage.getProperties().get("technicalCanvasFullscreenListener"))) {
+                stage.getProperties().put("technicalCanvasFullscreenListener", true);
+                stage.getScene().addEventFilter(KeyEvent.KEY_PRESSED, this::handleDialogKeyPressed);
+                stage.fullScreenProperty().addListener((obs, before, full) -> {
+                    if (!full && resolverFullscreen) toggleResolverFullscreen();
+                });
+            }
+            applyResolverFullscreenState();
+            stage.setFullScreen(true);
+            Platform.runLater(() -> canvasScroll.requestFocus());
         } else {
+            resolverFullscreen = false;
+            stage.setFullScreen(false);
             if (!statementCollapsedBeforeFullscreen && statementCollapsed) {
                 toggleStatementCollapsed();
             }
-            stage.setMaximized(stageMaximizedBeforeFullscreen);
-            if (!stageMaximizedBeforeFullscreen && stageWidthBeforeFullscreen > 0 && stageHeightBeforeFullscreen > 0) {
-                stage.setX(stageXBeforeFullscreen);
-                stage.setY(stageYBeforeFullscreen);
-                stage.setWidth(stageWidthBeforeFullscreen);
-                stage.setHeight(stageHeightBeforeFullscreen);
-            }
-            resolverFullscreen = false;
         }
         applyResolverFullscreenState();
         updateFullscreenButtonText();
@@ -2227,14 +2806,13 @@ public final class TechnicalProblemDialog {
     }
 
     private void applyResolverFullscreenState() {
-        setNodeVisible(titleNode, !resolverFullscreen);
-        setNodeVisible(notes, !resolverFullscreen);
-        setNodeVisible(existingSolutionNode, !resolverFullscreen);
-        setNodeVisible(toolBarNode, true);
+        setNodeVisible(existingSolutionNode, !resolverFullscreen && existingSolutionImagePath != null);
+        setNodeVisible(toolbarShellNode, !resolverFullscreen);
         if (rootPane != null) {
-            rootPane.setTop(resolverFullscreen ? null : titleNode);
+            setNodeVisible(rootPane.getBottom(), !resolverFullscreen);
         }
-        dialog.setHeaderText(resolverFullscreen ? "" : dialogHeaderText);
+        dialog.setHeaderText(resolverFullscreen ? null : dialogHeaderText);
+        setNodeVisible(dialog.getDialogPane().lookup(".button-bar"), !resolverFullscreen);
     }
 
     private static void setNodeVisible(Node node, boolean visible) {
@@ -2247,7 +2825,7 @@ public final class TechnicalProblemDialog {
 
     private void updateStatementButtonText() {
         if (collapseStatementButton != null) {
-            collapseStatementButton.setText(statementCollapsed ? "Mostrar enunciado" : "Ocultar enunciado");
+            collapseStatementButton.setText("◂");
         }
         setNodeVisible(restoreStatementButton, statementCollapsed);
     }
@@ -2265,10 +2843,7 @@ public final class TechnicalProblemDialog {
     }
 
     private void transferAllSourceImages() {
-        statementSources.stream()
-                .map(this::sourceImage)
-                .filter(image -> image != null && !image.isError())
-                .forEach(this::transferSourceImage);
+        for (StatementSource source : statementSources) transferSourceImage(source, sourceImage(source));
     }
 
     private void transferSourceImage(Path path) {
@@ -2276,6 +2851,14 @@ public final class TechnicalProblemDialog {
             return;
         }
         transferSourceImage(new Image(path.toUri().toString(), true));
+    }
+
+    private void transferSourceImage(StatementSource source, Image image) {
+        if (image == null || image.isError()) return;
+        transferSourceImage(image);
+        CanvasImageItem item = canvasImages.get(canvasImages.size() - 1);
+        item.sourceId = source.id();
+        item.view.setOpacity(sourceOpacity(source.id()).get());
     }
 
     private void transferSourceImage(Image image) {
@@ -2326,6 +2909,7 @@ public final class TechnicalProblemDialog {
                 return;
             }
             selectCanvasImage(item);
+            rememberUndo();
             item.beginDrag(event.getSceneX(), event.getSceneY());
             event.consume();
         });
@@ -2366,6 +2950,7 @@ public final class TechnicalProblemDialog {
         }
         updateResizeHandles();
         updateImageButtons();
+        syncTextStyle();
     }
 
     private void selectCanvasImageUnderPointerForDrawing(Point2D point) {
@@ -2388,10 +2973,33 @@ public final class TechnicalProblemDialog {
         return null;
     }
 
+    private void rotateSelectedImage(double degrees) {
+        if (selectedCanvasImage == null) return;
+        rememberUndo();
+        ImageView view = selectedCanvasImage.view();
+        double oldWidth = view.getFitWidth();
+        double centerX = view.getLayoutX() + view.getBoundsInLocal().getWidth() / 2;
+        double centerY = view.getLayoutY() + view.getBoundsInLocal().getHeight() / 2;
+        Image source = view.getImage();
+        if (selectedCanvasImage.text != null) selectedCanvasImage.text = selectedCanvasImage.text.rotated(degrees);
+        if (selectedCanvasImage.shape != null) selectedCanvasImage.shape = selectedCanvasImage.shape.rotated(degrees);
+        Image rotated = selectedCanvasImage.shape != null ? selectedCanvasImage.shape.render() : selectedCanvasImage.text == null
+                ? com.marcosmoreiradev.docupodcaststudio.presentation.components.CanvasImageTransforms.rotate(source, degrees)
+                : selectedCanvasImage.text.render();
+        double scale = oldWidth / source.getWidth();
+        view.setImage(rotated);
+        view.setFitWidth(rotated.getWidth() * scale);
+        view.setLayoutX(centerX - rotated.getWidth() * scale / 2);
+        view.setLayoutY(centerY - rotated.getHeight() * scale / 2);
+        updateResizeHandles();
+        canvasTouched.set(true);
+    }
+
     private void resizeSelectedImage(double factor) {
         if (selectedCanvasImage == null) {
             return;
         }
+        rememberUndo();
         ImageView view = selectedCanvasImage.view();
         double nextWidth = Math.max(48, Math.min(drawingSurface.logicalWidth(), view.getFitWidth() * factor));
         view.setFitWidth(nextWidth);
@@ -2407,6 +3015,7 @@ public final class TechnicalProblemDialog {
         if (selectedCanvasImage == null) {
             return;
         }
+        rememberUndo();
         drawingSurface.imageLayer().getChildren().remove(selectedCanvasImage.view());
         canvasImages.remove(selectedCanvasImage);
         selectCanvasImage(null);
@@ -2548,6 +3157,13 @@ public final class TechnicalProblemDialog {
     private void updateImageButtons() {
         boolean enabled = canInteractWithCanvasImages() && selectedCanvasImage != null;
         boolean imageToolsVisible = canInteractWithCanvasImages();
+        boolean mixedObjects = canvasRegionSelectionMode.get() && vectorSelection != null && !vectorSelection.selectedObjects().isEmpty();
+        objectSelectionVisible.set(enabled || mixedObjects);
+        regionSelectionVisible.set(canvasRegionSelectionMode.get() && vectorSelection != null && vectorSelection.hasSelection());
+        boolean fillable = enabled && selectedCanvasImage.shape != null && selectedCanvasImage.shape.closed();
+        if (shapeFillActions != null) setNodeVisible(shapeFillActions, fillable);
+        if (fillShapeButton != null) fillShapeButton.setDisable(!fillable);
+        if (clearShapeFillButton != null) clearShapeFillButton.setDisable(!fillable);
         if (shrinkImageButton != null) {
             setNodeVisible(shrinkImageButton, imageToolsVisible);
             shrinkImageButton.setDisable(!enabled);
@@ -2563,7 +3179,7 @@ public final class TechnicalProblemDialog {
         if (cropImageButton != null) {
             setNodeVisible(cropImageButton, imageToolsVisible);
             cropImageButton.setText(imageCropMode ? "Cancelar recorte" : "Recortar imagen");
-            cropImageButton.setDisable(!enabled);
+            cropImageButton.setDisable(!enabled || selectedCanvasImage.text != null || selectedCanvasImage.shape != null);
         }
         if (restoreImageCropButton != null) {
             setNodeVisible(restoreImageCropButton, imageToolsVisible && selectedCanvasImage != null && selectedCanvasImage.isCropped());
@@ -2581,11 +3197,12 @@ public final class TechnicalProblemDialog {
             handle.setCursor(Cursor.SE_RESIZE);
             handle.setVisible(false);
             handle.getStyleClass().add("technical-problem-image-resize-handle");
-            StudioFormControls.installTooltip(handle, "Arrastra para redimensionar la imagen manteniendo proporcion.");
+            StudioFormControls.installTooltip(handle, "Arrastra para redimensionar la imagen o forma manteniendo su proporción.");
             handle.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
                 if (selectedCanvasImage == null || !canInteractWithCanvasImages()) {
                     return;
                 }
+                rememberUndo();
                 event.consume();
             });
             handle.addEventFilter(MouseEvent.MOUSE_DRAGGED, event -> {
@@ -2598,6 +3215,19 @@ public final class TechnicalProblemDialog {
             imageResizeHandles.add(handle);
         }
         drawingSurface.inkInputLayer().getChildren().addAll(imageResizeHandles);
+        imageRotateHandle = iconToolButton("rotate-cw", "Arrastra alrededor del objeto para girarlo libremente.", () -> { }, false);
+        imageRotateHandle.setCursor(Cursor.HAND);
+        new com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.CanvasObjectRotationGesture(
+                imageRotateHandle, drawingSurface,
+                () -> canInteractWithCanvasImages() ? selectedCanvasImage : null,
+                degrees -> { if (selectedCanvasImage != null) selectedCanvasImage.view.setRotate(degrees); },
+                this::rememberUndo, () -> {
+                    canvasTouched.set(true);
+                    updateResizeHandles();
+                });
+        imageRotateHandle.setManaged(false);
+        imageRotateHandle.setVisible(false);
+        drawingSurface.inkInputLayer().getChildren().add(imageRotateHandle);
     }
 
     private void resizeSelectedImageFromHandle(double sceneX, double sceneY) {
@@ -2642,6 +3272,7 @@ public final class TechnicalProblemDialog {
 
     private void updateResizeHandles() {
         boolean visible = canInteractWithCanvasImages() && selectedCanvasImage != null;
+        if (imageRotateHandle != null) imageRotateHandle.setVisible(visible);
         for (Label handle : imageResizeHandles) {
             handle.setVisible(visible);
             handle.setMouseTransparent(!visible);
@@ -2650,6 +3281,11 @@ public final class TechnicalProblemDialog {
             return;
         }
         Bounds bounds = selectedCanvasImage.view().getBoundsInParent();
+        if (imageRotateHandle != null) {
+            imageRotateHandle.resizeRelocate((bounds.getMinX() + bounds.getMaxX()) / 2 - 16,
+                    Math.max(0, bounds.getMinY() - 40), 32, 32);
+            imageRotateHandle.toFront();
+        }
         double size = 18.0;
         double left = bounds.getMinX() - size / 2.0;
         double top = bounds.getMinY() - size / 2.0;
@@ -2753,21 +3389,18 @@ public final class TechnicalProblemDialog {
         }
     }
 
+    private record ImageUndoState(Image image, double x, double y, double width,
+                                  Image original, double originalX, double originalY,
+                                  double originalWidth, boolean cropped, com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.CanvasTextObject text, com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.CanvasShapeObject shape, double opacity, String sourceId) { }
+
     private record CanvasUndoSnapshot(WritableImage raster,
                                       List<StudyProblemCanvasSurface.InkStrokeState> strokes,
-                                      List<StudyProblemCanvasSurface.InkCommandState> commands) {
+                                      List<StudyProblemCanvasSurface.InkCommandState> commands,
+                                      List<ImageUndoState> images, Map<String, Double> sourceOpacity) {
         private CanvasUndoSnapshot {
             strokes = strokes == null ? List.of() : List.copyOf(strokes);
             commands = commands == null ? List.of() : List.copyOf(commands);
-        }
-
-        private static CanvasUndoSnapshot raster(WritableImage raster) {
-            return new CanvasUndoSnapshot(raster, null, null);
-        }
-
-        private static CanvasUndoSnapshot vector(List<StudyProblemCanvasSurface.InkStrokeState> strokes,
-                                                 List<StudyProblemCanvasSurface.InkCommandState> commands) {
-            return new CanvasUndoSnapshot(null, strokes, commands);
+            images = List.copyOf(images);
         }
 
         private boolean vector() {
@@ -2775,7 +3408,59 @@ public final class TechnicalProblemDialog {
         }
     }
 
-    private static final class CanvasImageItem {
+    private final class CanvasImageItem implements com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.CanvasStrokeSelection.EditableObject {
+        @Override public javafx.geometry.Rectangle2D bounds() {
+            Bounds b = view.getBoundsInParent();
+            return new javafx.geometry.Rectangle2D(b.getMinX(), b.getMinY(), b.getWidth(), b.getHeight());
+        }
+
+        @Override public java.util.function.Consumer<com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.CanvasStrokeSelection.ObjectTransform> captureTransform() {
+            Image source = view.getImage();
+            var sourceText = text;
+            var sourceShape = shape;
+            double width = view.getFitWidth();
+            javafx.geometry.Rectangle2D b = bounds();
+            double x = b.getMinX() + b.getWidth()/2, y = b.getMinY() + b.getHeight()/2;
+            return t -> {
+                double radians = Math.toRadians(t.degrees());
+                double dx = (x-t.cx())*t.scale(), dy = (y-t.cy())*t.scale();
+                double cx = t.cx()+t.dx()+dx*Math.cos(radians)-dy*Math.sin(radians);
+                double cy = t.cy()+t.dy()+dx*Math.sin(radians)+dy*Math.cos(radians);
+                if (sourceText != null) text = sourceText.rotated(t.degrees());
+                if (sourceShape != null) shape = sourceShape.rotated(t.degrees());
+                Image rendered = Math.abs(t.degrees()) < 0.0001 ? source : sourceShape != null ? shape.render() : sourceText != null ? text.render()
+                        : com.marcosmoreiradev.docupodcaststudio.presentation.components.CanvasImageTransforms.rotate(source, t.degrees());
+                double factor = width/source.getWidth()*t.scale();
+                view.setImage(rendered);
+                view.setFitWidth(rendered.getWidth()*factor);
+                view.setLayoutX(cx-rendered.getWidth()*factor/2);
+                view.setLayoutY(cy-rendered.getHeight()*factor/2);
+            };
+        }
+
+        @Override public java.util.function.Supplier<com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.CanvasStrokeSelection.EditableObject> copyFactory() {
+            ImageUndoState copy = new ImageUndoState(view.getImage(), view.getLayoutX(), view.getLayoutY(), view.getFitWidth(),
+                    originalImage, originalLayoutX, originalLayoutY, originalFitWidth, cropActive, text, shape, view.getOpacity(), sourceId);
+            return () -> {
+                CanvasImageItem item = addCanvasImage(copy.image(), copy.x()+24, copy.y()+24, copy.width(), false);
+                item.text = copy.text();
+                item.shape = copy.shape();
+                item.view.setOpacity(copy.opacity());
+                item.sourceId = copy.sourceId();
+                item.restoreCropMetadata(copy.original(), copy.originalX()+24, copy.originalY()+24, copy.originalWidth(), copy.cropped());
+                return item;
+            };
+        }
+
+        @Override public void remove() {
+            drawingSurface.imageLayer().getChildren().remove(view);
+            canvasImages.remove(this);
+            if (selectedCanvasImage == this) selectCanvasImage(null);
+        }
+
+        private com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.CanvasTextObject text;
+        private com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.CanvasShapeObject shape;
+        private String sourceId = "";
         private final ImageView view;
         private Image originalImage;
         private double originalLayoutX;

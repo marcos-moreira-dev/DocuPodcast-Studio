@@ -14,6 +14,12 @@ public final class DialogStyler {
         }
         if (owner != null) {
             dialog.initOwner(owner);
+            if (owner.getScene() != null) {
+                owner.getScene().getStylesheets().stream()
+                        .filter(style -> !dialog.getDialogPane()
+                                .getStylesheets().contains(style))
+                        .forEach(dialog.getDialogPane().getStylesheets()::add);
+            }
         }
         dialog.getDialogPane().getStyleClass().add("product-dialog");
         dialog.setResizable(true);

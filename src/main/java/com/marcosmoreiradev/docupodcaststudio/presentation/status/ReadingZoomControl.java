@@ -1,6 +1,11 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.status;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioControlDensity;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioControlVariant;
+
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.DocuPodcastShellViewModel;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionButtonFactory;
 import javafx.beans.property.IntegerProperty;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -38,10 +43,10 @@ public final class ReadingZoomControl extends HBox {
         Button reset = zoomButton("100%", "Restaurar tamaño de lectura", resetAction);
         Button increase = zoomButton("+", "Aumentar tamaño de lectura", increaseAction);
 
-        Slider slider = new Slider(
+        Slider slider = StudioFormControls.slider(
                 DocuPodcastShellViewModel.MIN_READING_FONT_SIZE,
                 DocuPodcastShellViewModel.MAX_READING_FONT_SIZE,
-                readingFontSize.get());
+                readingFontSize.get(), StudioControlVariant.COMPACT, StudioControlDensity.COMPACT);
         slider.getStyleClass().add("reading-zoom-slider");
         slider.setBlockIncrement(1);
         slider.setMajorTickUnit(2);
@@ -71,13 +76,13 @@ public final class ReadingZoomControl extends HBox {
     }
 
     private Button zoomButton(String label, String tooltip, Runnable action) {
-        Button button = new Button(label);
+        Button button = ActionButtonFactory.secondary(label, action);
         button.getStyleClass().add("reading-zoom-button");
         button.setFocusTraversable(false);
+        button.setWrapText(false);
         button.setTextOverrun(OverrunStyle.CLIP);
         button.setMinWidth(Region.USE_PREF_SIZE);
         button.setMaxWidth(Region.USE_PREF_SIZE);
-        button.setOnAction(event -> action.run());
         Tooltip.install(button, new Tooltip(tooltip));
         return button;
     }

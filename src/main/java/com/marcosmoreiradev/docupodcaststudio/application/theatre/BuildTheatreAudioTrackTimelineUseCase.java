@@ -27,7 +27,7 @@ public final class BuildTheatreAudioTrackTimelineUseCase {
         NarrationScriptDocument safeScript = script == null
                 ? NarrationScriptDocument.create("Lectura", "es", "", List.of()) : script;
         PlaybackManifest safeManifest = manifest == null ? PlaybackManifest.empty() : manifest;
-        Map<String, SegmentWindow> windows = segmentWindows(safeScript, safeManifest);
+        Map<String, SegmentWindow> windows = segmentWindows(safeScript, cuesBySegment(safeManifest));
         List<TheatreProjectLayer.Intervencion> interventions = project.theatre().intervenciones().stream()
                 .sorted(java.util.Comparator.comparingInt(TheatreProjectLayer.Intervencion::sequenceIndex))
                 .toList();
@@ -91,14 +91,25 @@ public final class BuildTheatreAudioTrackTimelineUseCase {
                 .findFirst();
     }
 
-    private static Map<String, SegmentWindow> segmentWindows(NarrationScriptDocument script, PlaybackManifest manifest) {
+    private static Map<String, List<PlaybackCue>> cuesBySegment(PlaybackManifest manifest) {
+        LinkedHashMap<String, List<PlaybackCue>> grouped = new LinkedHashMap<>();
+        for (PlaybackCue cue : manifest.cues()) {
+            grouped.computeIfAbsent(cue.segmentId(), ignored -> new ArrayList<>()).add(cue);
+        }
+        grouped.replaceAll((ignored, cues) -> List.copyOf(cues));
+        return Map.copyOf(grouped);
+    }
+
+    private static Map<String, SegmentWindow> segmentWindows(
+            NarrationScriptDocument script,
+            Map<String, List<PlaybackCue>> cuesBySegment) {
         LinkedHashMap<String, SegmentWindow> result = new LinkedHashMap<>();
         double cursor = 0.0;
         for (NarrationSegment segment : script.segments()) {
             if (!segment.narratable()) {
                 continue;
             }
-            List<PlaybackCue> cues = manifest.cuesForSegment(segment.id());
+            List<PlaybackCue> cues = cuesBySegment.getOrDefault(segment.id(), List.of());
             double start;
             double end;
             if (!cues.isEmpty()) {

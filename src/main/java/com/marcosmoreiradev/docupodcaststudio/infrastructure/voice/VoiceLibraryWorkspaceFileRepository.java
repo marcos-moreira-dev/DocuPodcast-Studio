@@ -47,7 +47,8 @@ public final class VoiceLibraryWorkspaceFileRepository implements VoiceLibraryWo
             field(out, 3, "id", quote(voice.id())); out.append(",\n");
             field(out, 3, "displayName", quote(voice.displayName())); out.append(",\n");
             field(out, 3, "type", quote(voice.type().name())); out.append(",\n");
-            field(out, 3, "engineType", quote(voice.engineType().name())); out.append(",\n");
+            field(out, 3, "engineId", quote(voice.engineId().value())); out.append(",\n");
+            field(out, 3, "engineType", quote(VoiceProfile.engineTypeFor(voice.engineId().value()).name())); out.append(",\n");
             field(out, 3, "language", quote(voice.language())); out.append(",\n");
             field(out, 3, "sampleAssetId", quote(voice.sampleAssetId())); out.append(",\n");
             field(out, 3, "modelAssetId", quote(voice.modelAssetId())); out.append(",\n");
@@ -115,7 +116,8 @@ public final class VoiceLibraryWorkspaceFileRepository implements VoiceLibraryWo
                 field(out, 5, "ownership", quote(sample.ownership().name())); out.append(",\n");
                 field(out, 5, "durationMillis", Long.toString(sample.durationMillis())); out.append(",\n");
                 field(out, 5, "createdAt", quote(sample.createdAt().toString())); out.append(",\n");
-                field(out, 5, "notes", quote(sample.notes())); out.append("\n");
+                field(out, 5, "notes", quote(sample.notes())); out.append(",\n");
+                field(out, 5, "referenceTranscript", quote(sample.referenceTranscript())); out.append("\n");
                 out.append("                }");
                 if (j < sampleSet.samples().size() - 1) out.append(',');
                 out.append("\n");

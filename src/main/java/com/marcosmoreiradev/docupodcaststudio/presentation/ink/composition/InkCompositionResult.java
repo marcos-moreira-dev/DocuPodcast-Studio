@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ink.InkWorkspaceState;
+import com.marcosmoreiradev.docupodcaststudio.ink.model.InkWorkspaceState;
 import javafx.scene.image.WritableImage;
 
 import java.nio.file.Path;

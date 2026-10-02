@@ -49,6 +49,7 @@
     -fx-cursor: hand;
     -fx-wrap-text: true;
     -fx-text-alignment: center;
+    -fx-graphic-text-gap: 8;
 }
 
 .ui-action-button-primary {
@@ -103,6 +104,18 @@
     -fx-stroke: #111827;
 }
 
+.ui-action-button-primary .ui-lucide-icon-shape {
+    -fx-stroke: white;
+}
+
+.ui-action-button-danger .ui-lucide-icon-shape {
+    -fx-stroke: -docu-danger;
+}
+
+.ui-action-button-warning .ui-lucide-icon-shape {
+    -fx-stroke: -docu-warning;
+}
+
 .button:disabled .ui-lucide-icon-shape,
 .toggle-button:disabled .ui-lucide-icon-shape {
     -fx-stroke: #9aa3b2;
@@ -116,27 +129,6 @@
     -fx-background-color: -docu-bg-card;
     -fx-text-fill: -docu-text-strong;
     -fx-font-size: 12px;
-}
-
-.ui-form-toggle {
-    -fx-padding: 7 11 7 11;
-    -fx-font-weight: 800;
-    -fx-cursor: hand;
-}
-
-.ui-form-toggle:selected {
-    -fx-background-color: -docu-bg-card;
-    -fx-border-color: -docu-accent;
-    -fx-text-fill: -docu-text-strong;
-}
-
-.ui-form-toggle:selected .box {
-    -fx-background-color: -docu-bg-card;
-    -fx-border-color: -docu-accent;
-}
-
-.ui-form-toggle:selected .mark {
-    -fx-background-color: -docu-accent;
 }
 
 .ui-form-combo,
@@ -367,6 +359,15 @@
     -fx-max-height: 34px;
 }
 
+.ui-icon-side-dock.ui-icon-product {
+    -fx-min-width: 44px;
+    -fx-pref-width: 44px;
+    -fx-max-width: 44px;
+    -fx-min-height: 44px;
+    -fx-pref-height: 44px;
+    -fx-max-height: 44px;
+}
+
 .ui-icon-rail {
     -fx-min-width: 26px;
     -fx-pref-width: 26px;
@@ -374,6 +375,15 @@
     -fx-min-height: 26px;
     -fx-pref-height: 26px;
     -fx-max-height: 26px;
+}
+
+.ui-icon-rail.ui-icon-product {
+    -fx-min-width: 32px;
+    -fx-pref-width: 32px;
+    -fx-max-width: 32px;
+    -fx-min-height: 32px;
+    -fx-pref-height: 32px;
+    -fx-max-height: 32px;
 }
 
 .ui-icon-fallback {
@@ -407,8 +417,9 @@
 /* PLAYBACK-SPEED1 — document playbar speed controls for generated WAV chunks. */
 /* Theatre script: compact playbar buttons embedded in the left rail. */
 .side-dock-rail-with-footer {
-    -fx-pref-width: 92px;
-    -fx-min-width: 88px;
+    -fx-pref-width: 96px;
+    -fx-min-width: 92px;
+    -fx-max-width: 100px;
 }
 
 .document-rail-playback-controls {

@@ -51,11 +51,17 @@ foreach ($name in $required) {
     }
 }
 
-& $Python $Wrapper `
-    --manifest $Manifest `
-    --model-dir $ModelDir `
-    --language $Language `
-    --device $Device
+$arguments = @(
+    $Wrapper,
+    "--manifest", $Manifest,
+    "--model-dir", $ModelDir,
+    "--language", $Language
+)
+if (-not [string]::IsNullOrWhiteSpace($Device)) {
+    $arguments += @("--device", $Device)
+}
+
+& $Python @arguments
 
 if ($LASTEXITCODE -ne 0) {
     throw "Voz IA avanzada batch devolvio codigo de salida $LASTEXITCODE"

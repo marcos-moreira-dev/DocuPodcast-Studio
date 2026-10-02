@@ -38,7 +38,27 @@ public record NarrationSegment(
     }
 
     public boolean narratable() {
-        return !narrationText.isBlank();
+        if (narrationText.isBlank()) {
+            return false;
+        }
+        if ("true".equalsIgnoreCase(metadata.getOrDefault("theatreStageDirection", "false"))) {
+            // Las acotaciones forman parte de la experiencia sonora teatral: se
+            // leen con su voz reservada y se muestran sobre el escenario vacio.
+            return true;
+        }
+        boolean logicalOnly = "true".equalsIgnoreCase(
+                metadata.getOrDefault("logicalOnly", "false"));
+        if (!logicalOnly) {
+            return true;
+        }
+        // Read compatibility for projects created while Word headings were
+        // persisted as visual-only segments. Their stable IDs and user audio
+        // edits remain valid; only their effective narratability is corrected.
+        return (type == NarrationSegmentType.TITLE
+                || type == NarrationSegmentType.HEADING
+                || type == NarrationSegmentType.SUBHEADING)
+                && "SKIP_LOGICAL_TITLE".equalsIgnoreCase(
+                metadata.getOrDefault("audioNarration", ""));
     }
 
     public int characterCount() {

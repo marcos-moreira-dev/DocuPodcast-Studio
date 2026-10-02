@@ -1,5 +1,9 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.script;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioCollectionControls;
+
 import com.marcosmoreiradev.docupodcaststudio.domain.playback.PlaybackCursor;
 import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationScriptDocument;
 import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationSegment;
@@ -29,7 +33,7 @@ public final class ScriptWorkspaceView extends BorderPane {
     private final DocuPodcastShellViewModel viewModel;
     private final ReadOnlyObjectProperty<NarrationScriptDocument> scriptProperty;
     private final VBox content = new VBox(12);
-    private final ListView<String> segmentList = new ListView<>();
+    private final ListView<String> segmentList = StudioCollectionControls.listView();
     private final VBox validationIssueList = new VBox(6);
     private boolean rendering;
     private final Label selectedSegmentLabel = new Label("Selección: ninguna");
@@ -42,11 +46,11 @@ public final class ScriptWorkspaceView extends BorderPane {
         getStyleClass().add("script-workspace");
         setPadding(new Insets(10));
 
-        ScrollPane center = new ScrollPane(content);
+        ScrollPane center = StudioViewportControls.scrollPane(content);
         center.setFitToWidth(true);
         center.getStyleClass().add("script-scroll");
 
-        SplitPane splitPane = new SplitPane(buildSidePanel(), center);
+        SplitPane splitPane = StudioViewportControls.splitPane(buildSidePanel(), center);
         splitPane.setDividerPositions(0.31);
         setCenter(splitPane);
 
@@ -325,7 +329,7 @@ public final class ScriptWorkspaceView extends BorderPane {
     }
 
     private List<ScriptValidationIssue> validationIssues(NarrationScriptDocument script) {
-        return viewModel.applicationServices().script().validateNarrationScript().validate(script);
+        return viewModel.projectWorkspace().script().validateNarrationScript().validate(script);
     }
 
     private Label stepLabel(String text) {

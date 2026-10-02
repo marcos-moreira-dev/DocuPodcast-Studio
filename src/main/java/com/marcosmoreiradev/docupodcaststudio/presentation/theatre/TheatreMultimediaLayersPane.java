@@ -38,9 +38,8 @@ public final class TheatreMultimediaLayersPane extends BorderPane {
     }
 
     private Button railButton(AppIcon icon, String label, Runnable action) {
-        Button button = ActionButtonFactory.sideDockRail(icon, action);
-        button.setGraphicTextGap(4);
-        button.setText(label);
+        Button button = ActionButtonFactory.sideDockRail(icon, label, action);
+        button.setText("");
         button.setMaxWidth(Double.MAX_VALUE);
         button.getStyleClass().add("theatre-multimedia-mode-button");
         return button;

@@ -38,6 +38,7 @@ final class DocuPodcastProjectFileRepositoryTest {
     void savesAndOpensDocuPodcastProjectWithAssets() throws Exception {
         DocuPodcastProject base = DocuPodcastProject.createNew("Notas de dinosaurios");
         DocuPodcastProject project = base.withMetadata(base.metadata().withKind(ProjectKind.DOCUMENT_ONLY))
+                .withDocumentReadAfterColon(true)
                 .withAsset(new ProjectAssetReference("SRC-001", ProjectAssetKind.SOURCE_DOCUMENT,
                         "Notas Word", "source/dinosaurios.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                         "Documento fuente Word/DOCX", "sha256:demo", "Fuente primaria del usuario"));
@@ -55,6 +56,7 @@ final class DocuPodcastProjectFileRepositoryTest {
         assertEquals(1, opened.assets().size());
         assertEquals("source/dinosaurios.docx", opened.assets().byId("SRC-001").orElseThrow().relativePath());
         assertEquals("Documento académico Word", opened.readingProfile().name());
+        assertTrue(opened.documentReadAfterColon());
         assertTrue(opened.voiceLibrary().voiceById("VOC-NARRATOR").isPresent());
     }
 
@@ -63,7 +65,7 @@ final class DocuPodcastProjectFileRepositoryTest {
         DocuPodcastProject project = DocuPodcastProject.createNew("Proyecto mínimo");
         String json = new DocuPodcastProjectJsonWriter().write(project);
 
-        assertTrue(json.contains("\"formatVersion\": 4"));
+        assertTrue(json.contains("\"formatVersion\": 6"));
         assertTrue(json.contains("\"project\""));
         assertTrue(json.contains("\"mode\": \"DOCUMENTARY_STUDIO\""));
         assertTrue(json.contains("\"assets\""));

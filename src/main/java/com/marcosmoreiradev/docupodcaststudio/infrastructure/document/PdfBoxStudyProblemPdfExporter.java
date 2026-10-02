@@ -28,7 +28,9 @@ public final class PdfBoxStudyProblemPdfExporter implements StudyProblemPdfExpor
         Files.createDirectories(output.getParent());
         try (PDDocument pdf = new PDDocument()) {
             for (StudyProblemPdfPage page : pages) {
-                BufferedImage image = ImageIO.read(page.imagePath().toFile());
+                BufferedImage image = page.canvasStateJson().isBlank() ? ImageIO.read(page.imagePath().toFile())
+                        : com.marcosmoreiradev.docupodcaststudio.ink.canvas.InkWorkspaceRasterizer.render(
+                                com.marcosmoreiradev.docupodcaststudio.ink.model.InkWorkspaceStateSerializer.fromJson(page.canvasStateJson()), page.title());
                 if (image == null || image.getWidth() <= 0 || image.getHeight() <= 0) {
                     throw new IOException("PNG de solucion no legible: " + page.imagePath().getFileName());
                 }

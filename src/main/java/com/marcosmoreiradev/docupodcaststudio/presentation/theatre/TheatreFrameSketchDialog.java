@@ -1,25 +1,40 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.theatre;
 
-import com.marcosmoreiradev.docupodcaststudio.application.ink.InkWorkspaceState;
-import com.marcosmoreiradev.docupodcaststudio.application.ink.InkWorkspaceStateSerializer;
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeDialogResponse;
+import com.marcosmoreiradev.docupodcaststudio.application.storyboard.TheatreDrawingVaultItem;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls;
+
+import com.marcosmoreiradev.docupodcaststudio.ink.DrawingFeatureCatalog;
+import com.marcosmoreiradev.docupodcaststudio.ink.DrawingProfile;
+import com.marcosmoreiradev.docupodcaststudio.ink.InkEditorSession;
+import com.marcosmoreiradev.docupodcaststudio.ink.model.InkWorkspaceState;
+import com.marcosmoreiradev.docupodcaststudio.ink.model.InkWorkspaceStateSerializer;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionButtonFactory;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ImageFullscreenViewer;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.LucideIconView;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
-import com.marcosmoreiradev.docupodcaststudio.presentation.document.StudyProblemCanvasExportOptions;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.InkRealtimeStrokeEngine;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.canvas.InkCanvasSurface;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.canvas.InkCanvasViewportCoordinateMapper;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputListener;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputProvider;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputProviderFactory;
-import com.marcosmoreiradev.docupodcaststudio.presentation.ink.input.InkInputSample;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioCanvasToolbar;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioAccordion;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFeedbackControls;
+import com.marcosmoreiradev.docupodcaststudio.ink.canvas.InkCanvasExportOptions;
+import com.marcosmoreiradev.docupodcaststudio.ink.InkRealtimeStrokeEngine;
+import com.marcosmoreiradev.docupodcaststudio.ink.canvas.InkCanvasSurface;
+import com.marcosmoreiradev.docupodcaststudio.ink.canvas.InkCanvasViewport;
+import com.marcosmoreiradev.docupodcaststudio.ink.canvas.InkCanvasZoomPane;
+import com.marcosmoreiradev.docupodcaststudio.ink.controls.InkPressureIndicator;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputListener;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputProvider;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.NoopInkInputProvider;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputSample;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
+import javafx.concurrent.Task;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
-import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
@@ -29,14 +44,18 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Dialog;
+import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TitledPane;
 import javafx.scene.control.ToggleButton;
+import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.PixelReader;
+import javafx.scene.image.PixelFormat;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -54,7 +73,7 @@ import javafx.scene.shape.Circle;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
-import javax.imageio.ImageIO;
+import com.marcosmoreiradev.docupodcaststudio.ink.canvas.InkImageFileStore;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
@@ -65,18 +84,16 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Locale;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.UUID;
 
 /** Drawn-frame editor reused by theatre storyboard fragments. */
 public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDialog.Result> {
-    private static final int MAX_UNDO = 50;
-    private static final double FRAME_WIDTH = 1280;
-    private static final double FRAME_HEIGHT = 720;
-    private static final int EXPORT_SCALE = 2;
     private static final String METADATA_SHOW_FRAGMENT_TITLE = "showFragmentTitle";
     private static final String METADATA_FRAGMENT_TITLE_TEXT = "fragmentTitleText";
     private static final String METADATA_TITLE_BAND_HEIGHT = "fragmentTitleBandHeight";
@@ -89,46 +106,103 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
 
     private final TheatreFrameSketchContext context;
     private final Runnable historyBoardAction;
+    private final DrawingProfile drawingProfile;
+    private final double frameWidth;
+    private final double frameHeight;
+    private final int exportScale;
     private final InkWorkspaceState restoredInkState;
     private final InkCanvasSurface surface = new InkCanvasSurface();
-    private final InkInputProvider inputProvider = InkInputProviderFactory.createNativeOnly();
-    private final ArrayDeque<List<InkCanvasSurface.InkStrokeState>> undo = new ArrayDeque<>();
-    private final ArrayDeque<List<InkCanvasSurface.InkStrokeState>> redo = new ArrayDeque<>();
-    private final ColorPicker penColor = new ColorPicker(Color.BLACK);
-    private final ColorPicker backgroundColor = new ColorPicker(Color.WHITE);
-    private final Slider strokeWidth = new Slider(1, 48, 6);
-    private final Slider canvasZoom = new Slider(25, 200, 100);
-    private final Slider cameraGuideOpacity = new Slider(0, 45, 18);
+    private final CheckBox mergeWithStage = StudioFormControls.checkBox("Fusionar dibujo con escenario");
+    private final ImageView mergedBackdrop = new ImageView();
+    private Image stageImage;
+    private boolean pointerOverControls;
+    private final ToggleButton fillMode = StudioFormControls.toggle("Rellenar", "Haz clic dentro de una figura cerrada para rellenarla con el color del lápiz.");
+    private final javafx.scene.shape.Rectangle fillTarget = new javafx.scene.shape.Rectangle();
+    private final java.util.List<com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.SketchBackdrop.Fill> fills = new java.util.ArrayList<>();
+    private final List<TheatreDrawingVaultItem> drawingVault = new ArrayList<>();
+    private final VBox drawingVaultCards = new VBox(8);
+    private boolean restoringSketch;
+    private final javafx.scene.control.ToggleButton selectStrokes = StudioFormControls.toggle(
+            "Seleccionar dibujos", "Clic selecciona un trazo; Mayús+clic añade trazos a la selección.");
+    private com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.CanvasStrokeSelection strokeSelection;
+    private final InkInputProvider inputProvider;
+    private final InkCanvasViewport inkViewport;
+    private final InkEditorSession<SketchState> editorSession;
+    private final ColorPicker penColor = StudioFormControls.colorPicker(Color.BLACK);
+    private final ColorPicker backgroundColor = StudioFormControls.colorPicker(Color.WHITE);
+    private final Slider strokeWidth = StudioFormControls.slider(1, 48, 6);
+    private final Slider canvasZoom = StudioFormControls.slider(25, 200, 100);
+    private final Slider cameraGuideOpacity = StudioFormControls.slider(0, 45, 18);
     private final Label canvasZoomValue = new Label("100%");
     private final Label cameraGuideOpacityValue = new Label("18%");
+    private final InkPressureIndicator pressureIndicator;
+    private final Label saveFeedback = new Label();
+    private final ProgressIndicator saveProgress = StudioFeedbackControls.progressIndicator();
     private final Circle penWidthPreview = new Circle(3);
     private final ToggleButton drawMode = StudioFormControls.toggle("Panear/dibujar: dibujar",
             "Alternar entre dibujar trazos y panear el lienzo sin dibujar.");
     private final ToggleButton eraser = StudioFormControls.toggle("Borrador",
             "Borrar solo la tinta del frame.");
-    private final CheckBox activateDrawn = new CheckBox("Usar frame dibujado al guardar");
-    private final CheckBox useCameraGuide = new CheckBox("Utilizar plano asignado");
-    private final CheckBox showFragmentTitle = new CheckBox("Mostrar fragmento como titulo en el lienzo");
-    private final ButtonType saveButtonType = new ButtonType("Guardar frame", ButtonBar.ButtonData.OK_DONE);
+    private final CheckBox activateDrawn = StudioFormControls.checkBox("Usar frame dibujado al guardar");
+    private final CheckBox useCameraGuide = StudioFormControls.checkBox("Utilizar plano asignado");
+    private final CheckBox showFragmentTitle = StudioFormControls.checkBox("Mostrar fragmento como titulo en el lienzo");
+    private final ButtonType saveButtonType = NativeDialogResponse.button("Guardar frame", ButtonBar.ButtonData.OK_DONE);
 
     private ScrollPane canvasScroll;
+    private InkCanvasZoomPane canvasZoomPane;
     private Label canvasTitleLabel;
     private InkRealtimeStrokeEngine inkEngine;
     private FrameTitleState frameTitleState;
     private boolean strokeActive;
     private Point2D lastInkPoint = Point2D.ZERO;
+    private Node leftEditorContent;
+    private Node canvasEditorContent;
+    private Button saveButton;
+    private Task<Result> saveTask;
+    private boolean saveCaptureQueued;
+    private final AtomicReference<Path> pendingSaveTarget = new AtomicReference<>();
+    private volatile boolean saveAbandoned;
+    private Button cancelButton;
+    private final EventHandler<ActionEvent> saveActionFilter = event -> {
+        event.consume();
+        beginSave();
+    };
+    private final EventHandler<ActionEvent> cancelActionFilter = event -> {
+        event.consume();
+        cancelAndClose();
+    };
 
-    public TheatreFrameSketchDialog(Window owner, TheatreFrameSketchContext context) {
-        this(owner, context, null);
-    }
-
-    public TheatreFrameSketchDialog(Window owner, TheatreFrameSketchContext context, Runnable historyBoardAction) {
+    /** Injection seam used by the launcher and input contract tests. */
+    public TheatreFrameSketchDialog(Window owner, TheatreFrameSketchContext context,
+                                    Runnable historyBoardAction, InkInputProvider inputProvider,
+                                    DrawingProfile drawingProfile) {
         this.context = context;
         this.historyBoardAction = historyBoardAction;
+        this.inputProvider = inputProvider == null ? NoopInkInputProvider.INSTANCE : inputProvider;
+        this.drawingProfile = java.util.Objects.requireNonNull(drawingProfile, "drawing profile");
+        this.frameWidth = drawingProfile.logicalWidth();
+        this.frameHeight = drawingProfile.logicalHeight();
+        this.exportScale = drawingProfile.exportProfile().scale();
+        this.inkViewport = new InkCanvasViewport(surface, drawingProfile);
+        this.editorSession = new InkEditorSession<>(drawingProfile, this.inputProvider, this::sketchState,
+                this::restoreSketchState,
+                (state, destination, exportProfile) -> destination);
+        pressureIndicator = new InkPressureIndicator(editorSession.inputStatusProperty());
         this.restoredInkState = readExistingInkState(context);
+        this.drawingVault.addAll(context.drawingVault());
         this.frameTitleState = initialTitleState();
         initOwner(owner);
         setTitle("Dibujar/editar frame");
+        // Bind each response as it is created, including skin/button-bar rebuilds.
+        // Binding only the buttons found before/after show leaves later instances inert.
+        setDialogPane(new DialogPane() {
+            @Override protected Node createButton(ButtonType type) {
+                Node node = super.createButton(type);
+                if (type == saveButtonType) node.addEventFilter(ActionEvent.ACTION, saveActionFilter);
+                else if (type == ButtonType.CANCEL) node.addEventFilter(ActionEvent.ACTION, cancelActionFilter);
+                return node;
+            }
+        });
         getDialogPane().getButtonTypes().setAll(
                 saveButtonType,
                 ButtonType.CANCEL);
@@ -140,19 +214,50 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
         drawMode.setSelected(true);
         configureKeyboardShortcuts();
         initializeCanvas();
-        setResultConverter(button -> button == saveButtonType ? saveResult() : null);
+        // Native response buttons remain in the ButtonBar, but result creation is
+        // asynchronous so the JavaFX thread never blocks while encoding the PNG.
+        setResultConverter(button -> null);
+        // Install eagerly and again after the native DialogPane is shown. Some
+        // JavaFX skins rebuild their ButtonBar while attaching to a window.
+        installDialogButtonHandlers();
         setOnShown(event -> Platform.runLater(() -> {
             configureStageWindow();
             installDialogButtonHandlers();
             resetInkCoordinateState();
         }));
-        setOnHidden(event -> disposeInk());
+        setOnHidden(event -> {
+            abandonPendingSave();
+            disposeInk();
+        });
     }
 
     private BorderPane content() {
         BorderPane root = new BorderPane();
-        root.setLeft(leftPanel());
-        root.setCenter(canvasPanel());
+        root.setMinSize(0, 0);
+        // BorderPane does not clip overflowing children. At smaller window sizes,
+        // the editor's minimum-size children can cover the DialogPane ButtonBar
+        // and intercept clicks even though the response buttons remain visible.
+        javafx.scene.shape.Rectangle contentClip = new javafx.scene.shape.Rectangle();
+        contentClip.widthProperty().bind(root.widthProperty());
+        contentClip.heightProperty().bind(root.heightProperty());
+        root.setClip(contentClip);
+        leftEditorContent = leftPanel();
+        canvasEditorContent = canvasPanel();
+        root.setLeft(leftEditorContent);
+        root.setCenter(canvasEditorContent);
+        saveProgress.setPrefSize(20, 20);
+        saveProgress.setMinSize(20, 20);
+        saveProgress.setMaxSize(20, 20);
+        saveProgress.setVisible(false);
+        saveProgress.setManaged(false);
+        saveFeedback.setVisible(false);
+        saveFeedback.setManaged(false);
+        saveFeedback.setWrapText(true);
+        saveFeedback.getStyleClass().add("theatre-frame-save-feedback");
+        HBox feedbackRow = new HBox(8, saveProgress, saveFeedback);
+        feedbackRow.setAlignment(Pos.CENTER_LEFT);
+        feedbackRow.setPadding(new Insets(6, 12, 6, 12));
+        root.setBottom(feedbackRow);
         return root;
     }
 
@@ -163,13 +268,12 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
         fragmentPreview.setMaxWidth(Double.MAX_VALUE);
         fragmentPreview.setMinHeight(Region.USE_PREF_SIZE);
         showFragmentTitle.setSelected(frameTitleState.enabled());
-        showFragmentTitle.getStyleClass().addAll(StudioFormControls.FORM_CONTROL, StudioFormControls.FORM_TOGGLE);
         StudioFormControls.installTooltip(showFragmentTitle,
                 "Cuando esta activo, el texto del fragmento se muestra como titulo dentro del frame.");
         showFragmentTitle.selectedProperty().addListener((obs, oldValue, newValue) -> updateCanvasTitle());
 
-        Accordion accordion = new Accordion(objectsPane(), storyboardPane());
-        accordion.setExpandedPane(accordion.getPanes().get(1));
+        Accordion accordion = StudioAccordion.accordion(objectsPane(), drawingVaultPane(), storyboardPane());
+        accordion.setExpandedPane(accordion.getPanes().get(2));
 
         VBox panel = new VBox(12, fragmentPreview, showFragmentTitle, accordion);
         panel.setPadding(new Insets(12));
@@ -187,7 +291,133 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
             empty.setWrapText(true);
             list.getChildren().add(empty);
         }
-        return new TitledPane("Objetos de la escena", list);
+        return StudioAccordion.pane("Objetos de la escena", list);
+    }
+
+    private TitledPane drawingVaultPane() {
+        rebuildDrawingVaultCards();
+        Label help = new Label("Reutiliza figuras vectoriales en cualquier frame de esta obra.");
+        help.setWrapText(true);
+        return StudioAccordion.pane("Baúl de dibujos", new VBox(8, help, drawingVaultCards));
+    }
+
+    private void rebuildDrawingVaultCards() {
+        drawingVaultCards.getChildren().clear();
+        if (drawingVault.isEmpty()) {
+            Label empty = new Label("Aún no hay dibujos guardados.");
+            empty.setWrapText(true);
+            drawingVaultCards.getChildren().add(empty);
+            return;
+        }
+        for (TheatreDrawingVaultItem item : List.copyOf(drawingVault)) {
+            drawingVaultCards.getChildren().add(drawingVaultCard(item));
+        }
+    }
+
+    private Node drawingVaultCard(TheatreDrawingVaultItem item) {
+        ImageView preview = new ImageView(vaultPreview(item));
+        preview.setFitWidth(86);
+        preview.setFitHeight(64);
+        preview.setPreserveRatio(true);
+        preview.setSmooth(true);
+        TextField name = com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls.textField(item.name().isBlank() ? "Dibujo" : item.name());
+        name.setPromptText("Nombre del dibujo");
+        name.focusedProperty().addListener((obs, before, focused) -> {
+            if (!focused) renameVaultItem(item.id(), name.getText());
+        });
+        name.setOnAction(event -> renameVaultItem(item.id(), name.getText()));
+        Button insert = ActionButtonFactory.secondary("Añadir al lienzo", () -> insertVaultItem(item));
+        Button delete = iconToolButton("trash-2", "Eliminar del baúl.", () -> deleteVaultItem(item.id()), true);
+        HBox actions = new HBox(6, insert, delete);
+        VBox details = new VBox(6, name, actions);
+        HBox.setHgrow(details, Priority.ALWAYS);
+        HBox card = new HBox(10, preview, details);
+        card.setAlignment(Pos.CENTER_LEFT);
+        card.getStyleClass().add("document-media-object-card");
+        return card;
+    }
+
+    private Image vaultPreview(TheatreDrawingVaultItem item) {
+        try {
+            InkWorkspaceState state = InkWorkspaceStateSerializer.fromJson(item.inkStateJson());
+            if (state.strokes().isEmpty()) return new WritableImage(172, 128);
+            double minX = Double.POSITIVE_INFINITY, minY = Double.POSITIVE_INFINITY;
+            double maxX = Double.NEGATIVE_INFINITY, maxY = Double.NEGATIVE_INFINITY;
+            for (var stroke : state.strokes()) for (var point : stroke.points()) {
+                minX = Math.min(minX, point.x()); minY = Math.min(minY, point.y());
+                maxX = Math.max(maxX, point.x()); maxY = Math.max(maxY, point.y());
+            }
+            double scale = Math.min(152.0 / Math.max(1, maxX - minX), 108.0 / Math.max(1, maxY - minY));
+            double offsetX = (172 - (maxX - minX) * scale) / 2.0;
+            double offsetY = (128 - (maxY - minY) * scale) / 2.0;
+            final double sourceMinX = minX, sourceMinY = minY;
+            List<com.marcosmoreiradev.docupodcaststudio.ink.model.InkStroke> previewStrokes = state.strokes().stream()
+                    .map(stroke -> new com.marcosmoreiradev.docupodcaststudio.ink.model.InkStroke(
+                            stroke.tool(), stroke.color(), Math.max(1, stroke.width() * scale), stroke.points().stream()
+                            .map(point -> com.marcosmoreiradev.docupodcaststudio.ink.model.InkPoint.of(
+                                    offsetX + (point.x() - sourceMinX) * scale,
+                                    offsetY + (point.y() - sourceMinY) * scale,
+                                    point.nanos(), point.pressure())).toList())).toList();
+            List<com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.SketchBackdrop.Fill> previewFills =
+                    fillsFromMetadata(state.metadata()).stream().map(fill ->
+                            new com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.SketchBackdrop.Fill(
+                                    offsetX + (fill.x() - sourceMinX) * scale,
+                                    offsetY + (fill.y() - sourceMinY) * scale, fill.color())).toList();
+            return com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.SketchBackdrop.renderPreview(
+                    172, 128, previewStrokes, Color.TRANSPARENT, previewFills);
+        } catch (IOException | RuntimeException invalid) {
+            return new WritableImage(86, 64);
+        }
+    }
+
+    private void renameVaultItem(String id, String value) {
+        String name = value == null || value.isBlank() ? "Dibujo" : value.strip();
+        for (int i = 0; i < drawingVault.size(); i++) {
+            TheatreDrawingVaultItem current = drawingVault.get(i);
+            if (current.id().equals(id)) {
+                drawingVault.set(i, new TheatreDrawingVaultItem(current.id(), name, current.inkStateJson()));
+                break;
+            }
+        }
+    }
+
+    private void deleteVaultItem(String id) {
+        drawingVault.removeIf(item -> item.id().equals(id));
+        rebuildDrawingVaultCards();
+    }
+
+    private void insertVaultItem(TheatreDrawingVaultItem item) {
+        try {
+            InkWorkspaceState state = InkWorkspaceStateSerializer.fromJson(item.inkStateJson());
+            strokeSelection.insert(new com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.CanvasStrokeSelection.SelectionSnapshot(
+                    state.strokes(), fillsFromMetadata(state.metadata())));
+            selectStrokes.setSelected(true);
+            showTransientFeedback("Dibujo añadido al lienzo. Puedes moverlo con el marco de selección.");
+        } catch (IOException | RuntimeException invalid) {
+            showTransientFeedback("El dibujo guardado no se pudo abrir.");
+        }
+    }
+
+    private void copySelectionToVault() {
+        var selection = strokeSelection.selectionSnapshot();
+        if (selection.strokes().isEmpty()) {
+            showTransientFeedback("Selecciona uno o varios dibujos antes de enviarlos al baúl.");
+            return;
+        }
+        LinkedHashMap<String, String> metadata = new LinkedHashMap<>();
+        addFillMetadata(metadata, selection.fills());
+        String state = InkWorkspaceStateSerializer.toJson(InkWorkspaceState.create(frameWidth, frameHeight,
+                "#00000000", selection.strokes(), List.of(), metadata));
+        drawingVault.add(new TheatreDrawingVaultItem("drawing-" + UUID.randomUUID().toString().replace("-", ""),
+                "Dibujo " + (drawingVault.size() + 1), state));
+        rebuildDrawingVaultCards();
+        showTransientFeedback("Copia añadida al baúl. Se conservará al guardar el frame.");
+    }
+
+    private void showTransientFeedback(String message) {
+        saveFeedback.setText(message);
+        saveFeedback.setVisible(true);
+        saveFeedback.setManaged(true);
     }
 
     private Node objectCard(TheatreFrameSketchContext.ObjectPreview object) {
@@ -238,15 +468,13 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
         list.getChildren().add(historyBoard);
         useCameraGuide.setSelected(context.cameraGuideUri() != null && !context.cameraGuideUri().isBlank());
         useCameraGuide.setDisable(context.cameraGuideUri() == null || context.cameraGuideUri().isBlank());
-        useCameraGuide.getStyleClass().addAll(StudioFormControls.FORM_CONTROL, StudioFormControls.FORM_TOGGLE);
         StudioFormControls.installTooltip(useCameraGuide,
                 "Mostrar el plano asignado como referencia translucida para dibujar encima.");
-        activateDrawn.getStyleClass().addAll(StudioFormControls.FORM_CONTROL, StudioFormControls.FORM_TOGGLE);
         StudioFormControls.installTooltip(activateDrawn,
                 "Si esta activo, el frame dibujado queda como variante visual para reproduccion y exportacion.");
         list.getChildren().add(useCameraGuide);
         list.getChildren().add(activateDrawn);
-        return new TitledPane("Storyboard", list);
+        return StudioAccordion.pane("Storyboard", list);
     }
 
     private void showHistoryBoard() {
@@ -278,7 +506,10 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
     }
 
     private BorderPane canvasPanel() {
-        surface.resetForFixedEditableState(FRAME_WIDTH, FRAME_HEIGHT, backgroundColor.getValue());
+        // Two physical preview pixels per logical ink pixel keeps pen edges
+        // crisp at the common 100-125% theatre zoom without changing geometry.
+        surface.setInkPreviewScale(2.0);
+        surface.resetForFixedEditableState(frameWidth, frameHeight, backgroundColor.getValue());
         surface.setFocusTraversable(true);
         loadExistingFrame();
 
@@ -292,7 +523,7 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
         canvasFrame.getChildren().add(surface);
         java.util.Optional<List<Node>> cameraGuideLayer = cameraGuideLayer();
         if (cameraGuideLayer.isPresent()) {
-            cameraGuideLayer.get().forEach(node -> node.visibleProperty().bind(useCameraGuide.selectedProperty()));
+            cameraGuideLayer.get().forEach(node -> node.visibleProperty().bind(useCameraGuide.selectedProperty().and(mergeWithStage.selectedProperty().not())));
             canvasFrame.getChildren().addAll(cameraGuideLayer.get());
         }
         canvasFrame.getChildren().add(canvasTitleLabel);
@@ -301,28 +532,16 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
         StackPane.setAlignment(canvasTitleLabel, Pos.TOP_LEFT);
         StackPane.setMargin(canvasTitleLabel, new Insets(18, 18, 0, 18));
 
-        Group scaledCanvas = new Group(canvasFrame);
-        scaledCanvas.scaleXProperty().bind(canvasZoom.valueProperty().divide(100.0));
-        scaledCanvas.scaleYProperty().bind(canvasZoom.valueProperty().divide(100.0));
-
-        StackPane zoomHost = new StackPane(scaledCanvas);
-        zoomHost.setAlignment(Pos.CENTER);
-
-        canvasScroll = new ScrollPane(zoomHost);
-        canvasScroll.setPannable(false);
-        canvasScroll.setFitToWidth(false);
-        canvasScroll.setFitToHeight(false);
+        canvasZoomPane = new InkCanvasZoomPane(canvasFrame,
+                () -> surface.logicalWidth() + 32.0,
+                () -> surface.logicalHeight() + 32.0);
+        canvasZoomPane.setOnZoomApplied(zoom -> {
+            editorSession.zoomTo(zoom);
+            editorSession.resetInputCoordinates();
+        });
+        canvasScroll = canvasZoomPane.scrollPane();
         canvasScroll.getStyleClass().add("technical-problem-canvas-scroll");
-        zoomHost.minWidthProperty().bind(Bindings.createDoubleBinding(
-                () -> Math.max(canvasScroll.getViewportBounds().getWidth(),
-                        (surface.logicalWidth() + 32.0) * canvasZoom.getValue() / 100.0),
-                canvasScroll.viewportBoundsProperty(), canvasZoom.valueProperty()));
-        zoomHost.minHeightProperty().bind(Bindings.createDoubleBinding(
-                () -> Math.max(canvasScroll.getViewportBounds().getHeight(),
-                        (surface.logicalHeight() + 32.0) * canvasZoom.getValue() / 100.0),
-                canvasScroll.viewportBoundsProperty(), canvasZoom.valueProperty()));
-        zoomHost.prefWidthProperty().bind(zoomHost.minWidthProperty());
-        zoomHost.prefHeightProperty().bind(zoomHost.minHeightProperty());
+        canvasScroll.setMinSize(0, 0);
         canvasScroll.addEventFilter(ScrollEvent.SCROLL, event -> {
             if (drawMode.isSelected() && event.getTarget() instanceof Node target && descendantOf(target, surface)) {
                 event.consume();
@@ -330,8 +549,9 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
         });
 
         BorderPane panel = new BorderPane();
+        panel.setMinSize(0, 0);
         panel.setTop(toolbar());
-        panel.setCenter(canvasScroll);
+        panel.setCenter(canvasZoomPane);
         updateInputMode();
         return panel;
     }
@@ -341,9 +561,9 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
         if (uri == null || uri.isBlank()) {
             return java.util.Optional.empty();
         }
-        ImageView guide = new ImageView(new Image(uri, FRAME_WIDTH, FRAME_HEIGHT, false, true, true));
-        guide.setFitWidth(FRAME_WIDTH);
-        guide.setFitHeight(FRAME_HEIGHT);
+        ImageView guide = new ImageView(new Image(uri, frameWidth, frameHeight, false, true, true));
+        guide.setFitWidth(frameWidth);
+        guide.setFitHeight(frameHeight);
         guide.setPreserveRatio(false);
         guide.setSmooth(true);
         guide.opacityProperty().bind(cameraGuideOpacity.valueProperty().divide(100.0));
@@ -368,7 +588,68 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
                 frameTitleState.margin()));
     }
 
-    private FlowPane toolbar() {
+    private StudioCanvasToolbar toolbar() {
+        fillMode.setText("Rellenar");
+        fillTarget.setManaged(false);
+        fillTarget.setFill(Color.TRANSPARENT);
+        surface.inkInputLayer().getChildren().add(fillTarget);
+        fillTarget.setOnMouseClicked(event -> {
+            if (!fillMode.isSelected() || event.getButton() != javafx.scene.input.MouseButton.PRIMARY) return;
+            Point2D p=surface.sceneToLocal(event.getSceneX(),event.getSceneY());
+            var regions=com.marcosmoreiradev.docupodcaststudio.ink.geometry.InkRegions.detect(surface.applicationInkStrokes(),frameWidth,frameHeight);
+            if(regions.regionAt(p.getX(),p.getY())>0) {
+                rememberUndo();
+                int selectedRegion=regions.regionAt(p.getX(),p.getY());
+                fills.removeIf(fill -> regions.regionAt(fill.x(),fill.y())==selectedRegion);
+                fills.add(new com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.SketchBackdrop.Fill(p.getX(),p.getY(),colorToHex(penColor.getValue())));
+                refreshMergedBackdrop();
+                saveFeedback.setVisible(false); saveFeedback.setManaged(false);
+            } else {
+                saveFeedback.setText("No hay una zona cerrada aquí. Cierra el contorno para rellenarla.");
+                saveFeedback.setVisible(true); saveFeedback.setManaged(true);
+            }
+            event.consume();
+        });
+        fillMode.selectedProperty().addListener((obs,before,active) -> {
+            cancelActiveInkStroke();
+            if(active) selectStrokes.setSelected(false);
+            updateInputMode();
+        });
+        mergedBackdrop.setMouseTransparent(true);
+        mergedBackdrop.setManaged(false);
+        mergedBackdrop.opacityProperty().bind(Bindings.when(mergeWithStage.selectedProperty())
+                .then(cameraGuideOpacity.valueProperty().divide(100.0)).otherwise(1.0));
+        mergedBackdrop.setFitWidth(frameWidth);
+        mergedBackdrop.setFitHeight(frameHeight);
+        surface.imageLayer().getChildren().add(mergedBackdrop);
+        mergeWithStage.setDisable(context.cameraGuideUri() == null || context.cameraGuideUri().isBlank());
+        StudioFormControls.installTooltip(mergeWithStage,
+                "Guarda el escenario a color. Las figuras cerradas se rellenan con Fondo; los trazos y colores quedan encima. Cierra las aberturas grandes para rellenarlas.");
+        if (restoredInkState != null && !mergeWithStage.isDisabled()) {
+            mergeWithStage.setSelected(Boolean.parseBoolean(restoredInkState.metadata().getOrDefault("mergeWithStage", "false")));
+        }
+        if(restoredInkState!=null) restoredInkState.metadata().entrySet().stream()
+                .filter(e->e.getKey().startsWith("regionFill."))
+                .sorted(java.util.Map.Entry.comparingByKey()).forEach(e->{
+                    try {
+                        String[] parts=e.getValue().split(",",3);
+                        double x=Double.parseDouble(parts[0]),y=Double.parseDouble(parts[1]);
+                        Color.web(parts[2]);
+                        if(Double.isFinite(x)&&Double.isFinite(y)) fills.add(new com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.SketchBackdrop.Fill(x,y,parts[2]));
+                    } catch(RuntimeException invalid) { /* Ignore malformed optional fill metadata. */ }
+                });
+        mergeWithStage.selectedProperty().addListener((obs, before, active) -> refreshMergedBackdrop());
+        strokeSelection = new com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.CanvasStrokeSelection(surface, this::rememberUndo);
+        strokeSelection.setOnChanged(this::refreshMergedBackdrop);
+        strokeSelection.setFillAccess(() -> List.copyOf(fills), updated -> { fills.clear(); fills.addAll(updated); });
+        if (restoredInkState != null) {
+            strokeSelection.restoreGroups(restoredInkState.metadata().getOrDefault("strokeGroups", ""));
+        }
+        selectStrokes.selectedProperty().addListener((obs, before, active) -> {
+            cancelActiveInkStroke();
+            if(active) fillMode.setSelected(false);
+            updateInputMode();
+        });
         configureStrokeWidth();
         configureCanvasZoom();
         configureCameraGuideOpacity();
@@ -382,9 +663,18 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
                 this::clearInkStrokes);
         Button clearCanvasButton = iconToolButton("trash-2", "Limpiar frame completo.", this::clearCanvas, true);
 
-        drawMode.textProperty().bind(Bindings.when(drawMode.selectedProperty())
-                .then("Panear/dibujar: dibujar")
-                .otherwise("Panear/dibujar: panear"));
+        drawMode.textProperty().bind(Bindings.createStringBinding(() ->
+                fillMode.isSelected() || selectStrokes.isSelected() ? "Volver a dibujar"
+                        : drawMode.isSelected() ? "Panear/dibujar: dibujar" : "Panear/dibujar: panear",
+                drawMode.selectedProperty(), fillMode.selectedProperty(), selectStrokes.selectedProperty()));
+        drawMode.setOnAction(event -> {
+            if (fillMode.isSelected() || selectStrokes.isSelected()) {
+                fillMode.setSelected(false);
+                selectStrokes.setSelected(false);
+                drawMode.setSelected(true);
+                updateInputMode();
+            }
+        });
         drawMode.selectedProperty().addListener((obs, oldValue, newValue) -> {
             if (!Boolean.TRUE.equals(newValue)) {
                 cancelActiveInkStroke();
@@ -393,9 +683,10 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
             resetInkCoordinateState();
         });
         backgroundColor.setOnAction(event -> {
+            if(restoringSketch) return;
             rememberUndo();
-            redo.clear();
             surface.fillBackground(backgroundColor.getValue());
+            refreshMergedBackdrop();
         });
         eraser.setGraphic(LucideIconView.of("eraser"));
         eraser.setContentDisplay(ContentDisplay.LEFT);
@@ -404,17 +695,66 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
         cameraGuideOpacityLabel.visibleProperty().bind(cameraGuideOpacity.visibleProperty());
         cameraGuideOpacityLabel.managedProperty().bind(cameraGuideOpacity.visibleProperty());
 
-        FlowPane tools = new FlowPane(8, 8,
-                drawMode,
+        StudioCanvasToolbar tools = new StudioCanvasToolbar("Herramientas del frame teatral");
+        FlowPane modeRow = tools.addRow("Modo e historial", drawMode, selectStrokes, fillMode, eraser, undoButton, redoButton,
+                clearStrokesButton, clearCanvasButton, mergeWithStage);
+        FlowPane selectionRow = tools.addRow("Dibujos seleccionados",
+                ActionButtonFactory.secondary("Seleccionar todos", () -> strokeSelection.selectAll()),
+                ActionButtonFactory.secondary("Agrupar", () -> strokeSelection.groupSelection()),
+                ActionButtonFactory.secondary("Desagrupar", () -> strokeSelection.ungroupSelection()),
+                ActionButtonFactory.secondary("Copiar al baúl", this::copySelectionToVault),
+                ActionButtonFactory.secondary("Copiar", () -> strokeSelection.copy()),
+                ActionButtonFactory.secondary("Pegar", () -> strokeSelection.paste()));
+        selectionRow.visibleProperty().bind(selectStrokes.selectedProperty());
+        selectionRow.managedProperty().bind(selectionRow.visibleProperty());
+        FlowPane appearanceRow = tools.addRow("Apariencia",
                 new Label("Lapiz"), penColor,
                 new Label("Fondo"), backgroundColor,
-                new Label("Grosor"), strokeWidth, penWidthPreview,
+                new Label("Grosor"), strokeWidth, penWidthPreview);
+        FlowPane viewRow = tools.addRow("Vista",
                 new Label("Zoom lienzo"), canvasZoom, canvasZoomValue,
                 cameraGuideOpacityLabel, cameraGuideOpacity, cameraGuideOpacityValue,
-                eraser, undoButton, redoButton, clearStrokesButton, clearCanvasButton);
-        tools.setAlignment(Pos.CENTER_LEFT);
+                pressureIndicator);
+        modeRow.getStyleClass().add("technical-problem-mode-tools");
+        appearanceRow.getStyleClass().add("technical-problem-drawing-tools");
+        viewRow.getStyleClass().add("technical-problem-view-tools");
         tools.getStyleClass().addAll("technical-problem-tools", "technical-problem-tools-flow");
+        getDialogPane().addEventFilter(javafx.scene.input.MouseEvent.ANY, event -> {
+            if (event.getEventType()!=javafx.scene.input.MouseEvent.MOUSE_MOVED
+                    && event.getEventType()!=javafx.scene.input.MouseEvent.MOUSE_PRESSED
+                    && event.getEventType()!=javafx.scene.input.MouseEvent.MOUSE_DRAGGED) return;
+            boolean blocked=!(event.getTarget() instanceof Node node) || !descendantOf(node,surface);
+            if(blocked!=pointerOverControls) {
+                pointerOverControls=blocked;
+                cancelActiveInkStroke();
+                // A hover transition does not change the coordinate transform.
+                // Resetting here discarded the native pen calibration unnecessarily.
+            }
+        });
+        refreshMergedBackdrop();
         return tools;
+    }
+
+    private void refreshMergedBackdrop() {
+        boolean merge = mergeWithStage.isSelected() && !mergeWithStage.isDisabled();
+        if (merge && stageImage == null) {
+            // Retain the original pixels for UHD frame export; preview rendering
+            // below still fits it to the logical 1280x720 theatre canvas.
+            stageImage = new Image(context.cameraGuideUri(), false);
+            if (stageImage.isError()) {
+                mergeWithStage.setSelected(false);
+                saveFeedback.setText("No se pudo cargar el escenario; comprueba el archivo del plano.");
+                saveFeedback.setVisible(true);
+                saveFeedback.setManaged(true);
+                stageImage = null;
+                return;
+            }
+        }
+        mergedBackdrop.setVisible(merge || !fills.isEmpty());
+        surface.fillBackground(merge ? Color.TRANSPARENT : backgroundColor.getValue());
+        if (merge || !fills.isEmpty()) mergedBackdrop.setImage(
+                com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.SketchBackdrop.render(
+                        merge ? stageImage : null, frameWidth, frameHeight, surface.applicationInkStrokes(), backgroundColor.getValue(), fills));
     }
 
     private Button iconToolButton(String iconName, String tooltip, Runnable action, boolean warning) {
@@ -459,6 +799,9 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
                 () -> Math.round(canvasZoom.getValue()) + "%",
                 canvasZoom.valueProperty()));
         StudioFormControls.installTooltip(canvasZoomValue, "Zoom visual del lienzo.");
+        canvasZoom.valueProperty().addListener((obs, oldValue, newValue) -> {
+            if (canvasZoomPane != null) canvasZoomPane.setZoom(newValue.doubleValue() / 100.0);
+        });
     }
 
     private void configureCameraGuideOpacity() {
@@ -468,7 +811,7 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
         cameraGuideOpacity.setShowTickMarks(true);
         cameraGuideOpacity.setSnapToTicks(false);
         cameraGuideOpacity.setPrefWidth(170);
-        cameraGuideOpacity.visibleProperty().bind(useCameraGuide.selectedProperty().and(useCameraGuide.disabledProperty().not()));
+        cameraGuideOpacity.visibleProperty().bind(useCameraGuide.selectedProperty().or(mergeWithStage.selectedProperty()).and(useCameraGuide.disabledProperty().not()));
         cameraGuideOpacity.managedProperty().bind(cameraGuideOpacity.visibleProperty());
         cameraGuideOpacityValue.visibleProperty().bind(cameraGuideOpacity.visibleProperty());
         cameraGuideOpacityValue.managedProperty().bind(cameraGuideOpacity.visibleProperty());
@@ -480,28 +823,133 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
                 "Nivel visible del plano asignado mientras dibujas.");
     }
 
-    private void installDialogButtonHandlers() {
-        Node saveButton = getDialogPane().lookupButton(saveButtonType);
-        if (saveButton instanceof Button button) {
-            button.setOnAction(event -> {
-                event.consume();
-                setResult(saveResult());
-                close();
-            });
+    void installDialogButtonHandlers() {
+        Node resolvedSaveButton = getDialogPane().lookupButton(saveButtonType);
+        if (resolvedSaveButton instanceof Button button) {
+            if (saveButton != null) saveButton.removeEventFilter(ActionEvent.ACTION, saveActionFilter);
+            saveButton = button;
+            saveButton.removeEventFilter(ActionEvent.ACTION, saveActionFilter);
+            saveButton.addEventFilter(ActionEvent.ACTION, saveActionFilter);
         }
-        Node cancelButton = getDialogPane().lookupButton(ButtonType.CANCEL);
-        if (cancelButton instanceof Button button) {
-            button.setOnAction(event -> {
-                event.consume();
-                setResult(null);
-                close();
-            });
+        Node resolvedCancelButton = getDialogPane().lookupButton(ButtonType.CANCEL);
+        if (resolvedCancelButton instanceof Button button) {
+            if (cancelButton != null) cancelButton.removeEventFilter(ActionEvent.ACTION, cancelActionFilter);
+            cancelButton = button;
+            cancelButton.removeEventFilter(ActionEvent.ACTION, cancelActionFilter);
+            cancelButton.addEventFilter(ActionEvent.ACTION, cancelActionFilter);
         }
+    }
+
+    private void cancelAndClose() {
+        saveAbandoned = true;
+        cancelPendingSave();
+        setResult(null);
+        close();
+    }
+
+    private void beginSave() {
+        if (saveTask != null || saveCaptureQueued) return;
+        installDialogButtonHandlers();
+        saveAbandoned = false;
+        cancelActiveInkStroke();
+        saveCaptureQueued = true;
+        setSaving(true, "Guardando frame...");
+        // Yield once so the native ButtonBar and progress feedback repaint
+        // before the immutable JavaFX snapshot is captured.
+        Platform.runLater(this::captureAndStartSave);
+    }
+
+    private void captureAndStartSave() {
+        saveCaptureQueued = false;
+        if (saveAbandoned) return;
+        final FrameSaveSnapshot snapshot;
+        try {
+            snapshot = captureSaveSnapshot();
+        } catch (RuntimeException failure) {
+            showSaveFailure(failure);
+            return;
+        }
+        Task<Result> task = new Task<>() {
+            @Override protected Result call() throws Exception {
+                Path target = InkImageFileStore.createTemporaryPng("docupodcast-drawn-frame-");
+                pendingSaveTarget.set(target);
+                try {
+                    if (isCancelled() || saveAbandoned) throw new InterruptedException("Guardado cancelado");
+                    writePng(snapshot, target);
+                    if (isCancelled() || saveAbandoned) throw new InterruptedException("Guardado cancelado");
+                    return new Result(context.segmentId(), target, snapshot.inkState(), snapshot.activateDrawn(),
+                            List.copyOf(drawingVault));
+                } catch (Exception | Error failure) {
+                    InkImageFileStore.deleteTemporaryPng(target);
+                    pendingSaveTarget.compareAndSet(target, null);
+                    throw failure;
+                }
+            }
+        };
+        saveTask = task;
+        task.setOnSucceeded(event -> {
+            Result saved = task.getValue();
+            saveTask = null;
+            pendingSaveTarget.set(null);
+            if (saveAbandoned || saved == null) {
+                if (saved != null) InkImageFileStore.deleteTemporaryPng(saved.framePng());
+                return;
+            }
+            setSaving(false, "");
+            setResult(saved);
+            close();
+        });
+        task.setOnFailed(event -> {
+            saveTask = null;
+            pendingSaveTarget.set(null);
+            if (!saveAbandoned) showSaveFailure(task.getException());
+        });
+        task.setOnCancelled(event -> {
+            saveTask = null;
+            Path target = pendingSaveTarget.getAndSet(null);
+            InkImageFileStore.deleteTemporaryPng(target);
+            if (!saveAbandoned) setSaving(false, "");
+        });
+        Thread worker = Thread.ofVirtual().name("theatre-frame-save").unstarted(task);
+        worker.start();
+    }
+
+    private void setSaving(boolean saving, String message) {
+        if (saveButton != null) saveButton.setDisable(saving);
+        if (leftEditorContent != null) leftEditorContent.setDisable(saving);
+        if (canvasEditorContent != null) canvasEditorContent.setDisable(saving);
+        saveProgress.setVisible(saving);
+        saveProgress.setManaged(saving);
+        if (saving) saveFeedback.getStyleClass().remove("error");
+        saveFeedback.setText(message == null ? "" : message);
+        saveFeedback.setVisible(saving || (message != null && !message.isBlank()));
+        saveFeedback.setManaged(saveFeedback.isVisible());
+    }
+
+    private void showSaveFailure(Throwable failure) {
+        String detail = failure == null || failure.getMessage() == null || failure.getMessage().isBlank()
+                ? "Error desconocido"
+                : failure.getMessage();
+        setSaving(false, "No se pudo guardar el frame dibujado: " + detail);
+        saveFeedback.getStyleClass().remove("error");
+        saveFeedback.getStyleClass().add("error");
+    }
+
+    private void cancelPendingSave() {
+        Task<Result> current = saveTask;
+        if (current != null) current.cancel(true);
+        InkImageFileStore.deleteTemporaryPng(pendingSaveTarget.getAndSet(null));
+    }
+
+    private void abandonPendingSave() {
+        if (saveTask == null && !saveCaptureQueued) return;
+        saveAbandoned = true;
+        cancelPendingSave();
     }
 
     private void initializeCanvas() {
         startInkEngine();
-        inputProvider.attach(surface.inkInputTarget(), new InkInputListener() {
+        editorSession.attach(inkViewport, new InkInputListener() {
             @Override
             public boolean onStrokeStart(InkInputSample sample) {
                 return handleStrokeStart(sample);
@@ -529,7 +977,7 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
     }
 
     private boolean handleStrokeStart(InkInputSample sample) {
-        if (!drawMode.isSelected()) {
+        if (!drawMode.isSelected() || selectStrokes.isSelected() || fillMode.isSelected()) {
             return false;
         }
         Point2D point = pointInsideCanvas(sample);
@@ -538,7 +986,6 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
             return false;
         }
         rememberUndo();
-        redo.clear();
         strokeActive = true;
         lastInkPoint = point;
         inkEngine.begin(point.getX(), point.getY(), sample == null ? 0L : sample.nanos(), penColor.getValue(),
@@ -547,11 +994,12 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
     }
 
     private boolean handleStrokeMove(InkInputSample sample) {
-        if (!strokeActive || !drawMode.isSelected()) {
+        if (!strokeActive || !drawMode.isSelected() || selectStrokes.isSelected() || fillMode.isSelected()) {
             return false;
         }
         Point2D point = pointInsideCanvas(sample);
         if (point == null) {
+            cancelActiveInkStroke();
             return false;
         }
         lastInkPoint = point;
@@ -561,7 +1009,7 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
     }
 
     private boolean handleStrokeEnd(InkInputSample sample) {
-        if (!strokeActive || !drawMode.isSelected()) {
+        if (!strokeActive || !drawMode.isSelected() || selectStrokes.isSelected() || fillMode.isSelected()) {
             strokeActive = false;
             return false;
         }
@@ -577,6 +1025,7 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
 
     private void cancelActiveInkStroke() {
         strokeActive = false;
+        if(inkEngine!=null) inkEngine.cancelActiveStroke();
         lastInkPoint = new Point2D(0, 0);
         surface.clearLiveStroke();
     }
@@ -610,6 +1059,7 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
                                         point.x(), point.y(), point.nanos(), point.pressure()))
                                 .toList()));
                 surface.clearLiveStroke();
+                refreshMergedBackdrop();
             }
 
             @Override
@@ -621,18 +1071,17 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
     }
 
     private Point2D pointInsideCanvas(InkInputSample sample) {
-        if (sample == null) {
+        if (sample == null || (pointerOverControls
+                && sample.cursor() == com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputCursor.MOUSE)) {
             return null;
         }
-        return InkCanvasViewportCoordinateMapper.mapInside(
-                        surface.inkInputTarget(),
-                        surface,
-                        sample.x(),
-                        sample.y(),
-                        surface.logicalWidth(),
-                        surface.logicalHeight())
-                .filter(point -> !insideTitleBand(point))
-                .orElse(null);
+        Point2D point = new Point2D(sample.x(), sample.y());
+        if(canvasScroll!=null && surface.getScene()!=null) {
+            Node viewport=canvasScroll.lookup(".viewport");
+            Point2D scenePoint=surface.localToScene(point);
+            if(viewport!=null && !viewport.contains(viewport.sceneToLocal(scenePoint))) return null;
+        }
+        return insideCanvas(point.getX(), point.getY()) && !insideTitleBand(point) ? point : null;
     }
 
     private boolean insideCanvas(double x, double y) {
@@ -640,8 +1089,8 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
                 && Double.isFinite(y)
                 && x >= 0.0
                 && y >= 0.0
-                && x <= FRAME_WIDTH
-                && y <= FRAME_HEIGHT;
+                && x <= frameWidth
+                && y <= frameHeight;
     }
 
     private boolean insideTitleBand(Point2D point) {
@@ -652,18 +1101,23 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
     }
 
     private void updateInputMode() {
-        boolean inkActive = drawMode.isSelected();
+        boolean selecting = selectStrokes.isSelected();
+        boolean filling = fillMode.isSelected();
+        boolean inkActive = drawMode.isSelected() && !selecting && !filling;
         if (canvasScroll != null) {
-            canvasScroll.setPannable(!inkActive);
+            canvasScroll.setPannable(!inkActive && !selecting && !filling);
         }
-        surface.configureInputCapture(inkActive, inkActive);
+        surface.configureInputCapture(inkActive || selecting || filling, inkActive);
+        fillTarget.setWidth(frameWidth); fillTarget.setHeight(frameHeight);
+        fillTarget.setVisible(filling); fillTarget.setMouseTransparent(!filling);
+        if (strokeSelection != null) strokeSelection.setActive(selecting);
         if (!inkActive) {
             resetInkCoordinateState();
         }
     }
 
     private void resetInkCoordinateState() {
-        inputProvider.resetCoordinateState();
+        editorSession.resetInputCoordinates();
     }
 
     private static boolean descendantOf(Node target, Node ancestor) {
@@ -696,9 +1150,9 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
         if (restoredInkState != null) {
             Color restoredBackground = parseFxColor(restoredInkState.background(), backgroundColor.getValue());
             backgroundColor.setValue(restoredBackground);
-            surface.resetForFixedEditableState(FRAME_WIDTH, FRAME_HEIGHT, restoredBackground);
+            surface.resetForFixedEditableState(frameWidth, frameHeight, restoredBackground);
             surface.restoreApplicationInkStrokes(restoredInkState.strokes());
-            surface.setFixedLogicalViewport(FRAME_WIDTH, FRAME_HEIGHT);
+            surface.setFixedLogicalViewport(frameWidth, frameHeight);
             return;
         }
         String uri = context.drawnFrameUri();
@@ -706,12 +1160,12 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
             return;
         }
         Platform.runLater(() -> {
-            Image image = new Image(uri, FRAME_WIDTH, FRAME_HEIGHT, false, true, false);
+            Image image = new Image(uri, frameWidth, frameHeight, false, true, false);
             if (image.isError() || image.getWidth() <= 0 || image.getHeight() <= 0) {
                 return;
             }
             surface.drawBackgroundImage(toWritable(image), backgroundColor.getValue());
-            surface.setFixedLogicalViewport(FRAME_WIDTH, FRAME_HEIGHT);
+            surface.setFixedLogicalViewport(frameWidth, frameHeight);
         });
     }
 
@@ -725,88 +1179,99 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
     }
 
     private void rememberUndo() {
-        undo.addLast(surface.inkStrokeStates());
-        while (undo.size() > MAX_UNDO) {
-            undo.removeFirst();
-        }
+        editorSession.checkpoint();
+    }
+
+    private record SketchState(List<InkCanvasSurface.InkStrokeState> strokes,
+                               List<com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.SketchBackdrop.Fill> fills,
+                               Color background) {}
+    private SketchState sketchState() { return new SketchState(surface.inkStrokeStates(),List.copyOf(fills),backgroundColor.getValue()); }
+    private void restoreSketchState(SketchState state) {
+        restoringSketch=true;
+        try {
+            surface.restoreInkUndoState(state.strokes(),List.of());
+            fills.clear(); fills.addAll(state.fills());
+            backgroundColor.setValue(state.background());
+        } finally { restoringSketch=false; }
+        refreshMergedBackdrop();
     }
 
     private void undo() {
-        if (undo.isEmpty()) {
-            return;
-        }
-        redo.addLast(surface.inkStrokeStates());
-        surface.restoreInkUndoState(undo.removeLast(), List.of());
+        editorSession.undo();
+        if (strokeSelection != null) strokeSelection.refresh();
+        refreshMergedBackdrop();
     }
 
     private void redo() {
-        if (redo.isEmpty()) {
-            return;
-        }
-        undo.addLast(surface.inkStrokeStates());
-        while (undo.size() > MAX_UNDO) {
-            undo.removeFirst();
-        }
-        surface.restoreInkUndoState(redo.removeLast(), List.of());
+        editorSession.redo();
+        if (strokeSelection != null) strokeSelection.refresh();
+        refreshMergedBackdrop();
     }
 
     private void clearInkStrokes() {
         rememberUndo();
-        redo.clear();
+        fills.clear();
         surface.clearStrokes();
+        refreshMergedBackdrop();
     }
 
     private void clearCanvas() {
         rememberUndo();
-        redo.clear();
-        surface.resetForFixedEditableState(FRAME_WIDTH, FRAME_HEIGHT, backgroundColor.getValue());
+        fills.clear();
+        surface.resetForFixedEditableState(frameWidth, frameHeight, backgroundColor.getValue());
         updateInputMode();
         updateCanvasTitle();
+        refreshMergedBackdrop();
     }
 
-    private Result saveResult() {
-        try {
-            updateCanvasTitle();
-            Path temp = Files.createTempFile("docupodcast-drawn-frame-", ".png");
-            writePng(exportFrameImage(), temp);
-            LinkedHashMap<String, String> metadata = new LinkedHashMap<>();
-            metadata.put("consumer", "theatre.storyboard-frame");
-            metadata.put("segmentId", context.segmentId());
-            metadata.put("interventionId", context.interventionId());
-            metadata.put(METADATA_SHOW_FRAGMENT_TITLE, Boolean.toString(frameTitleState.enabled()));
-            metadata.put(METADATA_FRAGMENT_TITLE_TEXT, frameTitleState.text());
-            metadata.put(METADATA_TITLE_BAND_HEIGHT, String.format(java.util.Locale.ROOT, "%.3f",
-                    frameTitleState.bandHeight()));
-            metadata.put(METADATA_TITLE_MARGIN, String.format(java.util.Locale.ROOT, "%.3f",
-                    frameTitleState.margin()));
-            String inkState = InkWorkspaceStateSerializer.toJson(InkWorkspaceState.create(
-                    surface.logicalWidth(),
-                    surface.logicalHeight(),
-                    colorToHex(surface.backgroundColor()),
-                    surface.applicationInkStrokes(),
-                    List.of(),
-                    metadata
-            ));
-            return new Result(context.segmentId(), temp, inkState, activateDrawn.isSelected());
-        } catch (IOException ex) {
-            throw new IllegalStateException("No se pudo guardar el frame dibujado: " + ex.getMessage(), ex);
-        }
+    private FrameSaveSnapshot captureSaveSnapshot() {
+        updateCanvasTitle();
+        WritableImage image = exportFrameImage();
+        int width = Math.max(1, (int) Math.ceil(image.getWidth()));
+        int height = Math.max(1, (int) Math.ceil(image.getHeight()));
+        PixelReader reader = image.getPixelReader();
+        if (reader == null) throw new IllegalStateException("El lienzo no expone pixeles para guardar.");
+        int[] pixels = new int[Math.multiplyExact(width, height)];
+        reader.getPixels(0, 0, width, height, PixelFormat.getIntArgbInstance(), pixels, 0, width);
+
+        LinkedHashMap<String, String> metadata = new LinkedHashMap<>();
+        metadata.put("consumer", "theatre.storyboard-frame");
+        metadata.put("mergeWithStage", Boolean.toString(mergeWithStage.isSelected()));
+        addFillMetadata(metadata, fills);
+        metadata.put("strokeGroups", strokeSelection == null ? "" : strokeSelection.groupsMetadata());
+        metadata.put("segmentId", context.segmentId());
+        metadata.put("interventionId", context.interventionId());
+        metadata.put(METADATA_SHOW_FRAGMENT_TITLE, Boolean.toString(frameTitleState.enabled()));
+        metadata.put(METADATA_FRAGMENT_TITLE_TEXT, frameTitleState.text());
+        metadata.put(METADATA_TITLE_BAND_HEIGHT, String.format(Locale.ROOT, "%.3f", frameTitleState.bandHeight()));
+        metadata.put(METADATA_TITLE_MARGIN, String.format(Locale.ROOT, "%.3f", frameTitleState.margin()));
+        String inkState = InkWorkspaceStateSerializer.toJson(InkWorkspaceState.create(
+                surface.logicalWidth(), surface.logicalHeight(), colorToHex(backgroundColor.getValue()),
+                surface.applicationInkStrokes(), List.of(), metadata));
+        return new FrameSaveSnapshot(width, height, pixels, surface.backgroundColor(), frameTitleState,
+                inkState, activateDrawn.isSelected());
     }
 
     private WritableImage exportFrameImage() {
-        WritableImage image = surface.exportWithImages(List.of(), new StudyProblemCanvasExportOptions(
-                EXPORT_SCALE,
+        List<ImageView> exportImages = List.of();
+        if (mergedBackdrop.isVisible()) {
+            Image exportBackdrop = com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.SketchBackdrop.renderScaled(
+                    mergeWithStage.isSelected() ? stageImage : null,
+                    frameWidth, frameHeight, surface.applicationInkStrokes(),
+                    backgroundColor.getValue(), fills, exportScale);
+            ImageView exportView = new ImageView(exportBackdrop);
+            exportView.setFitWidth(frameWidth);
+            exportView.setFitHeight(frameHeight);
+            exportView.setPreserveRatio(false);
+            exportImages = List.of(exportView);
+        }
+        return surface.exportWithImages(exportImages, new InkCanvasExportOptions(
+                exportScale,
                 24_000_000L,
                 false,
                 0,
-                FRAME_WIDTH,
-                FRAME_HEIGHT)).image();
-        int width = Math.min((int) Math.round(FRAME_WIDTH * 2.0), (int) image.getWidth());
-        int height = Math.min((int) Math.round(FRAME_HEIGHT * 2.0), (int) image.getHeight());
-        if (width == (int) image.getWidth() && height == (int) image.getHeight()) {
-            return image;
-        }
-        return new WritableImage(image.getPixelReader(), 0, 0, width, height);
+                frameWidth,
+                frameHeight)).image();
     }
 
     private void configureStageWindow() {
@@ -819,47 +1284,38 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
         }
     }
 
-    private void writePng(WritableImage image, Path target) throws IOException {
-        int width = (int) Math.ceil(image.getWidth());
-        int height = (int) Math.ceil(image.getHeight());
+    private void writePng(FrameSaveSnapshot snapshot, Path target) throws IOException, InterruptedException {
+        int width = snapshot.width();
+        int height = snapshot.height();
+        if (Thread.currentThread().isInterrupted()) throw new InterruptedException("Guardado cancelado");
+        BufferedImage overlay = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        overlay.setRGB(0, 0, width, height, snapshot.argb(), 0, width);
         BufferedImage buffered = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         Graphics2D graphics = buffered.createGraphics();
         try {
-            graphics.setColor(toAwtColor(surface.backgroundColor()));
+            graphics.setColor(toAwtColor(snapshot.background()));
             graphics.fillRect(0, 0, width, height);
+            graphics.drawImage(overlay, 0, 0, null);
         } finally {
             graphics.dispose();
         }
-        PixelReader reader = image.getPixelReader();
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                int argb = reader.getArgb(x, y);
-                int alpha = (argb >>> 24) & 0xff;
-                if (alpha <= 0) {
-                    continue;
-                }
-                if (alpha >= 255) {
-                    buffered.setRGB(x, y, argb);
-                } else {
-                    buffered.setRGB(x, y, blendOver(buffered.getRGB(x, y), argb, alpha));
-                }
-            }
-        }
+        if (Thread.currentThread().isInterrupted()) throw new InterruptedException("Guardado cancelado");
         graphics = buffered.createGraphics();
         try {
-            drawFrameTitle(graphics, width, height, frameTitleState);
+            drawFrameTitle(graphics, width, height, snapshot.title());
         } finally {
             graphics.dispose();
         }
-        ImageIO.write(buffered, "png", target.toFile());
+        if (Thread.currentThread().isInterrupted()) throw new InterruptedException("Guardado cancelado");
+        InkImageFileStore.writePng(buffered, target);
     }
 
     private void drawFrameTitle(Graphics2D graphics, int width, int height, FrameTitleState title) {
         if (graphics == null || title == null || !title.visible()) {
             return;
         }
-        double scaleX = width / FRAME_WIDTH;
-        double scaleY = height / FRAME_HEIGHT;
+        double scaleX = width / frameWidth;
+        double scaleY = height / frameHeight;
         double scale = Math.min(scaleX, scaleY);
         int margin = Math.max(1, (int) Math.round(title.margin() * scale));
         int bandHeight = Math.max(1, (int) Math.round(title.bandHeight() * scaleY));
@@ -894,20 +1350,6 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
         }
     }
 
-    private static int blendOver(int backgroundRgb, int foregroundArgb, int alpha) {
-        double a = alpha / 255.0;
-        int bgR = (backgroundRgb >> 16) & 0xff;
-        int bgG = (backgroundRgb >> 8) & 0xff;
-        int bgB = backgroundRgb & 0xff;
-        int fgR = (foregroundArgb >> 16) & 0xff;
-        int fgG = (foregroundArgb >> 8) & 0xff;
-        int fgB = foregroundArgb & 0xff;
-        int r = (int) Math.round(fgR * a + bgR * (1.0 - a));
-        int g = (int) Math.round(fgG * a + bgG * (1.0 - a));
-        int b = (int) Math.round(fgB * a + bgB * (1.0 - a));
-        return (r << 16) | (g << 8) | b;
-    }
-
     private static java.awt.Color toAwtColor(Color color) {
         Color safe = color == null ? Color.WHITE : color;
         return new java.awt.Color(
@@ -926,11 +1368,13 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
     }
 
     private void disposeInk() {
-        inputProvider.detach();
+        pressureIndicator.close();
+        editorSession.close();
         if (inkEngine != null) {
             inkEngine.stop();
             inkEngine = null;
         }
+        surface.releasePreviewResources();
     }
 
     private static String colorToHex(Color color) {
@@ -959,14 +1403,41 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
         }
     }
 
+    private static void addFillMetadata(Map<String, String> metadata,
+                                        List<com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.SketchBackdrop.Fill> source) {
+        for (int i = 0; i < source.size(); i++) {
+            var fill = source.get(i);
+            metadata.put(String.format(Locale.ROOT, "regionFill.%08d", i),
+                    fill.x() + "," + fill.y() + "," + fill.color());
+        }
+    }
+
+    private static List<com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.SketchBackdrop.Fill> fillsFromMetadata(
+            Map<String, String> metadata) {
+        ArrayList<com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.SketchBackdrop.Fill> parsed = new ArrayList<>();
+        if (metadata == null) return List.of();
+        metadata.entrySet().stream().filter(entry -> entry.getKey().startsWith("regionFill."))
+                .sorted(Map.Entry.comparingByKey()).forEach(entry -> {
+                    try {
+                        String[] parts = entry.getValue().split(",", 3);
+                        double x = Double.parseDouble(parts[0]);
+                        double y = Double.parseDouble(parts[1]);
+                        Color.web(parts[2]);
+                        if (Double.isFinite(x) && Double.isFinite(y)) parsed.add(
+                                new com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.SketchBackdrop.Fill(x, y, parts[2]));
+                    } catch (RuntimeException ignored) { }
+                });
+        return List.copyOf(parsed);
+    }
+
     private FrameTitleState initialTitleState() {
         if (restoredInkState == null) {
-            return FrameTitleState.create(false, context.interventionText(), FRAME_WIDTH);
+            return FrameTitleState.create(false, context.interventionText(), frameWidth);
         }
         Map<String, String> metadata = restoredInkState.metadata();
         boolean enabled = Boolean.parseBoolean(metadata.getOrDefault(METADATA_SHOW_FRAGMENT_TITLE, "false"));
         String text = metadata.getOrDefault(METADATA_FRAGMENT_TITLE_TEXT, context.interventionText());
-        return FrameTitleState.create(enabled, text, FRAME_WIDTH);
+        return FrameTitleState.create(enabled, text, frameWidth);
     }
 
     private static Color parseFxColor(String value, Color fallback) {
@@ -1039,6 +1510,18 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
         }
     }
 
-    public record Result(String segmentId, Path framePng, String inkStateJson, boolean activateDrawn) {
+    private record FrameSaveSnapshot(int width, int height, int[] argb, Color background,
+                                     FrameTitleState title, String inkState, boolean activateDrawn) {
+        private FrameSaveSnapshot {
+            argb = argb == null ? new int[0] : argb;
+            inkState = inkState == null ? "" : inkState;
+        }
+    }
+
+    public record Result(String segmentId, Path framePng, String inkStateJson, boolean activateDrawn,
+                         List<TheatreDrawingVaultItem> drawingVault) {
+        public Result {
+            drawingVault = drawingVault == null ? List.of() : List.copyOf(drawingVault);
+        }
     }
 }

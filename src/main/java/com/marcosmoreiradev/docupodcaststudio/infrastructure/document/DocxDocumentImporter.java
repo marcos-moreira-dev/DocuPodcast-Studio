@@ -259,49 +259,80 @@ public final class DocxDocumentImporter implements DocumentImporter {
                                         Map<String, EmbeddedImage> imagesByRelationshipId,
                                         List<DocumentBlock> blocks, List<DocumentImportIssue> issues, int[] counter, int[] imageCounter) {
         String text = textContentOf(paragraph).replace('\u00A0', ' ').strip();
+        String proseText = textContentExcludingMath(paragraph)
+                .replace('\u00A0', ' ').replaceAll("\\s+", " ").strip();
+        String nativeMathText = mathTextContentOf(paragraph)
+                .replace('\u00A0', ' ').replaceAll("\\s+", " ").strip();
         String styleId = paragraphStyleId(paragraph);
         String styleName = styleNames.getOrDefault(styleId, "");
         boolean numbered = hasDescendant(paragraph, "numPr");
         boolean partialBold = hasDescendant(paragraph, "b");
         boolean structurallyBold = isEffectivelyBoldParagraph(paragraph);
-        boolean math = hasMathDescendant(paragraph) || hasLatexText(text);
-        DocumentBlockType type = typeFromStyle(styleId, styleName, text, numbered, structurallyBold);
-        String id = null;
-        if (math) {
-            id = nextId(counter);
+        boolean structuredMath = hasMathDescendant(paragraph);
+        DocxNarratabilityPolicy.Assessment assessment =
+                DocxNarratabilityPolicy.assess(structuredMath ? proseText : text);
+        boolean plainTextMath = !structuredMath
+                && (hasLatexText(text)
+                || assessment.decision() == DocxNarratabilityPolicy.Decision.MATHEMATICAL);
+        String proseCandidate = structuredMath ? proseText : text;
+        DocumentBlockType type = typeFromStyle(styleId, styleName, proseCandidate, numbered, structurallyBold);
+
+        if (!proseCandidate.isBlank() && !plainTextMath) {
+            String id = nextId(counter);
             Map<String, String> metadata = new LinkedHashMap<>();
             putIfNotBlank(metadata, "styleId", styleId);
             putIfNotBlank(metadata, "styleName", styleName);
-            metadata.put("source", "docx-math");
+            metadata.put("source", "docx-native-text");
+            metadata.put("sourceLocatorLabel", "Word/DOCX · bloque " + id + " (paginación dinámica)");
+            metadata.put("narratabilitySource", "docx-structural-policy");
+            metadata.put("narratabilityReason", assessment.reason());
+            if (assessment.decision() == DocxNarratabilityPolicy.Decision.UNCERTAIN) {
+                metadata.put("narratability", "UNCERTAIN");
+                issues.add(DocumentImportIssue.warning("DOCX_TEXT_UNCERTAIN",
+                        "El bloque contiene texto fragmentado o símbolos dudosos y quedó excluido de la narración automática hasta revisarlo.", id));
+            } else {
+                metadata.put("narratability", "NARRATABLE");
+            }
+            if (structuredMath) {
+                metadata.put("containsInlineMath", "true");
+                putIfNotBlank(metadata, "filteredMathText", nativeMathText);
+            }
+            if (numbered) metadata.put("list", "true");
+            if (structurallyBold) metadata.put("bold", "true");
+            if (partialBold && !structurallyBold) metadata.put("partialBold", "true");
+            blocks.add(DocumentBlock.of(id, type, proseCandidate, firstNonBlank(styleName, styleId), metadata));
+            if (type == DocumentBlockType.LIST_ITEM || numbered) {
+                issues.add(DocumentImportIssue.info("LIST_ITEM_DETECTED",
+                        "Elemento de lista detectado en el bloque " + id + "."));
+            }
+            if (proseCandidate.length() > 1200) {
+                issues.add(DocumentImportIssue.warning("LONG_PARAGRAPH",
+                        "El bloque es largo y quizá deba dividirse antes del TTS.", id));
+            }
+        }
+
+        if (structuredMath || plainTextMath) {
+            String sourceMath = structuredMath ? nativeMathText : text;
+            String id = nextId(counter);
+            Map<String, String> metadata = new LinkedHashMap<>();
+            putIfNotBlank(metadata, "styleId", styleId);
+            putIfNotBlank(metadata, "styleName", styleName);
+            metadata.put("source", structuredMath ? "docx-omml-math" : "docx-plain-text-math");
             metadata.put("sourceLocatorLabel", "Word/DOCX · bloque " + id + " (paginación dinámica)");
             metadata.put("visualBlock", "true");
             metadata.put("storyboardAssignment", "user-controlled");
             metadata.put("renderPolicy", "identified-only");
-            String mathText = text.isBlank()
+            metadata.put("narratability", "NON_NARRATABLE");
+            metadata.put("narratabilitySource", "docx-structural-policy");
+            metadata.put("narratabilityReason", structuredMath ? "word-omml" : assessment.reason());
+            putIfNotBlank(metadata, "sourceMathText", sourceMath);
+            String mathText = sourceMath.isBlank()
                     ? "Bloque matemático/fórmula detectado en el documento fuente."
-                    : "Bloque matemático/fórmula detectado: " + abbreviate(text, 220);
-            blocks.add(DocumentBlock.of(id, DocumentBlockType.MATH_NOTICE, mathText, firstNonBlank(styleName, styleId, "math"), metadata));
+                    : "Bloque matemático/fórmula detectado: " + abbreviate(sourceMath, 220);
+            blocks.add(DocumentBlock.of(id, DocumentBlockType.MATH_NOTICE, mathText,
+                    firstNonBlank(styleName, styleId, "math"), metadata));
             issues.add(new DocumentImportIssue(DocumentImportIssueLevel.INFO, "MATH_BLOCK_DETECTED",
-                    "Bloque matemático/fórmula detectado como visual fuente; se identifica sin intentar renderizar LaTeX/OMML en esta versión.", id));
-        } else if (!text.isBlank()) {
-            id = nextId(counter);
-            Map<String, String> metadata = new LinkedHashMap<>();
-            putIfNotBlank(metadata, "styleId", styleId);
-            putIfNotBlank(metadata, "styleName", styleName);
-            metadata.put("sourceLocatorLabel", "Word/DOCX · bloque " + id + " (paginación dinámica)");
-            if (numbered) metadata.put("list", "true");
-            if (structurallyBold) metadata.put("bold", "true");
-            if (partialBold && !structurallyBold) metadata.put("partialBold", "true");
-            blocks.add(DocumentBlock.of(id, type, text, firstNonBlank(styleName, styleId), metadata));
-            if (type == DocumentBlockType.LIST_ITEM) {
-                issues.add(DocumentImportIssue.info("LIST_ITEM_DETECTED", "Se detectó un elemento de lista."));
-            }
-            if (numbered) {
-                issues.add(DocumentImportIssue.info("LIST_ITEM_DETECTED", "Elemento de lista detectado en el bloque " + id + "."));
-            }
-            if (text.length() > 1200) {
-                issues.add(DocumentImportIssue.warning("LONG_PARAGRAPH", "El bloque es largo y quizá deba dividirse antes del TTS.", id));
-            }
+                    "Bloque matemático/fórmula conservado como contenido visual y excluido del TTS automático.", id));
         }
         for (ImageReference imageReference : imageReferences(paragraph)) {
             String description = imageReference.description();
@@ -389,6 +420,9 @@ public final class DocxDocumentImporter implements DocumentImporter {
         metadata.put("columns", Integer.toString(columns));
         metadata.put("table.rowCount", Integer.toString(rows));
         metadata.put("table.columnCount", Integer.toString(columns));
+        metadata.put("table.kind", classifyTableKind(tableRows, columns));
+        metadata.put("narratability", "NON_NARRATABLE");
+        metadata.put("narratabilitySource", "docx-native-structure");
         addTableStructureMetadata(metadata, tableRows, columns);
         putIfNotBlank(metadata, "tableMarkdown", tablePreviewMarkdown(tableRows));
         metadata.put("sourceLocatorLabel", "Word/DOCX · bloque " + id + " (paginación dinámica)");
@@ -466,6 +500,92 @@ public final class DocxDocumentImporter implements DocumentImporter {
         StringBuilder out = new StringBuilder();
         appendText(element, out);
         return out.toString();
+    }
+
+    private static String textContentExcludingMath(Element element) {
+        StringBuilder out = new StringBuilder();
+        appendTextExcludingMath(element, out);
+        return out.toString();
+    }
+
+    private static void appendTextExcludingMath(Node node, StringBuilder out) {
+        if (node instanceof Element element) {
+            String localName = element.getLocalName();
+            if ("oMath".equals(localName) || "oMathPara".equals(localName)) {
+                out.append(' ');
+                return;
+            }
+            if ("t".equals(localName)) {
+                out.append(element.getTextContent());
+                return;
+            }
+            if ("tab".equals(localName)) {
+                out.append(' ');
+                return;
+            }
+            if ("br".equals(localName) || "cr".equals(localName)) {
+                out.append('\n');
+                return;
+            }
+        }
+        NodeList children = node.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            appendTextExcludingMath(children.item(i), out);
+        }
+    }
+
+    private static String mathTextContentOf(Element paragraph) {
+        StringBuilder out = new StringBuilder();
+        NodeList mathNodes = paragraph.getElementsByTagNameNS("*", "oMath");
+        for (int i = 0; i < mathNodes.getLength(); i++) {
+            if (i > 0) {
+                out.append(' ');
+            }
+            appendText(mathNodes.item(i), out);
+        }
+        return out.toString();
+    }
+
+    private static String classifyTableKind(List<List<String>> rows, int columns) {
+        if (rows == null || rows.isEmpty() || columns <= 0) {
+            return "UNKNOWN";
+        }
+        int populated = 0;
+        int numeric = 0;
+        int mathematical = 0;
+        for (List<String> row : rows) {
+            for (String cell : row) {
+                String value = cell == null ? "" : cell.strip();
+                if (value.isBlank()) {
+                    continue;
+                }
+                populated++;
+                if (value.matches("[-+]?\\d+(?:[.,]\\d+)?(?:\\s*%|\\s*[a-zA-Z]{1,4})?")) {
+                    numeric++;
+                }
+                if (DocxNarratabilityPolicy.assess(value).decision()
+                        == DocxNarratabilityPolicy.Decision.MATHEMATICAL) {
+                    mathematical++;
+                }
+            }
+        }
+        if (populated == 0) {
+            return "UNKNOWN";
+        }
+        if (mathematical * 2 >= populated) {
+            return rows.size() == columns ? "MATRIX" : "MATH";
+        }
+        double numericRatio = numeric / (double) populated;
+        if (columns == 2 && numericRatio < 0.5d) {
+            return "KEY_VALUE";
+        }
+        if (numericRatio >= 0.6d) {
+            return "NUMERIC";
+        }
+        if (numericRatio <= 0.12d) {
+            return "PROSE";
+        }
+        return "MIXED";
     }
 
     private static void appendText(Node node, StringBuilder out) {

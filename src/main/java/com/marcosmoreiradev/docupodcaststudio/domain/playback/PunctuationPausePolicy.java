@@ -4,7 +4,6 @@ package com.marcosmoreiradev.docupodcaststudio.domain.playback;
 public final class PunctuationPausePolicy {
     public static final long CONTINUING_PUNCTUATION_PAUSE_MILLIS = 250L;
     public static final long PARAGRAPH_FINAL_PAUSE_MILLIS = 500L;
-    private static final double ACCELERATED_RATE_THRESHOLD = 1.49;
 
     public long interCuePauseMillis(PlaybackCue completedCue,
                                     PlaybackCue nextCue,
@@ -13,9 +12,8 @@ public final class PunctuationPausePolicy {
         if (nextCue == null) {
             return 0L;
         }
-        if (playbackRate < ACCELERATED_RATE_THRESHOLD) {
-            return Math.max(0L, oneXFallbackMillis);
-        }
+        // Punctuation pauses are short wall-clock gaps at every listening speed.
+        // A blanket 1x delay used to add one second on top of the model's own pause.
         String text = completedCue == null ? "" : completedCue.spokenText().strip();
         if (text.isBlank()) {
             return 0L;

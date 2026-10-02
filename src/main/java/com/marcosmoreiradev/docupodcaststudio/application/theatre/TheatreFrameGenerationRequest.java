@@ -13,17 +13,17 @@ public record TheatreFrameGenerationRequest(
         TheatreImageGenerationPreset preset,
         ImageEnhancementOutputProfile outputProfile,
         TheatreImageAspectRatio aspectRatio,
-        ComfyUiConnectionSettings connectionSettings,
+        ImageGenerationWorkspaceSettings workspaceSettings,
         boolean overwriteExisting
 ) {
     public TheatreFrameGenerationRequest(TheatreFrameGenerationScope scope,
                                          FrameGenerationMode mode,
                                          Path outputDirectory,
                                          TheatreImageGenerationPreset preset,
-                                         ComfyUiConnectionSettings connectionSettings,
+                                         ImageGenerationWorkspaceSettings workspaceSettings,
                                          boolean overwriteExisting) {
         this(scope, mode, outputDirectory, preset, ImageEnhancementOutputProfile.FHD_1080,
-                TheatreImageAspectRatio.WIDE_16_9, connectionSettings, overwriteExisting);
+                TheatreImageAspectRatio.WIDE_16_9, workspaceSettings, overwriteExisting);
     }
 
     public TheatreFrameGenerationRequest(TheatreFrameGenerationScope scope,
@@ -31,10 +31,10 @@ public record TheatreFrameGenerationRequest(
                                          Path outputDirectory,
                                          TheatreImageGenerationPreset preset,
                                          ImageEnhancementOutputProfile outputProfile,
-                                         ComfyUiConnectionSettings connectionSettings,
+                                         ImageGenerationWorkspaceSettings workspaceSettings,
                                          boolean overwriteExisting) {
         this(scope, mode, outputDirectory, preset, outputProfile,
-                TheatreImageAspectRatio.WIDE_16_9, connectionSettings, overwriteExisting);
+                TheatreImageAspectRatio.WIDE_16_9, workspaceSettings, overwriteExisting);
     }
 
     public TheatreFrameGenerationRequest {
@@ -43,6 +43,6 @@ public record TheatreFrameGenerationRequest(
         preset = preset == null ? TheatreImageGenerationPreset.TEST_4GB_SD15 : preset;
         outputProfile = outputProfile == null ? ImageEnhancementOutputProfile.FHD_1080 : outputProfile;
         aspectRatio = aspectRatio == null ? TheatreImageAspectRatio.WIDE_16_9 : aspectRatio;
-        connectionSettings = Objects.requireNonNull(connectionSettings, "connectionSettings");
+        workspaceSettings = Objects.requireNonNull(workspaceSettings, "workspaceSettings");
     }
 }

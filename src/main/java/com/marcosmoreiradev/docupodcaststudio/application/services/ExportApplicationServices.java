@@ -13,12 +13,14 @@ import com.marcosmoreiradev.docupodcaststudio.application.video.RenderFinalVideo
 import com.marcosmoreiradev.docupodcaststudio.application.video.InspectFinalVideoSmokeReadinessUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.ExportDocumentStudyVideoUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.ExportTheatreVideoUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.observability.SupportBundleExporter;
 
 /** Export use cases and policies. */
 public record ExportApplicationServices(
         ExportPodcastWavUseCase exportPodcastWav,
         ExportPodcastAudioUseCase exportPodcastAudio,
         ExportDiagnosticReportUseCase exportDiagnosticReport,
+        SupportBundleExporter exportSupportBundle,
         ExportProjectBundleUseCase exportProjectBundle,
         InspectExportReadinessUseCase inspectExportReadiness,
         InspectFinalAudioExportReadinessUseCase inspectFinalAudioExportReadiness,

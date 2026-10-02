@@ -4,6 +4,7 @@ package com.marcosmoreiradev.docupodcaststudio.application.video;
 public enum TheatreMapCompanionMode {
     FRAGMENT_VISUALS("Fragmentos visuales", "fragments"),
     CHARACTER_PHOTOS("Fotos de personajes", "characters"),
+    CHARACTER_SCENERY("Fotos de personajes y escenografía", "scenery"),
     NONE("Sin acompanante", "none");
 
     private final String displayName;

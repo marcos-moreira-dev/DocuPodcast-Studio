@@ -1,35 +1,56 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.voice;
 
+import com.marcosmoreiradev.docupodcaststudio.application.audio.ListVoiceEngineOperationalStatesUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.audio.VoiceEngineOperationalState;
+import com.marcosmoreiradev.docupodcaststudio.application.compatibility.media.LegacyVoiceEngineSettingsMapper;
 import com.marcosmoreiradev.docupodcaststudio.application.compute.ComputeDeviceDescriptor;
 import com.marcosmoreiradev.docupodcaststudio.application.compute.ComputeDevicePolicy;
 import com.marcosmoreiradev.docupodcaststudio.application.compute.ComputeEnvironmentReport;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.OperationalSettings;
+import com.marcosmoreiradev.docupodcaststudio.application.settings.SelectedMediaEngines;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.TtsEngineModes;
+import com.marcosmoreiradev.docupodcaststudio.media.api.EngineId;
+import com.marcosmoreiradev.docupodcaststudio.media.api.MediaEnginePlatform;
+import com.marcosmoreiradev.docupodcaststudio.media.api.VoiceSynthesisEngine;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.DocuPodcastShellViewModel;
-import javafx.scene.Node;
-import javafx.scene.Parent;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
-import javafx.scene.layout.Pane;
+import javafx.scene.control.ListCell;
 import javafx.scene.layout.VBox;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.function.Consumer;
 
-/** Owns the engine/device settings controls for the Voices workspace. */
+import static com.marcosmoreiradev.docupodcaststudio.presentation.voice.VoiceWorkspaceLayout.detachNode;
+import static com.marcosmoreiradev.docupodcaststudio.presentation.voice.VoiceWorkspaceLayout.section;
+
+/** Owns the engine/device settings controls embedded in the Voices workspace. */
 final class VoiceEngineSettingsControls {
-    private final DocuPodcastShellViewModel viewModel;
+    static final String ENGINE_SELECTOR_ID = "voiceEngineSelector";
+    static final String DEVICE_SELECTOR_ID = "voiceComputeDeviceSelector";
+    static final String STATUS_ID = "voiceEngineOperationalStatus";
+
+    private final Backend backend;
     private final Consumer<List<String>> summarySink;
-    private final ComboBox<EngineModeChoice> engineModeSelector = new ComboBox<>();
-    private final ComboBox<ComputeDeviceChoice> computeDeviceSelector = new ComboBox<>();
-    private final Label engineConfigurationStatus = new Label("Selecciona motor y dispositivo para sincronizarlo con Configuración.");
+    private final ComboBox<EngineModeChoice> engineModeSelector = StudioFormControls.comboBox();
+    private final ComboBox<ComputeDeviceChoice> computeDeviceSelector = StudioFormControls.comboBox();
+    private final Label engineConfigurationStatus = new Label(
+            "Selecciona motor y dispositivo para sincronizarlos con Configuración.");
     private boolean refreshingEngineControls;
 
-    VoiceEngineSettingsControls(DocuPodcastShellViewModel viewModel, Consumer<List<String>> summarySink) {
-        this.viewModel = viewModel;
-        this.summarySink = summarySink;
+    VoiceEngineSettingsControls(DocuPodcastShellViewModel viewModel,
+                                Consumer<List<String>> summarySink) {
+        this(new ApplicationBackend(viewModel), summarySink);
+    }
+
+    VoiceEngineSettingsControls(Backend backend, Consumer<List<String>> summarySink) {
+        this.backend = Objects.requireNonNull(backend, "backend");
+        this.summarySink = summarySink == null ? ignored -> { } : summarySink;
         configure();
     }
 
@@ -37,17 +58,21 @@ final class VoiceEngineSettingsControls {
         VBox box = section("Selección de motor y dispositivo");
         VBox form = new VBox(8);
         form.getStyleClass().add("voice-engine-form");
-        Label engineLabel = new Label("Motor de voz");
-        engineLabel.getStyleClass().add("document-side-text");
+
+        Label engineLabel = fieldLabel("Motor de voz", engineModeSelector);
         detachNode(engineModeSelector);
         engineModeSelector.setMaxWidth(Double.MAX_VALUE);
-        Label deviceLabel = new Label("Dispositivo de renderizado");
-        deviceLabel.getStyleClass().add("document-side-text");
+
+        Label deviceLabel = fieldLabel("Dispositivo de renderizado", computeDeviceSelector);
         detachNode(computeDeviceSelector);
         computeDeviceSelector.setMaxWidth(Double.MAX_VALUE);
+
         detachNode(engineConfigurationStatus);
-        form.getChildren().addAll(engineLabel, engineModeSelector, deviceLabel, computeDeviceSelector, engineConfigurationStatus);
-        Label note = new Label("El dispositivo seleccionado se envía a los motores de voz. Si el runtime local no puede usar esa GPU, la app lo informará sin prometer aceleración falsa.");
+        form.getChildren().addAll(engineLabel, engineModeSelector, deviceLabel,
+                computeDeviceSelector, engineConfigurationStatus);
+
+        Label note = new Label("Automático prioriza una GPU compatible; CPU evita competir con otros "
+                + "trabajos GPU. El diagnóstico indicará el dispositivo realmente utilizado.");
         note.setWrapText(true);
         note.getStyleClass().add("document-side-text");
         box.getChildren().addAll(form, note);
@@ -56,166 +81,280 @@ final class VoiceEngineSettingsControls {
 
     void refresh() {
         OperationalSettings settings = loadOperationalSettingsSafely();
-        ComputeEnvironmentReport compute = viewModel.applicationServices().settings().inspectComputeEnvironment().inspect(settings);
+        ComputeEnvironmentReport compute = backend.inspectCompute(settings);
+        List<EngineModeChoice> choices = engineChoices();
         refreshingEngineControls = true;
         try {
-            engineModeSelector.setValue(engineModeSelector.getItems().stream()
-                    .filter(choice -> choice.mode().equalsIgnoreCase(settings.tts().engineMode()))
-                    .findFirst()
-                    .orElseGet(() -> engineModeSelector.getItems().stream()
-                            .filter(choice -> choice.mode().equals(TtsEngineModes.TEST))
-                            .findFirst()
-                            .orElse(null)));
+            engineModeSelector.getItems().setAll(choices);
+            engineModeSelector.setValue(selectedEngineChoice(choices, settings));
             computeDeviceSelector.getItems().setAll(computeDeviceChoices(compute));
-            computeDeviceSelector.setValue(selectedComputeChoice(compute, settings));
-            engineConfigurationStatus.setText(engineStatusText(settings, compute));
+            computeDeviceSelector.setValue(selectedComputeChoice(settings));
+            engineConfigurationStatus.setText(engineStatusText(
+                    engineModeSelector.getValue(), settings, compute));
         } finally {
             refreshingEngineControls = false;
         }
     }
 
+    ComboBox<EngineModeChoice> engineModeSelector() {
+        return engineModeSelector;
+    }
+
+    ComboBox<ComputeDeviceChoice> computeDeviceSelector() {
+        return computeDeviceSelector;
+    }
+
+    Label operationalStatus() {
+        return engineConfigurationStatus;
+    }
+
     private void configure() {
+        engineModeSelector.setId(ENGINE_SELECTOR_ID);
         engineModeSelector.getStyleClass().add("voice-library-combo");
-        engineModeSelector.getItems().setAll(
-                new EngineModeChoice(TtsEngineModes.ADVANCED_AI, "Voz IA avanzada", "Voces por muestra y muchas emociones."),
-                new EngineModeChoice(TtsEngineModes.LOCAL_SIMPLE, "Voz local simple", "Lectura neutral liviana."),
-                new EngineModeChoice(TtsEngineModes.TEST, "Modo de prueba", "Valida el flujo sin motor real."));
+        engineModeSelector.setAccessibleText("Motor de voz");
+        StudioFormControls.installTooltip(engineModeSelector,
+                "Elige uno de los motores de voz registrados en DocuPodcast Studio.");
+        engineModeSelector.setCellFactory(list -> engineChoiceCell());
+        engineModeSelector.setButtonCell(engineChoiceCell());
         engineModeSelector.valueProperty().addListener((obs, oldValue, newValue) -> {
-            if (!refreshingEngineControls && newValue != null) {
-                saveEngineModeSelection(newValue);
+            if (refreshingEngineControls || newValue == null) return;
+            if (!newValue.available()) {
+                refreshingEngineControls = true;
+                try { engineModeSelector.setValue(oldValue); }
+                finally { refreshingEngineControls = false; }
+                summarySink.accept(List.of(newValue.label() + " no está disponible.", newValue.detail()));
+                return;
             }
+            saveEngineModeSelection(newValue);
         });
+
+        computeDeviceSelector.setId(DEVICE_SELECTOR_ID);
         computeDeviceSelector.getStyleClass().add("voice-library-combo");
+        computeDeviceSelector.setAccessibleText("Dispositivo de renderizado de voz");
+        StudioFormControls.installTooltip(computeDeviceSelector,
+                "Elige asignación automática, CPU o una GPU detectada para la voz.");
         computeDeviceSelector.valueProperty().addListener((obs, oldValue, newValue) -> {
-            if (!refreshingEngineControls && newValue != null) {
-                saveComputeDeviceSelection(newValue);
-            }
+            if (!refreshingEngineControls && newValue != null) saveComputeDeviceSelection(newValue);
         });
+
+        engineConfigurationStatus.setId(STATUS_ID);
         engineConfigurationStatus.getStyleClass().add("voice-engine-status");
         engineConfigurationStatus.setWrapText(true);
+        engineConfigurationStatus.setAccessibleRoleDescription("Estado operativo del motor de voz");
     }
 
-    private List<ComputeDeviceChoice> computeDeviceChoices(ComputeEnvironmentReport report) {
-        ArrayList<ComputeDeviceChoice> choices = new ArrayList<>();
-        choices.add(new ComputeDeviceChoice("auto", "Automático", true));
-        choices.add(new ComputeDeviceChoice("cpu", "CPU", true));
-        for (ComputeDeviceDescriptor device : report.devices()) {
-            if (device.gpu()) {
-                choices.add(new ComputeDeviceChoice(device.id(), device.displayName(), false));
+    private static ListCell<EngineModeChoice> engineChoiceCell() {
+        return new ListCell<>() {
+            @Override
+            protected void updateItem(EngineModeChoice item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setDisable(false);
+                    setAccessibleText(null);
+                    return;
+                }
+                setText(item.label() + (item.available() ? "" : " · No disponible"));
+                setDisable(!item.available());
+                setAccessibleText(item.label() + ". " + item.detail());
             }
-        }
-        return choices;
+        };
     }
 
-    private ComputeDeviceChoice selectedComputeChoice(ComputeEnvironmentReport report, OperationalSettings settings) {
-        String selected = settings.compute().selectedDeviceId();
-        if (settings.compute().policy() == ComputeDevicePolicy.CPU_ONLY) {
-            selected = "cpu";
+    private List<EngineModeChoice> engineChoices() {
+        return backend.operationalStates().stream()
+                .map(VoiceEngineSettingsControls::choice)
+                .toList();
+    }
+
+    private static EngineModeChoice choice(VoiceEngineOperationalState state) {
+        String detail = state.message().isBlank() ? state.statusLabel() : state.message();
+        if (!state.ready() && !state.recommendedAction().isBlank()) {
+            detail = detail + " " + state.recommendedAction();
         }
-        if (selected == null || selected.isBlank()) {
-            selected = "auto";
-        }
-        String target = selected;
+        return new EngineModeChoice(state.engineId(), state.displayName(), detail,
+                state.registered() && state.ready());
+    }
+
+    private static List<ComputeDeviceChoice> computeDeviceChoices(ComputeEnvironmentReport report) {
+        ArrayList<ComputeDeviceChoice> choices = new ArrayList<>();
+        choices.add(new ComputeDeviceChoice("auto", "Automático", false));
+        choices.add(new ComputeDeviceChoice("cpu", "CPU", true));
+        report.devices().stream().filter(ComputeDeviceDescriptor::gpu)
+                .map(device -> new ComputeDeviceChoice(device.id(), device.displayName(), false))
+                .forEach(choices::add);
+        return List.copyOf(choices);
+    }
+
+    private EngineModeChoice selectedEngineChoice(List<EngineModeChoice> choices,
+                                                  OperationalSettings settings) {
+        EngineId selected = SelectedMediaEngines.from(settings).voice();
+        String id = selected == null ? settings.tts().engineMode() : selected.value();
+        return choices.stream().filter(choice -> choice.id().equalsIgnoreCase(id))
+                .findFirst().orElseGet(() -> choices.stream()
+                        .filter(choice -> TtsEngineModes.LOCAL_SIMPLE.equals(choice.id()))
+                        .findFirst().orElse(choices.getFirst()));
+    }
+
+    private ComputeDeviceChoice selectedComputeChoice(OperationalSettings settings) {
+        String selected = switch (settings.compute().policy()) {
+            case CPU_ONLY -> "cpu";
+            case AUTO, PREFER_GPU -> "auto";
+            case SPECIFIC_DEVICE -> settings.compute().selectedDeviceId();
+        };
         return computeDeviceSelector.getItems().stream()
-                .filter(choice -> choice.id().equalsIgnoreCase(target))
-                .findFirst()
-                .orElseGet(() -> computeDeviceSelector.getItems().isEmpty() ? null : computeDeviceSelector.getItems().get(0));
+                .filter(choice -> choice.id().equalsIgnoreCase(selected))
+                .findFirst().orElse(computeDeviceSelector.getItems().getFirst());
     }
 
-    private String engineStatusText(OperationalSettings settings, ComputeEnvironmentReport compute) {
-        String engine = TtsEngineModes.safeLabel(settings.tts().engineMode());
-        String device = compute.selectedDevice()
-                .map(ComputeDeviceDescriptor::displayName)
-                .orElse(settings.compute().policy() == ComputeDevicePolicy.CPU_ONLY ? "CPU" : "Automático");
-        String gpu = compute.gpuDetected() ? "GPU detectada" : "sin GPU compatible detectada";
-        String warnings = compute.warnings().isEmpty() ? "" : " · " + String.join(" · ", compute.warnings());
-        if (TtsEngineModes.LOCAL_SIMPLE.equalsIgnoreCase(settings.tts().engineMode())) {
-            return engine + " · Dispositivo solicitado: " + device + " · " + gpu
-                    + " · Voz local simple recibirá ese dispositivo si el runtime lo soporta." + warnings + ".";
-        }
-        return engine + " · " + device + " · " + gpu + warnings + ".";
+    private static String engineStatusText(EngineModeChoice selected,
+                                           OperationalSettings settings,
+                                           ComputeEnvironmentReport compute) {
+        String engine = selected == null ? TtsEngineModes.safeLabel(settings.tts().engineMode())
+                : selected.label();
+        String operational = selected == null ? "Estado no disponible"
+                : selected.available() ? "Listo para sintetizar" : selected.detail();
+        String device = switch (settings.compute().policy()) {
+            case CPU_ONLY -> "CPU";
+            case AUTO, PREFER_GPU -> "Automático";
+            case SPECIFIC_DEVICE -> compute.selectedDevice()
+                    .map(ComputeDeviceDescriptor::displayName)
+                    .orElse(settings.compute().selectedDeviceId());
+        };
+        String warnings = compute.warnings().isEmpty() ? ""
+                : " · " + String.join(" · ", compute.warnings());
+        return engine + " · " + operational + " · Dispositivo: " + device + warnings + ".";
     }
 
     private void saveEngineModeSelection(EngineModeChoice selection) {
         OperationalSettings current = loadOperationalSettingsSafely();
-        OperationalSettings updated;
-        if (TtsEngineModes.ADVANCED_AI.equals(selection.mode())) {
-            updated = viewModel.applicationServices().settings().selectXttsAsEngine().select(current);
-        } else if (TtsEngineModes.LOCAL_SIMPLE.equals(selection.mode())) {
-            updated = viewModel.applicationServices().settings().selectPiperAsEngine().select(current);
-        } else {
-            updated = new OperationalSettings(current.readingDocument(), current.playbackBuffer(),
-                    new OperationalSettings.TtsEngineSettings(TtsEngineModes.TEST, "", "Modo de prueba", current.tts().language(),
-                            current.tts().voiceProfileId(), current.tts().timeoutSeconds(), current.tts().maxRetries(),
-                            current.tts().xttsDownloadBaseUrl(), current.tts().piperRuntimeZipUrl(),
-                            current.tts().piperDefaultVoiceUrl(), current.tts().piperDefaultVoiceMetadataUrl()),
-                    current.video(), current.imageGeneration(), current.frameGeneration(), current.compute(),
-                    current.ocr(), current.storage(), current.diagnostics());
-        }
+        OperationalSettings updated = backend.selectEngine(current, selection.id());
         saveOperationalSettings(updated, "Motor activo actualizado: " + selection.label() + ".");
     }
 
     private void saveComputeDeviceSelection(ComputeDeviceChoice selection) {
         OperationalSettings current = loadOperationalSettingsSafely();
-        ComputeDevicePolicy policy = selection.cpu() && "cpu".equals(selection.id())
+        ComputeDevicePolicy policy = "cpu".equals(selection.id())
                 ? ComputeDevicePolicy.CPU_ONLY
-                : "auto".equals(selection.id()) ? ComputeDevicePolicy.AUTO : ComputeDevicePolicy.SPECIFIC_DEVICE;
-        OperationalSettings updated = new OperationalSettings(current.readingDocument(), current.playbackBuffer(), current.tts(), current.video(),
-                current.imageGeneration(),
-                current.frameGeneration(),
-                new OperationalSettings.ComputeSettings(policy, "auto".equals(selection.id()) ? "" : selection.id(), policy.canUseGpu(), current.compute().allowGpuForVideo(), current.compute().videoEncoderPolicy()),
-                current.ocr(),
-                current.storage(), current.diagnostics());
-        saveOperationalSettings(updated, "Dispositivo de renderizado actualizado: " + selection.label() + ".");
+                : "auto".equals(selection.id()) ? ComputeDevicePolicy.AUTO
+                : ComputeDevicePolicy.SPECIFIC_DEVICE;
+        OperationalSettings.ComputeSettings previous = current.compute();
+        OperationalSettings.ComputeSettings compute = new OperationalSettings.ComputeSettings(
+                policy, "auto".equals(selection.id()) ? "" : selection.id(),
+                policy.canUseGpu(), previous.allowGpuForVideo(), previous.videoEncoderPolicy(),
+                previous.allowGpuForContentAnalysis(), previous.allowRamOffloadForContentAnalysis());
+        OperationalSettings updated = new OperationalSettings(current.readingDocument(),
+                current.playbackBuffer(), current.tts(), current.video(), current.imageGeneration(),
+                current.imageSuperResolution(), current.mediaEngines(), current.frameGeneration(),
+                compute, current.ocr(), current.storage(), current.diagnostics());
+        saveOperationalSettings(updated,
+                "Dispositivo de renderizado actualizado: " + selection.label() + ".");
     }
 
     private OperationalSettings loadOperationalSettingsSafely() {
         try {
-            return viewModel.applicationServices().settings().loadOperationalSettings().load();
+            return backend.load();
         } catch (IOException | RuntimeException ex) {
+            summarySink.accept(List.of("No se pudo leer la configuración de voz: "
+                    + Objects.toString(ex.getMessage(), ex.getClass().getSimpleName())));
             return OperationalSettings.defaults();
         }
     }
 
     private void saveOperationalSettings(OperationalSettings settings, String message) {
         try {
-            viewModel.applicationServices().settings().saveOperationalSettings().save(settings);
-            summarySink.accept(List.of(message, "La misma configuración queda sincronizada con la ventana Configuración."));
+            backend.save(settings);
+            backend.resetVoiceTest(
+                    "La configuración de motor o dispositivo cambió. Genera una nueva voz de prueba.");
+            summarySink.accept(List.of(message,
+                    "La misma configuración queda sincronizada con Audio y Configuración."));
             refresh();
         } catch (IOException | RuntimeException ex) {
-            summarySink.accept(List.of("No se pudo guardar la configuración de voz: " + ex.getMessage()));
+            summarySink.accept(List.of("No se pudo guardar la configuración de voz: "
+                    + Objects.toString(ex.getMessage(), ex.getClass().getSimpleName())));
         }
     }
 
-    private static VBox section(String title) {
-        VBox box = new VBox(8);
-        Label label = new Label(title);
-        label.getStyleClass().add("document-side-section-title");
-        box.getChildren().add(label);
-        return box;
+    private static Label fieldLabel(String text, javafx.scene.Node control) {
+        Label label = new Label(text);
+        label.getStyleClass().add("document-side-text");
+        label.setLabelFor(control);
+        return label;
     }
 
-    private static void detachNode(Node node) {
-        if (node == null) {
-            return;
-        }
-        Parent parent = node.getParent();
-        if (parent instanceof Pane pane) {
-            pane.getChildren().remove(node);
-        }
+    interface Backend {
+        OperationalSettings load() throws IOException;
+        void save(OperationalSettings settings) throws IOException;
+        ComputeEnvironmentReport inspectCompute(OperationalSettings settings);
+        List<VoiceEngineOperationalState> operationalStates();
+        OperationalSettings selectEngine(OperationalSettings current, String engineId);
+        default void resetVoiceTest(String message) { }
     }
 
-    private record EngineModeChoice(String mode, String label, String detail) {
+    private static final class ApplicationBackend implements Backend {
+        private final DocuPodcastShellViewModel viewModel;
+
+        private ApplicationBackend(DocuPodcastShellViewModel viewModel) {
+            this.viewModel = Objects.requireNonNull(viewModel, "viewModel");
+        }
+
         @Override
-        public String toString() {
-            return label;
+        public OperationalSettings load() throws IOException {
+            return viewModel.administrationWorkspace().settings().loadOperationalSettings().load();
+        }
+
+        @Override
+        public void save(OperationalSettings settings) throws IOException {
+            viewModel.administrationWorkspace().settings().saveOperationalSettings().save(settings);
+        }
+
+        @Override
+        public ComputeEnvironmentReport inspectCompute(OperationalSettings settings) {
+            return viewModel.administrationWorkspace().settings().inspectComputeEnvironment().inspect(settings);
+        }
+
+        @Override
+        public List<VoiceEngineOperationalState> operationalStates() {
+            MediaEnginePlatform platform = viewModel.administrationWorkspace().mediaEngines();
+            return new ListVoiceEngineOperationalStatesUseCase(platform).list();
+        }
+
+        @Override
+        public OperationalSettings selectEngine(OperationalSettings current, String engineId) {
+            MediaEnginePlatform platform = viewModel.administrationWorkspace().mediaEngines();
+            VoiceSynthesisEngine engine = platform.voiceEngines().find(new EngineId(engineId))
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "El motor " + engineId + " no está registrado en el lanzador activo."));
+            return LegacyVoiceEngineSettingsMapper.select(current, engine.descriptor());
+        }
+
+        @Override
+        public void resetVoiceTest(String message) {
+            viewModel.resetGeneratedVoiceTestForSelection(message);
         }
     }
 
-    private record ComputeDeviceChoice(String id, String label, boolean cpu) {
-        @Override
-        public String toString() {
-            return label;
+    record EngineModeChoice(String id, String label, String detail, boolean available) {
+        EngineModeChoice {
+            id = normalize(id, TtsEngineModes.TEST).toLowerCase(Locale.ROOT);
+            label = normalize(label, id);
+            detail = normalize(detail, available ? "Listo" : "No disponible");
         }
+
+        @Override public String toString() { return label; }
+    }
+
+    record ComputeDeviceChoice(String id, String label, boolean cpu) {
+        ComputeDeviceChoice {
+            id = normalize(id, "auto");
+            label = normalize(label, id);
+        }
+
+        @Override public String toString() { return label; }
+    }
+
+    private static String normalize(String value, String fallback) {
+        String normalized = Objects.toString(value, "").strip();
+        return normalized.isBlank() ? fallback : normalized;
     }
 }

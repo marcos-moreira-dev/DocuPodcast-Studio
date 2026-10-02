@@ -269,7 +269,7 @@ public final class ExportSimpleVideoPackageUseCase {
                 + "- Resolución por defecto: " + settings.resolutionLabel() + ".\n"
                 + "- Dispositivo de render solicitado: " + settings.computePolicy().name() + ".\n"
                 + "- Encoder solicitado: " + settings.encoderPolicy().name() + " (`" + commandPlan.effectiveEncoder() + "`).\n"
-                + "- Opciones de usuario: 720p, 1080p, 2K y 4K.\n"
+                + "- Opciones de usuario: 540p, 720p, 1080p, 2K y 4K.\n"
                 + "- Manifest generado: `RENDER_MANIFEST.json`.\n"
                 + "- Comandos generados: `render-commands.txt`.\n"
                 + "- Estado del paquete: " + commandPlan.renderModeLabel() + ".\n"
@@ -323,7 +323,8 @@ public final class ExportSimpleVideoPackageUseCase {
                     frame.id(), frame.segmentId(), frame.title(), frame.narrationPreview(),
                     frame.imageAssetId(), frame.imageRelativePath(), frame.audioRelativePath(),
                     frame.audioDurationSeconds(), frame.silenceAfterSeconds(),
-                    frame.imageAssigned(), frame.audioReady(), frame.silentVisual(), labels));
+                    frame.imageAssigned(), frame.audioReady(), frame.silentVisual(), labels,
+                    frame.visualParts(), frame.visualBinding()));
         }
         return new SimpleVideoPlan(plan.title(), enriched, plan.silenceAfterFrameSeconds(), plan.createdAt());
     }

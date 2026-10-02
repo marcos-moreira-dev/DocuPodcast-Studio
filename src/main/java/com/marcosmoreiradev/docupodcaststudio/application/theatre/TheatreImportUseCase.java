@@ -6,6 +6,9 @@ import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationScriptDocum
 import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationSegment;
 import com.marcosmoreiradev.docupodcaststudio.domain.script.ScriptTextRange;
 import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreProjectLayer;
+import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreInteractionTargetPolicy;
+import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreInterventionState;
+import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreStageZone;
 import com.marcosmoreiradev.docupodcaststudio.domain.theatre.plan.*;
 import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceLibrary;
 import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceReferenceTone;
@@ -47,16 +50,17 @@ public final class TheatreImportUseCase {
         List<TheatreProjectLayer.StageBackdrop> stageBackdrops = new ArrayList<>();
         List<TheatreProjectLayer.StageBackdropAssignment> stageBackdropAssignments = new ArrayList<>();
         List<TheatreProjectLayer.ChoralVoiceAssignment> choralVoiceAssignments = new ArrayList<>();
+        List<TheatreInterventionState> interventionStates = new ArrayList<>();
         List<NarrativeLayerAssignment> emotionAssignments = new ArrayList<>();
         List<NarrativeLayerAssignment> imageAssignments = new ArrayList<>();
         Map<String, String> backdropIdsByPath = new LinkedHashMap<>();
 
         int actSortOrder = 0;
         for (ActPlan actPlan : plan.acts()) {
-            String actId = normalizeId("ACT", actPlan.name());
+            String actId = stableEntityId(actPlan.id(), "ACT", actPlan.name());
             acts.add(new TheatreProjectLayer.TheatreAct(actId, actPlan.name(), actPlan.notes()));
             for (ScenePlan scenePlan : actPlan.scenes()) {
-                String sceneId = normalizeId("SCN", scenePlan.name());
+                String sceneId = stableEntityId(scenePlan.id(), "SCN", scenePlan.name());
                 String spatialMapAssetId = assetIdFor(assetIds, scenePlan.spatialMap());
                 scenes.add(new TheatreProjectLayer.Scene(
                         sceneId, scenePlan.name(), scenePlan.notes(), actId, spatialMapAssetId));
@@ -77,8 +81,9 @@ public final class TheatreImportUseCase {
         }
 
         for (ProfilePlan cp : plan.characters()) {
-            String charId = normalizeId("CHR", cp.name());
-            List<String> aliases = List.of(cp.name().toUpperCase(Locale.ROOT).replace(" ", "_"));
+            String charId = stableEntityId(cp.id(), "CHR", cp.name());
+            List<String> aliases = cp.aliases().isEmpty()
+                    ? List.of(cp.name().toUpperCase(Locale.ROOT).replace(" ", "_")) : cp.aliases();
             characters.add(new TheatreProjectLayer.CharacterProfile(charId, cp.name(), aliases, cp.notes()));
 
             String voiceId = resolveVoiceId(cp.voz(), voiceLibrary);
@@ -90,6 +95,7 @@ public final class TheatreImportUseCase {
                 String assetId = assetIdFor(assetIds, imgRef.path());
                 if (assetId != null) {
                     characterImages.add(new TheatreProjectLayer.CharacterImage(
+                            "CHARIMG-" + (characterImages.size() + 1),
                             charId, resolveSceneId(imgRef.sceneId(), scenes), viewOrDefault(imgRef.angle()), assetId,
                             "Referencia importada desde teatro.md."));
                 }
@@ -97,12 +103,13 @@ public final class TheatreImportUseCase {
         }
 
         for (ProfilePlan op : plan.objects()) {
-            String objId = normalizeId("OBJ", op.name());
+            String objId = stableEntityId(op.id(), "OBJ", op.name());
             objects.add(new TheatreProjectLayer.TheatreObject(objId, op.name(), op.notes()));
             for (ImageRef imgRef : op.imagenes()) {
                 String assetId = assetIdFor(assetIds, imgRef.path());
                 if (assetId != null) {
                     objectImages.add(new TheatreProjectLayer.ObjectImage(
+                            "OBJIMG-" + (objectImages.size() + 1),
                             objId, resolveSceneId(imgRef.sceneId(), scenes), viewOrDefault(imgRef.angle()), assetId,
                             "Referencia importada desde teatro.md."));
                 }
@@ -115,10 +122,18 @@ public final class TheatreImportUseCase {
         int seq = 1;
         for (NarrationSegment segment : cueSegments) {
             String blockId = segment.sourceBlockIds().isEmpty() ? segment.id() : segment.sourceBlockIds().get(0);
-            String interId = "INTERVENCION-" + seq;
-            intervenciones.add(TheatreProjectLayer.Intervencion.ofSequence(seq, blockId));
+            InterventionPlan planned = seq <= plan.interventions().size() ? plan.interventions().get(seq - 1) : null;
+            String interId = segment.metadata().getOrDefault("theatreGrammarInterventionId",
+                    planned == null ? "INTERVENCION-" + seq : interventionId(planned));
+            intervenciones.add(new TheatreProjectLayer.Intervencion(interId, blockId, seq));
             segmentByInterventionId.put(interId, segment);
             seq++;
+        }
+        if (intervenciones.isEmpty()) {
+            for (InterventionPlan ip : plan.interventions()) {
+                String interId = interventionId(ip);
+                intervenciones.add(new TheatreProjectLayer.Intervencion(interId, "B" + String.format(Locale.ROOT, "%04d", ip.sequenceIndex()), ip.sequenceIndex()));
+            }
         }
 
         Map<String, String> sceneNameToId = new LinkedHashMap<>();
@@ -132,6 +147,13 @@ public final class TheatreImportUseCase {
             String key = c.displayName().toUpperCase(Locale.ROOT);
             charNameToId.put(key, c.id());
             charNameToDisplay.put(key, c.displayName());
+            charNameToId.put(c.id().toUpperCase(Locale.ROOT), c.id());
+            for (String alias : c.aliases()) charNameToId.put(alias.toUpperCase(Locale.ROOT), c.id());
+        }
+        Map<String, String> objectNameToId = new LinkedHashMap<>();
+        for (TheatreProjectLayer.TheatreObject object : objects) {
+            objectNameToId.put(object.id().toUpperCase(Locale.ROOT), object.id());
+            objectNameToId.put(object.displayName().toUpperCase(Locale.ROOT), object.id());
         }
 
         Map<String, String> aliasByBlockId = new LinkedHashMap<>();
@@ -143,7 +165,7 @@ public final class TheatreImportUseCase {
         for (InterventionPlan ip : plan.interventions()) {
             String sceneName = normalizeSceneName(ip.sceneName());
             sceneBoundaryMap.computeIfAbsent(sceneName, k -> new ArrayList<>())
-                    .add("INTERVENCION-" + ip.sequenceIndex());
+                    .add(interventionId(ip));
         }
 
         Map<String, String> sceneBoundariesStart = new LinkedHashMap<>();
@@ -179,8 +201,30 @@ public final class TheatreImportUseCase {
         for (InterventionPlan ip : plan.interventions()) {
             String sceneName = normalizeSceneName(ip.sceneName());
             String sceneId = sceneNameToId.getOrDefault(sceneName, scenes.isEmpty() ? "" : scenes.get(0).id());
-            String interId = "INTERVENCION-" + ip.sequenceIndex();
+            String interId = interventionId(ip);
             String charId = charNameToId.getOrDefault(ip.characterName().toUpperCase(Locale.ROOT), "");
+
+            List<TheatreInterventionState.CharacterState> resolvedCharacterStates = ip.characterStates().stream()
+                    .map(value -> new TheatreInterventionState.CharacterState(
+                            requiredReference(value.characterId(), charNameToId, "character"), value.presence(),
+                            value.position(), value.orientation(), resolveOptionalReference(value.gazeTarget(), charNameToId),
+                            value.visualVariantId(), value.costume()))
+                    .toList();
+            List<TheatreInterventionState.ObjectState> resolvedObjectStates = ip.objectStates().stream()
+                    .map(value -> new TheatreInterventionState.ObjectState(
+                            requiredReference(value.objectId(), objectNameToId, "object"), value.presence(), value.position(),
+                            resolveOptionalReference(value.holderCharacterId(), charNameToId), value.manipulation()))
+                    .toList();
+            List<TheatreInterventionState.StageEvent> resolvedEvents = ip.stageEvents().stream()
+                    .map(value -> new TheatreInterventionState.StageEvent(value.type(),
+                            resolveOptionalReference(value.characterId(), charNameToId),
+                            resolveOptionalReference(value.objectId(), objectNameToId),
+                            resolveOptionalReference(value.targetCharacterId(), charNameToId),
+                            value.fromPosition(), value.toPosition()))
+                    .toList();
+            String inherited = ip.inheritsFromInterventionId().isBlank() ? "" : normalizeInterventionId(ip.inheritsFromInterventionId());
+            interventionStates.add(new TheatreInterventionState(interId, ip.inheritanceMode(), inherited,
+                    resolvedCharacterStates, resolvedObjectStates, resolvedEvents, ip.microexpression(), ip.emoji(), ip.tono()));
 
             if (!ip.simultaneousVoiceNames().isEmpty()) {
                 List<String> participants = ip.simultaneousVoiceNames().stream()
@@ -215,7 +259,7 @@ public final class TheatreImportUseCase {
                 }
             }
 
-            if (!ip.origin().isBlank() || !ip.destination().isBlank() || !ip.interactionTarget().isBlank()) {
+            if (!sceneId.isBlank() || !charId.isBlank() || !ip.origin().isBlank() || !ip.destination().isBlank() || !ip.interactionTarget().isBlank()) {
                 Map<String, String> characterLocs = new LinkedHashMap<>();
                 if (!charId.isBlank() && !ip.origin().isBlank()) {
                     characterLocs.put(displayNameFor(ip.characterName(), charNameToDisplay), ip.origin());
@@ -227,9 +271,12 @@ public final class TheatreImportUseCase {
                         characterLocs.put(displayNameFor(target, charNameToDisplay), targetLocation);
                     }
                 }
+                for (TheatreInterventionState.CharacterState state : resolvedCharacterStates) {
+                    if (!state.position().isBlank()) characterLocs.put(state.characterId(), state.position());
+                }
                 textActionPlacements.add(new TheatreProjectLayer.TextActionPlacement(
                         interId, sceneId, charId, ip.origin(), ip.destination(),
-                        ip.interactionTarget(), Map.copyOf(characterLocs)));
+                        TheatreInteractionTargetPolicy.canonicalize(ip.interactionTarget()), Map.copyOf(characterLocs)));
             }
 
             if (!ip.interactionTarget().isBlank()) {
@@ -246,13 +293,18 @@ public final class TheatreImportUseCase {
             }
 
             if (!charId.isBlank() && !ip.origin().isBlank()) {
+                double x = 0.5;
+                double y = 0.5;
+                try {
+                    TheatreStageZone zone = TheatreStageZone.parse(ip.origin());
+                    x = zone.x(); y = zone.y();
+                } catch (RuntimeException ignored) { }
                 positions.add(new TheatreProjectLayer.SpatialPosition(
-                        sceneId, interId, charId, 0.5, 0.5, ip.origin()));
+                        sceneId, interId, charId, x, y, ip.origin()));
             }
 
             if (script != null && !charId.isBlank() && !ip.tono().isBlank()) {
-                int interIndex = ip.sequenceIndex() - 1;
-                NarrationSegment segment = findMatchingSegment(interIndex, cueSegments);
+                NarrationSegment segment = segmentByInterventionId.get(interId);
                 if (segment != null) {
                     VoiceReferenceTone tone = safeParseTone(ip.tono());
                     emotionAssignments.add(new NarrativeLayerAssignment(
@@ -289,7 +341,7 @@ public final class TheatreImportUseCase {
                         intervencionesVisuales, List.of(), acts, scenes, positions, actions,
                         textActionPlacements, objectImages, objects, List.of(),
                         TheatreBuiltInCameraCatalog.references(), cameraCues, stageBackdrops,
-                        stageBackdropAssignments, choralVoiceAssignments),
+                        stageBackdropAssignments, choralVoiceAssignments, interventionStates),
                 sceneBoundariesStart, sceneBoundariesEnd,
                 emotionAssignments,
                 imageAssignments);
@@ -311,6 +363,36 @@ public final class TheatreImportUseCase {
                 .replaceAll("-+", "-")
                 .replaceAll("^-|-$", "");
         return prefix + "-" + (normalized.isBlank() ? "UNKNOWN" : normalized);
+    }
+
+    public static String stableEntityId(String explicitId, String prefix, String name) {
+        if (explicitId == null || explicitId.isBlank()) return normalizeId(prefix, name);
+        String value = explicitId.strip().toUpperCase(Locale.ROOT).replace(' ', '_');
+        if (!value.matches("[A-Z][A-Z0-9_-]{0,63}")) throw new IllegalArgumentException("Invalid stable theatre id: " + explicitId);
+        return value;
+    }
+
+    private static String interventionId(InterventionPlan plan) {
+        return plan.interventionId().isBlank() ? "INTERVENCION-" + plan.sequenceIndex()
+                : normalizeInterventionId(plan.interventionId());
+    }
+
+    private static String normalizeInterventionId(String value) {
+        String normalized = value == null ? "" : value.strip().toUpperCase(Locale.ROOT);
+        if (normalized.matches("INTERVENCION-\\d+")) return normalized;
+        if (normalized.matches("\\d+")) return "INTERVENCION-" + Integer.parseInt(normalized);
+        throw new IllegalArgumentException("Invalid intervention id: " + value);
+    }
+
+    private static String requiredReference(String value, Map<String, String> ids, String kind) {
+        String resolved = resolveOptionalReference(value, ids);
+        if (resolved.isBlank()) throw new IllegalArgumentException("Unknown theatre " + kind + " reference: " + value);
+        return resolved;
+    }
+
+    private static String resolveOptionalReference(String value, Map<String, String> ids) {
+        if (value == null || value.isBlank()) return "";
+        return ids.getOrDefault(value.strip().toUpperCase(Locale.ROOT), "");
     }
 
     private static String normalizeCameraId(String cameraId) {
@@ -375,11 +457,22 @@ public final class TheatreImportUseCase {
         return "";
     }
 
-    private static String resolveVoiceId(String vozId, VoiceLibrary voiceLibrary) {
-        if (vozId == null || vozId.isBlank()) return "";
+    public static String resolveVoiceId(String vozId, VoiceLibrary voiceLibrary) {
+        if (vozId == null || vozId.isBlank()) {
+            if (voiceLibrary != null && !voiceLibrary.voices().isEmpty()) return voiceLibrary.voices().get(0).id();
+            return "VOICE-DEFAULT";
+        }
         if (voiceLibrary != null) {
             Optional<com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceProfile> profile = voiceLibrary.voiceById(vozId);
             if (profile.isPresent()) return profile.get().id();
+            var matches = voiceLibrary.voices().stream().filter(v ->
+                    v.id().equalsIgnoreCase(vozId) || v.displayName().equalsIgnoreCase(vozId)
+                    || vozId.equalsIgnoreCase(v.metadata().getOrDefault("sourceFolder", ""))).toList();
+            if (matches.size() == 1) return matches.getFirst().id();
+            var preset = com.marcosmoreiradev.docupodcaststudio.domain.voice.OfficialAdvancedVoicePresetCatalog.profiles()
+                    .stream().filter(v -> vozId.equalsIgnoreCase(v.metadata().get("sourceFolder")))
+                    .filter(v -> voiceLibrary.voiceById(v.id()).isPresent()).findFirst();
+            if (preset.isPresent()) return preset.get().id();
         }
         return vozId;
     }
@@ -490,6 +583,15 @@ public final class TheatreImportUseCase {
     }
 
     private static List<NarrationSegment> interventionSegmentsFromManifestRanges(ImportPlan plan, NarrationScriptDocument script) {
+        if (script != null && script.segments().stream().anyMatch(s -> s.metadata().containsKey("theatreGrammarInterventionId"))) {
+            Map<String, NarrationSegment> byId = new LinkedHashMap<>();
+            script.segments().forEach(s -> byId.put(s.metadata().get("theatreGrammarInterventionId"), s));
+            return plan.interventions().stream().map(i -> {
+                NarrationSegment segment = byId.get(i.stableInterventionId());
+                if (segment == null) throw new IllegalArgumentException("Falta el parlamento: " + i.stableInterventionId());
+                return segment;
+            }).toList();
+        }
         if (script == null || script.empty()) {
             return List.of();
         }
@@ -595,10 +697,8 @@ public final class TheatreImportUseCase {
 
     private static VoiceReferenceTone safeParseTone(String tono) {
         if (tono == null || tono.isBlank()) return VoiceReferenceTone.NEUTRAL;
-        try {
-            return VoiceReferenceTone.valueOf(tono.trim().toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException e) {
-            return VoiceReferenceTone.NEUTRAL;
-        }
+        return VoiceReferenceTone.fromLayerTargetId(tono).orElseThrow(() ->
+                new IllegalArgumentException("Tono teatral desconocido: " + tono
+                        + ". Usa un tono de la biblioteca, por ejemplo ANGRY o enojado; no se sustituirá por neutral."));
     }
 }

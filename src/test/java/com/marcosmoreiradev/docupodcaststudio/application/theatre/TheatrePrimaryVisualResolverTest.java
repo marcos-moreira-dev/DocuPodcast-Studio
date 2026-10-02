@@ -85,6 +85,30 @@ final class TheatrePrimaryVisualResolverTest {
     }
 
     @Test
+    void activeSceneryCompositionIsTheExportedVisualEvenWhenAnOfficialImageExists() throws Exception {
+        createImage("media/images/oficial.png");
+        createImage("storyboard/scenery/frame.png");
+        NarrationScriptDocument script = script();
+        DocuPodcastProject project = baseProject()
+                .withAsset(asset("IMG-OFFICIAL", "media/images/oficial.png"))
+                .withAsset(asset("IMG-SCENERY", "storyboard/scenery/frame.png"));
+        StoryboardDocument storyboard = StoryboardDocument.createForScript(script).withBinding(new StoryboardBinding(
+                "STB-001", "SEG-001", "IMG-SCENERY", StoryboardDisplayMode.FIT_CONTAIN,
+                "Personajes y escenografía", Map.of(
+                        UpsertTheatreStoryboardFrameVariantUseCase.OFFICIAL_IMAGE_ASSET_ID, "IMG-OFFICIAL",
+                        UpsertTheatreStoryboardFrameVariantUseCase.SCENERY_IMAGE_ASSET_ID, "IMG-SCENERY",
+                        UpsertTheatreStoryboardFrameVariantUseCase.ACTIVE_VISUAL_VARIANT,
+                        UpsertTheatreStoryboardFrameVariantUseCase.VARIANT_SCENERY)));
+
+        TheatrePrimaryVisualReference resolved = new TheatrePrimaryVisualResolver()
+                .resolveForSegment(project, storyboard, script.segments().getFirst(), projectDirectory)
+                .orElseThrow();
+
+        assertEquals("IMG-SCENERY", resolved.assetId());
+        assertEquals(TheatrePrimaryVisualReference.Source.SCENERY_COMPOSITION, resolved.source());
+    }
+
+    @Test
     void batchPlannerCountsExistingGenerableAndBlockedPairsAcrossTheWholeWork() throws Exception {
         createImage("media/images/uno.png");
         createImage("media/images/dos.png");

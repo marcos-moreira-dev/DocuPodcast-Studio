@@ -23,6 +23,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class DocuPodcastProjectVoiceLibraryJsonTest {
     @Test
+    void roundTripsDocumentDefaultVoiceAndToneWithoutChangingTheSchema() throws Exception {
+        DocuPodcastProject project = DocuPodcastProject.createNew("Voces")
+                .withDocumentDefaultVoiceProfileId("VOC-MARIA")
+                .withDocumentDefaultVoiceToneId(VoiceReferenceTone.SAD.layerTargetId());
+
+        String json = new DocuPodcastProjectJsonWriter().write(project);
+        DocuPodcastProject opened = new DocuPodcastProjectJsonReader().read(json);
+
+        assertEquals("VOC-MARIA", opened.documentDefaultVoiceProfileId());
+        assertEquals(VoiceReferenceTone.SAD.layerTargetId(),
+                opened.documentDefaultVoiceToneId());
+    }
+
+    @Test
     void writesAndReadsVoiceLibrarySection() throws Exception {
         DocuPodcastProject project = DocuPodcastProject.createNew("Voces").withVoiceLibrary(VoiceLibrary.defaults());
         String json = new DocuPodcastProjectJsonWriter().write(project);
@@ -61,6 +75,27 @@ final class DocuPodcastProjectVoiceLibraryJsonTest {
         assertEquals(2, openedSet.samples().size());
         assertTrue(openedSet.sampleFor(VoiceReferenceTone.NEUTRAL).isPresent());
         assertTrue(openedSet.sampleFor(VoiceReferenceTone.HAPPY).isPresent());
+        assertEquals("Texto exacto pronunciado.", openedSet.neutralSample()
+                .orElseThrow().referenceTranscript());
+    }
+
+    @Test
+    void readsOlderReferenceSampleWithoutTranscript() throws Exception {
+        String voiceId = "VOC-TEST-ADVANCED";
+        VoiceLibrary library = VoiceLibrary.defaults()
+                .withVoice(testAdvancedVoice(voiceId))
+                .withReferenceSample(sample(voiceId,
+                        "VOICE-SAMPLE-LEGACY", VoiceReferenceTone.NEUTRAL));
+        String json = new DocuPodcastProjectJsonWriter().write(
+                        DocuPodcastProject.createNew("Voces").withVoiceLibrary(library))
+                .replace("\"referenceTranscript\": \"Texto exacto pronunciado.\"",
+                        "\"legacyFieldWithoutTranscript\": \"\"");
+
+        VoiceReferenceSample opened = new DocuPodcastProjectJsonReader().read(json)
+                .voiceLibrary().referenceSampleSetByVoiceId(voiceId).orElseThrow()
+                .neutralSample().orElseThrow();
+
+        assertEquals("", opened.referenceTranscript());
     }
 
     @Test
@@ -124,7 +159,8 @@ final class DocuPodcastProjectVoiceLibraryJsonTest {
                 VoiceFileOwnership.PROJECT_ASSET,
                 0,
                 Instant.parse("2026-01-01T00:00:00Z"),
-                "Voz propia registrada"
+                "Voz propia registrada",
+                "Texto exacto pronunciado."
         );
     }
 }

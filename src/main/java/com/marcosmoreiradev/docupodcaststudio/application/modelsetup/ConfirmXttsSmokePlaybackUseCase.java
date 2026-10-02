@@ -115,7 +115,9 @@ public final class ConfirmXttsSmokePlaybackUseCase {
             throw new IllegalArgumentException("manifest requerido");
         }
         try {
-            String json = Files.isRegularFile(manifest) ? Files.readString(manifest) : "{\n}";
+            String json = Files.isRegularFile(manifest)
+                    ? Files.readString(manifest, StandardCharsets.UTF_8)
+                    : "{\n}";
             String updated = json.contains("\"playbackConfirmed\": false")
                     ? json.replace("\"playbackConfirmed\": false", "\"playbackConfirmed\": true")
                     : json;

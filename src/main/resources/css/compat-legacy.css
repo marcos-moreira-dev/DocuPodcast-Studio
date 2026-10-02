@@ -404,11 +404,25 @@
 
 .side-dock-rail-button:hover,
 .side-dock-rail-button-active,
-.ui-side-dock-rail-button:hover,
-.ui-side-dock-rail-button:focused {
+.ui-side-dock-rail-button:hover {
     -fx-background-color: #EEF6FF;
     -fx-border-color: #7EA2D6;
     -fx-text-fill: -docu-text-strong;
+}
+
+/* Keyboard focus remains visible without impersonating the active module. */
+.ui-side-dock-rail-button:focused {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-effect: dropshadow(gaussian, rgba(79, 70, 229, 0.72), 4, 0.28, 0, 0);
+}
+
+.side-dock-rail-button-active,
+.side-dock-rail-button-active:focused {
+    -fx-background-color: #EEF6FF;
+    -fx-border-color: #7EA2D6;
+    -fx-text-fill: -docu-text-strong;
+    -fx-effect: none;
 }
 
 .ui-collapsible-rail-collapsed .document-side-panel-header {

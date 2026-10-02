@@ -1,7 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
 import com.marcosmoreiradev.docupodcaststudio.domain.project.DocuPodcastProject;
-import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceEngineType;
+import com.marcosmoreiradev.docupodcaststudio.application.compatibility.voice.LegacyVoiceProfileEngineCompatibility;
 import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceLibrary;
 import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceProfile;
 import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceProfileType;
@@ -25,7 +25,7 @@ public final class VoiceProfileAdministrationCoordinator {
                 id,
                 name,
                 VoiceProfileType.OWN,
-                VoiceEngineType.XTTS,
+                LegacyVoiceProfileEngineCompatibility.advancedEngineTypeAlias(),
                 existing == null ? "es" : existing.language(),
                 existing == null ? "" : existing.sampleAssetId(),
                 existing == null ? "" : existing.modelAssetId(),

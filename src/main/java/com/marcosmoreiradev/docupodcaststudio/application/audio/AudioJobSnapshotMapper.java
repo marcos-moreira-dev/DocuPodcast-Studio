@@ -59,6 +59,7 @@ public final class AudioJobSnapshotMapper {
                 snapshot.currentSegmentId(),
                 snapshot.currentSegmentTitle(),
                 snapshot.estimatedRemainingSeconds(),
+                0L,
                 snapshot.message(),
                 outputDirectory,
                 snapshot.finalAudioPath(),

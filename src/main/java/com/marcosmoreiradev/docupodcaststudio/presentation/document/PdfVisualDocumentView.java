@@ -1,18 +1,27 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.document;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFeedbackControls;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioNavigationControls;
+
 import com.marcosmoreiradev.docupodcaststudio.application.document.BuildPdfVisualDocumentUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PdfPageRenderRequest;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PdfPageRenderResult;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PdfPageCoordinateTransform;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PdfPageRegion;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PdfRenderException;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PdfVisualReadingProjection;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PdfVisualTextHighlight;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PdfVisualTextTarget;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PdfTextLayerOrigin;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PdfPlaybackVisualGuard;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PdfViewportSelection;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PdfVisualDocument;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PdfVisualPage;
 import com.marcosmoreiradev.docupodcaststudio.application.document.RenderPdfVisualPageUseCase;
-import com.marcosmoreiradev.docupodcaststudio.domain.document.ReadableDocument;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PreparedPdfWorkspaceRef;
+import com.marcosmoreiradev.docupodcaststudio.domain.document.pdf.PdfNarrationFocusRef;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.binding.Bindings;
@@ -28,9 +37,13 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.Point2D;
 import javafx.scene.Cursor;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.ProgressIndicator;
+import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -44,6 +57,10 @@ import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
 
 import java.awt.Color;
 import java.awt.image.BufferedImage;
@@ -58,10 +75,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.function.IntSupplier;
 
 /** Visual PDF reader surface used only when the source document is a PDF. */
 public final class PdfVisualDocumentView extends BorderPane {
+    static final String TEXT_PADDING_HORIZONTAL_PROPERTY =
+            "docupodcast.pdf.playback.highlight.padding.horizontal.px";
+    static final String TEXT_PADDING_VERTICAL_PROPERTY =
+            "docupodcast.pdf.playback.highlight.padding.vertical.px";
+    static final double DEFAULT_TEXT_PADDING_HORIZONTAL_PX = 12.0;
+    static final double DEFAULT_TEXT_PADDING_VERTICAL_PX = 25.0;
+    private static final Logger LOGGER = LoggerFactory.getLogger(PdfVisualDocumentView.class);
     public static final boolean PDF_RENDER_DIAGNOSTICS = false;
 
     private static final int PAGE_RENDER_CACHE_LIMIT = 8;
@@ -80,7 +106,7 @@ public final class PdfVisualDocumentView extends BorderPane {
     private final RenderPdfVisualPageUseCase renderPdfVisualPage;
     private final IntSupplier zoomPercentSupplier;
     private final Consumer<PdfViewportSelection> regionSelectionHandler;
-    private final ScrollPane scroll = new ScrollPane();
+    private final ScrollPane scroll = StudioViewportControls.scrollPane();
     private final VBox pages = new VBox(18);
     private final StackPane pagesHost = new StackPane(pages);
     private final Pane regionCaptureLayer = new Pane();
@@ -99,15 +125,23 @@ public final class PdfVisualDocumentView extends BorderPane {
         }
     };
 
-    private ReadableDocument currentDocument;
+    private Path currentSourcePath;
     private PdfVisualDocument visualDocument;
     private boolean regionSelectionActive;
     private PdfVisualTextHighlight activeTextHighlight;
+    private final PdfPlaybackVisualGuard playbackVisualGuard = new PdfPlaybackVisualGuard();
+    private long activePlaybackPaintSequence;
+    private PdfNarrationFocusRef activeNarrationFocus;
     private PdfVisualReadingProjection readingProjection = new PdfVisualReadingProjection(List.of(), Map.of(), List.of());
     private PdfVisualTextTarget hoverTextTarget;
     private PdfVisualTextTarget fixedTextTarget;
     private PendingTextTargetRequest pendingTextTargetRequest;
     private Consumer<PdfVisualTextTarget> textTargetSelectionHandler;
+    private Consumer<PdfVisualTextTarget> contentDescriptionRequestHandler;
+    private Consumer<PdfVisualTextTarget> manualDescriptionRequestHandler;
+    private Consumer<PdfVisualTextTarget> narrateFromTargetRequestHandler;
+    private Runnable emptyTextTargetSelectionHandler;
+    private ContextMenu activeTextTargetContextMenu;
     private Consumer<Integer> textPreparationRequestHandler;
     private PdfPageSlot activeRegionSelectionSlot;
     private double globalSelectionStartImageX;
@@ -131,6 +165,17 @@ public final class PdfVisualDocumentView extends BorderPane {
         this.regionSelectionHandler = regionSelectionHandler;
 
         getStyleClass().add("pdf-visual-workspace");
+        setFocusTraversable(true);
+        addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+            if (event.getCode() != KeyCode.ESCAPE) return;
+            dismissTextTargetContextMenu();
+            clearPinnedTextTarget();
+            clearHoverTextTarget();
+            if (emptyTextTargetSelectionHandler != null) {
+                emptyTextTargetSelectionHandler.run();
+            }
+            event.consume();
+        });
         pagesHost.getStyleClass().add("pdf-visual-pages-host");
         pages.getStyleClass().add("pdf-visual-pages");
         pages.setAlignment(Pos.TOP_CENTER);
@@ -200,14 +245,35 @@ public final class PdfVisualDocumentView extends BorderPane {
         textTargetSelectionHandler = handler;
     }
 
+    public void setManualDescriptionRequestHandler(
+            Consumer<PdfVisualTextTarget> handler) {
+        manualDescriptionRequestHandler = handler;
+    }
+
+    public void setContentDescriptionRequestHandler(
+            Consumer<PdfVisualTextTarget> handler) {
+        contentDescriptionRequestHandler = handler;
+    }
+
+    public void setNarrateFromTargetRequestHandler(
+            Consumer<PdfVisualTextTarget> handler) {
+        narrateFromTargetRequestHandler = handler;
+    }
+
+    public void setEmptyTextTargetSelectionHandler(Runnable handler) {
+        emptyTextTargetSelectionHandler = handler;
+    }
+
     public void setTextPreparationRequestHandler(Consumer<Integer> handler) {
         textPreparationRequestHandler = handler;
     }
 
-    public void showDocument(ReadableDocument document) {
-        currentDocument = document;
+    public void showDocument(PreparedPdfWorkspaceRef workspace) {
+        currentSourcePath = workspace == null ? null : workspace.sourcePath();
         visualDocument = null;
         activeTextHighlight = null;
+        playbackVisualGuard.clear();
+        activeNarrationFocus = null;
         hoverTextTarget = null;
         fixedTextTarget = null;
         pendingTextTargetRequest = null;
@@ -219,12 +285,12 @@ public final class PdfVisualDocumentView extends BorderPane {
         scroll.setVvalue(0.0);
         scroll.setHvalue(0.0);
         updateScrollProgress();
-        if (document == null) {
+        if (workspace == null) {
             pages.getChildren().add(message("Sin PDF activo."));
             return;
         }
         try {
-            visualDocument = buildPdfVisualDocument.build(document.sourcePath(), dpiForZoom());
+            visualDocument = buildPdfVisualDocument.build(workspace.sourcePath(), dpiForZoom());
             if (visualDocument.pageCount() <= 0 || visualDocument.pages().isEmpty()) {
                 pages.getChildren().add(message("El PDF no reporta paginas renderizables."));
                 return;
@@ -243,13 +309,15 @@ public final class PdfVisualDocumentView extends BorderPane {
     }
 
     public void clear() {
-        currentDocument = null;
+        currentSourcePath = null;
         visualDocument = null;
         regionSelectionActive = false;
         activeRegionSelectionSlot = null;
         globalRegionSelectionRectangle.setVisible(false);
         updateGlobalRegionSelectionState();
         activeTextHighlight = null;
+        playbackVisualGuard.clear();
+        activeNarrationFocus = null;
         hoverTextTarget = null;
         fixedTextTarget = null;
         pendingTextTargetRequest = null;
@@ -275,6 +343,18 @@ public final class PdfVisualDocumentView extends BorderPane {
     }
 
     public void showTextHighlight(PdfVisualTextHighlight highlight) {
+        playbackVisualGuard.clear();
+        applyTextHighlight(highlight);
+    }
+
+    public void showPlaybackTextTarget(PdfVisualTextTarget target, long sequence) {
+        if (target == null || !target.available()
+                || !playbackVisualGuard.request(sequence, target.regionId())) return;
+        activePlaybackPaintSequence = sequence;
+        applyTextHighlight(target.highlight());
+    }
+
+    private void applyTextHighlight(PdfVisualTextHighlight highlight) {
         activeTextHighlight = highlight == null || !highlight.available() ? null : highlight;
         slots.values().forEach(PdfPageSlot::updateTextHighlight);
         if (activeTextHighlight != null) {
@@ -284,7 +364,40 @@ public final class PdfVisualDocumentView extends BorderPane {
 
     public void clearTextHighlight() {
         activeTextHighlight = null;
+        playbackVisualGuard.clear();
         slots.values().forEach(PdfPageSlot::updateTextHighlight);
+    }
+
+    PdfPlaybackVisualGuard.Snapshot playbackVisualSnapshot() {
+        return playbackVisualGuard.snapshot();
+    }
+
+    /**
+     * Keeps non-text content framed until the playback coordinator explicitly
+     * changes or clears the cue. Pausing therefore does not make it disappear.
+     */
+    public void showNarrationFocus(PdfNarrationFocusRef focus) {
+        activeNarrationFocus = focus;
+        slots.values().forEach(PdfPageSlot::updateNarrationFocus);
+        if (focus != null && !focus.boxes().isEmpty()) {
+            renderPage(focus.pageNumber());
+            PdfNarrationFocusRef.FocusBox box = focus.boxes().getFirst();
+            PdfPageSlot slot = slots.get(focus.pageNumber());
+            if (slot != null) {
+                scrollToPageRegion(focus.pageNumber(), new PdfPageRegion(
+                        focus.pageNumber(), box.xMin(), box.yMin(), box.xMax(), box.yMax(),
+                        slot.page.widthPoints(), slot.page.heightPoints()), 72.0);
+            }
+        }
+    }
+
+    public void clearNarrationFocus() {
+        activeNarrationFocus = null;
+        slots.values().forEach(PdfPageSlot::updateNarrationFocus);
+    }
+
+    public PdfNarrationFocusRef narrationFocus() {
+        return activeNarrationFocus;
     }
 
     public void showPinnedTextTarget(PdfVisualTextTarget target) {
@@ -296,6 +409,7 @@ public final class PdfVisualDocumentView extends BorderPane {
     }
 
     public void clearPinnedTextTarget() {
+        dismissTextTargetContextMenu();
         fixedTextTarget = null;
         slots.values().forEach(PdfPageSlot::updateFixedTextTarget);
     }
@@ -549,13 +663,13 @@ public final class PdfVisualDocumentView extends BorderPane {
 
     private void renderPage(int pageNumber) {
         PdfPageSlot slot = slots.get(pageNumber);
-        ReadableDocument document = currentDocument;
+        Path sourcePath = currentSourcePath;
         PdfVisualDocument pdf = visualDocument;
-        if (slot == null || document == null || pdf == null) {
+        if (slot == null || sourcePath == null || pdf == null) {
             return;
         }
         int dpi = dpiForVisibleWidth(slot.page());
-        PageKey key = new PageKey(document.sourcePath(), pageNumber, dpi);
+        PageKey key = new PageKey(sourcePath, pageNumber, dpi);
         Image cached = pageCache.get(key);
         if (cached != null) {
             slot.showImage(cached);
@@ -581,13 +695,13 @@ public final class PdfVisualDocumentView extends BorderPane {
 
     private void startRenderTask(int pageNumber) {
         PdfPageSlot slot = slots.get(pageNumber);
-        ReadableDocument document = currentDocument;
+        Path sourcePath = currentSourcePath;
         PdfVisualDocument pdf = visualDocument;
-        if (slot == null || document == null || pdf == null) {
+        if (slot == null || sourcePath == null || pdf == null) {
             return;
         }
         int dpi = dpiForVisibleWidth(slot.page());
-        PageKey key = new PageKey(document.sourcePath(), pageNumber, dpi);
+        PageKey key = new PageKey(sourcePath, pageNumber, dpi);
         Image cached = pageCache.get(key);
         if (cached != null) {
             slot.showImage(cached);
@@ -598,7 +712,6 @@ public final class PdfVisualDocumentView extends BorderPane {
             drainRenderQueue();
             return;
         }
-        Path sourcePath = document.sourcePath();
         long revision = renderRevision;
         activeRenderTasks++;
         reportPdfRenderDiagnostics("start page " + pageNumber + " dpi=" + dpi);
@@ -671,15 +784,12 @@ public final class PdfVisualDocumentView extends BorderPane {
         if (!PDF_RENDER_DIAGNOSTICS) {
             return;
         }
-        System.out.println("[PdfVisualRender] " + event
-                + " active=" + activeRenderTasks
-                + " queued=" + renderQueue.size()
-                + " rendering=" + renderingPages.size()
-                + " cache=" + pageCache.size());
+        LOGGER.debug("PDF visual render: {} active={} queued={} rendering={} cache={}",
+                event, activeRenderTasks, renderQueue.size(), renderingPages.size(), pageCache.size());
     }
 
     private boolean sameDocument(Path sourcePath) {
-        return currentDocument != null && currentDocument.sourcePath().equals(sourcePath);
+        return currentSourcePath != null && currentSourcePath.equals(sourcePath);
     }
 
     private int dpiForZoom() {
@@ -753,9 +863,9 @@ public final class PdfVisualDocumentView extends BorderPane {
         private final Rectangle hoverTextUnderlineRectangle = new Rectangle();
         private final Rectangle fixedTextHighlightRectangle = new Rectangle();
         private final Rectangle fixedTextUnderlineRectangle = new Rectangle();
-        private final Rectangle textHighlightRectangle = new Rectangle();
-        private final Rectangle textHighlightUnderlineRectangle = new Rectangle();
+        private final Pane textHighlightOverlay = new Pane();
         private final Rectangle selectionRectangle = new Rectangle();
+        private final Pane narrationFocusOverlay = new Pane();
         private double selectionStartX;
         private double selectionStartY;
         private boolean hasImage;
@@ -782,12 +892,19 @@ public final class PdfVisualDocumentView extends BorderPane {
             configureTextOverlay(hoverTextUnderlineRectangle, "pdf-visual-text-hover-underline");
             configureTextOverlay(fixedTextHighlightRectangle, "pdf-visual-text-selected");
             configureTextOverlay(fixedTextUnderlineRectangle, "pdf-visual-text-selected-underline");
-            configureTextOverlay(textHighlightRectangle, "pdf-visual-text-highlight");
-            configureTextOverlay(textHighlightUnderlineRectangle, "pdf-visual-text-highlight-underline");
+            textHighlightOverlay.setManaged(false);
+            textHighlightOverlay.setMouseTransparent(true);
+            textHighlightOverlay.setVisible(false);
+            textHighlightOverlay.setAccessibleRole(AccessibleRole.TEXT);
             selectionRectangle.getStyleClass().add("pdf-visual-region-selection");
             selectionRectangle.setManaged(false);
             selectionRectangle.setMouseTransparent(true);
             selectionRectangle.setVisible(false);
+            narrationFocusOverlay.setManaged(false);
+            narrationFocusOverlay.setMouseTransparent(true);
+            narrationFocusOverlay.setVisible(false);
+            narrationFocusOverlay.getStyleClass().add("pdf-narration-focus-overlay");
+            narrationFocusOverlay.setAccessibleRole(AccessibleRole.TEXT);
             imageView.fitWidthProperty().bind(Bindings.createDoubleBinding(
                     PdfVisualDocumentView.this::visiblePageWidthForZoom,
                     scroll.viewportBoundsProperty(),
@@ -817,6 +934,8 @@ public final class PdfVisualDocumentView extends BorderPane {
 
         private void configureTextOverlay(Rectangle rectangle, String styleClass) {
             rectangle.getStyleClass().add(styleClass);
+            rectangle.setFill(javafx.scene.paint.Color.TRANSPARENT);
+            rectangle.setStroke(javafx.scene.paint.Color.TRANSPARENT);
             rectangle.setManaged(false);
             rectangle.setMouseTransparent(true);
             rectangle.setVisible(false);
@@ -835,7 +954,7 @@ public final class PdfVisualDocumentView extends BorderPane {
             if (hasImage) {
                 return;
             }
-            ProgressIndicator indicator = new ProgressIndicator();
+            ProgressIndicator indicator = StudioFeedbackControls.progressIndicator();
             indicator.setMaxSize(28, 28);
             Label label = new Label("Renderizando pagina PDF...");
             label.getStyleClass().add("pdf-visual-page-placeholder");
@@ -855,13 +974,14 @@ public final class PdfVisualDocumentView extends BorderPane {
                     hoverTextUnderlineRectangle,
                     fixedTextHighlightRectangle,
                     fixedTextUnderlineRectangle,
-                    textHighlightRectangle,
-                    textHighlightUnderlineRectangle,
+                    textHighlightOverlay,
+                    narrationFocusOverlay,
                     selectionOverlay,
                     selectionRectangle);
             updateSelectionOverlay();
             updateRegionSelectionState();
             updateTextTargetOverlays();
+            updateNarrationFocus();
         }
 
         private void showError(String text) {
@@ -882,8 +1002,10 @@ public final class PdfVisualDocumentView extends BorderPane {
             hoverTextUnderlineRectangle.setVisible(false);
             fixedTextHighlightRectangle.setVisible(false);
             fixedTextUnderlineRectangle.setVisible(false);
-            textHighlightRectangle.setVisible(false);
-            textHighlightUnderlineRectangle.setVisible(false);
+            textHighlightOverlay.setVisible(false);
+            textHighlightOverlay.getChildren().clear();
+            narrationFocusOverlay.setVisible(false);
+            narrationFocusOverlay.getChildren().clear();
             selectionRectangle.setVisible(false);
             showWaiting();
         }
@@ -895,31 +1017,99 @@ public final class PdfVisualDocumentView extends BorderPane {
             hoverTextUnderlineRectangle.setVisible(false);
             fixedTextHighlightRectangle.setVisible(false);
             fixedTextUnderlineRectangle.setVisible(false);
-            textHighlightRectangle.setVisible(false);
-            textHighlightUnderlineRectangle.setVisible(false);
+            textHighlightOverlay.setVisible(false);
+            textHighlightOverlay.getChildren().clear();
+            narrationFocusOverlay.setVisible(false);
+            narrationFocusOverlay.getChildren().clear();
             selectionRectangle.setVisible(false);
             showWaiting();
         }
 
         private void updateTextHighlight() {
             PdfVisualTextHighlight highlight = activeTextHighlight;
+            textHighlightOverlay.getChildren().clear();
             if (highlight == null || !highlight.available() || !hasImage || imageView.getImage() == null
                     || highlight.pageNumber() != page.pageNumber()) {
-                textHighlightRectangle.setVisible(false);
-                textHighlightUnderlineRectangle.setVisible(false);
+                textHighlightOverlay.setVisible(false);
                 return;
             }
-            updateTextOverlay(highlight.region(), textHighlightRectangle, textHighlightUnderlineRectangle);
+            textHighlightOverlay.resizeRelocate(0, 0,
+                    frame.getWidth(), frame.getHeight());
+            textHighlightOverlay.setAccessibleText(highlight.text());
+            PdfPageRegion visibleRegion = highlight.visibleRegion();
+            Rectangle rectangle = new Rectangle();
+            Rectangle underline = new Rectangle();
+            configurePlaybackHighlightRectangle(rectangle, "pdf-visual-text-highlight");
+            configurePlaybackHighlightRectangle(underline,
+                    "pdf-visual-text-highlight-underline");
+            updateTextOverlay(visibleRegion, rectangle, underline,
+                    highlight.origin() == PdfTextLayerOrigin.OCR_LOCAL);
+            textHighlightOverlay.getChildren().addAll(rectangle, underline);
+            textHighlightOverlay.setVisible(true);
+            PdfPlaybackVisualGuard.Snapshot expected = playbackVisualGuard.snapshot();
+            if (!expected.expectedRegionId().isBlank()) {
+                boolean matches = playbackVisualGuard.painted(
+                        activePlaybackPaintSequence, expected.expectedRegionId());
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("PDF highlight painted sequence={} expectedVisualRegionId={} "
+                                    + "paintedVisualRegionId={} identityMatches={} page={} timestampNanos={}",
+                            activePlaybackPaintSequence, expected.expectedRegionId(),
+                            expected.expectedRegionId(), matches, page.pageNumber(), System.nanoTime());
+                }
+            }
         }
 
         private void updateTextTargetOverlays() {
             updateHoverTextTarget();
             updateFixedTextTarget();
             updateTextHighlight();
+            updateNarrationFocus();
+        }
+
+        private void updateNarrationFocus() {
+            PdfNarrationFocusRef focus = activeNarrationFocus;
+            narrationFocusOverlay.getChildren().clear();
+            if (focus == null || focus.pageNumber() != page.pageNumber()
+                    || !hasImage || imageView.getImage() == null) {
+                narrationFocusOverlay.setVisible(false);
+                return;
+            }
+            if (!shouldShowNarrationFocus(activeTextHighlight, page.pageNumber())) {
+                narrationFocusOverlay.setVisible(false);
+                return;
+            }
+            Bounds display = displayedImageBounds();
+            if (display == null) {
+                narrationFocusOverlay.setVisible(false);
+                return;
+            }
+            narrationFocusOverlay.resizeRelocate(0, 0, frame.getWidth(), frame.getHeight());
+            narrationFocusOverlay.setAccessibleText(focus.accessibleLabel());
+            for (PdfNarrationFocusRef.FocusBox box : focus.boxes()) {
+                PdfPageRegion region = new PdfPageRegion(
+                        page.pageNumber(), box.xMin(), box.yMin(), box.xMax(), box.yMax(),
+                        page.widthPoints(), page.heightPoints());
+                PdfPageCoordinateTransform.ViewportBox viewportBox = viewportBox(region, display);
+                Rectangle rectangle = new Rectangle();
+                configureNarrationFocusRectangle(rectangle);
+                rectangle.setX(viewportBox.xMin());
+                rectangle.setY(viewportBox.yMin());
+                rectangle.setWidth(Math.max(3.0, viewportBox.width()));
+                rectangle.setHeight(Math.max(3.0, viewportBox.height()));
+                Label label = new Label(focus.accessibleLabel());
+                label.getStyleClass().add("pdf-narration-focus-label");
+                label.setManaged(false);
+                label.relocate(rectangle.getX(), Math.max(display.getMinY(), rectangle.getY() - 25.0));
+                narrationFocusOverlay.getChildren().addAll(rectangle, label);
+            }
+            narrationFocusOverlay.setVisible(true);
+            narrationFocusOverlay.toFront();
         }
 
         private void updateHoverTextTarget() {
-            updateTextTarget(hoverTextTarget, hoverTextHighlightRectangle, hoverTextUnderlineRectangle);
+            updateTextTarget(shouldShowHover(activeTextHighlight, hoverTextTarget)
+                            ? hoverTextTarget : null,
+                    hoverTextHighlightRectangle, hoverTextUnderlineRectangle);
         }
 
         private void updateFixedTextTarget() {
@@ -933,7 +1123,9 @@ public final class PdfVisualDocumentView extends BorderPane {
                 underline.setVisible(false);
                 return;
             }
-            updateTextOverlay(target.region(), rectangle, underline);
+            PdfPageRegion visibleRegion = textOverlayRegion(target);
+            updateTextOverlay(visibleRegion, rectangle, underline,
+                    target.origin() == PdfTextLayerOrigin.OCR_LOCAL);
         }
 
         private void installRegionSelectionHandlers() {
@@ -954,6 +1146,8 @@ public final class PdfVisualDocumentView extends BorderPane {
                 }
             });
             frame.addEventFilter(MouseEvent.MOUSE_CLICKED, this::clickTextTarget);
+            frame.addEventFilter(
+                    MouseEvent.MOUSE_CLICKED, this::showTextTargetContextMenu);
         }
 
         private void hoverTextTarget(MouseEvent event) {
@@ -970,9 +1164,15 @@ public final class PdfVisualDocumentView extends BorderPane {
             if (event.getButton() != MouseButton.PRIMARY || !canHitTestText()) {
                 return;
             }
+            dismissTextTargetContextMenu();
             PdfVisualTextTarget target = targetAt(event);
+            requestFocus();
             if (target == null) {
-                requestTextPreparation(event);
+                clearPinnedTextTarget();
+                if (emptyTextTargetSelectionHandler != null) {
+                    emptyTextTargetSelectionHandler.run();
+                }
+                event.consume();
                 return;
             }
             showPinnedTextTarget(target);
@@ -980,6 +1180,54 @@ public final class PdfVisualDocumentView extends BorderPane {
                 textTargetSelectionHandler.accept(target);
             }
             event.consume();
+        }
+
+        private void showTextTargetContextMenu(MouseEvent event) {
+            if (event.getButton() != MouseButton.SECONDARY
+                    || !canHitTestText()) {
+                return;
+            }
+            dismissTextTargetContextMenu();
+            PdfVisualTextTarget target = targetAt(event);
+            if (target == null) {
+                clearPinnedTextTarget();
+                if (emptyTextTargetSelectionHandler != null) {
+                    emptyTextTargetSelectionHandler.run();
+                }
+                event.consume();
+                return;
+            }
+            showPinnedTextTarget(target);
+            if (textTargetSelectionHandler != null) {
+                textTargetSelectionHandler.accept(target);
+            }
+            boolean secondary = target.kind()
+                    == com.marcosmoreiradev.docupodcaststudio.application.document
+                    .PdfVisualTextTargetKind.SEMANTIC_COMPONENT;
+            activeTextTargetContextMenu = DocumentSelectionContextMenuFactory.create(
+                    secondary, false,
+                    narrateFromTargetRequestHandler == null ? null
+                            : () -> narrateFromTargetRequestHandler.accept(target),
+                    () -> copyTargetText(target),
+                    secondary && contentDescriptionRequestHandler != null
+                            ? () -> contentDescriptionRequestHandler.accept(target) : null,
+                    secondary && manualDescriptionRequestHandler != null
+                            ? () -> manualDescriptionRequestHandler.accept(target) : null);
+            activeTextTargetContextMenu.setOnHidden(hidden -> {
+                if (activeTextTargetContextMenu != null
+                        && !activeTextTargetContextMenu.isShowing()) {
+                    activeTextTargetContextMenu = null;
+                }
+            });
+            activeTextTargetContextMenu.show(
+                    frame, event.getScreenX(), event.getScreenY());
+            event.consume();
+        }
+
+        private void copyTargetText(PdfVisualTextTarget target) {
+            ClipboardContent content = new ClipboardContent();
+            content.putString(target == null ? "" : target.text());
+            Clipboard.getSystemClipboard().setContent(content);
         }
 
         private boolean canHitTestText() {
@@ -1179,9 +1427,9 @@ public final class PdfVisualDocumentView extends BorderPane {
             if (imagePoint == null || image == null || image.getWidth() <= 0 || image.getHeight() <= 0) {
                 return null;
             }
-            double x = imagePoint.getX() * page.widthPoints() / image.getWidth();
-            double y = imagePoint.getY() * page.heightPoints() / image.getHeight();
-            return new Point2D(x, y);
+            PdfPageCoordinateTransform.PagePoint point = coordinateTransform(image)
+                    .rasterToPage(imagePoint.getX(), imagePoint.getY());
+            return new Point2D(point.xPoints(), point.yPoints());
         }
 
         private Point2D imagePixelToScenePoint(double imageX, double imageY) {
@@ -1191,21 +1439,27 @@ public final class PdfVisualDocumentView extends BorderPane {
 
         private void updateTextOverlay(com.marcosmoreiradev.docupodcaststudio.application.document.PdfPageRegion region,
                                        Rectangle rectangle,
-                                       Rectangle underline) {
+                                       Rectangle underline,
+                                       boolean playbackPadding) {
             Bounds displayBounds = displayedImageBounds();
             if (displayBounds == null) {
                 rectangle.setVisible(false);
                 underline.setVisible(false);
                 return;
             }
-            double x1 = displayBounds.getMinX() + displayBounds.getWidth() * region.xMinPoints() / Math.max(1.0, region.pageWidthPoints());
-            double y1 = displayBounds.getMinY() + displayBounds.getHeight() * region.yMinPoints() / Math.max(1.0, region.pageHeightPoints());
-            double x2 = displayBounds.getMinX() + displayBounds.getWidth() * region.xMaxPoints() / Math.max(1.0, region.pageWidthPoints());
-            double y2 = displayBounds.getMinY() + displayBounds.getHeight() * region.yMaxPoints() / Math.max(1.0, region.pageHeightPoints());
-            double x = Math.min(x1, x2);
-            double y = Math.min(y1, y2);
-            double width = Math.max(2.0, Math.abs(x2 - x1));
-            double height = Math.max(2.0, Math.abs(y2 - y1));
+            PdfPageCoordinateTransform.ViewportBox viewportBox = viewportBox(region, displayBounds);
+            double horizontal = playbackPadding ? textPaddingHorizontalPixels() : 0.0;
+            double vertical = playbackPadding ? textPaddingVerticalPixels() : 0.0;
+            VisualBox visible = paddedAndClipped(new VisualBox(
+                            viewportBox.xMin(), viewportBox.yMin(),
+                            viewportBox.xMax(), viewportBox.yMax()),
+                    new VisualBox(displayBounds.getMinX(), displayBounds.getMinY(),
+                            displayBounds.getMaxX(), displayBounds.getMaxY()),
+                    horizontal, vertical);
+            double x = visible.xMin();
+            double y = visible.yMin();
+            double width = Math.max(2.0, visible.width());
+            double height = Math.max(2.0, visible.height());
             rectangle.setX(x);
             rectangle.setY(y);
             rectangle.setWidth(width);
@@ -1223,13 +1477,25 @@ public final class PdfVisualDocumentView extends BorderPane {
             if (displayBounds == null || region == null) {
                 return null;
             }
-            double pageWidth = Math.max(1.0, page.widthPoints());
-            double pageHeight = Math.max(1.0, page.heightPoints());
-            double x = displayBounds.getMinX()
-                    + displayBounds.getWidth() * Math.max(0.0, Math.min(pageWidth, region.xMinPoints())) / pageWidth;
-            double y = displayBounds.getMinY()
-                    + displayBounds.getHeight() * Math.max(0.0, Math.min(pageHeight, region.yMinPoints())) / pageHeight;
-            return frame.localToScene(x, y);
+            PdfPageCoordinateTransform.ViewportBox viewportBox = viewportBox(region, displayBounds);
+            return frame.localToScene(viewportBox.xMin(), viewportBox.yMin());
+        }
+
+        private PdfPageCoordinateTransform coordinateTransform(Image image) {
+            return new PdfPageCoordinateTransform(
+                    page.widthPoints(), page.heightPoints(), page.rotationDegrees(),
+                    image.getWidth(), image.getHeight());
+        }
+
+        private PdfPageCoordinateTransform.ViewportBox viewportBox(PdfPageRegion region, Bounds displayBounds) {
+            Image image = imageView.getImage();
+            if (image == null) {
+                throw new IllegalStateException("PDF page image is not available");
+            }
+            return coordinateTransform(image).toViewport(
+                    region,
+                    displayBounds.getMinX(), displayBounds.getMinY(),
+                    displayBounds.getWidth(), displayBounds.getHeight());
         }
 
         private void updateRegionSelectionState() {
@@ -1256,6 +1522,12 @@ public final class PdfVisualDocumentView extends BorderPane {
         }
     }
 
+    private void dismissTextTargetContextMenu() {
+        ContextMenu menu = activeTextTargetContextMenu;
+        activeTextTargetContextMenu = null;
+        if (menu != null) menu.hide();
+    }
+
     private static double placeholderHeight(PdfVisualPage page) {
         if (page.widthPoints() <= 0 || page.heightPoints() <= 0) {
             return 720.0;
@@ -1268,6 +1540,96 @@ public final class PdfVisualDocumentView extends BorderPane {
         Bounds bounds = scroll.getViewportBounds();
         double width = bounds == null || bounds.getWidth() <= 0 ? getWidth() : bounds.getWidth();
         return width <= 0 ? 900.0 : width;
+    }
+
+    static void configureNarrationFocusRectangle(Rectangle rectangle) {
+        rectangle.getStyleClass().add("pdf-narration-focus-rectangle");
+        // Programmatic fallback is intentional: a newly attached overlay must
+        // never flash with Rectangle's opaque black default before CSS applies.
+        rectangle.setFill(javafx.scene.paint.Color.rgb(250, 204, 21, 0.035));
+        rectangle.setStroke(javafx.scene.paint.Color.web("#a16207"));
+        rectangle.setStrokeWidth(4.0);
+        rectangle.getStrokeDashArray().setAll(10.0, 6.0);
+        rectangle.setManaged(false);
+        rectangle.setMouseTransparent(true);
+    }
+
+    static void configurePlaybackHighlightRectangle(Rectangle rectangle, String styleClass) {
+        rectangle.getStyleClass().add(styleClass);
+        rectangle.setFill("pdf-visual-text-highlight-underline".equals(styleClass)
+                ? javafx.scene.paint.Color.rgb(14, 165, 233, 0.72)
+                : javafx.scene.paint.Color.rgb(125, 211, 252, 0.22));
+        rectangle.setStroke(javafx.scene.paint.Color.TRANSPARENT);
+        rectangle.setOpacity(1.0);
+        rectangle.setManaged(false);
+        rectangle.setMouseTransparent(true);
+        rectangle.setVisible(false);
+    }
+
+    static double textPaddingHorizontalPixels() {
+        return configuredPadding(TEXT_PADDING_HORIZONTAL_PROPERTY,
+                DEFAULT_TEXT_PADDING_HORIZONTAL_PX);
+    }
+
+    static double textPaddingVerticalPixels() {
+        return configuredPadding(TEXT_PADDING_VERTICAL_PROPERTY,
+                DEFAULT_TEXT_PADDING_VERTICAL_PX);
+    }
+
+    private static double configuredPadding(String property, double fallback) {
+        String configured = System.getProperty(property, "");
+        if (configured.isBlank()) return fallback;
+        try {
+            double value = Double.parseDouble(configured);
+            return Double.isFinite(value) ? Math.max(0.0, Math.min(40.0, value))
+                    : fallback;
+        } catch (NumberFormatException ignored) {
+            return fallback;
+        }
+    }
+
+    static VisualBox paddedAndClipped(VisualBox tight, VisualBox page,
+                                      double horizontal, double vertical) {
+        if (tight == null || page == null) throw new IllegalArgumentException("bounds required");
+        double h = Math.max(0.0, horizontal);
+        double v = Math.max(0.0, vertical);
+        return new VisualBox(
+                Math.max(page.xMin(), tight.xMin() - h),
+                Math.max(page.yMin(), tight.yMin() - v),
+                Math.min(page.xMax(), tight.xMax() + h),
+                Math.min(page.yMax(), tight.yMax() + v));
+    }
+
+    record VisualBox(double xMin, double yMin, double xMax, double yMax) {
+        VisualBox {
+            if (xMax < xMin || yMax < yMin) throw new IllegalArgumentException("invalid visual bounds");
+        }
+        double width() { return xMax - xMin; }
+        double height() { return yMax - yMin; }
+    }
+
+    static boolean shouldShowNarrationFocus(PdfVisualTextHighlight active, int pageNumber) {
+        return active == null || !active.available() || active.pageNumber() != pageNumber;
+    }
+
+    /** Shared geometry authority for hover and fixed selection; playback uses the same highlight. */
+    static PdfPageRegion textOverlayRegion(PdfVisualTextTarget target) {
+        return target == null ? null : target.highlight().visibleRegion();
+    }
+
+    static boolean shouldShowHover(PdfVisualTextHighlight active, PdfVisualTextTarget hover) {
+        if (hover == null || !hover.available()) return false;
+        if (active == null || !active.available() || active.pageNumber() != hover.pageNumber()) {
+            return true;
+        }
+        PdfPageRegion playback = active.visibleRegion();
+        return playback == null || hover.highlightRegions().stream().noneMatch(region ->
+                intersects(playback, region));
+    }
+
+    private static boolean intersects(PdfPageRegion a, PdfPageRegion b) {
+        return a.xMinPoints() < b.xMaxPoints() && a.xMaxPoints() > b.xMinPoints()
+                && a.yMinPoints() < b.yMaxPoints() && a.yMaxPoints() > b.yMinPoints();
     }
 
     private record PendingTextTargetRequest(int pageNumber, double xPoints, double yPoints) {

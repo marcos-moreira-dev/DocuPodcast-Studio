@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.theatre;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
+
 import javafx.beans.binding.Bindings;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -13,7 +15,7 @@ final class TechnicalSheetTextArea extends StackPane {
 
     TechnicalSheetTextArea(String initialText, String placeholder) {
         getStyleClass().add("theatre-technical-sheet-input");
-        textArea = new TextArea(initialText == null ? "" : initialText);
+        textArea = StudioFormControls.textArea(initialText == null ? "" : initialText);
         textArea.getStyleClass().add("theatre-character-description-area");
         textArea.setWrapText(true);
         textArea.setPromptText("");

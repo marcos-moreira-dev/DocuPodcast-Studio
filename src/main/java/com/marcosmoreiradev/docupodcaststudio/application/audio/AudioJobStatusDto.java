@@ -19,6 +19,7 @@ public record AudioJobStatusDto(
         String currentSegmentId,
         String currentSegmentTitle,
         long estimatedRemainingSeconds,
+        long estimatedRemainingErrorSeconds,
         String message,
         String outputDirectory,
         String finalAudioPath,
@@ -36,15 +37,31 @@ public record AudioJobStatusDto(
         currentSegmentId = normalize(currentSegmentId);
         currentSegmentTitle = normalize(currentSegmentTitle);
         estimatedRemainingSeconds = Math.max(0, estimatedRemainingSeconds);
+        estimatedRemainingErrorSeconds = Math.max(0, estimatedRemainingErrorSeconds);
         message = normalize(message);
         outputDirectory = normalize(outputDirectory);
         finalAudioPath = normalize(finalAudioPath);
         manifestPath = normalize(manifestPath);
     }
 
+    /** Source-compatible constructor for status producers that do not expose uncertainty. */
+    public AudioJobStatusDto(String jobId, String documentName, AudioJobState state,
+                             AudioGenerationStage stage, int completedSegments,
+                             int totalSegments, int failedSegments, double progress,
+                             String currentSegmentId, String currentSegmentTitle,
+                             long estimatedRemainingSeconds, String message,
+                             String outputDirectory, String finalAudioPath,
+                             String manifestPath) {
+        this(jobId, documentName, state, stage, completedSegments, totalSegments,
+                failedSegments, progress, currentSegmentId, currentSegmentTitle,
+                estimatedRemainingSeconds, 0L, message, outputDirectory,
+                finalAudioPath, manifestPath);
+    }
+
     public static AudioJobStatusDto idle() {
         return new AudioJobStatusDto("", "", AudioJobState.IDLE, AudioGenerationStage.NONE,
-                0, 0, 0, 0.0, "", "", 0, "Sin generación de audio activa.", "", "", "");
+                0, 0, 0, 0.0, "", "", 0, 0,
+                "Sin generación de audio activa.", "", "", "");
     }
 
     public String progressPercentLabel() {
@@ -62,7 +79,11 @@ public record AudioJobStatusDto(
         if (!state.running() || completedSegments == 0 || estimatedRemainingSeconds <= 0) {
             return state.running() ? "Calculando tiempo restante…" : "Sin ETA";
         }
-        return durationLabel(estimatedRemainingSeconds) + " restantes aprox.";
+        String estimate = "Faltan aproximadamente " + durationLabel(estimatedRemainingSeconds);
+        if (estimatedRemainingErrorSeconds <= 0) {
+            return estimate + ".";
+        }
+        return estimate + " ± " + durationLabel(estimatedRemainingErrorSeconds) + ".";
     }
 
     private static String durationLabel(long totalSeconds) {
@@ -84,7 +105,9 @@ public record AudioJobStatusDto(
             return message.isBlank() ? "Sin generación activa." : message;
         }
         String segment = currentSegmentTitle.isBlank() ? "" : " — " + currentSegmentTitle;
-        return state.displayName() + " · " + stage.displayName() + " · " + segmentCounterLabel() + segment;
+        String activity = message.isBlank() ? "" : " · " + message;
+        return state.displayName() + " · " + stage.displayName() + " · "
+                + segmentCounterLabel() + segment + activity;
     }
 
     public boolean running() {
