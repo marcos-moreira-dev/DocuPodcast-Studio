@@ -36,7 +36,9 @@ public final class InkPressureIndicator extends Label implements AutoCloseable {
     }
 
     private void queue(InkInputStatus current) {
-        pendingText = textFor(current);
+        String nextText = textFor(current);
+        if (nextText.equals(pendingText)) return;
+        pendingText = nextText;
         if (updateQueued) return;
         updateQueued = true;
         Platform.runLater(() -> {

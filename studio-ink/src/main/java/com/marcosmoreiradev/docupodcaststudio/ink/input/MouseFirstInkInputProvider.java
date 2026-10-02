@@ -131,6 +131,12 @@ final class MouseFirstInkInputProvider implements InkInputProvider {
         public boolean onStrokeStart(InkInputSample sample) {
             if (nativeRecentlyActive() || nativeStrokeActive) return false;
             lastMouseSample = sample;
+            // There is nothing to arbitrate when native input is unavailable.
+            // In particular, do not wait for a JavaFX pulse before starting ink.
+            if (!nativeProvider.capabilities().nativeProvider()) {
+                mouseStrokeActive = delegate.onStrokeStart(sample);
+                return mouseStrokeActive;
+            }
             queueMouse(PendingMouseEvent.start(delegate, sample));
             return true;
         }

@@ -38,6 +38,8 @@ final class MouseFirstInkInputProviderTest {
         onFx(() -> {
             provider.attach(new Pane(), recording);
             mouse.fireStart(mouseSample());
+            assertEquals(List.of("start:MOUSE"), recording.events,
+                    "mouse-only input must begin without waiting for the animation pulse");
             mouse.fireMove(mouseSample());
             mouse.fireEnd(mouseSample());
         });

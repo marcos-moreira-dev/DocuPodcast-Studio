@@ -49,9 +49,13 @@ final class TheatreFrameSketchDialogE2ETest {
                     fireMouse(target, javafx.scene.input.MouseEvent.MOUSE_MOVED, 100, 100, false);
                     fireMouse(target, javafx.scene.input.MouseEvent.MOUSE_PRESSED, 100, 100, true);
                     fireMouse(target, javafx.scene.input.MouseEvent.MOUSE_DRAGGED, 140, 120, true);
-                    fireMouse(target, javafx.scene.input.MouseEvent.MOUSE_RELEASED, 140, 120, false);
+                    fireMouse(target, javafx.scene.input.MouseEvent.MOUSE_DRAGGED, 160, 90, true);
+                    fireMouse(target, javafx.scene.input.MouseEvent.MOUSE_DRAGGED, 180, 120, true);
+                    fireMouse(target, javafx.scene.input.MouseEvent.MOUSE_RELEASED, 200, 100, false);
                     var strokes = surface.applicationInkStrokes();
                     assertFalse(strokes.isEmpty());
+                    assertTrue(surface.inkCommandStates().stream().anyMatch(command -> command.quadratic()),
+                            "theatre must preserve the same curved vector ink with and without a stage image");
                     var first = strokes.get(strokes.size() - 1).points().get(0);
                     org.junit.jupiter.api.Assertions.assertEquals(100, first.x(), 0.01);
                     org.junit.jupiter.api.Assertions.assertEquals(100, first.y(), 0.01);

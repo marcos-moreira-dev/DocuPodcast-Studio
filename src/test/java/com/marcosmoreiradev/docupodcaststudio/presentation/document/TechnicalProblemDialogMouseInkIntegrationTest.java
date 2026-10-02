@@ -545,6 +545,8 @@ final class TechnicalProblemDialogMouseInkIntegrationTest {
             var strokes = surface.inkStrokeStates();
             assertEquals(1, strokes.size(), "express="+express);
             assertTrue(strokes.getFirst().points().size() >= 5);
+            assertTrue(surface.inkCommandStates().stream().anyMatch(command -> command.quadratic()),
+                    "both editors must retain curved ink after releasing the mouse: express=" + express);
             var rendered = runOnFxAndWait(surface::snapshotDrawing);
             if (expected != null) {
                 var actualPoints = strokes.getFirst().points();
