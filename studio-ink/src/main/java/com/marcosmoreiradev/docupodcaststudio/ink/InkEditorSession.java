@@ -174,8 +174,10 @@ public final class InkEditorSession<S> implements AutoCloseable {
                 || sample.cursor() == InkInputCursor.ERASER
                 || sample.inputSource().startsWith("LectureStudio")
                 || sample.inputSource().startsWith("Windows Pointer");
-        inputStatus.set(new InkInputStatus(capabilities.providerName(), sample.inputSource(), sample.cursor(),
-                sample.rawPressure(), sample.pressure(), variable, nativeActive, capabilities.fallbackReason()));
+        InkInputStatus next = new InkInputStatus(capabilities.providerName(), sample.inputSource(), sample.cursor(),
+                sample.rawPressure(), sample.pressure(), variable, nativeActive, capabilities.fallbackReason());
+        // Position changes belong to the stroke stream, not the status UI.
+        if (!next.equals(inputStatus.get())) inputStatus.set(next);
     }
 
     private void ensureOpen() {

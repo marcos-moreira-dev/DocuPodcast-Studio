@@ -43,6 +43,27 @@ final class InkEditorSessionTest {
     }
 
     @Test
+    void mouseMotionPreservesSamplesWithoutRepeatedStatusNotifications() {
+        FakeProvider provider = new FakeProvider();
+        AtomicReference<InkInputSample> received = new AtomicReference<>();
+        AtomicInteger notifications = new AtomicInteger();
+        DrawingProfile profile = DrawingFeatureCatalog.official().require(DrawingFeatureCatalog.DOCUMENT_PROBLEM);
+        try (InkEditorSession<String> session = session(provider, new AtomicReference<>("ink"))) {
+            session.attach(new InkCanvasViewport(new InkCanvasSurface(), profile), listener(received));
+            session.inputStatusProperty().addListener((obs, before, after) -> notifications.incrementAndGet());
+            for (int i = 0; i < 100; i++) {
+                provider.listener.onStrokeMove(new InkInputSample(100 + i, 100, i + 1, 1,
+                        InkInputCursor.MOUSE, true, false));
+                assertEquals(100 + i, received.get().x());
+            }
+            assertEquals(1, notifications.get(), "pointer positions must not refresh status controls");
+            provider.listener.onStrokeMove(new InkInputSample(200, 100, 101, .4,
+                    InkInputCursor.PEN, true, false));
+            assertEquals(2, notifications.get(), "a real pressure/cursor change must still be published");
+        }
+    }
+
+    @Test
     void boundsHistoryAndRestoresUndoRedo() {
         FakeProvider provider = new FakeProvider();
         AtomicReference<String> state = new AtomicReference<>("one");
