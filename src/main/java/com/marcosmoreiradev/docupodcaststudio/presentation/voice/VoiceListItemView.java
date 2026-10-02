@@ -2,6 +2,7 @@ package com.marcosmoreiradev.docupodcaststudio.presentation.voice;
 
 import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceLibrary;
 import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceProfile;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.SemanticActionIcons;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -25,6 +26,7 @@ public final class VoiceListItemView extends VBox {
             return;
         }
         Label name = new Label(VoiceProfilePresentationPolicy.displayName(voice));
+        name.setGraphic(SemanticActionIcons.graphicFor("Voz", 17));
         name.getStyleClass().add("voice-browser-name");
 
         String status = humanStatus(voice, library);

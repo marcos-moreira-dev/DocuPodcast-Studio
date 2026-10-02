@@ -46,7 +46,41 @@ La segunda tanda convierte los contratos creados inicialmente en la ruta product
 - Los smokes que necesitan runtimes reales son opt-in. Una instalación ausente se informa como recurso ausente, nunca como éxito simulado.
 - Narrative mantiene su composición de producto actual y estado `EVOLVING`; la infraestructura nueva no decide su UX definitiva.
 
-## Tercera tanda: trabajo deliberadamente diferido
+## Tercera tanda: saneamiento final en ejecucion
+
+La tercera tanda se ejecuta en cinco gates consecutivos. Un gate no se considera cerrado por crear contratos: la ruta productiva y sus pruebas deben usarlo.
+
+1. **Cierre de infraestructura heredada.** Los protocolos, procesos, HTTP, descargas, PDF/OCR y manipulacion multimedia salen de `application` y `presentation`. Los nombres de proveedor solo permanecen en adaptadores, launcher y codecs de compatibilidad.
+2. **Cutover de presentacion.** `StudioSessionStore` conserva exclusivamente el estado global. Proyecto, reproduccion, documento, Documentary, Theatre, Narrative, exportacion y administracion poseen controladores estrechos. Las vistas raiz solo componen layout y bindings.
+3. **Persistencia seccionada.** `DocuPodcastProjectJsonReader` y `DocuPodcastProjectJsonWriter` coordinan codecs de metadata, lectura, voz, assets, estudio, Theatre, Narrative y vista sin modificar `formatVersion: 1`.
+4. **Operabilidad local.** SLF4J/Logback, contexto MDC, metricas de jobs, ZIP de soporte sanitizado, cierre ordenado y reconciliacion de jobs interrumpidos forman una unica politica de operacion.
+5. **Verificacion.** La suite normal, `gui-e2e`, empaquetado y smoke del launcher son obligatorios. Las reglas arquitectonicas impiden reintroducir las dependencias retiradas.
+
+### Contratos internos de esta tanda
+
+- `StudioSessionStore`: proyecto activo, experiencia, seleccion transversal, dirty y mensajes.
+- `ProjectArtifactStore`, `DocumentAssetGateway`, `ArchiveGateway`, `DocumentTextExtractor` y `DocumentTextExtractionProvisioner`: E/S especializada; no existe una fachada global de sistema de archivos.
+- `OperationContext`, `JobMetricsRecorder`, `ApplicationLifecycleCoordinator` y `SupportBundleExporter`: operabilidad local y sanitizada.
+- `ProjectJsonSectionCodec`: lectura/escritura por seccion con contextos compartidos y aliases v1 centralizados.
+
+Los contratos publicos de voz, imagen, video generativo y render permanecen congelados. Un cambio requiere primero un contract test que reproduzca el defecto.
+
+### Recuperacion y privacidad
+
+En cierre normal se bloquean jobs nuevos, se solicita cancelacion, se espera hasta cinco segundos, se persiste estado y finalmente se cierran tinta, runtimes, ejecutores y logging. Al arrancar, un job neutral `RUNNING` o `STAGING` pasa a `INTERRUPTED/RECOVERABLE`; los jobs historicos no se reescriben.
+
+Logs y bundles de soporte no contienen prompts completos, texto documental, secretos, query strings, proyectos, modelos ni artefactos. Las rutas de home y proyecto se tokenizan. No existe subida automatica.
+
+### Estado de corte
+
+- Cerrado: codecs JSON v1 por seccion, logging runtime, contexto operativo, bundle sanitizado, coordinador de ciclo de vida, recuperacion neutral de jobs y perfil JavaFX headless.
+- Cerrado en presentacion: la administracion de voz usa descriptores neutrales; Theatre genera por capacidades neutrales; los nombres de proveedor, clientes HTTP y `ImageIO` estan prohibidos por pruebas de frontera.
+- Cerrado en tinta transversal: `InkCanvasViewport` centraliza el target transparente, coordenadas y limites vivos; `InkEditorSession` conserva presion cruda/normalizada, zoom, historial y ciclo de vida. Problema tecnico, composicion libre y frame teatral consumen esa ruta y los perfiles crecientes ya no se limitan al ancho inicial.
+- En curso: retirada de rutas heredadas de generacion/documentos, E/S directa restante y descomposicion de controladores/vistas. Narrative ya resuelve y descarta artefactos mediante `ProjectArtifactStore`; quedan otros workspaces por migrar.
+- Evidencia del 21 de julio de 2026: `mvn verify -Pgui-e2e` paso con 889 pruebas normales, 0 fallos, 0 errores y 1 omitida, mas 4 pruebas JavaFX headless. La verificacion focalizada posterior del skin de formularios paso 2 reglas de arquitectura y 5 pruebas JavaFX headless.
+- Pendiente para el gate final: eliminar `DocuPodcastShellViewModel`, reducir las cuatro vistas grandes a composicion, sacar los 148 accesos `Files.*` que aun permanecen en presentacion, retirar E/S/procesos documentales de application y completar el smoke interactivo del launcher.
+
+### Alcance detallado
 
 La tercera tanda será de reducción de complejidad interna y robustez, no de ampliación de motores:
 
@@ -65,3 +99,16 @@ La tercera tanda no añadirá motores ni reabrirá los contratos públicos de me
 Una nueva experiencia de dibujo registra un `DrawingProfile`, sus overlays y paneles específicos. No vuelve a implementar captura, presión, transformación de coordenadas, zoom, undo/redo, restauración, exportación ni cierre del proveedor.
 
 Un nuevo adaptador de una capacidad existente implementa su contract test, publica descriptor/presets/administración y se registra en launcher. No modifica dominio, workflows de producto ni componentes GUI.
+
+## Tanda de arranque confiable y paridad
+
+Esta tanda corrige el camino ejecutable antes de continuar la reducción de clases grandes:
+
+- `studio-launcher` exporta cualificadamente su clase JavaFX y el smoke muestra el shell real antes de cerrar.
+- `LocalMediaLayout` separa instalación de runtime escribible. Propiedad Java, entorno y detección tienen precedencia documentada; `user.dir` deja de ser infraestructura implícita.
+- Piper, XTTS, ComfyUI imagen, ComfyUI video y FFmpeg poseen administradores propios. Ningún formulario administrativo acepta comandos, destinos o staging arbitrarios.
+- El runtime ComfyUI se inicia una vez aunque imagen y video conserven registros y contratos independientes.
+- El catálogo público se reduce a siete scripts. La app-image es ligera; MSI y copia de activos pesados quedan fuera de alcance.
+- La copia `g - copia` es un oráculo estrictamente de solo lectura. La [matriz de paridad](../quality/capability-parity.md) relaciona activos, rutas productivas y evidencia.
+
+El gate no afirma que un recurso ausente exista: los workflows de video no incluidos en la referencia deben importarse desde Configuración y hasta entonces se informan como capacidad no disponible.

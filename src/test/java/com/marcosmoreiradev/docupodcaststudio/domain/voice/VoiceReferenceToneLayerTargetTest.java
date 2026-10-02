@@ -6,6 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class VoiceReferenceToneLayerTargetTest {
+    @Test void spanishLabelsAndAngryLegacyIdResolveWithoutNeutralFallback() {
+        for (String label : java.util.List.of("enojado","Enojada","TONE-ANGRY","STY-ANGRY","tone-angry"))
+            assertEquals(VoiceReferenceTone.ANGRY,VoiceReferenceTone.fromLayerTargetId(label).orElseThrow());
+        assertEquals(VoiceReferenceTone.EUPHORIC,VoiceReferenceTone.fromLayerTargetId("eufórico").orElseThrow());
+        assertTrue(VoiceReferenceTone.fromLayerTargetId("enojaod").isEmpty());
+    }
     @Test
     void toneLayerTargetRoundTripsFromStableProjectId() {
         assertEquals("TONE-HEROIC", VoiceReferenceTone.HEROIC.layerTargetId());

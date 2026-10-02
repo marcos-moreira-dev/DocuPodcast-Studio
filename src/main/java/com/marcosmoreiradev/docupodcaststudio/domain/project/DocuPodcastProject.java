@@ -6,6 +6,8 @@ import com.marcosmoreiradev.docupodcaststudio.domain.assignment.NarrativeLayerAs
 import com.marcosmoreiradev.docupodcaststudio.domain.assignment.NarrativeLayerAssignmentPolicy;
 import com.marcosmoreiradev.docupodcaststudio.domain.narrative.NarrativeProjectLayer;
 import com.marcosmoreiradev.docupodcaststudio.domain.reading.ReadingProfile;
+import com.marcosmoreiradev.docupodcaststudio.domain.reading.DocumentListeningPreferences;
+import com.marcosmoreiradev.docupodcaststudio.domain.reading.DocumentTranslationPreferences;
 import com.marcosmoreiradev.docupodcaststudio.domain.study.StudyProjectLayer;
 import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreProjectLayer;
 import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceLibrary;
@@ -27,8 +29,16 @@ public record DocuPodcastProject(
         NarrativeProjectLayer narrative,
         TheatreProjectLayer theatre,
         StudyProjectLayer study,
+        ProjectVisualProcessingSettings visualProcessing,
         Map<String, String> viewState
 ) {
+    public static final String DOCUMENT_DEFAULT_VOICE_PROFILE_KEY =
+            "documentAudio.defaultVoiceProfileId";
+    public static final String DOCUMENT_DEFAULT_VOICE_TONE_KEY =
+            "documentAudio.defaultVoiceTone";
+    public static final String DOCUMENT_READ_AFTER_COLON_KEY =
+            "documentAudio.readAfterColon";
+
     public DocuPodcastProject {
         metadata = Objects.requireNonNull(metadata, "metadata");
         assets = Objects.requireNonNullElseGet(assets, ProjectAssetCatalog::empty);
@@ -38,7 +48,24 @@ public record DocuPodcastProject(
         narrative = Objects.requireNonNullElseGet(narrative, NarrativeProjectLayer::empty);
         theatre = Objects.requireNonNullElseGet(theatre, TheatreProjectLayer::empty);
         study = Objects.requireNonNullElseGet(study, StudyProjectLayer::empty);
+        visualProcessing = Objects.requireNonNullElseGet(
+                visualProcessing, ProjectVisualProcessingSettings::inherited);
         viewState = viewState == null ? Map.of() : Map.copyOf(viewState);
+    }
+
+    /** Compatibility constructor for projects created before visual-processing overrides existed. */
+    public DocuPodcastProject(
+            ProjectMetadata metadata,
+            ProjectAssetCatalog assets,
+            ReadingProfile readingProfile,
+            VoiceLibrary voiceLibrary,
+            List<NarrativeLayerAssignment> narrativeLayerAssignments,
+            NarrativeProjectLayer narrative,
+            TheatreProjectLayer theatre,
+            StudyProjectLayer study,
+            Map<String, String> viewState) {
+        this(metadata, assets, readingProfile, voiceLibrary, narrativeLayerAssignments,
+                narrative, theatre, study, ProjectVisualProcessingSettings.inherited(), viewState);
     }
 
     public DocuPodcastProject(ProjectMetadata metadata, ProjectAssetCatalog assets, Map<String, String> viewState) {
@@ -98,6 +125,7 @@ public record DocuPodcastProject(
                 NarrativeProjectLayer.empty(),
                 TheatreProjectLayer.empty(),
                 StudyProjectLayer.empty(),
+                ProjectVisualProcessingSettings.inherited(),
                 Map.of("activeWorkspace", "WELCOME_HOME")
         );
     }
@@ -115,48 +143,49 @@ public record DocuPodcastProject(
 
     public DocuPodcastProject withAsset(ProjectAssetReference reference) {
         return new DocuPodcastProject(touch(metadata), assets.withReference(reference), readingProfile, voiceLibrary,
-                narrativeLayerAssignments, narrative, theatre, study, viewState);
+                narrativeLayerAssignments, narrative, theatre, study, visualProcessing, viewState);
     }
 
     public DocuPodcastProject withoutAsset(String assetId) {
         return new DocuPodcastProject(touch(metadata), assets.withoutReference(assetId), readingProfile, voiceLibrary,
-                narrativeLayerAssignments, narrative, theatre, study, viewState);
+                narrativeLayerAssignments, narrative, theatre, study, visualProcessing, viewState);
     }
 
     public DocuPodcastProject withMetadata(ProjectMetadata newMetadata) {
         return new DocuPodcastProject(newMetadata, assets, readingProfile, voiceLibrary,
-                narrativeLayerAssignments, narrative, theatre, study, viewState);
+                narrativeLayerAssignments, narrative, theatre, study, visualProcessing, viewState);
     }
 
     public DocuPodcastProject withReadingProfile(ReadingProfile newReadingProfile) {
         return new DocuPodcastProject(touch(metadata), assets,
                 Objects.requireNonNull(newReadingProfile, "newReadingProfile"), voiceLibrary,
-                narrativeLayerAssignments, narrative, theatre, study, viewState);
+                narrativeLayerAssignments, narrative, theatre, study, visualProcessing, viewState);
     }
 
     public DocuPodcastProject withVoiceLibrary(VoiceLibrary newVoiceLibrary) {
         return new DocuPodcastProject(touch(metadata), assets, readingProfile,
                 Objects.requireNonNull(newVoiceLibrary, "newVoiceLibrary"), narrativeLayerAssignments,
-                narrative, theatre, study, viewState);
+                narrative, theatre, study, visualProcessing, viewState);
     }
 
     public DocuPodcastProject withNarrative(NarrativeProjectLayer newNarrative) {
         return new DocuPodcastProject(touch(metadata), assets, readingProfile, voiceLibrary,
                 narrativeLayerAssignments,
                 Objects.requireNonNullElseGet(newNarrative, NarrativeProjectLayer::empty),
-                theatre, study, viewState);
+                theatre, study, visualProcessing, viewState);
     }
 
     public DocuPodcastProject withTheatre(TheatreProjectLayer newTheatre) {
         return new DocuPodcastProject(touch(metadata), assets, readingProfile, voiceLibrary,
                 narrativeLayerAssignments, narrative,
-                Objects.requireNonNullElseGet(newTheatre, TheatreProjectLayer::empty), study, viewState);
+                Objects.requireNonNullElseGet(newTheatre, TheatreProjectLayer::empty), study,
+                visualProcessing, viewState);
     }
 
     public DocuPodcastProject withStudy(StudyProjectLayer newStudy) {
         return new DocuPodcastProject(touch(metadata), assets, readingProfile, voiceLibrary,
                 narrativeLayerAssignments, narrative, theatre,
-                Objects.requireNonNullElseGet(newStudy, StudyProjectLayer::empty), viewState);
+                Objects.requireNonNullElseGet(newStudy, StudyProjectLayer::empty), visualProcessing, viewState);
     }
 
     /**
@@ -193,7 +222,13 @@ public record DocuPodcastProject(
 
     public DocuPodcastProject withNarrativeLayerAssignments(List<NarrativeLayerAssignment> assignments) {
         return new DocuPodcastProject(touch(metadata), assets, readingProfile, voiceLibrary,
-                assignments, narrative, theatre, study, viewState);
+                assignments, narrative, theatre, study, visualProcessing, viewState);
+    }
+
+    public DocuPodcastProject withVisualProcessing(ProjectVisualProcessingSettings settings) {
+        return new DocuPodcastProject(touch(metadata), assets, readingProfile, voiceLibrary,
+                narrativeLayerAssignments, narrative, theatre, study,
+                Objects.requireNonNullElseGet(settings, ProjectVisualProcessingSettings::inherited), viewState);
     }
 
     public DocuPodcastProject withViewState(String key, String value) {
@@ -207,7 +242,72 @@ public record DocuPodcastProject(
             updated.put(key, value);
         }
         return new DocuPodcastProject(touch(metadata), assets, readingProfile, voiceLibrary,
-                narrativeLayerAssignments, narrative, theatre, study, updated);
+                narrativeLayerAssignments, narrative, theatre, study, visualProcessing, updated);
+    }
+
+    /** Voice selected as the default for this document, persisted with the project. */
+    public String documentDefaultVoiceProfileId() {
+        String value = viewState.get(DOCUMENT_DEFAULT_VOICE_PROFILE_KEY);
+        return value == null ? "" : value.strip();
+    }
+
+    public DocuPodcastProject withDocumentDefaultVoiceProfileId(String voiceProfileId) {
+        String normalized = voiceProfileId == null ? "" : voiceProfileId.strip();
+        return withViewState(DOCUMENT_DEFAULT_VOICE_PROFILE_KEY,
+                normalized.isBlank() ? null : normalized);
+    }
+
+    /** Expressive tone used by document narration units without a specific emotion override. */
+    public String documentDefaultVoiceToneId() {
+        String value = viewState.get(DOCUMENT_DEFAULT_VOICE_TONE_KEY);
+        return value == null ? "" : value.strip();
+    }
+
+    public DocuPodcastProject withDocumentDefaultVoiceToneId(String toneId) {
+        String normalized = toneId == null ? "" : toneId.strip();
+        return withViewState(DOCUMENT_DEFAULT_VOICE_TONE_KEY,
+                normalized.isBlank() ? null : normalized);
+    }
+
+    /** Whether dialogue labels such as "CONCHA:" are excluded from generated speech. */
+    public boolean documentReadAfterColon() {
+        return Boolean.parseBoolean(viewState.getOrDefault(
+                DOCUMENT_READ_AFTER_COLON_KEY, "false"));
+    }
+
+    public DocuPodcastProject withDocumentReadAfterColon(boolean enabled) {
+        return withViewState(DOCUMENT_READ_AFTER_COLON_KEY,
+                Boolean.toString(enabled));
+    }
+
+    public DocumentListeningPreferences documentListeningPreferences() {
+        return DocumentListeningPreferences.fromViewState(
+                viewState, readingProfile.imagePolicy(),
+                readingProfile.tablePolicy());
+    }
+
+    public DocuPodcastProject withDocumentListeningPreferences(
+            DocumentListeningPreferences preferences) {
+        DocumentListeningPreferences safe = Objects.requireNonNullElseGet(
+                preferences, DocumentListeningPreferences::defaults);
+        return new DocuPodcastProject(
+                touch(metadata), assets, readingProfile, voiceLibrary,
+                narrativeLayerAssignments, narrative, theatre, study,
+                visualProcessing, safe.applyTo(viewState));
+    }
+
+    public DocumentTranslationPreferences documentTranslationPreferences() {
+        return DocumentTranslationPreferences.fromViewState(viewState);
+    }
+
+    public DocuPodcastProject withDocumentTranslationPreferences(
+            DocumentTranslationPreferences preferences) {
+        DocumentTranslationPreferences safe = Objects.requireNonNullElseGet(
+                preferences, DocumentTranslationPreferences::defaults);
+        return new DocuPodcastProject(
+                touch(metadata), assets, readingProfile, voiceLibrary,
+                narrativeLayerAssignments, narrative, theatre, study,
+                visualProcessing, safe.applyTo(viewState));
     }
 
     private static ProjectMetadata touch(ProjectMetadata metadata) {

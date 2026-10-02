@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.theatre;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioCollectionControls;
+
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreAudioTrackTimelineEntry;
 import javafx.geometry.Insets;
 import javafx.application.Platform;
@@ -20,7 +22,7 @@ public final class TheatreAudioTrackRailView extends VBox {
         setSpacing(8);
         Label title = new Label("Pistas asignadas");
         title.getStyleClass().add("document-media-action-label");
-        ListView<TheatreAudioTrackTimelineEntry> tracks = new ListView<>(editor.trackEntries());
+        ListView<TheatreAudioTrackTimelineEntry> tracks = StudioCollectionControls.listView(editor.trackEntries());
         tracks.setMinWidth(0);
         tracks.setMaxWidth(Double.MAX_VALUE);
         tracks.setPlaceholder(new Label("No hay pistas asignadas."));

@@ -5,19 +5,24 @@
     -fx-background-color: linear-gradient(to bottom, #F4F8FE, #E7EFF8 100%);
 }
 
-.welcome-scroll {
+.welcome-start-scroll {
     -fx-background-color: transparent;
     -fx-background: transparent;
     -fx-border-color: transparent;
+    -fx-padding: 0 3 0 0;
 }
 
-.welcome-scroll > .viewport {
+.welcome-start-scroll > .viewport {
     -fx-background-color: transparent;
+}
+
+.welcome-start-actions {
+    -fx-padding: 0 8 8 0;
 }
 
 .welcome-stage {
     -fx-min-height: 560px;
-    -fx-padding: 58 62 58 62;
+    -fx-padding: 28 62 28 62;
 }
 
 .welcome-art-layer {
@@ -73,17 +78,24 @@
 }
 
 .welcome-command-icon {
-    -fx-background-color: rgba(255, 255, 255, 0.78);
-    -fx-border-color: -docu-border-soft;
-    -fx-border-width: 1;
-    -fx-background-radius: 2;
-    -fx-border-radius: 2;
-    -fx-min-width: 44px;
-    -fx-min-height: 44px;
+    -fx-min-width: 54px;
+    -fx-pref-width: 54px;
+    -fx-max-width: 54px;
+    -fx-min-height: 54px;
+    -fx-pref-height: 54px;
+    -fx-max-height: 54px;
     -fx-alignment: center;
     -fx-text-fill: -docu-accent-dark;
     -fx-font-size: 11px;
     -fx-font-weight: 900;
+}
+
+/* Product illustrations already carry their own transparent canvas. */
+.welcome-command-icon.ui-icon-product {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 0;
 }
 
 .welcome-command-copy {

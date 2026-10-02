@@ -63,6 +63,7 @@ public final class AudioJobProcessMapper {
         return switch (stage == null ? AudioGenerationStage.NONE : stage) {
             case NONE -> ProcessJobStage.NONE;
             case PREPARING_WORKSPACE -> ProcessJobStage.PREPARING_WORKSPACE;
+            case WAITING_FOR_RESOURCES -> ProcessJobStage.PREPARING_ENGINE;
             case GENERATING_SEGMENTS -> ProcessJobStage.RUNNING_ENGINE;
             case MERGING_SEGMENTS -> ProcessJobStage.WRITING_ARTIFACTS;
             case EXPORT_READY -> ProcessJobStage.EXPORT_READY;

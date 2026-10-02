@@ -91,14 +91,16 @@ public final class TheatreCharacterDetector {
         if (document != null && !document.blocks().isEmpty()) {
             return document.blocks().stream()
                     .filter(DocumentBlock::narratable)
-                    .map(DocumentBlock::text)
+                    .map(block -> block.metadata().containsKey("theatreGrammarInterventionId")
+                            ? block.metadata().get("characterName") + ": " + block.text() : block.text())
                     .flatMap(text -> splitLines(text).stream())
                     .toList();
         }
         if (script != null && !script.empty()) {
             return script.segments().stream()
                     .filter(NarrationSegment::narratable)
-                    .map(NarrationSegment::narrationText)
+                    .map(segment -> segment.metadata().containsKey("theatreGrammarInterventionId")
+                            ? segment.metadata().get("characterName") + ": " + segment.narrationText() : segment.narrationText())
                     .flatMap(text -> splitLines(text).stream())
                     .toList();
         }

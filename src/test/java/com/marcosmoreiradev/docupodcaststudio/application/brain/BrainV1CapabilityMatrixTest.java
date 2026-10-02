@@ -48,7 +48,7 @@ final class BrainV1CapabilityMatrixTest {
         assertTrue(markdown.contains("document-intake"));
         assertTrue(markdown.contains("V1_READY_WITH_LIMITS"));
         assertTrue(markdown.contains("V2_DEFERRED"));
-        assertTrue(markdown.contains("PDF con texto nativo u OCR local"));
+        assertTrue(markdown.contains("PDF entra directamente como workspace V2 por páginas"));
         assertTrue(markdown.contains("Nube y colaboración"));
     }
 }

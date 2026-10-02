@@ -24,6 +24,19 @@ final class VisualComputeBindingVerifierTest {
     }
 
     @Test
+    void ignoresDiscoveryDecorationsSuchAsVramWhenMatchingTheLiveGpu() {
+        VisualComputeBinding expected = new VisualComputeBinding(
+                "gpu-nvidia-0", "GPU NVIDIA - NVIDIA GeForce GTX 1650 - VRAM 4.0 GB",
+                VisualComputeBackend.CUDA, 0, List.of("--cuda-device", "0"));
+        ComfyUiSystemStats stats = new ComfyUiSystemStats(
+                "windows", "3.11", "2.5.1+cu121",
+                List.of(new ComfyUiSystemStats.Device(
+                        "cuda:0 NVIDIA GeForce GTX 1650 : native", "cuda", 0)), "{}");
+
+        assertTrue(verifier.verify(expected, stats).matches());
+    }
+
+    @Test
     void rejectsDifferentIndexBackendOrGpuModel() {
         VisualComputeBinding expected = new VisualComputeBinding(
                 "gpu-nvidia-1", "NVIDIA GeForce GTX 1650",

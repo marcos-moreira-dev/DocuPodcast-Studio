@@ -30,7 +30,9 @@ public record FluxModelBundle(
     }
 
     public static FluxModelBundle inspectKontext(Path applicationRoot) {
-        return inspect(applicationRoot, KONTEXT_MODEL_NAME, KONTEXT_WORKFLOW_NAME, true);
+        // Both local execution paths construct the built-in Kontext graph from ComfyUiWorkflowSpec.
+        // An unrelated JSON file is not a prerequisite for that built-in workflow.
+        return inspect(applicationRoot, KONTEXT_MODEL_NAME, KONTEXT_WORKFLOW_NAME, false);
     }
 
     private static FluxModelBundle inspect(

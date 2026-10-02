@@ -105,7 +105,7 @@ public final class FileSystemProjectBundleExporter implements ProjectBundleExpor
 
     private void copyEditableDirectories(ProjectBundleExportRequest request, Path target) throws IOException {
         Files.createDirectories(target);
-        for (String name : List.of("document", "script", "voices", "storyboard", "media", "recordings")) {
+        for (String name : List.of("document", "script", "voices", "storyboard", "media", "recordings", "study")) {
             Path source = request.projectDirectory().resolve(name);
             if (Files.exists(source)) {
                 copyRecursively(source, target.resolve(name));

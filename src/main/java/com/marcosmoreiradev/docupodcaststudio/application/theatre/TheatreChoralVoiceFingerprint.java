@@ -33,7 +33,7 @@ public final class TheatreChoralVoiceFingerprint {
         ordered.sort(Comparator.naturalOrder());
         StringBuilder source = new StringBuilder();
         source.append("text=").append(normalize(segment == null ? "" : segment.narrationText())).append('\n');
-        source.append("style=").append(normalize(segment == null ? "" : segment.performanceStyleId())).append('\n');
+        source.append("style=").append(normalize(effectiveToneTarget(project, segment))).append('\n');
         for (String characterId : ordered) {
             String voiceId = voiceByCharacter.getOrDefault(characterId, "");
             VoiceProfile voice = project.voiceLibrary().voiceById(voiceId).orElse(null);
@@ -49,6 +49,18 @@ public final class TheatreChoralVoiceFingerprint {
 
     public static boolean isGenerated(String fingerprint) {
         return fingerprint != null && fingerprint.startsWith(GENERATED_PREFIX);
+    }
+
+    /** A whole-intervention emotion applies to every participant in the chorus. */
+    static String effectiveToneTarget(DocuPodcastProject project, NarrationSegment segment) {
+        if (segment == null) return "";
+        return project.narrativeLayerAssignments().stream()
+                .filter(a -> a.kind() == com.marcosmoreiradev.docupodcaststudio.domain.assignment.NarrativeLayerKind.EMOTION)
+                .filter(a -> a.textRange().segmentId().equals(segment.id())
+                        && a.textRange().startOffset() == 0
+                        && a.textRange().endOffset() >= segment.narrationText().length())
+                .map(com.marcosmoreiradev.docupodcaststudio.domain.assignment.NarrativeLayerAssignment::targetId)
+                .findFirst().orElse(segment.performanceStyleId());
     }
 
     public static boolean isCurrent(TheatreProjectLayer.ChoralVoiceAssignment assignment,

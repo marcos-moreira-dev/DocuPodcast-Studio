@@ -23,7 +23,8 @@ final class InkRealtimeStrokeEnginePressureTest {
         assertTrue(sink.widths.stream().allMatch(width -> width <= 12.0));
         assertTrue(sink.widths.stream().anyMatch(width -> width < 6.0));
         assertEquals(1, sink.commits);
-        assertEquals(0, sink.quadratics);
+        assertTrue(sink.quadratics > 0, "Freehand previews must smooth the sampled path");
+        assertEquals(3, sink.points, "Smoothing must preserve editable input samples");
     }
 
     @Test
@@ -50,6 +51,7 @@ final class InkRealtimeStrokeEnginePressureTest {
         private final List<Double> widths = new ArrayList<>();
         private int commits;
         private int quadratics;
+        private int points;
 
         @Override
         public void beginLiveStroke() {
@@ -71,6 +73,7 @@ final class InkRealtimeStrokeEnginePressureTest {
         @Override
         public void commitStroke(InkRealtimeStrokeEngine.CommittedStroke stroke) {
             commits++;
+            points = stroke.points().size();
         }
     }
 }

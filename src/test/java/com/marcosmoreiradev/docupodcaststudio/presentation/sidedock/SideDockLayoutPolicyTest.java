@@ -15,6 +15,14 @@ final class SideDockLayoutPolicyTest {
     }
 
     @Test
+    void standardRailUsesTheReferenceRangeInsteadOfAFixedLegacyWidth() {
+        SideDockLayoutPolicy policy = SideDockLayoutPolicy.standard(292, 318);
+        assertEquals(74, policy.collapsed().min());
+        assertEquals(78, policy.collapsed().pref());
+        assertEquals(84, policy.collapsed().max());
+    }
+
+    @Test
     void invalidWidthOrderingFailsAtCompositionTime() {
         assertThrows(IllegalArgumentException.class,
                 () -> new SideDockLayoutPolicy.WidthRange(500, 400, 600));

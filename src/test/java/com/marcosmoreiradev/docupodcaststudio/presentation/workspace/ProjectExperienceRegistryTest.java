@@ -20,5 +20,19 @@ final class ProjectExperienceRegistryTest {
         assertEquals(ProductMaturity.EVOLVING, narrative.maturity());
         assertEquals(WorkspaceKind.DOCUMENT_READER, narrative.primaryWorkspace());
         assertTrue(narrative.workspaces().contains(WorkspaceKind.NARRATIVE_VISUAL_PRODUCTION));
+        assertTrue(narrative.requires(ProductRequirements.MEDIA_CANDIDATE_REVIEW));
+        assertTrue(narrative.requires(ProductRequirements.RECOVERABLE_JOBS));
+    }
+
+    @Test
+    void infrastructureNeedsComeFromProductComplexity() {
+        ProjectExperienceRegistry registry = ProjectExperienceRegistry.official();
+        ProjectExperience documentary = registry.require(ProjectMode.DOCUMENTARY_STUDIO);
+        ProjectExperience theatre = registry.require(ProjectMode.THEATRE_PRODUCTION);
+
+        assertTrue(documentary.requires(ProductRequirements.DOCUMENT_PAGED));
+        assertTrue(documentary.requires(ProductRequirements.INK_EDITING));
+        assertTrue(theatre.requires(ProductRequirements.PRODUCTION_BOARD));
+        assertTrue(theatre.requires(ProductRequirements.MEDIA_CANDIDATE_REVIEW));
     }
 }

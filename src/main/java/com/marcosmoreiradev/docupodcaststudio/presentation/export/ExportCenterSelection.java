@@ -13,6 +13,7 @@ import java.util.Objects;
 public record ExportCenterSelection(
         ExportCenterAction action,
         AppCommandId commandId,
+        ExportExecutionMode executionMode,
         AudioExportFormat audioFormat,
         DocumentTextVideoOptions documentTextVideoOptions,
         VideoExportOptions videoOptions,
@@ -20,18 +21,21 @@ public record ExportCenterSelection(
         TheatrePortionExportOptions theatrePortionOptions
 ) {
     public ExportCenterSelection(ExportCenterAction action, AppCommandId commandId) {
-        this(action, commandId, AudioExportFormat.WAV, DocumentTextVideoOptions.defaults(), null, null, null);
+        this(action, commandId, ExportExecutionMode.READY_ONLY, AudioExportFormat.WAV,
+                DocumentTextVideoOptions.defaults(), null, null, null);
     }
 
     public ExportCenterSelection(ExportCenterAction action,
                                  AppCommandId commandId,
                                  AudioExportFormat audioFormat,
                                  DocumentTextVideoOptions documentTextVideoOptions) {
-        this(action, commandId, audioFormat, documentTextVideoOptions, null, null, null);
+        this(action, commandId, ExportExecutionMode.READY_ONLY, audioFormat,
+                documentTextVideoOptions, null, null, null);
     }
 
     public ExportCenterSelection {
         action = Objects.requireNonNull(action, "action");
+        executionMode = executionMode == null ? ExportExecutionMode.READY_ONLY : executionMode;
         audioFormat = audioFormat == null ? AudioExportFormat.WAV : audioFormat;
         documentTextVideoOptions = documentTextVideoOptions == null ? DocumentTextVideoOptions.defaults() : documentTextVideoOptions;
     }

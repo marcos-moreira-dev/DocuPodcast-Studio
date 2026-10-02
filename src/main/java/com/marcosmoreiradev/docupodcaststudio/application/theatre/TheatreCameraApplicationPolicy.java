@@ -10,6 +10,13 @@ import java.util.Map;
 public final class TheatreCameraApplicationPolicy {
     public static final String APPLY_CAMERA_METADATA = "theatreApplyCamera";
 
+    public boolean appliesToSegment(StoryboardDocument storyboard,
+            com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationSegment segment) {
+        if (segment == null) return true;
+        if (storyboard != null && storyboard.bindingForSegment(segment.id()).isPresent()) return applies(storyboard, segment.id());
+        return !isFalse(segment.metadata().get(APPLY_CAMERA_METADATA));
+    }
+
     public boolean applies(StoryboardDocument storyboard, String segmentId) {
         if (storyboard == null || segmentId == null || segmentId.isBlank()) {
             return true;

@@ -3,6 +3,7 @@ package com.marcosmoreiradev.docupodcaststudio.application.voice;
 import com.marcosmoreiradev.docupodcaststudio.application.audio.AudioEngineDescriptor;
 import com.marcosmoreiradev.docupodcaststudio.domain.voice.OfficialAdvancedVoicePresetCatalog;
 import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceLibrary;
+import com.marcosmoreiradev.docupodcaststudio.media.api.EngineFeature;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -32,7 +33,11 @@ final class VoiceCapabilityPolicyTest {
 
     @Test
     void xttsEngineUsesPredesignedAdvancedNeutralReference() {
-        AudioEngineDescriptor process = AudioEngineDescriptor.process("Voz IA avanzada", true, "xtts {textFile} {outputFile}", "Configurado");
+        AudioEngineDescriptor process = AudioEngineDescriptor.process(
+                "Voz IA avanzada", true, "xtts {textFile} {outputFile}",
+                "Configurado", java.util.Set.of(
+                        EngineFeature.REFERENCE_VOICE,
+                        EngineFeature.EXPRESSIVE_STYLE));
         VoiceLibraryCapabilityReport report = policy.evaluate(VoiceLibrary.defaults(), process);
 
         VoiceProfileCapability advancedDefault = report.voice(OfficialAdvancedVoicePresetCatalog.PRIMARY_PRESET_ID).orElseThrow();

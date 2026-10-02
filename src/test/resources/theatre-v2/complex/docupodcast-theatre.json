@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 2,
+  "grammarVersion": "theatre-v2",
+  "grammar": "obra.teatro.md",
+  "packageId": "fixture-teatro-complejo",
+  "packageVersion": "1.0.0",
+  "assets": [
+    {"path":"assets/personajes/CONCHA/frontal.png","logicalId":"character:CONCHA:frontal","kind":"CHARACTER_IMAGE","sha256":"5290dea4df4e4ee5eeadca64eee94344f2225939581d3f0b57aadaafba3185c7","size":1557,"characterId":"CONCHA","sceneId":"SCN-PLAZA","view":"frontal"},
+    {"path":"assets/objetos/SOMBRERO/frontal.png","logicalId":"object:SOMBRERO:frontal","kind":"OBJECT_IMAGE","sha256":"5290dea4df4e4ee5eeadca64eee94344f2225939581d3f0b57aadaafba3185c7","size":1557,"objectId":"SOMBRERO","sceneId":"SCN-PLAZA","view":"frontal"},
+    {"path":"assets/fondos/plaza.png","logicalId":"backdrop:PLAZA","kind":"BACKDROP","sha256":"5290dea4df4e4ee5eeadca64eee94344f2225939581d3f0b57aadaafba3185c7","size":1557,"backdropId":"PLAZA","scope":"SCENE","scopeId":"SCN-PLAZA"},
+    {"path":"assets/mapas/plaza.png","logicalId":"spatial-map:PLAZA","kind":"SPATIAL_MAP","sha256":"5290dea4df4e4ee5eeadca64eee94344f2225939581d3f0b57aadaafba3185c7","size":1557,"sceneId":"SCN-PLAZA"},
+    {"path":"assets/frames/INTERVENCION-1.png","logicalId":"frame:INTERVENCION-1","kind":"INTERVENTION_IMAGE","sha256":"5290dea4df4e4ee5eeadca64eee94344f2225939581d3f0b57aadaafba3185c7","size":1557,"interventionId":"INTERVENCION-1"},
+    {"path":"assets/audio/INTERVENCION-1.wav","logicalId":"audio:INTERVENCION-1","kind":"HUMAN_AUDIO","sha256":"38daf79afc0ea87cd759785ffaf75c1545486584929509ad33bb80a0d4f39332","size":309044,"interventionId":"INTERVENCION-1"}
+  ]
+}

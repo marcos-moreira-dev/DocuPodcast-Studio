@@ -1,6 +1,9 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.document;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls;
+
 import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlock;
+import com.marcosmoreiradev.docupodcaststudio.domain.project.ProjectMode;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.AppIcon;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.DocuPodcastShellViewModel;
 import com.marcosmoreiradev.docupodcaststudio.presentation.sidedock.SideDockContext;
@@ -43,13 +46,20 @@ public final class DocumentStudySideDock extends BorderPane {
                 dockContext,
                 dockRegistry,
                 viewModel.documentRightRailVisibleProperty(),
-                SideDockLayoutPolicy.of(84.0, 560.0, 720.0),
+                SideDockLayoutPolicy.standard(560.0, 720.0),
                 WorkspaceSideDock.RailPlacement.RIGHT);
         viewModel.currentDocumentProperty().addListener((obs, oldValue, newValue) ->
                 dock.refresh(dockContext, dockRegistry));
+        viewModel.currentPreparedPdfSourceProperty().addListener((obs, oldValue, newValue) ->
+                dock.refresh(dockContext, dockRegistry));
         viewModel.currentProjectModeProperty().addListener((obs, oldValue, newValue) ->
                 dock.refresh(dockContext, dockRegistry));
-        setCenter(dock);
+        viewModel.technicalProblemPreparationActiveProperty().addListener((obs, oldValue, active) -> {
+            if (Boolean.TRUE.equals(active)) {
+                dock.activateModule(SideDockModuleId.DOCUMENT_TECHNICAL_PROBLEM);
+            }
+        });
+        dock.installInto(this);
     }
 
     public ReadOnlyBooleanProperty expandedProperty() {
@@ -68,10 +78,11 @@ public final class DocumentStudySideDock extends BorderPane {
                 .register(new StaticSideDockModule(
                         SideDockModuleId.DOCUMENT_STUDY_VIDEO,
                         "Contenido del video",
-                        "Edita cada parrafo, tabla y diapositiva final del video documental.",
-                        AppIcon.VIDEO,
+                        "Edita cada contenido narrable de Word o PDF y las diapositivas finales.",
+                        AppIcon.PRODUCT_DOCUMENTARY_VIDEO_CONTENT,
                         () -> new DocumentStudyVideoPanel(viewModel),
-                        context -> viewModel.documentaryVideoConfigurationAvailable()))
+                        context -> supportsVideoModule(
+                                viewModel.currentProjectModeProperty().get())))
                 .register(StaticSideDockModule.of(
                         SideDockModuleId.DOCUMENT_TECHNICAL_PROBLEM,
                         "Problema",
@@ -90,7 +101,7 @@ public final class DocumentStudySideDock extends BorderPane {
     private Parent scrollableProblemPanel(DocumentTechnicalProblemPanel panel) {
         panel.setMinWidth(0);
         panel.setMaxWidth(Double.MAX_VALUE);
-        ScrollPane scroll = new ScrollPane(panel);
+        ScrollPane scroll = StudioViewportControls.scrollPane(panel);
         scroll.setFitToWidth(true);
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
@@ -98,5 +109,9 @@ public final class DocumentStudySideDock extends BorderPane {
         scroll.setMaxWidth(Double.MAX_VALUE);
         scroll.getStyleClass().add("document-technical-problem-scroll");
         return scroll;
+    }
+
+    static boolean supportsVideoModule(ProjectMode mode) {
+        return mode == ProjectMode.DOCUMENTARY_STUDIO;
     }
 }

@@ -18,6 +18,7 @@ public class SideDockHost extends BorderPane {
     private final BooleanProperty expandedPreference;
     private final SideDockLayoutPolicy layoutPolicy;
     private final String compactStyleClass;
+    private final boolean railHasFooter;
     private boolean compact;
 
     public SideDockHost(String styleClass,
@@ -40,6 +41,7 @@ public class SideDockHost extends BorderPane {
         this.expandedPreference = Objects.requireNonNull(expandedPreference, "expandedPreference");
         this.layoutPolicy = Objects.requireNonNull(layoutPolicy, "layoutPolicy");
         this.compactStyleClass = compactStyleClass == null ? "" : compactStyleClass.strip();
+        this.railHasFooter = railFooterContent != null;
         if (styleClass != null && !styleClass.isBlank()) getStyleClass().add(styleClass.strip());
         this.dock = new WorkspaceSideDock(
                 Objects.requireNonNull(context, "context"),
@@ -67,6 +69,10 @@ public class SideDockHost extends BorderPane {
         dock.refresh(context, registry);
     }
 
+    public final void activateModule(SideDockModuleId moduleId) {
+        dock.activateModule(moduleId);
+    }
+
     public final void setCompact(boolean compact) {
         if (this.compact == compact) return;
         this.compact = compact;
@@ -79,9 +85,26 @@ public class SideDockHost extends BorderPane {
 
     public final boolean isCompact() { return compact; }
 
+    /**
+     * Installs this host in a product-specific wrapper while keeping the
+     * wrapper's intrinsic width synchronized with expansion and collapse.
+     */
+    public final void installInto(BorderPane wrapper) {
+        Objects.requireNonNull(wrapper, "wrapper");
+        wrapper.setCenter(this);
+        wrapper.minWidthProperty().bind(minWidthProperty());
+        wrapper.prefWidthProperty().bind(prefWidthProperty());
+        wrapper.maxWidthProperty().bind(maxWidthProperty());
+    }
+
     private void applyWidth(boolean expanded) {
         SideDockLayoutPolicy.WidthRange width = !expanded
-                ? layoutPolicy.collapsed()
+                ? railHasFooter
+                        ? new SideDockLayoutPolicy.WidthRange(
+                                WorkspaceSideDock.FOOTER_MIN_WIDTH,
+                                WorkspaceSideDock.FOOTER_WIDTH,
+                                WorkspaceSideDock.FOOTER_MAX_WIDTH)
+                        : layoutPolicy.collapsed()
                 : compact ? layoutPolicy.compactExpanded() : layoutPolicy.expanded();
         setMinWidth(width.min());
         setPrefWidth(width.pref());

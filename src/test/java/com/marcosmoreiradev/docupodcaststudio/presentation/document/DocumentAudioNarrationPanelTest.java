@@ -12,7 +12,7 @@ final class DocumentAudioNarrationPanelTest {
     @Test
     void xttsDocumentAcceptsDefaultNarratorAndPredesignedAdvancedNeutral() {
         VoiceLibrary library = VoiceLibrary.defaults();
-        VoiceEngineCapabilityProfile xtts = VoiceEngineCapabilityProfile.coquiXtts(true, "Voz IA avanzada");
+        VoiceEngineCapabilityProfile xtts = VoiceEngineCapabilityProfile.advancedAi(true, "Voz IA avanzada");
         VoiceProfile narrator = library.voiceById("VOC-NARRATOR").orElseThrow();
         VoiceProfile advancedPreset = library.voiceById(OfficialAdvancedVoicePresetCatalog.PRIMARY_PRESET_ID).orElseThrow();
 

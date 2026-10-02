@@ -1,12 +1,24 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.theatre;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeSourceChooser;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeDialogResponse;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFeedbackControls;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
+
 import com.marcosmoreiradev.docupodcaststudio.application.playback.SegmentAudioPlayer;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreAudioTrackTimelineEntry;
 import com.marcosmoreiradev.docupodcaststudio.application.media.PreparedAudioAsset;
 import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreProjectLayer;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionButtonFactory;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.ResponsiveActionGroup;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.AppIcon;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.DocuPodcastShellViewModel;
+import com.marcosmoreiradev.docupodcaststudio.domain.project.ProjectMode;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow.TheatreAudioTrackWorkflow;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -48,12 +60,12 @@ public final class TheatreAudioTrackPanel extends VBox {
     private final Label fileName = new Label("Sin archivo de audio.");
     private final TextField sourceStart = secondsField("0.0");
     private final TextField sourceEnd = secondsField("0.0");
-    private final ComboBox<TheatreProjectLayer.AudioTrackEndMode> endMode = new ComboBox<>();
-    private final Slider volume = new Slider(0.0, 1.0, 0.30);
+    private final ComboBox<TheatreProjectLayer.AudioTrackEndMode> endMode = StudioFormControls.comboBox();
+    private final Slider volume = StudioFormControls.slider(0.0, 1.0, 0.30);
     private final Label volumeLabel = new Label("30%");
-    private final Slider playhead = new Slider(0.0, 1.0, 0.0);
+    private final Slider playhead = StudioFormControls.slider(0.0, 1.0, 0.0);
     private final Label playheadLabel = new Label("00:00.0 / 00:00.0");
-    private final CheckBox gentleFade = new CheckBox("Fade suave al inicio y al final (0,5 s)");
+    private final CheckBox gentleFade = StudioFormControls.checkBox("Fade suave al inicio y al final (0,5 s)");
     private final ObservableList<TheatreAudioTrackTimelineEntry> trackEntries = FXCollections.observableArrayList();
     private final ObjectProperty<TheatreAudioTrackTimelineEntry> selectedTrack = new SimpleObjectProperty<>();
     private final Button chooseAudio;
@@ -62,7 +74,7 @@ public final class TheatreAudioTrackPanel extends VBox {
     private javafx.concurrent.Task<PreparedAudioAsset> preparationTask;
     private PreparedAudioAsset pendingAudio;
     private final Label preparationState = new Label("Elige un archivo para preparar la pista.");
-    private final ProgressIndicator preparationProgress = new ProgressIndicator();
+    private final ProgressIndicator preparationProgress = StudioFeedbackControls.progressIndicator();
     private final java.util.List<javafx.scene.control.Control> readyControls = new java.util.ArrayList<>();
     private boolean previewPaused;
     private boolean restartingPreview;
@@ -90,6 +102,7 @@ public final class TheatreAudioTrackPanel extends VBox {
         Button markEnd = ActionButtonFactory.secondary("Establecer fin", this::setEndFromPlayhead);
         HBox transport = new HBox(8, play, pause, stop);
         HBox markers = new HBox(8, markStart, markEnd);
+        ResponsiveActionGroup.install(markers, 300, markStart, markEnd);
         HBox.setHgrow(markStart, Priority.ALWAYS);
         HBox.setHgrow(markEnd, Priority.ALWAYS);
         markStart.setMaxWidth(Double.MAX_VALUE);
@@ -113,7 +126,7 @@ public final class TheatreAudioTrackPanel extends VBox {
                 gentleFade, save, goTo, remove);
         body.setPadding(new Insets(14));
         body.setFillWidth(true);
-        ScrollPane scroll = new ScrollPane(body);
+        ScrollPane scroll = StudioViewportControls.scrollPane(body);
         scroll.setFitToWidth(true);
         scroll.setPannable(false);
         scroll.getStyleClass().add("theatre-audio-track-scroll");
@@ -124,7 +137,11 @@ public final class TheatreAudioTrackPanel extends VBox {
         viewModel.selectedDocumentBlockIdProperty().addListener((obs, oldValue, value) -> refresh());
         viewModel.currentScriptProperty().addListener((obs, oldValue, value) -> refresh());
         viewModel.currentPlaybackManifestProperty().addListener((obs, oldValue, value) -> refresh());
-        viewModel.documentMediaRevisionProperty().addListener((obs, oldValue, value) -> refresh());
+        viewModel.documentMediaRevisionProperty().addListener((obs, oldValue, value) -> {
+            if (viewModel.currentProjectModeProperty().get() == ProjectMode.THEATRE_PRODUCTION) {
+                refresh();
+            }
+        });
         positionTimer = new Timeline(new KeyFrame(Duration.millis(100), event -> updatePlayheadFromPlayer()));
         positionTimer.setCycleCount(Timeline.INDEFINITE);
         positionTimer.play();
@@ -233,7 +250,7 @@ public final class TheatreAudioTrackPanel extends VBox {
     }
 
     private void chooseAudio() {
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle("Elegir pista de audio teatral");
         chooser.getExtensionFilters().setAll(
                 new FileChooser.ExtensionFilter("Audio compatible", "*.wav", "*.mp3", "*.m4a", "*.flac", "*.ogg"),
@@ -312,7 +329,7 @@ public final class TheatreAudioTrackPanel extends VBox {
     }
 
     private void confirmReplacement(TheatreAudioTrackWorkflow.Result result) {
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
+        Alert confirm = NativeDialogResponse.alert(Alert.AlertType.CONFIRMATION,
                 result.message() + "\n\nLa pista existente sera eliminada de la linea temporal.",
                 ButtonType.OK, ButtonType.CANCEL);
         confirm.setTitle("Pista superpuesta");
@@ -503,7 +520,7 @@ public final class TheatreAudioTrackPanel extends VBox {
     }
 
     private void error(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR,
+        Alert alert = NativeDialogResponse.alert(Alert.AlertType.ERROR,
                 message == null || message.isBlank() ? "No se pudo completar la accion." : message,
                 ButtonType.OK);
         alert.setTitle("Pista de audio");
@@ -524,7 +541,7 @@ public final class TheatreAudioTrackPanel extends VBox {
     }
 
     private static Button fullWidth(Button button) { button.setMaxWidth(Double.MAX_VALUE); return button; }
-    private static TextField secondsField(String value) { TextField field = new TextField(value); field.setPromptText("0.0"); return field; }
+    private static TextField secondsField(String value) { TextField field = StudioFormControls.textField(value); field.setPromptText("0.0"); return field; }
     private static double number(TextField field) { return Double.parseDouble(field.getText().trim().replace(',', '.')); }
     private static double safeNumber(TextField field, double fallback) { try { return Math.max(0.0, number(field)); } catch (RuntimeException ex) { return fallback; } }
     private static String format(double value) { return String.format(Locale.ROOT, "%.2f", value); }

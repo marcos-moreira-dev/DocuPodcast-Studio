@@ -37,7 +37,7 @@ public final class TheatreSideDock extends BorderPane {
                 new SideDockContext(WorkspaceKind.THEATRE_SCRIPT, "Teatro"),
                 registry(viewModel, saveProjectRequest),
                 viewModel.documentRightRailVisibleProperty(),
-                SideDockLayoutPolicy.withCompact(84.0, 680.0, 980.0, 520.0, 700.0),
+                SideDockLayoutPolicy.standardWithCompact(680.0, 980.0, 520.0, 700.0),
                 WorkspaceSideDock.RailPlacement.RIGHT,
                 "theatre-side-dock-compact",
                 null);
@@ -48,7 +48,7 @@ public final class TheatreSideDock extends BorderPane {
                 dock.setCompact(false);
             }
         });
-        setCenter(dock);
+        dock.installInto(this);
     }
 
     public ReadOnlyBooleanProperty expandedProperty() {
@@ -61,32 +61,32 @@ public final class TheatreSideDock extends BorderPane {
                         SideDockModuleId.THEATRE_FRAGMENT_IMAGES,
                         "Capas multimedia",
                         "Imagenes y pistas de audio asignadas a las intervenciones.",
-                        AppIcon.IMAGE,
+                        AppIcon.PRODUCT_THEATRE_MEDIA_LAYERS,
                         () -> multimediaLayers(viewModel, saveProjectRequest)))
                 .register(StaticSideDockModule.of(
                         SideDockModuleId.THEATRE_CHARACTERS,
                         "Personajes",
                         "Personajes detectados y referencias visuales por personaje.",
-                        AppIcon.VOICE,
+                        AppIcon.PRODUCT_THEATRE_CHARACTERS,
                         () -> characters(viewModel)))
                 .register(StaticSideDockModule.of(
                         SideDockModuleId.THEATRE_TEXTUAL_MAP,
                         "Mapa textual",
                         "Intervenciones 1, 2, 3... como identificadores de fragmentos.",
-                        AppIcon.TEXT,
+                        AppIcon.PRODUCT_THEATRE_TEXT_MAP,
                         () -> new TheatreTextualMapPanel(viewModel, sceneBoundaryStore)))
                 .register(StaticSideDockModule.of(
                         SideDockModuleId.THEATRE_SPATIAL_MAP,
                         "Mapa espacial y acciones",
                         "Escenarios, posiciones y desplazamientos por fragmento.",
-                        AppIcon.STORYBOARD,
+                        AppIcon.PRODUCT_THEATRE_SPATIAL_ACTIONS,
                         () -> new TheatreSpatialActionMapPanel(viewModel, sceneBoundaryStore)))
                 // THEATRE_ACTIONS is kept as a legacy id but is now fused into THEATRE_SPATIAL_MAP.
                 .register(StaticSideDockModule.of(
                         SideDockModuleId.THEATRE_OBJECTS,
                         "Objetos",
                         "Utileria, escenografia y referencias visuales de escena.",
-                        AppIcon.BUNDLE,
+                        AppIcon.PRODUCT_THEATRE_OBJECTS,
                         () -> objects(viewModel)));
     }
 

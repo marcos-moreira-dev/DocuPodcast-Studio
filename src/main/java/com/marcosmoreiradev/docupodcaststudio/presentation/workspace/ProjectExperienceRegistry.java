@@ -39,18 +39,26 @@ public final class ProjectExperienceRegistry {
                                 SideDockModuleId.DOCUMENT_TECHNICAL_PROBLEM),
                         java.util.Set.of("documentary-video", "podcast-wav"),
                         java.util.Set.of(CapabilityId.VOICE_SYNTHESIS, CapabilityId.IMAGE_GENERATION,
-                                CapabilityId.VIDEO_RENDERING)))
+                                CapabilityId.VIDEO_RENDERING),
+                        java.util.Set.of(ProductRequirements.DOCUMENT_PAGED, ProductRequirements.CONTEXT_RAILS,
+                                ProductRequirements.INK_EDITING, ProductRequirements.PERSISTENT_JOBS,
+                                ProductRequirements.RECOVERABLE_JOBS, ProductRequirements.LONG_RUNNING_OPERATIONS)))
                 .register(new ProjectExperience(ProjectMode.THEATRE_PRODUCTION, ProductMaturity.STABLE,
                         WorkspaceKind.THEATRE_SCRIPT,
                         java.util.Set.of(WorkspaceKind.THEATRE_SCRIPT, WorkspaceKind.THEATRE_IMAGE_GENERATION,
                                 WorkspaceKind.VOICE_LIBRARY),
-                        java.util.Set.of(AppCommandId.OPEN_THEATRE_IMAGE_GENERATION, AppCommandId.EXPORT_THEATRE_WORK),
+                        java.util.Set.of(AppCommandId.OPEN_THEATRE_IMAGE_GENERATION, AppCommandId.REFRESH_THEATRE_PACKAGE,
+                                AppCommandId.EXPORT_THEATRE_WORK),
                         java.util.Set.of(SideDockModuleId.THEATRE_FRAGMENT_IMAGES, SideDockModuleId.THEATRE_CHARACTERS,
                                 SideDockModuleId.THEATRE_TEXTUAL_MAP, SideDockModuleId.THEATRE_SPATIAL_MAP,
                                 SideDockModuleId.THEATRE_OBJECTS),
                         java.util.Set.of("theatre-work", "theatre-spatial-view"),
                         java.util.Set.of(CapabilityId.VOICE_SYNTHESIS, CapabilityId.IMAGE_GENERATION,
-                                CapabilityId.VIDEO_RENDERING)))
+                                CapabilityId.VIDEO_RENDERING),
+                        java.util.Set.of(ProductRequirements.CONTEXT_RAILS, ProductRequirements.PRODUCTION_BOARD,
+                                ProductRequirements.INK_EDITING, ProductRequirements.MEDIA_CANDIDATE_REVIEW,
+                                ProductRequirements.PERSISTENT_JOBS, ProductRequirements.RECOVERABLE_JOBS,
+                                ProductRequirements.LONG_RUNNING_OPERATIONS)))
                 .register(new ProjectExperience(ProjectMode.NARRATIVE_VIDEO, ProductMaturity.EVOLVING,
                         WorkspaceKind.DOCUMENT_READER,
                         java.util.Set.of(WorkspaceKind.DOCUMENT_READER, WorkspaceKind.NARRATIVE_VISUAL_PRODUCTION,
@@ -60,6 +68,9 @@ public final class ProjectExperienceRegistry {
                         java.util.Set.of(SideDockModuleId.NARRATIVE_VIDEO_CONTENT),
                         java.util.Set.of("narrative-video"),
                         java.util.Set.of(CapabilityId.VOICE_SYNTHESIS, CapabilityId.IMAGE_GENERATION,
-                                CapabilityId.VIDEO_RENDERING)));
+                                CapabilityId.VIDEO_GENERATION, CapabilityId.VIDEO_RENDERING),
+                        java.util.Set.of(ProductRequirements.DOCUMENT_PAGED, ProductRequirements.CONTEXT_RAILS,
+                                ProductRequirements.MEDIA_CANDIDATE_REVIEW, ProductRequirements.PERSISTENT_JOBS,
+                                ProductRequirements.RECOVERABLE_JOBS, ProductRequirements.LONG_RUNNING_OPERATIONS)));
     }
 }

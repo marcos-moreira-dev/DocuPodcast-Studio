@@ -18,10 +18,10 @@ import java.util.List;
 
 /** Shared theatrical text-overlay controls backed by options used by the frame renderer. */
 public final class TextOverlayOptionsPane extends VBox {
-    private final CheckBox showText = new CheckBox("Mostrar texto en pantalla");
-    private final ComboBox<String> fontFamily = new ComboBox<>();
-    private final Spinner<Integer> fontSize = new Spinner<>(12, 96, 42);
-    private final ColorPicker textColor = new ColorPicker(Color.web("#111827"));
+    private final CheckBox showText = StudioFormControls.checkBox("Mostrar texto en pantalla");
+    private final ComboBox<String> fontFamily = StudioFormControls.comboBox();
+    private final Spinner<Integer> fontSize = StudioFormControls.spinner(12, 96, 42);
+    private final ColorPicker textColor = StudioFormControls.colorPicker(Color.web("#111827"));
     private final ComboBox<TheatreTextPosition> textPosition = enumCombo(
             TheatreTextPosition.values(), TheatreTextPosition.CENTER);
     private final ComboBox<TheatreTextEffect> textEffect = enumCombo(
@@ -32,7 +32,6 @@ public final class TextOverlayOptionsPane extends VBox {
         setSpacing(9);
         getStyleClass().addAll("export-options-section", "text-overlay-options");
         showText.setSelected(true);
-        showText.getStyleClass().add("ui-form-toggle");
         StudioFormControls.installTooltip(showText, "Incluir el texto de la intervencion en cada frame teatral.");
 
         fontFamily.getItems().setAll(preferredFonts());
@@ -98,7 +97,7 @@ public final class TextOverlayOptionsPane extends VBox {
     }
 
     private static <T extends Enum<T>> ComboBox<T> enumCombo(T[] values, T selected) {
-        ComboBox<T> combo = new ComboBox<>();
+        ComboBox<T> combo = StudioFormControls.comboBox();
         combo.getItems().setAll(values);
         combo.setValue(selected);
         combo.setMaxWidth(Double.MAX_VALUE);

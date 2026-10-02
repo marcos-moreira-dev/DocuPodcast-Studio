@@ -23,6 +23,9 @@ public final class AppStyles {
     public static final String UI_SETTINGS_KEY = "ui-settings-key";
     public static final String UI_SETTINGS_VALUE = "ui-settings-value";
     public static final String UI_NOTE = "ui-note";
+    public static final String UI_ACCORDION = "ui-accordion";
+    public static final String UI_ACCORDION_PANE = "ui-accordion-pane";
+    public static final String UI_ACCORDION_CONTENT = "ui-accordion-content";
 
     public static final String UI_ACTION_BAR = "ui-action-bar";
     public static final String UI_ACTION_BUTTON = "ui-action-button";
@@ -87,8 +90,13 @@ public final class AppStyles {
     public static final String UI_TOOLBAR_ACTION_PRIMARY = "ui-toolbar-action-primary";
     public static final String UI_TOOLBAR_ACTION_ICON = "ui-toolbar-action-icon";
     public static final String UI_TOOLBAR_ACTION_TEXT = "ui-toolbar-action-text";
+    public static final String UI_CANVAS_TOOLBAR = "studio-canvas-toolbar";
+    public static final String UI_CANVAS_TOOLBAR_ROW = "studio-canvas-toolbar-row";
+    public static final String UI_CANVAS_TOOLBAR_GROUP_LABEL = "studio-canvas-toolbar-group-label";
 
     public static final String UI_ICON_VIEW = "ui-icon-view";
+    public static final String UI_ICON_PRODUCT = "ui-icon-product";
+    public static final String UI_ICON_WELCOME = "ui-icon-welcome";
     public static final String UI_ICON_RIBBON = "ui-icon-ribbon";
     public static final String UI_ICON_SIDE_DOCK = "ui-icon-side-dock";
     public static final String UI_ICON_RAIL = "ui-icon-rail";

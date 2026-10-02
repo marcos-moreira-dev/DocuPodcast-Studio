@@ -20,6 +20,7 @@ import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceReferenceSample;
 import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceReferenceSampleSet;
 import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceReferenceTone;
 import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceSampleOrigin;
+import com.marcosmoreiradev.docupodcaststudio.application.voice.VoiceReferenceSamplePathResolver;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -30,8 +31,25 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class AudioGenerationRequestVoiceReferenceSampleTest {
+    @Test void angryUsesTheActorsAngrySampleAndChangesTheReuseFingerprint() throws Exception {
+        Path neutral=sampleFile("voices/samples/actor-neutral.wav");
+        Path angry=sampleFile("voices/samples/actor-angry.wav");
+        var library=libraryWithSamples(sample("S-NEUTRAL",VoiceReferenceTone.NEUTRAL,relative(neutral)),
+                sample("S-ANGRY",VoiceReferenceTone.ANGRY,relative(angry)));
+        var first=new AudioGenerationRequest(script(),plan("TONE-NEUTRAL"),tempDir,"Neutral",library);
+        for(String tone:List.of("TONE-ANGRY","STY-ANGRY","enojado")) {
+            var request=new AudioGenerationRequest(script(),plan(tone),tempDir,"Enojado",library);
+            var unit=request.generationUnits().getFirst();
+            assertEquals(angry,request.referenceSamplePathFor(unit).orElseThrow());
+            assertEquals(VoiceReferenceTone.ANGRY,request.appliedReferenceToneFor(unit).orElseThrow());
+            assertNotEquals(first.generationUnits().getFirst().sourceFingerprint(),unit.sourceFingerprint());
+        }
+    }
     @TempDir
     Path tempDir;
 
@@ -69,6 +87,100 @@ final class AudioGenerationRequestVoiceReferenceSampleTest {
         AudioGenerationRequest request = new AudioGenerationRequest(script(), plan("TONE-HEROIC"), tempDir, "Job", library);
 
         assertEquals(neutral, request.referenceSamplePathFor(request.generationUnits().getFirst()).orElseThrow());
+        assertEquals(VoiceReferenceTone.HEROIC,
+                request.requestedReferenceToneFor(request.generationUnits().getFirst()));
+        assertEquals(VoiceReferenceTone.NEUTRAL,
+                request.appliedReferenceToneFor(request.generationUnits().getFirst()).orElseThrow());
+        assertTrue(request.requiresReferenceSampleFor(request.generationUnits().getFirst()));
+    }
+
+    @Test
+    void missingNeutralKeepsTheSameCharacterBlockedInsteadOfUsingAnotherSpeaker() throws Exception {
+        VoiceLibrary library = libraryWithSamples();
+        AudioGenerationRequest request = new AudioGenerationRequest(
+                script(), plan("TONE-HEROIC"), tempDir, "Job", library);
+
+        assertTrue(request.requiresReferenceSampleFor(request.generationUnits().getFirst()));
+        assertFalse(request.referenceSamplePathFor(request.generationUnits().getFirst()).isPresent());
+    }
+
+    @Test
+    void sampleContentParticipatesInAudioReuseFingerprint() throws Exception {
+        Path neutral = sampleFile("voices/samples/actor-neutral.wav");
+        VoiceLibrary library = libraryWithSamples(
+                sample("S-NEUTRAL", VoiceReferenceTone.NEUTRAL, relative(neutral)));
+        AudioGenerationRequest first = new AudioGenerationRequest(
+                script(), plan("TONE-NEUTRAL"), tempDir, "Job", library);
+        var original = first.generationUnits().getFirst().sourceFingerprint();
+
+        Files.write(neutral, new byte[] {9, 8, 7, 6, 5});
+        AudioGenerationRequest second = new AudioGenerationRequest(
+                script(), plan("TONE-NEUTRAL"), tempDir, "Job", library);
+
+        assertNotEquals(original, second.generationUnits().getFirst().sourceFingerprint());
+    }
+
+    @Test
+    void referenceTranscriptIsResolvedAndParticipatesInAudioReuseFingerprint()
+            throws Exception {
+        Path neutral = sampleFile("voices/samples/actor-neutral.wav");
+        VoiceLibrary firstLibrary = libraryWithSamples(sample(
+                "S-NEUTRAL", VoiceReferenceTone.NEUTRAL, relative(neutral),
+                "Primera transcripción exacta."));
+        VoiceLibrary correctedLibrary = libraryWithSamples(sample(
+                "S-NEUTRAL", VoiceReferenceTone.NEUTRAL, relative(neutral),
+                "Transcripción exacta corregida."));
+        AudioGenerationRequest first = new AudioGenerationRequest(
+                script(), plan("TONE-NEUTRAL"), tempDir, "Job", firstLibrary);
+        AudioGenerationRequest corrected = new AudioGenerationRequest(
+                script(), plan("TONE-NEUTRAL"), tempDir, "Job", correctedLibrary);
+
+        assertEquals("Primera transcripción exacta.",
+                first.referenceTranscriptFor(first.generationUnits().getFirst())
+                        .orElseThrow());
+        assertNotEquals(first.generationUnits().getFirst().sourceFingerprint(),
+                corrected.generationUnits().getFirst().sourceFingerprint());
+    }
+
+    @Test
+    void changingGlobalVoiceInvalidatesOnlyUnitsWithoutSpecificVoice() {
+        NarrationSegment global = new NarrationSegment(
+                "SEG-GLOBAL", NarrationSegmentType.PARAGRAPH, "Global", "Texto global.",
+                List.of("B-GLOBAL"), "CHR-NARRATOR", "VOC-NARRATOR", "STY-NEUTRAL", Map.of());
+        NarrationSegment specific = new NarrationSegment(
+                "SEG-SPECIFIC", NarrationSegmentType.PARAGRAPH, "Específico", "Texto específico.",
+                List.of("B-SPECIFIC"), "CHR-ACTOR", "VOC-ACTOR", "STY-NEUTRAL", Map.of());
+        NarrationScriptDocument script = NarrationScriptDocument.create(
+                "Lectura", "es", "source", List.of(global, specific));
+        VoiceReferenceSamplePathResolver resolver = new VoiceReferenceSamplePathResolver(tempDir, tempDir);
+        AudioGenerationRequest first = new AudioGenerationRequest(
+                script, null, tempDir, "Job A", "es", "VOC-GLOBAL-A", null, resolver);
+        AudioGenerationRequest second = new AudioGenerationRequest(
+                script, null, tempDir, "Job B", "es", "VOC-GLOBAL-B", null, resolver);
+
+        assertNotEquals(first.generationUnits().get(0).sourceFingerprint(),
+                second.generationUnits().get(0).sourceFingerprint());
+        assertEquals(first.generationUnits().get(1).sourceFingerprint(),
+                second.generationUnits().get(1).sourceFingerprint());
+    }
+
+    @Test
+    void languageAndSelectedRuntimeParticipateInAudioReuseFingerprint() {
+        VoiceReferenceSamplePathResolver resolver =
+                new VoiceReferenceSamplePathResolver(tempDir, tempDir);
+        AudioGenerationRequest xttsEs = new AudioGenerationRequest(
+                script(), null, tempDir, "XTTS es", "es", "VOC-ACTOR", null,
+                resolver, "xtts|process");
+        AudioGenerationRequest xttsEn = new AudioGenerationRequest(
+                script(), null, tempDir, "XTTS en", "en", "VOC-ACTOR", null,
+                resolver, "xtts|process");
+        AudioGenerationRequest piperEs = new AudioGenerationRequest(
+                script(), null, tempDir, "Piper es", "es", "VOC-ACTOR", null,
+                resolver, "piper|process");
+
+        var expected = xttsEs.generationUnits().getFirst().sourceFingerprint();
+        assertNotEquals(expected, xttsEn.generationUnits().getFirst().sourceFingerprint());
+        assertNotEquals(expected, piperEs.generationUnits().getFirst().sourceFingerprint());
     }
 
     private RenderUnitPlan plan(String toneTargetId) {
@@ -95,8 +207,14 @@ final class AudioGenerationRequestVoiceReferenceSampleTest {
     }
 
     private VoiceReferenceSample sample(String id, VoiceReferenceTone tone, String uri) {
+        return sample(id, tone, uri, "");
+    }
+
+    private VoiceReferenceSample sample(String id, VoiceReferenceTone tone,
+                                        String uri, String transcript) {
         return new VoiceReferenceSample(id, "VOC-ACTOR", tone, uri, VoiceSampleOrigin.IMPORTED_FILE,
-                VoiceFileOwnership.PROJECT_ASSET, 1000L, Instant.EPOCH, "test");
+                VoiceFileOwnership.PROJECT_ASSET, 1000L, Instant.EPOCH,
+                "test", transcript);
     }
 
     private Path sampleFile(String relative) throws Exception {

@@ -1,19 +1,31 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeSourceChooser;
+
 import com.marcosmoreiradev.docupodcaststudio.ink.model.InkImageCrop;
 import com.marcosmoreiradev.docupodcaststudio.ink.model.InkPlacedImage;
 import com.marcosmoreiradev.docupodcaststudio.ink.model.InkWorkspaceState;
+import com.marcosmoreiradev.docupodcaststudio.ink.model.InkStroke;
+import com.marcosmoreiradev.docupodcaststudio.ink.geometry.InkSelectionGeometry;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionButtonFactory;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioCanvasToolbar;
 import com.marcosmoreiradev.docupodcaststudio.ink.canvas.InkCanvasExportOptions;
 import com.marcosmoreiradev.docupodcaststudio.ink.InkRealtimeStrokeEngine;
 import com.marcosmoreiradev.docupodcaststudio.ink.canvas.InkCanvasSurface;
-import com.marcosmoreiradev.docupodcaststudio.ink.canvas.InkCanvasViewportCoordinateMapper;
 import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputCapabilities;
 import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputListener;
 import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputProvider;
-import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputProviderFactory;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.JavaFxMouseInputProvider;
 import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputSample;
+import com.marcosmoreiradev.docupodcaststudio.ink.InkEditorSession;
+import com.marcosmoreiradev.docupodcaststudio.ink.DrawingProfile;
+import com.marcosmoreiradev.docupodcaststudio.ink.DrawingExportProfile;
+import com.marcosmoreiradev.docupodcaststudio.ink.InkInputPolicy;
+import com.marcosmoreiradev.docupodcaststudio.ink.ViewportMode;
+import com.marcosmoreiradev.docupodcaststudio.ink.canvas.InkCanvasViewport;
+import com.marcosmoreiradev.docupodcaststudio.ink.canvas.InkCanvasZoomPane;
+import com.marcosmoreiradev.docupodcaststudio.ink.controls.InkPressureIndicator;
 import javafx.application.Platform;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
@@ -21,7 +33,6 @@ import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
-import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -46,22 +57,16 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.transform.Scale;
+import javafx.scene.shape.Rectangle;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
+import com.marcosmoreiradev.docupodcaststudio.ink.canvas.InkImageFileStore;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Base64;
-import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -72,35 +77,49 @@ public final class InkCompositionWorkspace extends BorderPane implements AutoClo
     private final InkCompositionProfile profile;
     private final InkCanvasSurface surface = new InkCanvasSurface();
     private final InkInputProvider inputProvider;
-    private final Group scaledCanvas = new Group(surface);
-    private final Scale canvasScale = new Scale(1.0, 1.0, 0.0, 0.0);
-    private final Pane zoomHost = new Pane(scaledCanvas);
-    private final StackPane centeredCanvas = new StackPane(zoomHost);
-    private final ScrollPane canvasScroll = new ScrollPane(centeredCanvas);
+    private final StackPane centeredCanvas;
+    private final InkCanvasZoomPane canvasZoomPane;
+    private final ScrollPane canvasScroll;
     private final ToggleButton drawMode = StudioFormControls.toggle("Dibujar", "Dibujar sobre la ilustracion.");
     private final ToggleButton panMode = StudioFormControls.toggle(
             "Panear", "Mover la vista del lienzo sin modificar la ilustracion.");
     private final ToggleButton organizeMode = StudioFormControls.toggle(
             "Organizar imagenes", "Mover, cambiar de tamano o eliminar imagenes.");
+    private final ToggleButton selectInkMode = StudioFormControls.toggle(
+            "Seleccionar trazos", "Seleccionar, mover y transformar un trazo vectorial.");
     private final ToggleButton eraser = StudioFormControls.toggle("Borrador", "Borrar trazos del lapiz.");
-    private final ColorPicker penColor = StudioFormControls.colorPicker(new ColorPicker(Color.BLACK), "Color del lapiz.");
+    private final ColorPicker penColor = StudioFormControls.colorPicker(StudioFormControls.colorPicker(Color.BLACK), "Color del lapiz.");
     private final ColorPicker backgroundColor;
-    private final Slider strokeWidth = StudioFormControls.slider(new Slider(1, 36, 7), "Grosor del trazo.");
-    private final Slider zoom = StudioFormControls.slider(new Slider(0.20, 2.0, 1.0), "Zoom del lienzo.");
+    private final Slider strokeWidth = StudioFormControls.slider(StudioFormControls.slider(1, 36, 7), "Grosor del trazo.");
+    private final Slider zoom = StudioFormControls.slider(StudioFormControls.slider(0.20, 2.0, 1.0), "Zoom del lienzo.");
     private final Label zoomLabel = new Label("100%");
     private final Label selectionLabel = new Label("Selecciona una imagen para organizarla.");
+    private final Label inkSelectionLabel = new Label("Selecciona un trazo para transformarlo.");
     private final Button shrinkImage;
     private final Button growImage;
     private final Button deleteImage;
+    private Button shrinkStroke;
+    private Button growStroke;
+    private Button rotateStrokeLeft;
+    private Button rotateStrokeRight;
+    private Button copyStroke;
+    private Button pasteStroke;
     private final Button undo;
     private final Button redo;
     private final List<PlacedImageItem> images = new ArrayList<>();
     private final List<Label> imageResizeHandles = new ArrayList<>();
+    private final Rectangle strokeSelectionBounds = new Rectangle();
+    private final Rectangle strokeSelectionHitArea = new Rectangle();
     private final Map<String, Path> stagedSources = new LinkedHashMap<>();
-    private final Deque<InkWorkspaceState> undoStates = new ArrayDeque<>();
-    private final Deque<InkWorkspaceState> redoStates = new ArrayDeque<>();
+    private final InkCanvasViewport inkViewport;
+    private final InkEditorSession<InkWorkspaceState> editorSession;
+    private final InkPressureIndicator pressureIndicator;
     private InkRealtimeStrokeEngine inkEngine;
     private PlacedImageItem selectedImage;
+    private int selectedStrokeIndex = -1;
+    private List<InkStroke> strokeDragSnapshot = List.of();
+    private Point2D strokeDragStart = Point2D.ZERO;
+    private InkStroke strokeClipboard;
     private boolean strokeActive;
     private Point2D lastInkPoint = Point2D.ZERO;
     private boolean restoring;
@@ -112,28 +131,42 @@ public final class InkCompositionWorkspace extends BorderPane implements AutoClo
     private Scene shortcutScene;
 
     public InkCompositionWorkspace(InkCompositionProfile profile, InkWorkspaceState initialState) {
-        this(profile, initialState, InkInputProviderFactory.createLectureStudioOnly());
+        this(profile, initialState, new JavaFxMouseInputProvider());
     }
 
-    InkCompositionWorkspace(InkCompositionProfile profile,
-                            InkWorkspaceState initialState,
-                            InkInputProvider inputProvider) {
+    public InkCompositionWorkspace(InkCompositionProfile profile,
+                                   InkWorkspaceState initialState,
+                                   InkInputProvider inputProvider) {
         this.profile = profile == null ? InkCompositionProfile.documentaryIllustration() : profile;
         this.inputProvider = inputProvider == null
-                ? InkInputProviderFactory.createLectureStudioOnly()
+                ? new JavaFxMouseInputProvider()
                 : inputProvider;
         this.backgroundColor = StudioFormControls.colorPicker(
-                new ColorPicker(this.profile.initialBackground()), "Color de fondo de la ilustracion.");
+                StudioFormControls.colorPicker(this.profile.initialBackground()), "Color de fondo de la ilustracion.");
         surface.resetForFixedEditableState(this.profile.logicalWidth(), this.profile.logicalHeight(),
                 this.profile.initialBackground());
+        centeredCanvas = new StackPane(surface);
+        canvasZoomPane = new InkCanvasZoomPane(centeredCanvas,
+                () -> this.profile.logicalWidth(),
+                () -> this.profile.logicalHeight());
+        canvasScroll = canvasZoomPane.scrollPane();
+        DrawingProfile sessionProfile = new DrawingProfile("composition", "Composicion", ViewportMode.FIXED,
+                this.profile.logicalWidth(), this.profile.logicalHeight(), InkInputPolicy.MOUSE_AND_NATIVE,
+                List.of(), this.profile.undoLimit(), true, new DrawingExportProfile(1, false, true));
+        inkViewport = new InkCanvasViewport(surface, sessionProfile);
+        editorSession = new InkEditorSession<>(sessionProfile, this.inputProvider, this::currentState, this::restore,
+                (state, destination, exportProfile) -> destination);
+        pressureIndicator = new InkPressureIndicator(editorSession.inputStatusProperty());
         configureCanvas();
         installImageResizeHandles();
+        configureStrokeSelection();
         configureInk();
 
         ToggleGroup modes = new ToggleGroup();
         drawMode.setToggleGroup(modes);
         panMode.setToggleGroup(modes);
         organizeMode.setToggleGroup(modes);
+        selectInkMode.setToggleGroup(modes);
         drawMode.setSelected(true);
         modes.selectedToggleProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue == null) {
@@ -157,26 +190,33 @@ public final class InkCompositionWorkspace extends BorderPane implements AutoClo
         growImage = ActionButtonFactory.secondary("Ampliar", () -> resizeSelected(1.15));
         deleteImage = ActionButtonFactory.danger("Eliminar imagen", this::deleteSelectedImage);
 
-        FlowPane firstRow = new FlowPane(10, 8, addImage, drawMode, panMode, organizeMode, undo, redo);
-        firstRow.setAlignment(Pos.CENTER_LEFT);
-        FlowPane drawingRow = new FlowPane(10, 8, new Label("Lapiz"), penColor,
+        StudioCanvasToolbar toolbar = new StudioCanvasToolbar("Herramientas de composición del lienzo");
+        FlowPane firstRow = toolbar.addRow("Modo", addImage, drawMode, panMode, organizeMode, selectInkMode, undo, redo);
+        FlowPane drawingRow = toolbar.addRow("Apariencia", new Label("Lapiz"), penColor,
                 new Label("Fondo"), backgroundColor, new Label("Grosor"), strokeWidth,
-                eraser, clear, new Label("Zoom"), zoom, zoomLabel, fit, actualSize);
-        drawingRow.setAlignment(Pos.CENTER_LEFT);
-        FlowPane imageRow = new FlowPane(10, 8, selectionLabel, shrinkImage, growImage, deleteImage);
-        imageRow.setAlignment(Pos.CENTER_LEFT);
-        VBox toolbar = new VBox(8, firstRow, drawingRow, imageRow);
-        toolbar.setPadding(new Insets(10, 12, 8, 12));
+                eraser, clear, new Label("Zoom"), zoom, zoomLabel, fit, actualSize, pressureIndicator);
+        shrinkStroke = ActionButtonFactory.secondary("Reducir trazo", "Reducir el trazo seleccionado.", () -> transformSelectedStroke(0.9, 0.9, 0));
+        growStroke = ActionButtonFactory.secondary("Ampliar trazo", "Ampliar el trazo seleccionado.", () -> transformSelectedStroke(1.1, 1.1, 0));
+        rotateStrokeLeft = ActionButtonFactory.secondary("Girar izquierda", "Girar el trazo seleccionado 15 grados a la izquierda.", () -> transformSelectedStroke(1, 1, -15));
+        rotateStrokeRight = ActionButtonFactory.secondary("Girar derecha", "Girar el trazo seleccionado 15 grados a la derecha.", () -> transformSelectedStroke(1, 1, 15));
+        copyStroke = ActionButtonFactory.secondary("Copiar trazo", "Copiar el trazo seleccionado al portapapeles interno.", this::copySelectedStroke);
+        pasteStroke = ActionButtonFactory.secondary("Pegar trazo", "Pegar el trazo copiado como una nueva capa vectorial.", this::pasteStroke);
+        FlowPane imageRow = toolbar.addRow("Imagen seleccionada", selectionLabel, shrinkImage, growImage, deleteImage);
+        FlowPane strokeRow = toolbar.addRow("Trazo seleccionado", inkSelectionLabel,
+                shrinkStroke, growStroke, rotateStrokeLeft, rotateStrokeRight, copyStroke, pasteStroke);
+        firstRow.getStyleClass().add("ink-composition-mode-row");
+        drawingRow.getStyleClass().add("ink-composition-drawing-row");
+        imageRow.getStyleClass().add("ink-composition-image-row");
+        strokeRow.getStyleClass().add("ink-composition-stroke-row");
         toolbar.getStyleClass().add("ink-composition-toolbar");
         setTop(toolbar);
-        setCenter(canvasScroll);
+        setCenter(canvasZoomPane);
         getStyleClass().add("ink-composition-workspace");
         sceneProperty().addListener((observable, oldScene, newScene) -> installWorkspaceShortcuts(newScene));
 
         backgroundColor.valueProperty().addListener((observable, oldValue, newValue) -> {
             if (restoring || newValue == null || newValue.equals(oldValue)) return;
             rememberUndo();
-            redoStates.clear();
             surface.fillBackground(newValue);
         });
         zoom.valueProperty().addListener((observable, oldValue, newValue) -> applyZoom(newValue.doubleValue()));
@@ -189,12 +229,7 @@ public final class InkCompositionWorkspace extends BorderPane implements AutoClo
     private void configureCanvas() {
         surface.setManaged(false);
         surface.relocate(0, 0);
-        scaledCanvas.getTransforms().setAll(canvasScale);
-        zoomHost.setMinSize(profile.logicalWidth(), profile.logicalHeight());
-        zoomHost.setPrefSize(profile.logicalWidth(), profile.logicalHeight());
-        zoomHost.setMaxSize(profile.logicalWidth(), profile.logicalHeight());
         centeredCanvas.setAlignment(Pos.CENTER);
-        centeredCanvas.setPadding(new Insets(18));
         centeredCanvas.getStyleClass().add("ink-composition-canvas-host");
         // Let ScrollPane expand the centering host when the scaled canvas is smaller than
         // the viewport. The host's computed minimum still forces scrollbars when it is larger.
@@ -208,6 +243,13 @@ public final class InkCompositionWorkspace extends BorderPane implements AutoClo
         canvasScroll.setMinHeight(300);
         canvasScroll.setPrefViewportHeight(520);
         canvasScroll.getStyleClass().add("technical-problem-canvas-scroll");
+        canvasZoomPane.setOnZoomApplied(appliedZoom -> {
+            if (editorSession.closed()) return;
+            cancelTransientStroke(false);
+            editorSession.zoomTo(appliedZoom);
+            zoomLabel.setText(Math.round(appliedZoom * 100) + "%");
+            resetCoordinatesAfterCurrentInputEvent();
+        });
         // Moving a cached parent forces JavaFX to rebuild the complete image layer on every pulse.
         // Keep each image as a stable scene-graph node, matching Problema Tecnico Express.
         surface.imageLayer().setCache(false);
@@ -243,6 +285,125 @@ public final class InkCompositionWorkspace extends BorderPane implements AutoClo
         attachInput();
     }
 
+    /** Installs the non-destructive vector selection surface used by composition editors. */
+    private void configureStrokeSelection() {
+        strokeSelectionBounds.setManaged(false);
+        strokeSelectionBounds.setMouseTransparent(true);
+        strokeSelectionBounds.setFill(Color.TRANSPARENT);
+        strokeSelectionBounds.getStyleClass().add("studio-canvas-selection-bounds");
+        strokeSelectionHitArea.setManaged(false);
+        strokeSelectionHitArea.setFill(Color.TRANSPARENT);
+        strokeSelectionHitArea.setMouseTransparent(true);
+        strokeSelectionHitArea.getStyleClass().add("studio-canvas-selection-hit-area");
+        surface.inkInputLayer().getChildren().addAll(strokeSelectionHitArea, strokeSelectionBounds);
+        strokeSelectionHitArea.setOnMousePressed(event -> {
+            if (!selectInkMode.isSelected() || event.getButton() != javafx.scene.input.MouseButton.PRIMARY) return;
+            Point2D point = surface.sceneToLocal(event.getSceneX(), event.getSceneY());
+            List<InkStroke> strokes = surface.applicationInkStrokes();
+            selectedStrokeIndex = -1;
+            for (int i = strokes.size() - 1; i >= 0; i--) {
+                if (InkSelectionGeometry.hitTest(strokes.get(i), point.getX(), point.getY())) {
+                    selectedStrokeIndex = i;
+                    break;
+                }
+            }
+            if (selectedStrokeIndex < 0) {
+                strokeDragSnapshot = List.of();
+                updateStrokeSelectionOverlay();
+                event.consume();
+                return;
+            }
+            strokeDragSnapshot = List.copyOf(strokes);
+            strokeDragStart = point;
+            rememberUndo();
+            updateStrokeSelectionOverlay();
+            event.consume();
+        });
+        strokeSelectionHitArea.setOnMouseDragged(event -> {
+            if (!selectInkMode.isSelected() || selectedStrokeIndex < 0 || strokeDragSnapshot.isEmpty()) return;
+            Point2D point = surface.sceneToLocal(event.getSceneX(), event.getSceneY());
+            double dx = point.getX() - strokeDragStart.getX();
+            double dy = point.getY() - strokeDragStart.getY();
+            List<InkStroke> transformed = new ArrayList<>(strokeDragSnapshot);
+            transformed.set(selectedStrokeIndex, InkSelectionGeometry.transform(
+                    strokeDragSnapshot.get(selectedStrokeIndex),
+                    new InkSelectionGeometry.Transform(dx, dy, 1, 1, 0)));
+            surface.replaceInkStrokeStates(toStrokeStates(transformed));
+            updateStrokeSelectionOverlay();
+            refreshCommandState();
+            event.consume();
+        });
+        strokeSelectionHitArea.setOnMouseReleased(event -> {
+            if (event.getButton() == javafx.scene.input.MouseButton.PRIMARY) {
+                strokeDragSnapshot = List.of();
+                event.consume();
+            }
+        });
+    }
+
+    private void transformSelectedStroke(double scaleX, double scaleY, double rotationDegrees) {
+        List<InkStroke> strokes = surface.applicationInkStrokes();
+        if (selectedStrokeIndex < 0 || selectedStrokeIndex >= strokes.size()) return;
+        rememberUndo();
+        List<InkStroke> transformed = new ArrayList<>(strokes);
+        transformed.set(selectedStrokeIndex, InkSelectionGeometry.transform(strokes.get(selectedStrokeIndex),
+                new InkSelectionGeometry.Transform(0, 0, scaleX, scaleY, rotationDegrees)));
+        surface.replaceInkStrokeStates(toStrokeStates(transformed));
+        updateStrokeSelectionOverlay();
+        refreshCommandState();
+    }
+
+    private void copySelectedStroke() {
+        List<InkStroke> strokes = surface.applicationInkStrokes();
+        if (selectedStrokeIndex >= 0 && selectedStrokeIndex < strokes.size()) {
+            strokeClipboard = strokes.get(selectedStrokeIndex);
+            refreshCommandState();
+        }
+    }
+
+    private void pasteStroke() {
+        if (strokeClipboard == null) return;
+        rememberUndo();
+        List<InkStroke> strokes = new ArrayList<>(surface.applicationInkStrokes());
+        strokes.add(InkSelectionGeometry.transform(strokeClipboard,
+                new InkSelectionGeometry.Transform(24, 24, 1, 1, 0)));
+        selectedStrokeIndex = strokes.size() - 1;
+        surface.replaceInkStrokeStates(toStrokeStates(strokes));
+        updateStrokeSelectionOverlay();
+        refreshCommandState();
+    }
+
+    private List<InkCanvasSurface.InkStrokeState> toStrokeStates(List<InkStroke> strokes) {
+        if (strokes == null) return List.of();
+        return strokes.stream().map(stroke -> new InkCanvasSurface.InkStrokeState(
+                stroke.tool().name(), stroke.color(), stroke.width(),
+                stroke.points().stream().map(point -> new InkCanvasSurface.InkPointState(
+                        point.x(), point.y(), point.nanos(), point.pressure())).toList())).toList();
+    }
+
+    private void updateStrokeSelectionOverlay() {
+        boolean visible = selectInkMode.isSelected() && selectedStrokeIndex >= 0;
+        strokeSelectionBounds.setVisible(visible);
+        strokeSelectionBounds.setManaged(visible);
+        if (!visible) {
+            inkSelectionLabel.setText("Selecciona un trazo para transformarlo.");
+            return;
+        }
+        List<InkStroke> strokes = surface.applicationInkStrokes();
+        if (selectedStrokeIndex >= strokes.size()) {
+            selectedStrokeIndex = -1;
+            updateStrokeSelectionOverlay();
+            return;
+        }
+        InkSelectionGeometry.Bounds bounds = InkSelectionGeometry.bounds(strokes.get(selectedStrokeIndex));
+        strokeSelectionBounds.setX(bounds.minX());
+        strokeSelectionBounds.setY(bounds.minY());
+        strokeSelectionBounds.setWidth(Math.max(1, bounds.width()));
+        strokeSelectionBounds.setHeight(Math.max(1, bounds.height()));
+        strokeSelectionBounds.toFront();
+        inkSelectionLabel.setText("Trazo seleccionado");
+    }
+
     private void attachInput() {
         if (inputAttached) {
             return;
@@ -259,7 +420,7 @@ public final class InkCompositionWorkspace extends BorderPane implements AutoClo
             @Override public boolean onStrokeEnd(InkInputSample sample) { return endStroke(sample); }
             };
         }
-        inputProvider.attach(surface.inkInputTarget(), inputListener);
+        editorSession.attach(inkViewport, inputListener);
         inputAttached = true;
     }
 
@@ -269,7 +430,6 @@ public final class InkCompositionWorkspace extends BorderPane implements AutoClo
         if (point == null) return false;
         coordinateStateEpoch++;
         rememberUndo();
-        redoStates.clear();
         strokeActive = true;
         lastInkPoint = point;
         inkEngine.begin(point.getX(), point.getY(), sample.nanos(), penColor.getValue(), strokeWidth.getValue(),
@@ -313,6 +473,12 @@ public final class InkCompositionWorkspace extends BorderPane implements AutoClo
         } else if (event.getCode() == KeyCode.Y) {
             redo();
             event.consume();
+        } else if (selectInkMode.isSelected() && event.getCode() == KeyCode.C) {
+            copySelectedStroke();
+            event.consume();
+        } else if (selectInkMode.isSelected() && event.getCode() == KeyCode.V) {
+            pasteStroke();
+            event.consume();
         }
     }
 
@@ -345,19 +511,19 @@ public final class InkCompositionWorkspace extends BorderPane implements AutoClo
 
     private Point2D pointInside(InkInputSample sample) {
         if (sample == null) return null;
-        return InkCanvasViewportCoordinateMapper.mapInside(surface.inkInputTarget(), surface,
-                sample.x(), sample.y(), profile.logicalWidth(), profile.logicalHeight()).orElse(null);
+        return sample.x() >= 0 && sample.y() >= 0
+                && sample.x() <= surface.logicalWidth() && sample.y() <= surface.logicalHeight()
+                ? new Point2D(sample.x(), sample.y()) : null;
     }
 
     public void chooseImages(Window owner) {
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle("Agregar imagenes a la ilustracion");
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(
                 "Imagenes", "*.png", "*.jpg", "*.jpeg", "*.webp", "*.bmp"));
         List<java.io.File> selected = chooser.showOpenMultipleDialog(owner);
         if (selected == null || selected.isEmpty()) return;
         rememberUndo();
-        redoStates.clear();
         for (java.io.File file : selected) {
             try {
                 Path staged = stageSource(file.toPath());
@@ -418,7 +584,6 @@ public final class InkCompositionWorkspace extends BorderPane implements AutoClo
         item.view().setOnMousePressed(event -> {
             if (!organizeMode.isSelected()) return;
             rememberUndo();
-            redoStates.clear();
             selectImage(item);
             Point2D pointer = surface.sceneToLocal(event.getSceneX(), event.getSceneY());
             item.dragPointerX = pointer.getX();
@@ -464,7 +629,6 @@ public final class InkCompositionWorkspace extends BorderPane implements AutoClo
     private void resizeSelected(double factor) {
         if (selectedImage == null) return;
         rememberUndo();
-        redoStates.clear();
         ImageView view = selectedImage.view();
         double maxWidth = profile.logicalWidth() - view.getLayoutX();
         double maxByHeight = (profile.logicalHeight() - view.getLayoutY())
@@ -487,7 +651,6 @@ public final class InkCompositionWorkspace extends BorderPane implements AutoClo
             handle.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
                 if (selectedImage == null || !organizeMode.isSelected()) return;
                 rememberUndo();
-                redoStates.clear();
                 event.consume();
             });
             handle.addEventFilter(MouseEvent.MOUSE_DRAGGED, event -> {
@@ -546,7 +709,6 @@ public final class InkCompositionWorkspace extends BorderPane implements AutoClo
     private void deleteSelectedImage() {
         if (selectedImage == null) return;
         rememberUndo();
-        redoStates.clear();
         surface.imageLayer().getChildren().remove(selectedImage.view());
         images.remove(selectedImage);
         selectImage(null);
@@ -556,36 +718,35 @@ public final class InkCompositionWorkspace extends BorderPane implements AutoClo
         cancelTransientStrokeAndResetCoordinates();
         if (surface.applicationInkStrokes().isEmpty()) return;
         rememberUndo();
-        redoStates.clear();
         surface.clearStrokes();
+        selectedStrokeIndex = -1;
+        strokeDragSnapshot = List.of();
+        updateStrokeSelectionOverlay();
         refreshCommandState();
     }
 
     private void rememberUndo() {
         if (restoring) return;
-        undoStates.addLast(currentState());
-        while (undoStates.size() > profile.undoLimit()) undoStates.removeFirst();
+        editorSession.checkpoint();
         refreshCommandState();
     }
 
     private void undo() {
-        if (undoStates.isEmpty()) return;
         cancelTransientStrokeAndResetCoordinates();
-        redoStates.addLast(currentState());
-        restore(undoStates.removeLast());
+        editorSession.undo();
         refreshCommandState();
     }
 
     private void redo() {
-        if (redoStates.isEmpty()) return;
         cancelTransientStrokeAndResetCoordinates();
-        undoStates.addLast(currentState());
-        restore(redoStates.removeLast());
+        editorSession.redo();
         refreshCommandState();
     }
 
     private void restore(InkWorkspaceState state) {
         cancelTransientStrokeAndResetCoordinates();
+        selectedStrokeIndex = -1;
+        strokeDragSnapshot = List.of();
         restoring = true;
         try {
             Color background = parseColor(state.background(), profile.initialBackground());
@@ -603,6 +764,7 @@ public final class InkCompositionWorkspace extends BorderPane implements AutoClo
                 item.view().setFitWidth(placed.fitWidth());
             }
             selectImage(null);
+            updateStrokeSelectionOverlay();
         } finally {
             restoring = false;
         }
@@ -645,12 +807,12 @@ public final class InkCompositionWorkspace extends BorderPane implements AutoClo
         surface.applyCss();
         surface.layout();
         if (inputAttached) {
-            inputProvider.detach();
+            editorSession.detach();
             inputAttached = false;
         }
         attachInput();
         coordinateStateEpoch++;
-        inputProvider.resetCoordinateState();
+        editorSession.resetInputCoordinates();
         surface.inkInputTarget().requestFocus();
     }
 
@@ -659,62 +821,69 @@ public final class InkCompositionWorkspace extends BorderPane implements AutoClo
     }
 
     InkInputCapabilities inputCapabilitiesForTesting() {
-        return inputProvider.capabilities();
+        return editorSession.inputCapabilities();
     }
 
     private void refreshInteractionMode() {
         boolean arranging = organizeMode.isSelected();
         boolean panning = panMode.isSelected();
         boolean inkActive = drawMode.isSelected();
-        surface.configureInputCapture(inkActive || arranging, inkActive);
+        boolean selecting = selectInkMode.isSelected();
+        surface.configureInputCapture(inkActive || arranging || selecting, inkActive);
         surface.inkInputTarget().setCursor(inkActive ? Cursor.CROSSHAIR : Cursor.DEFAULT);
+        strokeSelectionHitArea.setWidth(surface.logicalWidth());
+        strokeSelectionHitArea.setHeight(surface.logicalHeight());
+        strokeSelectionHitArea.setMouseTransparent(!selecting);
+        strokeSelectionHitArea.setVisible(selecting);
         centeredCanvas.setCursor(panning ? Cursor.OPEN_HAND : Cursor.DEFAULT);
         canvasScroll.setPannable(panning);
         for (PlacedImageItem item : images) item.view().setMouseTransparent(!arranging);
         if (!arranging) selectImage(null);
+        if (!selecting) {
+            selectedStrokeIndex = -1;
+            strokeDragSnapshot = List.of();
+        }
         shrinkImage.setDisable(!arranging || selectedImage == null);
         growImage.setDisable(!arranging || selectedImage == null);
         deleteImage.setDisable(!arranging || selectedImage == null);
         updateImageResizeHandles();
+        updateStrokeSelectionOverlay();
     }
 
     private void refreshCommandState() {
-        undo.setDisable(undoStates.isEmpty());
-        redo.setDisable(redoStates.isEmpty());
+        undo.setDisable(!editorSession.canUndo());
+        redo.setDisable(!editorSession.canRedo());
         boolean disabled = !organizeMode.isSelected() || selectedImage == null;
         shrinkImage.setDisable(disabled);
         growImage.setDisable(disabled);
         deleteImage.setDisable(disabled);
+        boolean strokeDisabled = !selectInkMode.isSelected() || selectedStrokeIndex < 0;
+        if (shrinkStroke != null) shrinkStroke.setDisable(strokeDisabled);
+        if (growStroke != null) growStroke.setDisable(strokeDisabled);
+        if (rotateStrokeLeft != null) rotateStrokeLeft.setDisable(strokeDisabled);
+        if (rotateStrokeRight != null) rotateStrokeRight.setDisable(strokeDisabled);
+        if (copyStroke != null) copyStroke.setDisable(strokeDisabled);
+        if (pasteStroke != null) pasteStroke.setDisable(strokeClipboard == null);
     }
 
     private void fitCanvas(double viewportWidth, double viewportHeight) {
         double fitted = Math.min((viewportWidth - 42) / profile.logicalWidth(),
                 (viewportHeight - 42) / profile.logicalHeight());
         zoom.setValue(clamp(fitted, zoom.getMin(), 1.0));
-        Platform.runLater(() -> {
-            canvasScroll.setHvalue(0.5);
-            canvasScroll.setVvalue(0.5);
-            resetCoordinatesAfterCurrentInputEvent();
-        });
+        canvasZoomPane.centerContent();
     }
 
     private void applyZoom(double value) {
-        cancelTransientStroke(false);
         double safe = clamp(value, zoom.getMin(), zoom.getMax());
-        canvasScale.setX(safe);
-        canvasScale.setY(safe);
-        zoomHost.setMinSize(profile.logicalWidth() * safe, profile.logicalHeight() * safe);
-        zoomHost.setPrefSize(profile.logicalWidth() * safe, profile.logicalHeight() * safe);
-        zoomHost.setMaxSize(profile.logicalWidth() * safe, profile.logicalHeight() * safe);
         zoomLabel.setText(Math.round(safe * 100) + "%");
-        resetCoordinatesAfterCurrentInputEvent();
+        canvasZoomPane.setZoom(safe);
     }
 
     private void cancelTransientStrokeAndResetCoordinates() {
         cancelTransientStroke(false);
         if (inputAttached) {
             coordinateStateEpoch++;
-            inputProvider.resetCoordinateState();
+            editorSession.resetInputCoordinates();
         }
     }
 
@@ -730,7 +899,7 @@ public final class InkCompositionWorkspace extends BorderPane implements AutoClo
         long requestedEpoch = ++coordinateStateEpoch;
         Platform.runLater(() -> {
             if (requestedEpoch != coordinateStateEpoch || strokeActive || !inputAttached) return;
-            inputProvider.resetCoordinateState();
+            editorSession.resetInputCoordinates();
         });
     }
 
@@ -739,7 +908,7 @@ public final class InkCompositionWorkspace extends BorderPane implements AutoClo
     }
 
     Pane zoomHostForTesting() {
-        return zoomHost;
+        return canvasZoomPane.contentHost();
     }
 
     StackPane centeredCanvasForTesting() {
@@ -787,7 +956,8 @@ public final class InkCompositionWorkspace extends BorderPane implements AutoClo
             inkEngine.cancelActiveStroke();
             inkEngine.stop();
         }
-        inputProvider.close();
+        pressureIndicator.close();
+        editorSession.close();
         inputAttached = false;
     }
 
@@ -812,29 +982,15 @@ public final class InkCompositionWorkspace extends BorderPane implements AutoClo
 
     private static String imageToBase64(Image image) {
         if (image == null || image.getPixelReader() == null) return "";
-        try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
-            ImageIO.write(toBuffered(image), "png", output);
-            return Base64.getEncoder().encodeToString(output.toByteArray());
+        try {
+            return InkImageFileStore.encodePngBase64(image);
         } catch (IOException ex) {
             return "";
         }
     }
 
     private static Image imageFromBase64(String data) {
-        if (data == null || data.isBlank()) return null;
-        try { return new Image(new ByteArrayInputStream(Base64.getDecoder().decode(data))); }
-        catch (RuntimeException ex) { return null; }
-    }
-
-    private static BufferedImage toBuffered(Image image) {
-        int width = Math.max(1, (int) Math.ceil(image.getWidth()));
-        int height = Math.max(1, (int) Math.ceil(image.getHeight()));
-        BufferedImage output = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-        PixelReader reader = image.getPixelReader();
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) output.setRGB(x, y, reader.getArgb(x, y));
-        }
-        return output;
+        return InkImageFileStore.decodePngBase64(data);
     }
 
     private static final class PlacedImageItem {

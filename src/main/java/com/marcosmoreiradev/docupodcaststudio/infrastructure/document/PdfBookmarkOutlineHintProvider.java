@@ -1,14 +1,13 @@
 package com.marcosmoreiradev.docupodcaststudio.infrastructure.document;
 
 import com.marcosmoreiradev.docupodcaststudio.application.document.DocumentOutlineHint;
-import com.marcosmoreiradev.docupodcaststudio.application.document.DocumentOutlineHintProvider;
 import com.marcosmoreiradev.docupodcaststudio.application.document.DocumentOutlineOrigin;
-import com.marcosmoreiradev.docupodcaststudio.domain.document.ReadableDocument;
-import com.marcosmoreiradev.docupodcaststudio.domain.document.SourceDocumentFormat;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PdfBookmarkOutlineReader;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -19,7 +18,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /** Best-effort PDF bookmark reader for simple, unencrypted outlines. */
-public final class PdfBookmarkOutlineHintProvider implements DocumentOutlineHintProvider {
+public final class PdfBookmarkOutlineHintProvider implements PdfBookmarkOutlineReader {
     private static final Pattern OBJECT_PATTERN = Pattern.compile("(?s)(\\d+)\\s+0\\s+obj\\s*<<(.*?)>>\\s*endobj");
     private static final Pattern PAGE_TYPE_PATTERN = Pattern.compile("/Type\\s*/Page\\b(?!s)");
     private static final Pattern TITLE_PATTERN = Pattern.compile("/Title\\s*\\(");
@@ -27,12 +26,12 @@ public final class PdfBookmarkOutlineHintProvider implements DocumentOutlineHint
     private static final Pattern DEST_PAGE_PATTERN = Pattern.compile("/(?:Dest|D)\\s*\\[\\s*(\\d+)\\s+0\\s+R");
 
     @Override
-    public List<DocumentOutlineHint> hintsFor(ReadableDocument document) {
-        if (document == null || document.format() != SourceDocumentFormat.PDF || document.sourcePath() == null) {
+    public List<DocumentOutlineHint> hintsFor(Path sourcePdf) {
+        if (sourcePdf == null || !Files.isRegularFile(sourcePdf)) {
             return List.of();
         }
         try {
-            String raw = Files.readString(document.sourcePath(), StandardCharsets.ISO_8859_1);
+            String raw = Files.readString(sourcePdf, StandardCharsets.ISO_8859_1);
             if (!raw.startsWith("%PDF") || raw.contains("/Encrypt") || !raw.contains("/Outlines")) {
                 return List.of();
             }

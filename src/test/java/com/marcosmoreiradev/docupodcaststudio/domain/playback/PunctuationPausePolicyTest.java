@@ -8,13 +8,21 @@ final class PunctuationPausePolicyTest {
     private final PunctuationPausePolicy policy = new PunctuationPausePolicy();
 
     @Test
-    void keepsExistingOneXPauseInsteadOfApplyingNewDurations() {
+    void usesHalfSecondAtNormalSpeedInsteadOfBlanketOneSecond() {
         PlaybackCue completed = cue("SEG-001", "SEG-001-U001", "Texto final.");
         PlaybackCue next = cue("SEG-002", "SEG-002-U001", "Siguiente texto.");
 
         long pause = policy.interCuePauseMillis(completed, next, 1.0, 1000L);
 
-        assertEquals(1000L, pause);
+        assertEquals(500L, pause);
+    }
+
+    @Test
+    void normalSpeedPointFollowedIsShorterThanParagraphBoundary() {
+        PlaybackCue completed = cue("SEG-001", "SEG-001-U001", "Primera oración.");
+        PlaybackCue next = cue("SEG-001", "SEG-001-U002", "Segunda oración.");
+        assertEquals(250L, policy.interCuePauseMillis(completed, next, 1.0, 1000L));
+        assertEquals(250L, policy.interCuePauseMillis(completed, next, 1.0, 0L));
     }
 
     @Test

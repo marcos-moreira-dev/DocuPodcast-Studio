@@ -20,7 +20,7 @@ import java.util.Optional;
 /** Parses Poppler's pdftotext -bbox-layout XHTML into page/block text with PDF-space bboxes. */
 final class PdfBboxLayoutParser {
     PdfBboxExtraction parse(String xhtml) throws IOException {
-        Document document = parseXml(stripDoctype(xhtml));
+        Document document = parseXml(stripDoctype(sanitizeXml10(xhtml)));
         NodeList pageNodes = document.getElementsByTagName("page");
         ArrayList<PdfBboxPage> pages = new ArrayList<>();
         for (int i = 0; i < pageNodes.getLength(); i++) {
@@ -84,6 +84,9 @@ final class PdfBboxLayoutParser {
         if (verticalGap < -2.0 || verticalGap > 14.0) {
             return false;
         }
+        if (startsNewParagraph(previous.text(), current.text(), verticalGap)) {
+            return false;
+        }
         double overlap = Math.max(0.0, Math.min(previous.bbox().xMax(), current.bbox().xMax())
                 - Math.max(previous.bbox().xMin(), current.bbox().xMin()));
         double narrower = Math.max(1.0, Math.min(previous.bbox().xMax() - previous.bbox().xMin(),
@@ -91,6 +94,30 @@ final class PdfBboxLayoutParser {
         boolean sameColumn = overlap / narrower >= 0.42
                 || Math.abs(previous.bbox().xMin() - current.bbox().xMin()) <= 18.0;
         return sameColumn;
+    }
+
+    /**
+     * Poppler already emits semantic blocks in many born-digital PDFs. Keep
+     * joining genuinely fragmented lines, but do not turn consecutive prose
+     * paragraphs into one giant selectable/audio region merely because their
+     * boxes are close.
+     */
+    private static boolean startsNewParagraph(String previous, String current,
+                                              double verticalGap) {
+        String before = previous == null ? "" : previous.strip();
+        String after = current == null ? "" : current.strip();
+        if (before.isBlank() || after.isBlank() || verticalGap < 2.0) {
+            return false;
+        }
+        int last = before.codePointBefore(before.length());
+        boolean completedThought = last == '.' || last == '!' || last == '?'
+                || last == ':' || last == ';' || last == '\u2026';
+        int first = after.codePointAt(0);
+        boolean visibleParagraphStart = Character.isUpperCase(first)
+                || Character.isDigit(first)
+                || first == '\u00AB' || first == '\u201C' || first == '\u2018'
+                || first == '-' || first == '\u2022';
+        return completedThought && visibleParagraphStart;
     }
 
     private static PdfBboxTextBlock merge(PdfBboxTextBlock previous, PdfBboxTextBlock current) {
@@ -175,6 +202,25 @@ final class PdfBboxLayoutParser {
     private static String stripDoctype(String value) {
         String safe = value == null ? "" : value;
         return safe.replaceFirst("(?is)<!DOCTYPE[^>]*>", "");
+    }
+
+    /**
+     * Some old embedded fonts make Poppler emit C0 control codes in word
+     * content. XML 1.0 rejects those bytes before we can preserve the rest of
+     * the page, so retain their position as a replacement character instead
+     * of losing the complete native layer.
+     */
+    private static String sanitizeXml10(String value) {
+        String safe = value == null ? "" : value;
+        StringBuilder sanitized = new StringBuilder(safe.length());
+        safe.codePoints().forEach(codePoint -> {
+            boolean allowed = codePoint == 0x9 || codePoint == 0xA || codePoint == 0xD
+                    || codePoint >= 0x20 && codePoint <= 0xD7FF
+                    || codePoint >= 0xE000 && codePoint <= 0xFFFD
+                    || codePoint >= 0x10000 && codePoint <= 0x10FFFF;
+            sanitized.appendCodePoint(allowed ? codePoint : 0xFFFD);
+        });
+        return sanitized.toString();
     }
 }
 

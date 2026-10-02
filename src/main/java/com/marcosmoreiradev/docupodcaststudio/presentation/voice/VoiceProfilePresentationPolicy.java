@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.voice;
 
-import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceEngineType;
+import com.marcosmoreiradev.docupodcaststudio.application.compatibility.voice.LegacyVoiceProfileEngineCompatibility;
 import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceLibrary;
 import com.marcosmoreiradev.docupodcaststudio.domain.voice.OfficialAdvancedVoicePresetCatalog;
 import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceProfile;
@@ -32,7 +32,7 @@ final class VoiceProfilePresentationPolicy {
         if (advancedPredesignedNeutral(voice) || OfficialAdvancedVoicePresetCatalog.isOfficialPreset(voice)) {
             return "Voz IA avanzada";
         }
-        if (voice != null && voice.engineType() == VoiceEngineType.MOCK) {
+        if (LegacyVoiceProfileEngineCompatibility.isDiagnostic(voice)) {
             return "Modo de prueba";
         }
         return "Voz avanzada";
@@ -77,7 +77,7 @@ final class VoiceProfilePresentationPolicy {
         if (DEFAULT_SIMPLE_VOICE_ID.equalsIgnoreCase(voice.id()) && !voice.hasSample()) {
             return true;
         }
-        return voice.engineType() == VoiceEngineType.PIPER || voice.engineType() == VoiceEngineType.LOCAL_TTS_PROCESS;
+        return LegacyVoiceProfileEngineCompatibility.isSimple(voice);
     }
 
     static boolean predefinedVoice(VoiceProfile voice) {
@@ -86,8 +86,7 @@ final class VoiceProfilePresentationPolicy {
 
     static boolean advancedVoice(VoiceProfile voice) {
         return voice != null && (advancedPredesignedNeutral(voice)
-                || voice.engineType() == VoiceEngineType.XTTS
-                || voice.engineType() == VoiceEngineType.HUMAN_AUDIO);
+                || LegacyVoiceProfileEngineCompatibility.isAdvanced(voice));
     }
 
     static boolean advancedPredesignedNeutral(VoiceProfile voice) {

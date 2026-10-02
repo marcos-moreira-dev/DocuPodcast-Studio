@@ -20,10 +20,12 @@ public final class CollapsibleSection extends VBox {
                 initiallyExpanded ? "Ocultar " + title : "Mostrar " + title,
                 null);
         getStyleClass().add("ui-collapsible-section");
+        setAccessibleText((title == null || title.isBlank() ? "Seccion" : title) + ", contenido expandible");
 
         DocumentSidePanelChrome.Header chrome = DocumentSidePanelChrome.header(title, "", toggle);
         HBox header = chrome.node();
         header.getStyleClass().add("ui-collapsible-section-header");
+        header.setAccessibleText(title == null ? "Seccion expandible" : title);
         chrome.copy().setOnMouseClicked(event -> setExpanded(!expanded()));
         toggle.setOnAction(event -> setExpanded(!expanded()));
 

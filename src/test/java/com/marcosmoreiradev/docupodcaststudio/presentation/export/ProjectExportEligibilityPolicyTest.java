@@ -1,5 +1,8 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.export;
 
+import com.marcosmoreiradev.docupodcaststudio.application.document.BlockDocumentSource;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PreparedPdfSource;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PreparedPdfWorkspaceRef;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.ReadableDocument;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.SourceDocumentFormat;
 import org.junit.jupiter.api.Test;
@@ -14,20 +17,33 @@ final class ProjectExportEligibilityPolicyTest {
     private final ProjectExportEligibilityPolicy policy = new ProjectExportEligibilityPolicy();
 
     @Test
-    void pdfDocumentsCannotOpenExportCenter() {
-        ReadableDocument document = new ReadableDocument("Libro", SourceDocumentFormat.PDF, Path.of("libro.pdf"), List.of());
+    void preparedPdfCanOpenExportCenterWhenItsProjectionExists() {
+        PreparedPdfSource source = new PreparedPdfSource(new PreparedPdfWorkspaceRef(
+                Path.of("proyecto"), Path.of("proyecto/source/libro.pdf"), "a".repeat(64)), "Libro");
 
-        ProjectExportEligibilityPolicy.ExportEligibility eligibility = policy.evaluate(document);
+        ProjectExportEligibilityPolicy.ExportEligibility eligibility = policy.evaluate(source, true);
 
-        assertFalse(eligibility.eligible());
-        assertTrue(eligibility.message().contains("Los PDF quedan para lectura"));
+        assertTrue(eligibility.eligible());
     }
 
     @Test
-    void docxDocumentsCanOpenExportCenter() {
-        ReadableDocument document = new ReadableDocument("Guion", SourceDocumentFormat.DOCX, Path.of("guion.docx"), List.of());
+    void preparedPdfWithoutProjectionExplainsTheMissingCapability() {
+        PreparedPdfSource source = new PreparedPdfSource(new PreparedPdfWorkspaceRef(
+                Path.of("proyecto"), Path.of("proyecto/source/libro.pdf"), "a".repeat(64)), "Libro");
 
-        ProjectExportEligibilityPolicy.ExportEligibility eligibility = policy.evaluate(document);
+        ProjectExportEligibilityPolicy.ExportEligibility eligibility = policy.evaluate(source, false);
+
+        assertFalse(eligibility.eligible());
+        assertTrue(eligibility.message().contains("proyección audiovisual"));
+    }
+
+    @Test
+    void docxCanOpenExportCenter() {
+        ReadableDocument document = new ReadableDocument("Guion", SourceDocumentFormat.DOCX,
+                Path.of("guion.docx"), List.of());
+
+        ProjectExportEligibilityPolicy.ExportEligibility eligibility =
+                policy.evaluate(new BlockDocumentSource(document));
 
         assertTrue(eligibility.eligible());
     }

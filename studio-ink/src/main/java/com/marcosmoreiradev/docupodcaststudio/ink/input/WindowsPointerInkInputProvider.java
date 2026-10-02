@@ -42,6 +42,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * {@link InkInputProvider} and never imports JNA directly.</p>
  */
 public final class WindowsPointerInkInputProvider implements InkInputProvider {
+    private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger(WindowsPointerInkInputProvider.class);
     private static final String DISABLE_PROPERTY = "docupodcast.ink.disableWindowsPointer";
     private static final String DIAGNOSTICS_PROPERTY = "docupodcast.ink.inputDiagnostics";
     private static final String WINDOWS = "win";
@@ -487,7 +488,7 @@ public final class WindowsPointerInkInputProvider implements InkInputProvider {
 
     private static void reportDiagnostic(String message) {
         if (Boolean.getBoolean(DIAGNOSTICS_PROPERTY)) {
-            System.out.println("[WindowsPointerInk] " + message);
+            LOGGER.debug("Windows Pointer ink: {}", message);
         }
     }
 

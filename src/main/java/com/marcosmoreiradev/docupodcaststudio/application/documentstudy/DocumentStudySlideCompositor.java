@@ -9,6 +9,7 @@ import com.marcosmoreiradev.docupodcaststudio.domain.study.DocumentStudyClosingS
 import com.marcosmoreiradev.docupodcaststudio.domain.study.DocumentStudyVideoConfiguration;
 
 import javax.imageio.ImageIO;
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.FontMetrics;
@@ -25,11 +26,144 @@ import java.util.Map;
 
 /** Composes stable paragraph, cover and table PNGs for documentary export. */
 public final class DocumentStudySlideCompositor {
+    /**
+     * Source-only central policy for visual/structured semantic content. Speech
+     * explains the object; it is deliberately not printed again over the ROI.
+     * Global title, configured imagery and mascot remain transversal overlays.
+     */
+    public void composeSourceCapture(Path target, DocumentBlock block,
+                                         Path sourceRoi,
+                                         DocumentParagraphVisualAssignment visual,
+                                         DocumentStudyVideoConfiguration configuration,
+                                         DocuPodcastProject project, Path projectDirectory,
+                                         DocumentTextVideoOptions options) throws IOException {
+        BufferedImage image = canvas(options);
+        Graphics2D g = graphics(image);
+        try {
+            paintBackground(g, image, options);
+            int width = image.getWidth(), height = image.getHeight();
+            int margin = Math.max(36, width / 16);
+            int availableWidth = width - margin * 2;
+            int y = drawGlobalTitle(g, configuration.videoTitle(), options,
+                    margin, margin, availableWidth);
+            int imageY = y;
+            int imageHeight = height - imageY - margin;
+            BufferedImage selected = null;
+            if (sourceRoi != null && Files.isRegularFile(sourceRoi)) {
+                selected = ImageIO.read(sourceRoi.toFile());
+            }
+            if (selected == null) {
+                selected = readAsset(project, projectDirectory,
+                        visual.activeImageAssetId());
+            }
+            drawContainedImage(g, selected, margin, imageY, availableWidth, imageHeight, options);
+            drawMascot(g, readAsset(project, projectDirectory, visual.mascotAssetId()),
+                    visual, width, height, imageHeight, Math.max(70, availableWidth / 5));
+        } finally {
+            g.dispose();
+        }
+        write(target, image);
+    }
+
+    /** Compatibility alias retained for callers compiled against the earlier name. */
+    public void composeSemanticComponent(Path target, DocumentBlock block,
+                                         Path sourceRoi,
+                                         DocumentParagraphVisualAssignment visual,
+                                         DocumentStudyVideoConfiguration configuration,
+                                         DocuPodcastProject project, Path projectDirectory,
+                                         DocumentTextVideoOptions options) throws IOException {
+        composeSourceCapture(target, block, sourceRoi, visual, configuration,
+                project, projectDirectory, options);
+    }
     public void composeParagraph(Path target, DocumentBlock block,
                                  DocumentParagraphVisualAssignment visual,
                                  DocumentStudyVideoConfiguration configuration,
                                  DocuPodcastProject project, Path projectDirectory,
                                  DocumentTextVideoOptions options) throws IOException {
+        composeParagraph(target, block, visual, configuration, project, projectDirectory,
+                options, null);
+    }
+
+    /** Composes a generated text frame whose complete body is the narration unit currently heard. */
+    public void composeNarratedParagraph(Path target, DocumentBlock block,
+                                         DocumentParagraphVisualAssignment visual,
+                                         DocumentStudyVideoConfiguration configuration,
+                                         DocuPodcastProject project, Path projectDirectory,
+                                         DocumentTextVideoOptions options) throws IOException {
+        composeParagraph(target, block, visual, configuration, project, projectDirectory,
+                options, block.text());
+    }
+
+    /**
+     * Keeps the complete Word paragraph on screen while emphasizing only the
+     * acoustic unit currently narrated. The audio remains sentence-granular;
+     * the visual context remains paragraph-granular.
+     */
+    public void composeNarratedParagraph(Path target, DocumentBlock block,
+                                         String narratedFragment,
+                                         DocumentParagraphVisualAssignment visual,
+                                         DocumentStudyVideoConfiguration configuration,
+                                         DocuPodcastProject project, Path projectDirectory,
+                                         DocumentTextVideoOptions options) throws IOException {
+        composeParagraph(target, block, visual, configuration, project, projectDirectory,
+                options, narratedFragment);
+    }
+
+    public void composeIllustratedParagraph(Path target, DocumentBlock block, String narratedFragment,
+            DocumentParagraphVisualAssignment visual, DocumentStudyVideoConfiguration configuration,
+            DocuPodcastProject project, Path root, DocumentTextVideoOptions options, Path illustration) throws IOException {
+        var appearance = configuration.aiIllustrationAppearance();
+        if (appearance.background()) {
+            composeNarratedParagraph(target, block, narratedFragment, visual, configuration, project, root,
+                    options.withBackgroundImage(illustration.toAbsolutePath().toString(), appearance.opacity(),
+                            DocumentBackgroundImageFit.valueOf(appearance.fit())));
+            return;
+        }
+        BufferedImage image = canvas(options);
+        Graphics2D g = graphics(image);
+        try {
+            paintBackground(g, image, options);
+            int margin = Math.max(36, image.getWidth()/16);
+            int available = image.getWidth()-2*margin;
+            int y = drawGlobalTitle(g, configuration.videoTitle(), options, margin, margin, available);
+            y = drawParagraphSubtitle(g, visual.subtitle(), options, margin, y, available, block.id());
+            int height = image.getHeight()-margin-y;
+            int gap = Math.max(16, margin/3);
+            int pictureHeight = Math.min(600, height/2);
+            String body = block.text();
+            while (pictureHeight > Math.max(80,height/6) && !fitsText(g, body, options, available, height-pictureHeight-gap))
+                pictureHeight -= Math.max(1,height/30);
+            // Audio is already divided into narrated units: use that exact unit rather than inventing timing.
+            if (!fitsText(g, body, options, available, height-pictureHeight-gap) && narratedFragment != null && !narratedFragment.isBlank())
+                body = narratedFragment;
+            int textHeight = height-pictureHeight-gap;
+            drawJustifiedText(g, body, options, margin, y, available, textHeight, block.id(), narratedFragment);
+            BufferedImage asset = ImageIO.read(illustration.toFile());
+            if (asset != null) {
+                double scale = Math.min(1, Math.min(available/(double)asset.getWidth(), pictureHeight/(double)asset.getHeight()));
+                int w = Math.max(1,(int)(asset.getWidth()*scale)), h = Math.max(1,(int)(asset.getHeight()*scale));
+                g.drawImage(asset, margin+(available-w)/2, y+textHeight+gap+(pictureHeight-h)/2, w,h,null);
+            }
+            // Existing mascot composition remains an explicit overlay, independent of the illustration.
+            drawMascot(g, readAsset(project, root, visual.mascotAssetId()), visual,
+                    image.getWidth(), image.getHeight(), height, Math.max(70,available/5));
+        } finally { g.dispose(); }
+        write(target,image);
+    }
+
+    private static boolean fitsText(Graphics2D g, String text, DocumentTextVideoOptions options, int width, int height) {
+        int minimum = Math.max(18, options.resolution().height()/60);
+        FontMetrics metrics = g.getFontMetrics(new Font(options.fontFamily(), Font.PLAIN, minimum));
+        return wrapWithRanges(normalizeWhitespace(text),metrics,width).size()
+                * (metrics.getHeight()+Math.max(3,minimum/5)) <= height;
+    }
+
+    private void composeParagraph(Path target, DocumentBlock block,
+                                  DocumentParagraphVisualAssignment visual,
+                                  DocumentStudyVideoConfiguration configuration,
+                                  DocuPodcastProject project, Path projectDirectory,
+                                  DocumentTextVideoOptions options,
+                                  String narratedFragment) throws IOException {
         BufferedImage image = canvas(options);
         Graphics2D g = graphics(image);
         try {
@@ -43,23 +177,15 @@ public final class DocumentStudySlideCompositor {
             if (visual.illustrationOnly()) {
                 int contentHeight = Math.max(1, height - margin - y);
                 drawContainedAsset(g, project, projectDirectory, visual.activeImageAssetId(),
-                        margin, y, availableWidth, contentHeight);
+                        margin, y, availableWidth, contentHeight, options);
                 drawMascot(g, mascot, visual, image.getWidth(), image.getHeight(), contentHeight,
                         Math.max(70, availableWidth / 5));
             } else {
                 y = drawParagraphSubtitle(g, visual.subtitle(), options, margin, y, availableWidth, block.id());
-                int illustrationWidth = DocumentStudySlideLayout.illustrationWidth(availableWidth);
-                int imageHeight = DocumentStudySlideLayout.illustrationHeight(illustrationWidth, height);
-                int gap = Math.max(18, height / 50);
-                int textBottom = height - margin - imageHeight - gap;
                 drawJustifiedText(g, block.text(), options, margin, y, availableWidth,
-                        textBottom - y, block.id());
-                int imageY = textBottom + gap;
-                int illustrationX = margin + (availableWidth - illustrationWidth) / 2;
-                drawContainedAsset(g, project, projectDirectory, visual.activeImageAssetId(),
-                        illustrationX, imageY, illustrationWidth, imageHeight);
-                drawMascot(g, mascot, visual, image.getWidth(), image.getHeight(), imageHeight,
-                        availableWidth - illustrationWidth);
+                        height - margin - y, block.id(), narratedFragment);
+                drawMascot(g, mascot, visual, image.getWidth(), image.getHeight(),
+                        height - y - margin, Math.max(70, availableWidth / 5));
             }
         } finally {
             g.dispose();
@@ -70,6 +196,20 @@ public final class DocumentStudySlideCompositor {
     public void composeCover(Path target, DocumentBlock block,
                              DocumentStudyVideoConfiguration configuration,
                              DocumentTextVideoOptions options) throws IOException {
+        composeCover(target, block, configuration, options, false);
+    }
+
+    /** Composes a title/heading frame whose source block is the narration unit currently heard. */
+    public void composeNarratedCover(Path target, DocumentBlock block,
+                                     DocumentStudyVideoConfiguration configuration,
+                                     DocumentTextVideoOptions options) throws IOException {
+        composeCover(target, block, configuration, options, true);
+    }
+
+    private void composeCover(Path target, DocumentBlock block,
+                              DocumentStudyVideoConfiguration configuration,
+                              DocumentTextVideoOptions options,
+                              boolean narratedText) throws IOException {
         BufferedImage image = canvas(options);
         Graphics2D g = graphics(image);
         try {
@@ -80,13 +220,13 @@ public final class DocumentStudySlideCompositor {
             g.fillRect(margin, height / 5, Math.max(90, width / 9), Math.max(7, height / 170));
             String title = configuration.videoTitle().isBlank() ? block.text() : configuration.videoTitle();
             String subtitle = configuration.videoTitle().isBlank() ? "" : block.text();
-            drawCenteredFit(g, title, options.fontFamily(), Font.BOLD, options.fontSize() + 18,
+            drawCenteredFit(g, title, options.titleFontFamily(), Font.BOLD, options.fontSize() + 18,
                     Math.max(26, options.fontSize() / 2), margin, height / 3, width - margin * 2, height / 3,
-                    color(options.textColor()), block.id());
+                    color(options.textColor()), block.id(), narratedText && subtitle.isBlank(), options);
             if (!subtitle.isBlank() && !subtitle.equals(title)) {
-                drawCenteredFit(g, subtitle, options.fontFamily(), Font.PLAIN, options.fontSize(),
+                drawCenteredFit(g, subtitle, options.titleFontFamily(), Font.PLAIN, options.fontSize(),
                         20, margin, (int) (height * 0.70), width - margin * 2, height / 7,
-                        color(options.textColor()), block.id());
+                        color(options.textColor()), block.id(), narratedText, options);
             }
         } finally { g.dispose(); }
         write(target, image);
@@ -122,15 +262,15 @@ public final class DocumentStudySlideCompositor {
             int imageHeight = height - margin * 2;
             if (!slide.title().isBlank()) {
                 int titleHeight = Math.max(height / 8, 100);
-                drawCenteredFit(g, slide.title(), options.fontFamily(), Font.BOLD,
+                drawCenteredFit(g, slide.title(), options.titleFontFamily(), Font.BOLD,
                         options.fontSize() + 12, Math.max(22, options.fontSize() / 2),
                         margin, margin, width - margin * 2, titleHeight,
-                        color(options.textColor()), slide.id());
+                        color(options.textColor()), slide.id(), false, options);
                 imageY = margin + titleHeight + Math.max(18, height / 45);
                 imageHeight = height - imageY - margin;
             }
             drawContainedAsset(g, project, projectDirectory, slide.imageAssetId(),
-                    margin, imageY, width - margin * 2, imageHeight);
+                    margin, imageY, width - margin * 2, imageHeight, options);
         } finally {
             g.dispose();
         }
@@ -157,11 +297,8 @@ public final class DocumentStudySlideCompositor {
                 && !options.backgroundImagePath().isBlank()) {
             BufferedImage bg = ImageIO.read(Path.of(options.backgroundImagePath()).toFile());
             if (bg == null) throw new IOException("No se pudo leer el fondo documental configurado.");
-            double scale = Math.max(image.getWidth() / (double) bg.getWidth(), image.getHeight() / (double) bg.getHeight());
-            int w = (int) Math.ceil(bg.getWidth() * scale), h = (int) Math.ceil(bg.getHeight() * scale);
-            g.drawImage(bg, (image.getWidth() - w) / 2, (image.getHeight() - h) / 2, w, h, null);
-            g.setColor(new Color(255, 255, 255, 185));
-            g.fillRect(0, 0, image.getWidth(), image.getHeight());
+            DocumentBackgroundImagePainter.paint(g, bg, image.getWidth(), image.getHeight(),
+                    options.backgroundImageOpacity(), options.backgroundImageFit());
         }
     }
 
@@ -171,14 +308,14 @@ public final class DocumentStudySlideCompositor {
         int preferred = Math.max(22, options.fontSize() - 14);
         int minimum = Math.max(18, options.resolution().height() / 60);
         for (int size = preferred; size >= minimum; size--) {
-            Font font = new Font(options.fontFamily(), Font.BOLD, size);
+            Font font = new Font(options.titleFontFamily(), Font.BOLD, size);
             FontMetrics fm = g.getFontMetrics(font);
             List<String> lines = wrap(title, fm, width);
             if (lines.size() > 2) continue;
             g.setFont(font); g.setColor(color(options.textColor()));
             int baseline = y + fm.getAscent();
             for (String line : lines) {
-                g.drawString(line, x, baseline);
+                DocumentTextPainter.drawString(g, line, x, baseline, options);
                 baseline += fm.getHeight();
             }
             int next = y + lines.size() * fm.getHeight() + Math.max(12, fm.getHeight() / 3);
@@ -190,18 +327,34 @@ public final class DocumentStudySlideCompositor {
     }
 
     private static void drawJustifiedText(Graphics2D g, String text, DocumentTextVideoOptions options,
-                                          int x, int y, int width, int height, String blockId) throws IOException {
+                                          int x, int y, int width, int height, String blockId,
+                                          String narratedFragment) throws IOException {
+        String normalizedText = normalizeWhitespace(text);
+        int[] narratedRange = narratedRange(normalizedText, narratedFragment);
         int minimum = Math.max(18, options.resolution().height() / 60);
         for (int size = options.fontSize(); size >= minimum; size--) {
             Font font = new Font(options.fontFamily(), Font.PLAIN, size);
             FontMetrics fm = g.getFontMetrics(font);
-            List<String> lines = wrap(text, fm, width);
+            List<TextLine> lines = wrapWithRanges(normalizedText, fm, width);
             int lineHeight = fm.getHeight() + Math.max(3, size / 5);
             if (lines.size() * lineHeight <= height) {
                 g.setFont(font); g.setColor(color(options.textColor()));
                 int baseline = y + fm.getAscent();
                 for (int i = 0; i < lines.size(); i++) {
-                    drawJustifiedLine(g, lines.get(i), x, baseline, width, i == lines.size() - 1, fm);
+                    boolean last = i == lines.size() - 1;
+                    TextLine positioned = lines.get(i);
+                    String line = positioned.text();
+                    drawJustifiedLine(g, line, x, baseline, width, last, fm, options);
+                    int highlightedStart = Math.max(positioned.start(), narratedRange[0]);
+                    int highlightedEnd = Math.min(positioned.end(), narratedRange[1]);
+                    if (highlightedStart < highlightedEnd) {
+                        int localStart = highlightedStart - positioned.start();
+                        int localEnd = highlightedEnd - positioned.start();
+                        int underlineX = x + justifiedAdvance(line, localStart, width, last, fm);
+                        int underlineEnd = x + justifiedAdvance(line, localEnd, width, last, fm);
+                        drawNarratedUnderline(g, options, underlineX, baseline,
+                                Math.max(0, underlineEnd - underlineX), fm);
+                    }
                     baseline += lineHeight;
                 }
                 return;
@@ -216,7 +369,7 @@ public final class DocumentStudySlideCompositor {
         int preferred = Math.max(22, options.fontSize() - 8);
         int minimum = Math.max(17, options.resolution().height() / 64);
         for (int size = preferred; size >= minimum; size--) {
-            Font font = new Font(options.fontFamily(), Font.BOLD, size);
+            Font font = new Font(options.titleFontFamily(), Font.BOLD, size);
             FontMetrics fm = g.getFontMetrics(font);
             List<String> lines = wrap(subtitle, fm, width);
             if (lines.size() > 2) continue;
@@ -224,7 +377,7 @@ public final class DocumentStudySlideCompositor {
             g.setColor(color(options.textColor()));
             int baseline = y + fm.getAscent();
             for (String line : lines) {
-                g.drawString(line, x, baseline);
+                DocumentTextPainter.drawString(g, line, x, baseline, options);
                 baseline += fm.getHeight();
             }
             return y + lines.size() * fm.getHeight() + Math.max(10, fm.getHeight() / 3);
@@ -233,27 +386,112 @@ public final class DocumentStudySlideCompositor {
     }
 
     private static void drawJustifiedLine(Graphics2D g, String line, int x, int baseline, int width,
-                                          boolean last, FontMetrics fm) {
+                                          boolean last, FontMetrics fm, DocumentTextVideoOptions options) {
         String[] words = line.split(" ");
-        if (last || words.length < 2) { g.drawString(line, x, baseline); return; }
+        if (last || words.length < 2) {
+            DocumentTextPainter.drawString(g, line, x, baseline, options);
+            return;
+        }
         int wordsWidth = 0;
         for (String word : words) wordsWidth += fm.stringWidth(word);
         double gap = (width - wordsWidth) / (double) (words.length - 1);
         double cursor = x;
         for (String word : words) {
-            g.drawString(word, (int) Math.round(cursor), baseline);
+            DocumentTextPainter.drawString(g, word, (int) Math.round(cursor), baseline, options);
             cursor += fm.stringWidth(word) + gap;
         }
     }
 
+    private static int justifiedLineWidth(String line, int width, boolean last, FontMetrics fm) {
+        String[] words = line.split(" ");
+        return !last && words.length >= 2 ? width : fm.stringWidth(line);
+    }
+
+    private static int justifiedAdvance(String line, int offset, int width,
+                                        boolean last, FontMetrics fm) {
+        int safeOffset = Math.max(0, Math.min(offset, line.length()));
+        String[] words = line.split(" ");
+        if (last || words.length < 2) return fm.stringWidth(line.substring(0, safeOffset));
+        int wordsWidth = 0;
+        for (String word : words) wordsWidth += fm.stringWidth(word);
+        double gap = (width - wordsWidth) / (double) (words.length - 1);
+        double cursor = 0.0;
+        int character = 0;
+        for (int index = 0; index < words.length; index++) {
+            String word = words[index];
+            int wordEnd = character + word.length();
+            if (safeOffset <= wordEnd) {
+                return (int) Math.round(cursor
+                        + fm.stringWidth(word.substring(0, safeOffset - character)));
+            }
+            cursor += fm.stringWidth(word);
+            character = wordEnd;
+            if (index + 1 < words.length) {
+                if (safeOffset == character + 1) return (int) Math.round(cursor + gap);
+                cursor += gap;
+                character++;
+            }
+        }
+        return (int) Math.round(cursor);
+    }
+
+    private static List<TextLine> wrapWithRanges(String normalizedText,
+                                                 FontMetrics metrics, int maxWidth) {
+        List<String> wrapped = wrap(normalizedText, metrics, maxWidth);
+        ArrayList<TextLine> result = new ArrayList<>();
+        int cursor = 0;
+        for (String line : wrapped) {
+            int start = normalizedText.indexOf(line, cursor);
+            if (start < 0) start = cursor;
+            int end = Math.min(normalizedText.length(), start + line.length());
+            result.add(new TextLine(line, start, end));
+            cursor = end;
+        }
+        return List.copyOf(result);
+    }
+
+    private static int[] narratedRange(String normalizedText, String narratedFragment) {
+        String fragment = normalizeWhitespace(narratedFragment);
+        if (normalizedText.isBlank() || fragment.isBlank()) return new int[]{0, 0};
+        int start = normalizedText.indexOf(fragment);
+        return start < 0 ? new int[]{0, 0}
+                : new int[]{start, Math.min(normalizedText.length(), start + fragment.length())};
+    }
+
+    private static String normalizeWhitespace(String value) {
+        return value == null ? "" : value.replaceAll("\\s+", " ").strip();
+    }
+
+    private record TextLine(String text, int start, int end) { }
+
+    private static void drawNarratedUnderline(Graphics2D g, DocumentTextVideoOptions options,
+                                              int x, int baseline, int width, FontMetrics metrics) {
+        if (!options.underlineNarratedText() || options.narratedUnderlineThicknessPx() <= 0 || width <= 0) {
+            return;
+        }
+        var previousColor = g.getColor();
+        var previousStroke = g.getStroke();
+        int thickness = options.narratedUnderlineThicknessPx();
+        int y = baseline + Math.max(thickness, metrics.getDescent() / 2);
+        g.setColor(color(options.narratedUnderlineColor()));
+        g.setStroke(new BasicStroke(thickness, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g.drawLine(x, y, x + width, y);
+        g.setStroke(previousStroke);
+        g.setColor(previousColor);
+    }
+
     private static void drawContainedAsset(Graphics2D g, DocuPodcastProject project, Path root, String assetId,
-                                           int x, int y, int width, int height) throws IOException {
+                                           int x, int y, int width, int height, DocumentTextVideoOptions options) throws IOException {
         BufferedImage asset = readAsset(project, root, assetId);
-        if (asset == null) return;
-        double scale = Math.min(width / (double) asset.getWidth(), height / (double) asset.getHeight());
-        int w = Math.max(1, (int) Math.round(asset.getWidth() * scale));
-        int h = Math.max(1, (int) Math.round(asset.getHeight() * scale));
-        g.drawImage(asset, x + (width - w) / 2, y + (height - h) / 2, w, h, null);
+        drawContainedImage(g, asset, x, y, width, height, options);
+    }
+
+    private static void drawContainedImage(Graphics2D g, BufferedImage asset,
+                                           int x, int y, int width, int height, DocumentTextVideoOptions options) {
+        if (asset == null || width <= 0 || height <= 0) return;
+        Graphics2D local = (Graphics2D)g.create(x, y, width, height);
+        try { DocumentBackgroundImagePainter.paint(local, asset, width, height, 1.0, options.backgroundImageFit()); }
+        finally { local.dispose(); }
     }
 
     private static void drawMascot(Graphics2D g, BufferedImage mascot,
@@ -262,14 +500,24 @@ public final class DocumentStudySlideCompositor {
                                    int regionHeight, int reservedWidth) {
         if (mascot == null) return;
         Rectangle bounds = mascotBounds(canvasWidth, canvasHeight, regionHeight, reservedWidth,
-                mascot.getWidth(), mascot.getHeight(), visual.mascotPosition());
+                mascot.getWidth(), mascot.getHeight(), visual.mascotPosition(), visual.mascotSizePercent());
         g.drawImage(mascot, bounds.x, bounds.y, bounds.width, bounds.height, null);
     }
 
     static Rectangle mascotBounds(int canvasWidth, int canvasHeight, int regionHeight, int reservedWidth,
                                    int sourceWidth, int sourceHeight, DocumentMascotPosition position) {
-        int maxW = Math.max(56, (int) Math.round(reservedWidth * 0.84));
-        int maxH = Math.max(56, (int) Math.round(regionHeight * 0.78));
+        return mascotBounds(canvasWidth, canvasHeight, regionHeight, reservedWidth,
+                sourceWidth, sourceHeight, position, 15);
+    }
+
+    static Rectangle mascotBounds(int canvasWidth, int canvasHeight, int regionHeight, int reservedWidth,
+                                   int sourceWidth, int sourceHeight, DocumentMascotPosition position,
+                                   int sizePercent) {
+        double factor = Math.max(5, Math.min(40, sizePercent)) / 15.0;
+        int maxW = Math.max(36, (int) Math.round(reservedWidth * 0.84 * factor));
+        int maxH = Math.max(36, (int) Math.round(regionHeight * 0.78 * factor));
+        maxW = Math.min(maxW, Math.max(36, (int) Math.round(canvasWidth * 0.42)));
+        maxH = Math.min(maxH, Math.max(36, (int) Math.round(canvasHeight * 0.64)));
         double scale = Math.min(maxW / (double) sourceWidth, maxH / (double) sourceHeight);
         int width = Math.max(1, (int) Math.round(sourceWidth * scale));
         int height = Math.max(1, (int) Math.round(sourceHeight * scale));
@@ -296,7 +544,7 @@ public final class DocumentStudySlideCompositor {
         int minimum = Math.max(12, options.resolution().height() / 90);
         for (int size = Math.min(options.fontSize() - 16, 34); size >= minimum; size--) {
             Font font = new Font(options.fontFamily(), Font.PLAIN, size);
-            Font headerFont = font.deriveFont(Font.BOLD);
+            Font headerFont = new Font(options.titleFontFamily(), Font.BOLD, size);
             FontMetrics fm = g.getFontMetrics(font);
             int columnWidth = width / columns;
             ArrayList<Integer> rowHeights = new ArrayList<>();
@@ -324,7 +572,8 @@ public final class DocumentStudySlideCompositor {
                     String cell = c < table.rows().get(r).size() ? table.rows().get(r).get(c) : "";
                     int baseline = cy + 9 + cellMetrics.getAscent();
                     for (String line : wrap(cell, cellMetrics, columnWidth - 20)) {
-                        g.drawString(line, cx + 10, baseline); baseline += cellMetrics.getHeight() + 2;
+                        DocumentTextPainter.drawString(g, line, cx + 10, baseline, options);
+                        baseline += cellMetrics.getHeight() + 2;
                     }
                     g.setColor(new Color(190, 195, 205));
                     g.drawRect(cx, cy, columnWidth, rh);
@@ -356,7 +605,8 @@ public final class DocumentStudySlideCompositor {
 
     private static void drawCenteredFit(Graphics2D g, String text, String family, int style, int preferred,
                                         int minimum, int x, int y, int width, int height, Color color,
-                                        String blockId) throws IOException {
+                                        String blockId, boolean narratedText,
+                                        DocumentTextVideoOptions options) throws IOException {
         for (int size = preferred; size >= minimum; size--) {
             Font font = new Font(family, style, size); FontMetrics fm = g.getFontMetrics(font);
             List<String> lines = wrap(text, fm, width);
@@ -364,7 +614,10 @@ public final class DocumentStudySlideCompositor {
                 g.setFont(font); g.setColor(color);
                 int baseline = y + fm.getAscent();
                 for (String line : lines) {
-                    g.drawString(line, x + (width - fm.stringWidth(line)) / 2, baseline);
+                    int lineWidth = fm.stringWidth(line);
+                    int lineX = x + (width - lineWidth) / 2;
+                    DocumentTextPainter.drawString(g, line, lineX, baseline, options);
+                    if (narratedText) drawNarratedUnderline(g, options, lineX, baseline, lineWidth, fm);
                     baseline += fm.getHeight() + 5;
                 }
                 return;

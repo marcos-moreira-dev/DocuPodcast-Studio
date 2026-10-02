@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -35,6 +36,60 @@ final class IntervencionCatalogoTest {
         assertEquals("B0005", aliases.get(0).blockId());
         assertEquals("INTERVENCION-2", aliases.get(1).alias());
         assertEquals("B0006", aliases.get(1).blockId());
+    }
+
+    @Test
+    void silentStageDirectionRemainsSelectableForTheatrePreview() {
+        DocumentBlock direction = DocumentBlock.of(
+                "B-ACOT-1", DocumentBlockType.PARAGRAPH,
+                "Acotación: La plaza queda vacía mientras cae la tarde.", "",
+                Map.of("theatreStageDirection", "true", "narratability", "NON_NARRATABLE"));
+        ReadableDocument document = new ReadableDocument(
+                "Teatro", SourceDocumentFormat.DOCX, Path.of("source.docx"), List.of(direction));
+        NarrationSegment segment = new NarrationSegment(
+                "SEG-ACOT-1", NarrationSegmentType.PARAGRAPH, "",
+                direction.text(), List.of(direction.id()), "CHR-ACOTACION", "VOC-NARRATOR",
+                "STY-NEUTRAL", Map.of("theatreStageDirection", "true",
+                        "theatreGrammarInterventionId", "INTERVENCION-10001"));
+        NarrationScriptDocument script = NarrationScriptDocument.create(
+                "Teatro", "es", "source.docx", List.of(segment));
+
+        List<IntervencionCatalogo.IntervencionInfo> aliases =
+                IntervencionCatalogo.intervenciones(document, script);
+
+        assertEquals(1, aliases.size());
+        assertEquals("INTERVENCION-10001", aliases.get(0).alias());
+        assertEquals("B-ACOT-1", aliases.get(0).blockId());
+        assertEquals(true, aliases.get(0).stageDirection());
+        assertEquals("La plaza queda vacía mientras cae la tarde.",
+                TheatreFullscreenMapView.stripStageDirectionCue(aliases.get(0).fullText()));
+    }
+
+    @Test
+    void canonicalBlockIdentityWinsOverStaleNarrationMetadata() {
+        DocumentBlock concha = DocumentBlock.of(
+                "B-INTERVENCION-6", DocumentBlockType.PARAGRAPH,
+                "CONCHA: ¡Yo, yo quiero la palabra!", "",
+                Map.of("characterName", "CONCHA",
+                        "theatreGrammarInterventionId", "INTERVENCION-11"));
+        ReadableDocument document = new ReadableDocument(
+                "Teatro", SourceDocumentFormat.DOCX, Path.of("source.md"), List.of(concha));
+        NarrationSegment staleSegment = new NarrationSegment(
+                "SEG-INTERVENCION-6", NarrationSegmentType.PARAGRAPH, "",
+                concha.text(), List.of(concha.id()), "CHR-CONCHA", "VOC-CONCHA",
+                "STY-NEUTRAL", Map.of(
+                "characterName", "CONCHA",
+                "theatreGrammarInterventionId", "INTERVENCION-11"));
+        NarrationScriptDocument script = NarrationScriptDocument.create(
+                "Teatro", "es", "source.md", List.of(staleSegment));
+
+        List<IntervencionCatalogo.IntervencionInfo> aliases =
+                IntervencionCatalogo.intervenciones(document, script);
+
+        assertEquals(1, aliases.size());
+        assertEquals("INTERVENCION-6", aliases.getFirst().alias());
+        assertEquals("B-INTERVENCION-6", aliases.getFirst().blockId());
+        assertEquals("CONCHA: ¡Yo, yo quiero la palabra!", aliases.getFirst().fullText());
     }
 
     private static DocumentBlock block(String id, String text) {

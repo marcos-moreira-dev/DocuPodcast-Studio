@@ -1,5 +1,11 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.dialogs;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeDialogResponse;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioDialogShell;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
+
 import com.marcosmoreiradev.docupodcaststudio.domain.project.ProjectMode;
 import com.marcosmoreiradev.docupodcaststudio.presentation.notification.DialogStyler;
 import javafx.beans.binding.Bindings;
@@ -36,15 +42,15 @@ public final class ProjectNameDialog {
     }
 
     public Optional<ProjectSetup> showSetup(Window owner) {
-        Dialog<ProjectSetup> dialog = new Dialog<>();
+        Dialog<ProjectSetup> dialog = StudioDialogShell.dialog();
         dialog.setTitle("Nuevo proyecto");
         dialog.setHeaderText("Crear proyecto DocuPodcast");
-        ButtonType createButton = new ButtonType("Crear proyecto", ButtonBar.ButtonData.OK_DONE);
+        ButtonType createButton = NativeDialogResponse.button("Crear proyecto", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().setAll(createButton, ButtonType.CANCEL);
 
-        TextField titleField = new TextField(DEFAULT_TITLE);
+        TextField titleField = StudioFormControls.textField(DEFAULT_TITLE);
         titleField.setPrefColumnCount(32);
-        ComboBox<ProjectMode> modeBox = new ComboBox<>(FXCollections.observableArrayList(ProjectMode.officialModes()));
+        ComboBox<ProjectMode> modeBox = StudioFormControls.comboBox(FXCollections.observableArrayList(ProjectMode.officialModes()));
         modeBox.setMaxWidth(Double.MAX_VALUE);
         modeBox.setValue(ProjectMode.defaultMode());
         modeBox.setCellFactory(list -> modeCell());

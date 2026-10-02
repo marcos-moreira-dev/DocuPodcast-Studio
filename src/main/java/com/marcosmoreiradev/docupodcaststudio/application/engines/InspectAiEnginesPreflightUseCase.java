@@ -55,9 +55,7 @@ public final class InspectAiEnginesPreflightUseCase {
         Path folder = modelsRoot.resolve("tts/xtts");
         ModelInspectionResult model = inspectModelFolder(ModelFolderContract.xttsHighQuality(), folder);
         boolean selected = "xtts".equalsIgnoreCase(settings.tts().engineMode())
-                || "coqui".equalsIgnoreCase(settings.tts().engineMode())
-                || settings.tts().displayName().toLowerCase().contains("coqui")
-                || settings.tts().displayName().toLowerCase().contains("xtts");
+                || "coqui".equalsIgnoreCase(settings.tts().engineMode());
         Path xttsWrapper = paths.xttsWrapperScript();
         Path xttsScript = paths.xttsPowerShellScript();
         Path defaultSpeaker = folder.resolve("speakers/voz-por-defecto.wav").normalize();
@@ -221,7 +219,7 @@ public final class InspectAiEnginesPreflightUseCase {
         diagnostics.add("Idiomas OCR faltantes: " + (languages.missingLanguages().isEmpty() ? "ninguno" : languages.missingLabel()));
         diagnostics.add("Carpetas tessdata revisadas: " + languages.checkedDirectories());
         diagnostics.add("DPI OCR configurado: " + settings.ocr().dpi());
-        diagnostics.add("Cache OCR: " + (settings.ocr().cacheEnabled() ? "sÃ­" : "no"));
+        diagnostics.add("Cache OCR: " + (settings.ocr().cacheEnabled() ? "sí" : "no"));
         diagnostics.add("Runtime OCR esperado: " + paths.tesseractRoot());
         AiEngineReadinessStatus status = !tesseract.ready()
                 ? AiEngineReadinessStatus.MISSING_RUNTIME

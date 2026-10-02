@@ -16,12 +16,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class RefreshSourceDocumentUseCaseTest {
+    @Test void theatreProjectionCannotFallBackToGenericMarkdownRefresh() throws IOException {
+        Path source = Files.createTempFile("theatre-refresh", ".md");
+        ReadableDocument clean = new ReadableDocument("Obra", SourceDocumentFormat.MARKDOWN, source,
+                List.of(new DocumentBlock("B-1", DocumentBlockType.PARAGRAPH, "Solo diálogo.", "theatre-dialogue",
+                        java.util.Map.of("theatreGrammarInterventionId", "INTERVENCION-1"))));
+        var result = new RefreshSourceDocumentUseCase(service(new StaticImporter(document(source, "origen=centro")))).refresh(clean);
+        assertFalse(result.refreshedDocumentAvailable());
+        assertTrue(result.report().requiresUserReview());
+    }
     @Test
     void refreshReimportsReadOnlySourceAndReportsStaleAudioWhenContentChanged() throws IOException {
         Path source = Files.createTempFile("docupodcast-refresh", ".docx");
         ReadableDocument current = document(source, "Contenido anterior.");
         ReadableDocument changed = document(source, "Contenido actualizado desde otra app.");
-        RefreshSourceDocumentUseCase useCase = new RefreshSourceDocumentUseCase(new DocumentSourceImportService(new ImportDocumentUseCase(List.of(new StaticImporter(changed)))));
+        RefreshSourceDocumentUseCase useCase =
+                new RefreshSourceDocumentUseCase(service(new StaticImporter(changed)));
 
         RefreshSourceDocumentResult result = useCase.refresh(current);
 
@@ -36,7 +46,8 @@ class RefreshSourceDocumentUseCaseTest {
         Path source = Files.createTempFile("docupodcast-missing-refresh", ".docx");
         Files.delete(source);
         ReadableDocument current = document(source, "Contenido anterior.");
-        RefreshSourceDocumentUseCase useCase = new RefreshSourceDocumentUseCase(new DocumentSourceImportService(new ImportDocumentUseCase(List.of(new StaticImporter(current)))));
+        RefreshSourceDocumentUseCase useCase =
+                new RefreshSourceDocumentUseCase(service(new StaticImporter(current)));
 
         RefreshSourceDocumentResult result = useCase.refresh(current);
 
@@ -44,25 +55,6 @@ class RefreshSourceDocumentUseCaseTest {
         assertTrue(result.report().requiresUserReview());
     }
 
-
-    @Test
-    void unsupportedNativeTextPdfRefreshDoesNotReplaceCurrentDocument() throws IOException {
-        Path source = Files.createTempFile("docupodcast-refresh-scanned", ".pdf");
-        Files.writeString(source, "%PDF-1.4\n%%EOF");
-        ReadableDocument current = new ReadableDocument(
-                "PDF previo",
-                SourceDocumentFormat.PDF,
-                source,
-                List.of(DocumentBlock.of("B001", DocumentBlockType.PARAGRAPH, "Texto previo extraído.", "PDF")));
-        RefreshSourceDocumentUseCase useCase = new RefreshSourceDocumentUseCase(
-                new DocumentSourceImportService(new ImportDocumentUseCase(List.of(new RejectingPdfImporter()))));
-
-        RefreshSourceDocumentResult result = useCase.refresh(current);
-
-        assertFalse(result.refreshedDocumentAvailable());
-        assertEquals(com.marcosmoreiradev.docupodcaststudio.domain.document.SourceDocumentChangeStatus.UNSUPPORTED, result.report().status());
-        assertTrue(result.report().requiresUserReview());
-    }
 
     private static ReadableDocument document(Path source, String text) {
         return new ReadableDocument(
@@ -84,15 +76,11 @@ class RefreshSourceDocumentUseCaseTest {
         }
     }
 
-    private record RejectingPdfImporter() implements DocumentImporter {
-        @Override
-        public boolean supports(Path sourceFile) {
-            return sourceFile.toString().toLowerCase().endsWith(".pdf");
-        }
-
-        @Override
-        public ReadableDocument importDocument(Path sourceFile) throws IOException {
-            throw new SourceDocumentRequirementException("PDF no compatible: no contiene texto nativo extraíble suficiente.");
-        }
+    private static DocumentSourceImportService service(DocumentImporter importer) {
+        return new DocumentSourceImportService(new ImportDocumentUseCase(List.of(importer)),
+                new CreatePreparedPdfSessionWorkspaceUseCase(
+                        new InMemoryPreparedPdfDocumentRepository(),
+                        new BuildPdfVisualDocumentUseCase(
+                                new com.marcosmoreiradev.docupodcaststudio.infrastructure.document.PdfBoxRenderEngine())));
     }
 }

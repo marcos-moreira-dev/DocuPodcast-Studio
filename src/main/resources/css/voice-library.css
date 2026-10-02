@@ -398,6 +398,10 @@
     -fx-text-fill: #F3F4FF;
 }
 
+.voice-module-row .ui-lucide-icon-shape {
+    -fx-stroke: #F3F4FF;
+}
+
 .voice-module-row:hover {
     -fx-background-color: #303654;
     -fx-border-color: #464D73;
@@ -409,6 +413,10 @@
     -fx-border-width: 1 1 1 4;
     -fx-font-weight: 800;
     -fx-text-fill: #FFFFFF;
+}
+
+.voice-module-row:selected .ui-lucide-icon-shape {
+    -fx-stroke: #FFFFFF;
 }
 
 .voice-module-content {

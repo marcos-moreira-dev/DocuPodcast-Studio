@@ -36,6 +36,18 @@
     -fx-text-fill: -docu-text;
 }
 
+.product-dialog .studio-message-content {
+    -fx-text-fill: -docu-text;
+    -fx-font-size: 13px;
+    -fx-line-spacing: 2px;
+    -fx-padding: 4 2 4 2;
+}
+
+.product-dialog .studio-message-details {
+    -fx-font-family: "Cascadia Mono", "Consolas", "Monospaced";
+    -fx-font-size: 12px;
+}
+
 .product-dialog .text-area {
     -fx-font-family: "Cascadia Mono", "Consolas", "Monospaced";
     -fx-font-size: 12px;

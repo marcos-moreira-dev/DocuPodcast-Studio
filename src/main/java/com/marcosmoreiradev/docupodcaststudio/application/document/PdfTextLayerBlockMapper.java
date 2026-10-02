@@ -1,9 +1,15 @@
 package com.marcosmoreiradev.docupodcaststudio.application.document;
 
-import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlock;
-import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlockType;
-import com.marcosmoreiradev.docupodcaststudio.domain.document.SourceDocumentFormat;
+import com.marcosmoreiradev.docupodcaststudio.domain.document.pdf.PdfNarratability;
+import com.marcosmoreiradev.docupodcaststudio.domain.document.pdf.PdfPagePreparationStatus;
+import com.marcosmoreiradev.docupodcaststudio.domain.document.pdf.PdfRegion;
+import com.marcosmoreiradev.docupodcaststudio.domain.document.pdf.PdfRegionEvidence;
+import com.marcosmoreiradev.docupodcaststudio.domain.document.pdf.PdfRegionOrigin;
+import com.marcosmoreiradev.docupodcaststudio.domain.document.pdf.PdfRegionOverride;
+import com.marcosmoreiradev.docupodcaststudio.domain.document.pdf.PdfRegionType;
+import com.marcosmoreiradev.docupodcaststudio.domain.document.pdf.PreparedPdfPage;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -14,39 +20,80 @@ import java.util.Optional;
 /** Converts resolved PDF text layers into narratable document blocks with stable visual anchors. */
 public final class PdfTextLayerBlockMapper {
     private static final double OCR_PARAGRAPH_VERTICAL_GAP_FACTOR = 1.65;
+    private static final double OCR_MAX_PARAGRAPH_GAP_PAGE_FACTOR = 0.035;
 
-    public List<DocumentBlock> blocksFromOcrLayer(PdfTextLayer layer,
-                                                  int pageCount,
-                                                  boolean visualRenderable,
-                                                  int startIndex) {
-        if (layer == null || !layer.available()) {
-            return List.of();
+    public PreparedPdfPage preparedPage(PdfOcrPageResult result,
+                                        String sourceSha256,
+                                        PreparedPdfPage previousPage) {
+        if (result == null || result.pageNumber() <= 0) {
+            throw new IllegalArgumentException("A valid OCR page result is required");
         }
-        int index = Math.max(1, startIndex);
-        ArrayList<DocumentBlock> blocks = new ArrayList<>();
-        for (OcrParagraph paragraph : ocrParagraphs(layer)) {
-            String normalized = paragraph.text().strip();
-            if (PdfNarratableTextClassifier.shouldSkip(normalized)) {
-                continue;
-            }
-            blocks.add(ocrBlock(blockId(index), normalized, paragraph, pageCount, visualRenderable, index));
-            index++;
-        }
-        return List.copyOf(blocks);
+        return preparedPage(result.textLayer(), result.pageWidthPoints(), result.pageHeightPoints(),
+                sourceSha256, previousPage, PdfRegionOrigin.OCR_LOCAL,
+                "tesseract", result.warnings());
     }
 
-    public static String blockId(int index) {
-        return "B" + String.format(Locale.ROOT, "%04d", Math.max(1, index));
-    }
-
-    public static DocumentBlockType classifyPdfBlock(String text, int index) {
-        return PdfNarratableTextClassifier.classify(text, index);
+    public PreparedPdfPage preparedPage(PdfTextLayer layer,
+                                        double widthPoints,
+                                        double heightPoints,
+                                        String sourceSha256,
+                                        PreparedPdfPage previousPage,
+                                        PdfRegionOrigin origin,
+                                        String extractorVersion,
+                                        List<String> extractionWarnings) {
+        if (layer == null || layer.pageNumber() <= 0) {
+            throw new IllegalArgumentException("A valid PDF text layer is required");
+        }
+        List<OcrParagraph> paragraphs = ocrParagraphs(layer);
+        ArrayList<PdfRegion> candidates = new ArrayList<>();
+        int order = 0;
+        for (OcrParagraph paragraph : paragraphs) {
+            PdfNarratabilityDecision decision = PdfNarratableTextClassifier.decide(
+                    paragraph.text(), paragraph.confidence());
+            PdfRegionType type = PdfNarratableTextClassifier.classify(paragraph.text(), order + 1);
+            String generatedId = stableRegionId(sourceSha256, paragraph.region());
+            candidates.add(new PdfRegion(
+                    generatedId,
+                    layer.pageNumber(),
+                    paragraph.region().xMinPoints(),
+                    paragraph.region().yMinPoints(),
+                    paragraph.region().xMaxPoints(),
+                    paragraph.region().yMaxPoints(),
+                    0,
+                    order++,
+                    paragraph.text(),
+                    type,
+                    decision.narratability(),
+                    decision.reasons(),
+                    new PdfRegionEvidence(origin, paragraph.confidence(),
+                            extractorVersion, origin == PdfRegionOrigin.NATIVE_TEXT ? "bbox-v1" : "tsv-v1",
+                            "paragraph-v3", "narratability-v2"),
+                    PdfRegionOverride.empty(),
+                    regionAttributes(paragraph),
+                    1L));
+        }
+        List<PdfRegion> reconciled = new PdfRegionReconciler().reconcile(
+                previousPage == null ? List.of() : previousPage.regions(), candidates);
+        ArrayList<String> warnings = new ArrayList<>(
+                extractionWarnings == null ? List.of() : extractionWarnings);
+        long uncertain = reconciled.stream()
+                .filter(region -> region.effectiveNarratability() == PdfNarratability.UNCERTAIN).count();
+        if (uncertain > 0) warnings.add(uncertain + " región(es) requieren revisión.");
+        if (reconciled.isEmpty()) {
+            warnings.add("No se detectaron regiones de texto en la página.");
+        }
+        PdfPagePreparationStatus status = warnings.isEmpty()
+                ? PdfPagePreparationStatus.READY
+                : PdfPagePreparationStatus.READY_WITH_WARNINGS;
+        long revision = previousPage == null ? 1L : previousPage.revision() + 1L;
+        return new PreparedPdfPage(PreparedPdfPage.CURRENT_SCHEMA_VERSION, layer.pageNumber(),
+                widthPoints, heightPoints, status, revision,
+                reconciled, warnings, "");
     }
 
     private static List<OcrParagraph> ocrParagraphs(PdfTextLayer layer) {
         List<PdfTextLine> lines = layer.lines().stream()
                 .filter(line -> line != null && !line.text().isBlank() && line.region() != null)
-                .filter(PdfTextLayerBlockMapper::isNarratableOcrLine)
                 .sorted(readingOrderComparator())
                 .toList();
         if (lines.isEmpty()) {
@@ -120,13 +167,6 @@ public final class PdfTextLayerBlockMapper {
         return sameProximityGroup(referenceRegion, candidateRegion);
     }
 
-    private static boolean isNarratableOcrLine(PdfTextLine line) {
-        return line != null
-                && !line.text().isBlank()
-                && line.region() != null
-                && PdfNarratableTextClassifier.narratableProse(line.text());
-    }
-
     private static boolean startsNewOcrParagraph(PdfTextLine previous, PdfTextLine current) {
         PdfPageRegion previousRegion = previous.region();
         PdfPageRegion currentRegion = current.region();
@@ -136,14 +176,77 @@ public final class PdfTextLayerBlockMapper {
         if (differentDominantColor(previous, current) || !sameProximityGroup(previousRegion, currentRegion)) {
             return true;
         }
+        PdfNarratability previousDecision = PdfNarratableTextClassifier
+                .decide(previous.text(), previous.confidence()).narratability();
+        PdfNarratability currentDecision = PdfNarratableTextClassifier
+                .decide(current.text(), current.confidence()).narratability();
+        if ((previousDecision == PdfNarratability.NON_NARRATABLE)
+                != (currentDecision == PdfNarratability.NON_NARRATABLE)) {
+            return true;
+        }
+        if (looksLikeStandaloneMath(previous.text())
+                != looksLikeStandaloneMath(current.text())) {
+            return true;
+        }
         double previousHeight = Math.max(1.0, previousRegion.yMaxPoints() - previousRegion.yMinPoints());
         double gap = currentRegion.yMinPoints() - previousRegion.yMaxPoints();
-        if (gap > previousHeight * OCR_PARAGRAPH_VERTICAL_GAP_FACTOR) {
+        double pageHeight = Math.max(previousRegion.pageHeightPoints(),
+                currentRegion.pageHeightPoints());
+        double hardGapLimit = Math.max(18.0,
+                pageHeight * OCR_MAX_PARAGRAPH_GAP_PAGE_FACTOR);
+        double paragraphGapLimit = Math.min(
+                previousHeight * OCR_PARAGRAPH_VERTICAL_GAP_FACTOR,
+                hardGapLimit);
+        double visibleParagraphGap = pageHeight * 0.006;
+        if (gap > visibleParagraphGap
+                && endsSentence(previous.text())
+                && startsSentence(current.text())) {
+            return true;
+        }
+        double pageWidth = Math.max(previousRegion.pageWidthPoints(),
+                currentRegion.pageWidthPoints());
+        if (gap > pageHeight * 0.004
+                && Math.abs(previousRegion.xMinPoints()
+                - currentRegion.xMinPoints()) > pageWidth * 0.012) {
+            return true;
+        }
+        if (gap > paragraphGapLimit) {
             return true;
         }
         String text = current.text();
         return text.matches("^\\s*(\\d+(\\.\\d+){0,3}|[A-Z]\\.|[*\\-])\\s+.+")
                 && gap > previousHeight * 0.45;
+    }
+
+    private static boolean endsSentence(String value) {
+        String text = value == null ? "" : value.strip();
+        return text.matches("(?s).*[.!?][\\p{Pf}\\p{Pe}\"']?\\s*$");
+    }
+
+    private static boolean startsSentence(String value) {
+        String text = value == null ? "" : value.strip();
+        return text.matches("^[\\p{Lu}¿¡\"'“‘].*");
+    }
+
+    private static boolean looksLikeStandaloneMath(String value) {
+        String text = value == null ? "" : value.strip();
+        if (text.isBlank() || text.length() > 120) {
+            return false;
+        }
+        String lower = text.toLowerCase(Locale.ROOT);
+        if (lower.matches(".*\\b(se lee|significa|donde|entonces|por tanto|definici[oó]n|expresi[oó]n)\\b.*")) {
+            return false;
+        }
+        long mathSymbols = text.codePoints().filter(codePoint ->
+                "=<>≤≥≠∈∉∀∃∧∨¬→←⇒⇔±×÷∑∫√^".indexOf(codePoint) >= 0).count();
+        if (mathSymbols == 0) {
+            return false;
+        }
+        long letters = text.codePoints().filter(Character::isLetter).count();
+        long whitespaceSeparatedTokens = java.util.Arrays.stream(text.split("\\s+"))
+                .filter(token -> !token.isBlank())
+                .count();
+        return mathSymbols >= 2 || (letters <= 12 && whitespaceSeparatedTokens <= 10);
     }
 
     private static boolean differentDominantColor(PdfTextLine previous, PdfTextLine current) {
@@ -238,43 +341,27 @@ public final class PdfTextLayerBlockMapper {
                 .orElse("");
     }
 
-    private static DocumentBlock ocrBlock(String blockId,
-                                          String text,
-                                          OcrParagraph paragraph,
-                                          int pageCount,
-                                          boolean visualRenderable,
-                                          int index) {
-        DocumentBlockType type = classifyPdfBlock(text, index);
-        Map<String, String> metadata = new LinkedHashMap<>();
-        metadata.put("sourceMode", "read-only");
-        metadata.put("sourceFormat", SourceDocumentFormat.PDF.name());
-        metadata.put("pdfTextMapVersion", "1");
-        metadata.put("nativeText", "false");
-        metadata.put("ocr", "true");
-        metadata.put("sourcePage", Integer.toString(paragraph.region().pageNumber()));
-        metadata.put("sourcePageCount", Integer.toString(Math.max(1, pageCount)));
-        metadata.put("visualRenderAvailable", Boolean.toString(visualRenderable));
-        metadata.put("visualRenderEngine", visualRenderable ? "pdfbox" : "");
-        metadata.put("bbox", paragraph.region().bbox());
-        metadata.put("bboxUnits", "pdf-points");
-        metadata.put("pageWidth", formatNumber(paragraph.region().pageWidthPoints()));
-        metadata.put("pageHeight", formatNumber(paragraph.region().pageHeightPoints()));
-        metadata.put("extractionMode", "ocr-local");
-        metadata.put("confidence", "ocr-local");
-        metadata.put("ocrConfidence", formatNumber(paragraph.confidence()));
-        if (!paragraph.dominantColor().isBlank()) {
-            metadata.put("dominantColor", paragraph.dominantColor());
-        }
-        if (!paragraph.lineFragments().isEmpty()) {
-            metadata.put("lineBboxes", lineBboxes(paragraph.lineFragments()));
-            metadata.put("lineCharRanges", lineCharRanges(paragraph.lineFragments()));
-        }
-        metadata.put("sourceLocatorLabel", "PDF OCR - pagina " + paragraph.region().pageNumber() + " - bloque " + blockId);
-        return DocumentBlock.of(blockId, type, text, "PDF OCR", metadata);
+    private static String stableRegionId(String sourceSha256, PdfPageRegion region) {
+        String source = sourceSha256 == null || sourceSha256.isBlank() ? "unknown" : sourceSha256.strip();
+        String identity = source + "|" + region.pageNumber() + "|"
+                + Math.round(region.xMinPoints() * 2.0) + "|"
+                + Math.round(region.yMinPoints() * 2.0) + "|"
+                + Math.round(region.xMaxPoints() * 2.0) + "|"
+                + Math.round(region.yMaxPoints() * 2.0);
+        java.util.UUID uuid = java.util.UUID.nameUUIDFromBytes(identity.getBytes(StandardCharsets.UTF_8));
+        return "P%06d-R-%s".formatted(region.pageNumber(), uuid.toString());
     }
 
-    private static String formatNumber(double value) {
-        return String.format(Locale.ROOT, "%.3f", value);
+    private static Map<String, String> regionAttributes(OcrParagraph paragraph) {
+        LinkedHashMap<String, String> attributes = new LinkedHashMap<>();
+        if (!paragraph.dominantColor().isBlank()) {
+            attributes.put("dominantColor", paragraph.dominantColor());
+        }
+        if (!paragraph.lineFragments().isEmpty()) {
+            attributes.put("lineBboxes", lineBboxes(paragraph.lineFragments()));
+            attributes.put("lineCharRanges", lineCharRanges(paragraph.lineFragments()));
+        }
+        return Map.copyOf(attributes);
     }
 
     private static String lineBboxes(List<LineFragment> fragments) {

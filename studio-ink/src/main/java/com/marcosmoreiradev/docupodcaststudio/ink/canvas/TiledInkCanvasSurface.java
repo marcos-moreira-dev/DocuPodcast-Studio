@@ -57,11 +57,32 @@ public class TiledInkCanvasSurface extends Pane {
     private int columns;
     private int rows;
     private Color background = Color.WHITE;
+    private String paperPattern = "blank";
     private double contentWidth;
     private double contentHeight;
     private double contentMinX = Double.POSITIVE_INFINITY;
     private double contentMinY = Double.POSITIVE_INFINITY;
     private boolean vectorInkReliable = true;
+    private double inkPreviewScale = 1;
+
+    /** Higher density for screen ink; logical coordinates and persisted geometry stay unchanged. */
+    public void setInkPreviewScale(double scale) {
+        // Bound texture pressure: both committed and live ink have a backing canvas.
+        double next=Double.isFinite(scale) ? Math.max(1,Math.min(1.5,scale)) : 1;
+        if(next==inkPreviewScale) return;
+        inkPreviewScale=next;
+        for(CanvasTile tile:strokeTiles) configureInkDensity(tile.canvas());
+        for(CanvasTile tile:liveStrokeTiles) configureInkDensity(tile.canvas());
+        if(vectorInkReliable) renderCommandsToFx(List.copyOf(inkCommands));
+        else for(CanvasTile tile:strokeTiles) refreshTileCanvasFromRaster(tile);
+    }
+
+    private void configureInkDensity(Canvas canvas) {
+        canvas.setWidth(CANVAS_TILE_SIZE*inkPreviewScale);
+        canvas.setHeight(CANVAS_TILE_SIZE*inkPreviewScale);
+        canvas.getTransforms().setAll(new javafx.scene.transform.Scale(1.0/inkPreviewScale,1.0/inkPreviewScale,0,0));
+        canvas.getGraphicsContext2D().setTransform(inkPreviewScale,0,0,inkPreviewScale,0,0);
+    }
 
     public TiledInkCanvasSurface() {
         getChildren().addAll(backgroundLayer, imageLayer, strokeLayer, liveStrokeLayer, inkInputLayer);
@@ -168,6 +189,34 @@ public class TiledInkCanvasSurface extends Pane {
 
     public boolean canGrowHorizontally() {
         return columns < MAX_CANVAS_COLUMNS;
+    }
+
+    /** Releases unused trailing tiles without rebuilding or rasterizing the surviving ink. */
+    public boolean trimUnusedSpace(double minimumWidth, double minimumHeight, double margin) {
+        // The rendered-content bounds also protect legacy rasters and command-only strokes.
+        double maxX = contentWidth, maxY = contentHeight;
+        for (var node : imageLayer.getChildren()) {
+            var b = node.getBoundsInParent();
+            maxX = Math.max(maxX, b.getMaxX()); maxY = Math.max(maxY, b.getMaxY());
+        }
+        int keepColumns = Math.min(columns, Math.max(1, (int)Math.ceil(Math.max(minimumWidth, maxX + margin) / CANVAS_TILE_SIZE)));
+        int keepRows = Math.min(rows, Math.max(1, (int)Math.ceil(Math.max(minimumHeight, maxY + margin) / CANVAS_TILE_SIZE)));
+        if (keepColumns == columns && keepRows == rows) return false;
+        columns = keepColumns; rows = keepRows;
+        trimTiles(backgroundTiles, backgroundLayer);
+        trimTiles(strokeTiles, strokeLayer);
+        trimTiles(liveStrokeTiles, liveStrokeLayer);
+        dirtyLiveStrokeTiles.retainAll(liveStrokeTiles);
+        syncSize();
+        return true;
+    }
+
+    private void trimTiles(List<CanvasTile> tiles, Pane layer) {
+        tiles.removeIf(tile -> {
+            if (tile.x() < logicalWidth() && tile.y() < logicalHeight()) return false;
+            layer.getChildren().remove(tile.canvas());
+            return true;
+        });
     }
 
     public boolean canGrowVertically() {
@@ -416,6 +465,11 @@ public class TiledInkCanvasSurface extends Pane {
     }
 
     public void resetForEditableState(double width, double height, Color color) {
+        resetTileGrid(Math.max(DEFAULT_WIDTH, width), Math.max(DEFAULT_HEIGHT, height), color);
+    }
+
+    /** Fixed frames allocate only their actual extent, not the growing document minimum. */
+    protected final void resetTileGrid(double width, double height, Color color) {
         backgroundTiles.clear();
         strokeTiles.clear();
         liveStrokeTiles.clear();
@@ -433,14 +487,70 @@ public class TiledInkCanvasSurface extends Pane {
         inkStrokes.clear();
         vectorInkReliable = true;
         background = color == null ? Color.WHITE : color;
-        ensureLogicalSize(Math.max(DEFAULT_WIDTH, width), Math.max(DEFAULT_HEIGHT, height));
+        ensureLogicalSize(Math.max(1, width), Math.max(1, height));
         fillBackground(background);
+    }
+
+    /** Release GPU textures when a disposable editor closes; model strokes remain intact. */
+    public void releasePreviewResources() {
+        for (List<CanvasTile> tiles : List.of(backgroundTiles, strokeTiles, liveStrokeTiles)) {
+            for (CanvasTile tile : tiles) {
+                tile.canvas().setWidth(0);
+                tile.canvas().setHeight(0);
+            }
+        }
+    }
+
+    public String paperPattern() { return paperPattern; }
+
+    public void setPaperPattern(String pattern) {
+        paperPattern = java.util.Set.of("ruled", "grid", "isometric", "polar").contains(pattern == null ? "" : pattern) ? pattern : "blank";
+        fillBackground(background);
+    }
+
+    private void paintPaperPattern(CanvasTile tile) {
+        if ("blank".equals(paperPattern)) return;
+        Graphics2D g = tile.raster().createGraphics();
+        try {
+            g.translate(-tile.x(), -tile.y());
+            g.setColor(new java.awt.Color(118, 158, 203, 110));
+            g.setStroke(new java.awt.BasicStroke(0.7f));
+            double step = 28;
+            double left = tile.x(), top = tile.y(), right = left + CANVAS_TILE_SIZE, bottom = top + CANVAS_TILE_SIZE;
+            if ("ruled".equals(paperPattern) || "grid".equals(paperPattern)) {
+                for (double y = Math.ceil(top / step) * step; y <= bottom; y += step)
+                    g.draw(new java.awt.geom.Line2D.Double(left, y, right, y));
+                if ("grid".equals(paperPattern))
+                    for (double x = Math.ceil(left / step) * step; x <= right; x += step)
+                        g.draw(new java.awt.geom.Line2D.Double(x, top, x, bottom));
+            } else if ("isometric".equals(paperPattern)) {
+                for (double x = Math.ceil(left / step) * step; x <= right; x += step)
+                    g.draw(new java.awt.geom.Line2D.Double(x, top, x, bottom));
+                for (double slope : new double[]{0.577350269, -0.577350269}) {
+                    double min = top - Math.max(slope * left, slope * right);
+                    double max = bottom - Math.min(slope * left, slope * right);
+                    for (double b = Math.floor(min / step) * step; b <= max; b += step)
+                        g.draw(new java.awt.geom.Line2D.Double(left, slope * left + b, right, slope * right + b));
+                }
+            } else {
+                double cx = 420, cy = 420;
+                double radius = Math.hypot(right, bottom) + 840;
+                for (double r = step; r <= radius; r += step)
+                    g.draw(new java.awt.geom.Ellipse2D.Double(cx-r, cy-r, 2*r, 2*r));
+                for (int a = 0; a < 360; a += 15) {
+                    double rad = Math.toRadians(a);
+                    g.draw(new java.awt.geom.Line2D.Double(cx, cy, cx + radius*Math.cos(rad), cy + radius*Math.sin(rad)));
+                }
+            }
+        } finally { g.dispose(); }
+        tile.canvas().getGraphicsContext2D().drawImage(bufferedToWritable(tile.raster()), 0, 0);
     }
 
     public void fillBackground(Color color) {
         background = color == null ? Color.WHITE : color;
         for (CanvasTile tile : backgroundTiles) {
             fillTile(tile, background);
+            paintPaperPattern(tile);
         }
     }
 
@@ -598,6 +708,18 @@ public class TiledInkCanvasSurface extends Pane {
         }
     }
 
+    /**
+     * Replaces the vector ink layer in one deterministic operation.
+     *
+     * <p>Selection/transform tools use this boundary instead of mutating tile canvases directly;
+     * raster snapshots and legacy sidecars therefore keep their existing fallback behaviour.</p>
+     */
+    public void replaceInkStrokeStates(List<InkStrokeState> states) {
+        clearStrokes();
+        restoreInkStrokeStates(states == null ? List.of() : states);
+        vectorInkReliable = true;
+    }
+
     public void restoreInkCommandStates(List<InkCommandState> states) {
         if (states == null || states.isEmpty()) {
             return;
@@ -668,10 +790,13 @@ public class TiledInkCanvasSurface extends Pane {
         Canvas backgroundCanvas = tileCanvas(x, y);
         Canvas strokeCanvas = tileCanvas(x, y);
         Canvas liveStrokeCanvas = tileCanvas(x, y);
+        configureInkDensity(strokeCanvas);
+        configureInkDensity(liveStrokeCanvas);
         CanvasTile backgroundTile = new CanvasTile(backgroundCanvas, transparentRaster(), x, y);
         CanvasTile strokeTile = new CanvasTile(strokeCanvas, transparentRaster(), x, y);
         CanvasTile liveStrokeTile = new CanvasTile(liveStrokeCanvas, transparentRaster(), x, y);
         fillTile(backgroundTile, background);
+        paintPaperPattern(backgroundTile);
         backgroundTiles.add(backgroundTile);
         strokeTiles.add(strokeTile);
         liveStrokeTiles.add(liveStrokeTile);
@@ -772,7 +897,7 @@ public class TiledInkCanvasSurface extends Pane {
                     (int) Math.round((bounds.minX() - originX) * scale),
                     (int) Math.round((bounds.minY() - originY) * scale),
                     Math.max(1, (int) Math.round(bounds.width() * scale)),
-                    Math.max(1, (int) Math.round(bounds.height() * scale)));
+                    Math.max(1, (int) Math.round(bounds.height() * scale)), view.getOpacity());
         }
     }
 
@@ -932,15 +1057,33 @@ public class TiledInkCanvasSurface extends Pane {
         }
         double lastX = points.get(0).x();
         double lastY = points.get(0).y();
+        double midX = lastX;
+        double midY = lastY;
         for (int i = 1; i < points.size(); i++) {
             InkPointState point = points.get(i);
             double commandWidth = widthForPoint(width, point);
+            double nextMidX = (lastX + point.x()) / 2;
+            double nextMidY = (lastY + point.y()) / 2;
             if (commandWidth > 0.0) {
-                commands.add(InkCommand.line(type, lastX, lastY, point.x(), point.y(),
-                        0.0, 0.0, color, commandWidth));
+                if (type == InkCommandType.ERASE || points.size() == 2) {
+                    commands.add(InkCommand.line(type, lastX, lastY, point.x(), point.y(),
+                            0.0, 0.0, color, commandWidth));
+                } else if (i == 1) {
+                    commands.add(InkCommand.line(type, lastX, lastY, nextMidX, nextMidY,
+                            0.0, 0.0, color, commandWidth));
+                } else {
+                    commands.add(InkCommand.quadratic(type, midX, midY, lastX, lastY,
+                            nextMidX, nextMidY, color, commandWidth));
+                }
             }
+            midX = nextMidX;
+            midY = nextMidY;
             lastX = point.x();
             lastY = point.y();
+        }
+        if (type != InkCommandType.ERASE && points.size() > 2) {
+            commands.add(InkCommand.line(type, midX, midY, lastX, lastY, 0, 0, color,
+                    widthForPoint(width, points.getLast())));
         }
         return commands;
     }
@@ -1094,6 +1237,11 @@ public class TiledInkCanvasSurface extends Pane {
 
     private static void copyScaledImage(Image source, WritableImage target,
                                         int targetX, int targetY, int targetWidth, int targetHeight) {
+        copyScaledImage(source, target, targetX, targetY, targetWidth, targetHeight, 1.0);
+    }
+
+    private static void copyScaledImage(Image source, WritableImage target,
+                                        int targetX, int targetY, int targetWidth, int targetHeight, double opacity) {
         if (source == null || target == null || source.getPixelReader() == null || target.getPixelWriter() == null
                 || targetWidth <= 0 || targetHeight <= 0) {
             return;
@@ -1118,8 +1266,9 @@ public class TiledInkCanvasSurface extends Pane {
             for (int x = startX; x < endX; x++) {
                 int dx = targetX + x;
                 double sx = sourceCoordinate(x, sourceWidth, targetWidth);
-                writer.setArgb(dx, dy, blend(targetReader.getArgb(dx, dy),
-                        sampleBilinear(reader, sourceWidth, sourceHeight, sx, sy)));
+                int pixel = sampleBilinear(reader, sourceWidth, sourceHeight, sx, sy);
+                int alpha = (int) Math.round((pixel >>> 24) * Math.max(0, Math.min(1, opacity)));
+                writer.setArgb(dx, dy, blend(targetReader.getArgb(dx, dy), (pixel & 0x00ffffff) | (alpha << 24)));
             }
         }
     }
@@ -1252,12 +1401,9 @@ public class TiledInkCanvasSurface extends Pane {
 
     private static WritableImage bufferedToWritable(BufferedImage image) {
         WritableImage output = new WritableImage(image.getWidth(), image.getHeight());
-        PixelWriter writer = output.getPixelWriter();
-        for (int y = 0; y < image.getHeight(); y++) {
-            for (int x = 0; x < image.getWidth(); x++) {
-                writer.setArgb(x, y, image.getRGB(x, y));
-            }
-        }
+        int[] pixels = image.getRGB(0, 0, image.getWidth(), image.getHeight(), null, 0, image.getWidth());
+        output.getPixelWriter().setPixels(0, 0, image.getWidth(), image.getHeight(),
+                javafx.scene.image.PixelFormat.getIntArgbInstance(), pixels, 0, image.getWidth());
         return output;
     }
 
@@ -1275,10 +1421,12 @@ public class TiledInkCanvasSurface extends Pane {
             return dst;
         }
         int inv = 255 - alpha;
-        int r = (((src >>> 16) & 0xff) * alpha + ((dst >>> 16) & 0xff) * inv) / 255;
-        int g = (((src >>> 8) & 0xff) * alpha + ((dst >>> 8) & 0xff) * inv) / 255;
-        int b = ((src & 0xff) * alpha + (dst & 0xff) * inv) / 255;
-        return 0xff000000 | (r << 16) | (g << 8) | b;
+        int destinationAlpha = (dst >>> 24) & 0xff;
+        int weight = alpha * 255 + destinationAlpha * inv;
+        int r = (((src >>> 16) & 0xff) * alpha * 255 + ((dst >>> 16) & 0xff) * destinationAlpha * inv) / weight;
+        int g = (((src >>> 8) & 0xff) * alpha * 255 + ((dst >>> 8) & 0xff) * destinationAlpha * inv) / weight;
+        int b = ((src & 0xff) * alpha * 255 + (dst & 0xff) * destinationAlpha * inv) / weight;
+        return ((weight + 127) / 255 << 24) | (r << 16) | (g << 8) | b;
     }
 
     private static int toArgb(Color color) {

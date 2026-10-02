@@ -1,5 +1,11 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.audio;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFeedbackControls;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioCollectionControls;
+
 import com.marcosmoreiradev.docupodcaststudio.application.audio.AudioJobStatusDto;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.DocuPodcastShellViewModel;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionBar;
@@ -27,12 +33,12 @@ public final class AudioWorkspaceView extends BorderPane {
     private final Label activeJobTitle = new Label();
     private final Label activeJobSupport = new Label();
     private final Label activeJobMessage = new Label();
-    private final ProgressBar progress = new ProgressBar(0);
-    private final ListView<String> queueList = new ListView<>();
-    private final ListView<String> selectedJobDetails = new ListView<>();
-    private final ListView<String> processDiagnostics = new ListView<>();
-    private final ListView<String> playbackCues = new ListView<>();
-    private final ListView<String> segmentList = new ListView<>();
+    private final ProgressBar progress = StudioFeedbackControls.progressBar(0);
+    private final ListView<String> queueList = StudioCollectionControls.listView();
+    private final ListView<String> selectedJobDetails = StudioCollectionControls.listView();
+    private final ListView<String> processDiagnostics = StudioCollectionControls.listView();
+    private final ListView<String> playbackCues = StudioCollectionControls.listView();
+    private final ListView<String> segmentList = StudioCollectionControls.listView();
 
     public AudioWorkspaceView(DocuPodcastShellViewModel viewModel) {
         this.viewModel = viewModel;
@@ -117,7 +123,7 @@ public final class AudioWorkspaceView extends BorderPane {
 
         VBox content = new VBox(12, engine, activeCard, queueRow, bottomRow, segmentsCard);
         content.getStyleClass().add("audio-queue-dashboard");
-        ScrollPane scroll = new ScrollPane(content);
+        ScrollPane scroll = StudioViewportControls.scrollPane(content);
         scroll.setFitToWidth(true);
         scroll.getStyleClass().add("workspace-scroll");
         return scroll;

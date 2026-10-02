@@ -11,5 +11,9 @@ import java.util.Optional;
 public interface ImportedDocumentWorkspaceRepository {
     MaterializedImportedDocument materialize(ReadableDocument document, ReadingProfile activeReadingProfile, Path projectFile) throws IOException;
 
-    Optional<ReadableDocument> load(Path projectFile) throws IOException;
+    MaterializedImportedDocument materialize(ProjectDocumentSource source,
+                                             ReadingProfile activeReadingProfile,
+                                             Path projectFile) throws IOException;
+
+    Optional<ProjectDocumentSource> load(Path projectFile) throws IOException;
 }

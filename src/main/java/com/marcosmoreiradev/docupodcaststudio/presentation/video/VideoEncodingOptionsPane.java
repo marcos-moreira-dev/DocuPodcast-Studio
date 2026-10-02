@@ -18,10 +18,10 @@ import java.util.List;
 
 /** Shared styled controls for MP4 resolution, frame rate and encoder. */
 public final class VideoEncodingOptionsPane extends VBox {
-    private final ComboBox<SimpleVideoResolutionPreset> resolution = new ComboBox<>();
-    private final ComboBox<Integer> framesPerSecond = new ComboBox<>();
-    private final ComboBox<VideoEncoderPolicy> encoder = new ComboBox<>();
-    private final CheckBox includeInferredFrames = new CheckBox("Incluir frames inferidos");
+    private final ComboBox<SimpleVideoResolutionPreset> resolution = StudioFormControls.comboBox();
+    private final ComboBox<Integer> framesPerSecond = StudioFormControls.comboBox();
+    private final ComboBox<VideoEncoderPolicy> encoder = StudioFormControls.comboBox();
+    private final CheckBox includeInferredFrames = StudioFormControls.checkBox("Incluir frames inferidos");
 
     public VideoEncodingOptionsPane(List<VideoEncoderPolicy> availableEncoders,
                                     VideoEncoderPolicy defaultEncoder) {
@@ -37,15 +37,22 @@ public final class VideoEncodingOptionsPane extends VBox {
         boolean narrativeVideo = projectMode == ProjectMode.NARRATIVE_VIDEO;
         if (narrativeVideo) {
             resolution.getItems().setAll(
+                    SimpleVideoResolutionPreset.LOW_VERTICAL_540X960,
                     SimpleVideoResolutionPreset.HD_VERTICAL_720X1280,
-                    SimpleVideoResolutionPreset.FULL_HD_VERTICAL_1080X1920);
+                    SimpleVideoResolutionPreset.FULL_HD_VERTICAL_1080X1920,
+                    SimpleVideoResolutionPreset.LOW_540,
+                    SimpleVideoResolutionPreset.HD_720,
+                    SimpleVideoResolutionPreset.FULL_HD_1080,
+                    SimpleVideoResolutionPreset.QHD_2K,
+                    SimpleVideoResolutionPreset.UHD_4K);
             resolution.setValue(SimpleVideoResolutionPreset.HD_VERTICAL_720X1280);
         } else {
             resolution.getItems().setAll(
                     SimpleVideoResolutionPreset.UHD_4K,
                     SimpleVideoResolutionPreset.QHD_2K,
                     SimpleVideoResolutionPreset.FULL_HD_1080,
-                    SimpleVideoResolutionPreset.HD_720);
+                    SimpleVideoResolutionPreset.HD_720,
+                    SimpleVideoResolutionPreset.LOW_540);
             resolution.setValue(SimpleVideoResolutionPreset.defaultPreset());
         }
         resolution.setMaxWidth(Double.MAX_VALUE);
@@ -73,7 +80,7 @@ public final class VideoEncodingOptionsPane extends VBox {
         encoder.setItems(FXCollections.observableArrayList(safeEncoders));
         encoder.setValue(safeEncoders.contains(defaultEncoder) ? defaultEncoder : safeEncoders.getFirst());
         encoder.setMaxWidth(Double.MAX_VALUE);
-        StudioFormControls.combo(encoder, "Codificador FFmpeg usado para producir el MP4.");
+        StudioFormControls.combo(encoder, "Preferencia de codificación usada por el renderizador seleccionado.");
         encoder.setConverter(new StringConverter<>() {
             @Override
             public String toString(VideoEncoderPolicy policy) {
@@ -94,7 +101,6 @@ public final class VideoEncodingOptionsPane extends VBox {
         addRow(form, 0, "Resolucion", resolution);
         addRow(form, 1, "FPS", framesPerSecond);
         addRow(form, 2, "Codificador", encoder);
-        includeInferredFrames.getStyleClass().addAll(StudioFormControls.FORM_CONTROL, StudioFormControls.FORM_TOGGLE);
         StudioFormControls.installTooltip(includeInferredFrames,
                 "Usa frames intermedios ya guardados entre intervenciones adyacentes; no lanza inferencia durante la exportacion.");
         includeInferredFrames.setVisible(!narrativeVideo);

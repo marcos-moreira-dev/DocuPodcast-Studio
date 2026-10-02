@@ -17,7 +17,7 @@ public class InkCanvasSurface extends TiledInkCanvasSurface {
 
     public void resetForFixedEditableState(double width, double height, Color color) {
         clearFixedLogicalViewport();
-        resetForEditableState(width, height, color);
+        resetTileGrid(width, height, color);
         setFixedLogicalViewport(width, height);
     }
 

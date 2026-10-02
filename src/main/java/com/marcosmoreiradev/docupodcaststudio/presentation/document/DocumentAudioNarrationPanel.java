@@ -1,20 +1,33 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.document;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeSourceChooser;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeDialogResponse;
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.StudioMessageDialog;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
+
 import com.marcosmoreiradev.docupodcaststudio.application.audio.AudioEngineAvailability;
 import com.marcosmoreiradev.docupodcaststudio.application.audio.AudioEngineDescriptor;
+import com.marcosmoreiradev.docupodcaststudio.application.audio.AudioSourceOption;
 import com.marcosmoreiradev.docupodcaststudio.application.voice.VoiceAssignmentOption;
+import com.marcosmoreiradev.docupodcaststudio.application.voice.VoiceAssignmentReadinessContext;
 import com.marcosmoreiradev.docupodcaststudio.application.voice.VoiceEngineCapabilityProfile;
 import com.marcosmoreiradev.docupodcaststudio.domain.voice.OfficialAdvancedVoicePresetCatalog;
+import com.marcosmoreiradev.docupodcaststudio.application.voice.VoiceReferenceSamplePathResolver;
 import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceLibrary;
 import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceProfile;
 import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceReferenceTone;
-import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceEngineType;
+import com.marcosmoreiradev.docupodcaststudio.media.api.EngineFeature;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionButtonFactory;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.RailActionRow;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.SectionHeader;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.DocuPodcastShellViewModel;
+import com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow.DocumentAudioAction;
 import com.marcosmoreiradev.docupodcaststudio.presentation.voice.VoiceToneLabelPolicy;
-import com.marcosmoreiradev.docupodcaststudio.presentation.notification.DialogStyler;
+import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.geometry.Insets;
 import javafx.scene.control.Alert;
@@ -25,8 +38,10 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tooltip;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
@@ -37,27 +52,34 @@ import java.io.File;
 import java.io.IOException;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Objects;
+import java.util.function.Consumer;
 
 /** Contextual audio/narration module for the selected sentence. */
 public final class DocumentAudioNarrationPanel extends VBox {
-    private static final String ADVANCED_VOICE = "Voz IA avanzada";
-    private static final String LOCAL_SIMPLE_VOICE = "Voz local simple";
     private static final String MOCK_VOICE = "Modo de prueba";
     private static final String COMPUTER_AUDIO = "Audio del computador";
     private static final String DEFAULT_NARRATOR_VOICE_ID = "VOC-NARRATOR";
 
     private final DocuPodcastShellViewModel viewModel;
     private final VBox options = new VBox(8);
-    private final ComboBox<String> sourceSelector = new ComboBox<>();
+    private final ComboBox<AudioSourceOption> sourceSelector = StudioFormControls.comboBox();
     private final Label sourceStatus = new Label();
-    private final ComboBox<VoiceProfile> voiceSelector = new ComboBox<>();
-    private final ComboBox<VoiceReferenceTone> toneSelector = new ComboBox<>();
+    private final ComboBox<VoiceAssignmentOption> voiceSelector = StudioFormControls.comboBox();
+    private final ComboBox<VoiceReferenceTone> toneSelector = StudioFormControls.comboBox();
+    private final Label voiceStatus = new Label();
+    private final Consumer<DocumentAudioAction> documentAudioActionRequest;
     private boolean updatingChoices;
     private boolean updatingSourceChoices;
 
     public DocumentAudioNarrationPanel(DocuPodcastShellViewModel viewModel) {
+        this(viewModel, null);
+    }
+
+    public DocumentAudioNarrationPanel(
+            DocuPodcastShellViewModel viewModel,
+            Consumer<DocumentAudioAction> documentAudioActionRequest) {
         this.viewModel = viewModel;
+        this.documentAudioActionRequest = documentAudioActionRequest;
         getStyleClass().add("document-context-module");
         setPadding(new Insets(10));
         setSpacing(10);
@@ -78,18 +100,21 @@ public final class DocumentAudioNarrationPanel extends VBox {
         Label origin = new Label("Origen");
         origin.getStyleClass().add("document-context-field-label");
         syncSourceChoices();
+        configureSourceSelectorCells();
         sourceSelector.getStyleClass().add("document-context-combo");
         sourceSelector.setMaxWidth(Double.MAX_VALUE);
         sourceSelector.valueProperty().addListener((obs, oldValue, newValue) -> {
-            if (!updatingSourceChoices && newValue != null && !COMPUTER_AUDIO.equals(newValue)) {
-                viewModel.selectDocumentAudioSource(newValue);
+            if (!updatingSourceChoices && newValue != null && newValue.selectable()
+                    && !"computer-audio".equals(newValue.id())) {
+                viewModel.selectDocumentAudioSource(newValue.id());
             }
             renderOptions();
         });
         sourceStatus.getStyleClass().add("document-context-note");
         sourceStatus.setWrapText(true);
 
-        CheckBox readAfterColon = new CheckBox("Leer desde después de ':' (requiere reconstruir fragmentos de audio)");
+        CheckBox readAfterColon = StudioFormControls.checkBox(
+                "Leer desde después de ':' (se aplica al procesar la lectura)");
         readAfterColon.getStyleClass().add("document-context-checkbox");
         readAfterColon.setSelected(viewModel.readAfterColonForNarrationProperty().get());
         viewModel.readAfterColonForNarrationProperty().addListener((obs, oldValue, newValue) -> {
@@ -97,35 +122,16 @@ public final class DocumentAudioNarrationPanel extends VBox {
         });
         readAfterColon.selectedProperty().addListener((obs, oldValue, newValue) -> {
             if (oldValue == newValue) { return; }
-            String selectedBlockId = viewModel.selectedDocumentBlockIdProperty().get();
-            boolean hasSelection = selectedBlockId != null && !selectedBlockId.isBlank();
-            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-            confirm.setTitle("Leer después de dos puntos");
-            confirm.setHeaderText("¿A partir de dónde quieres reconstruir los fragmentos de audio?");
-            confirm.setContentText("Los fragmentos de audio se re-renderizarán con la voz global y el tono seleccionados."
-                    + (hasSelection ? "\n\nPuedes re-renderizar desde el fragmento seleccionado o desde el inicio." : ""));
-            ButtonType fromSelection = new ButtonType("Desde fragmento seleccionado", ButtonBar.ButtonData.YES);
-            ButtonType fromStart = new ButtonType("Desde el inicio", ButtonBar.ButtonData.NO);
-            confirm.getButtonTypes().setAll(hasSelection ? List.of(fromSelection, fromStart, ButtonType.CANCEL) : List.of(fromStart, ButtonType.CANCEL));
-            DialogStyler.apply(confirm, ownerWindow());
-            confirm.showAndWait().ifPresentOrElse(button -> {
-                if (button == fromSelection && hasSelection) {
-                    viewModel.setReadAfterColonForNarration(newValue, true);
-                } else if (button == fromStart) {
-                    viewModel.setReadAfterColonForNarration(newValue, false);
-                } else {
-                    readAfterColon.setSelected(oldValue);
-                }
-            }, () -> readAfterColon.setSelected(oldValue));
+            viewModel.setReadAfterColonForNarration(newValue);
         });
-        Label note = new Label("El documento fuente no cambia. La voz, el audio y la regla de ':' se guardan como capas del proyecto. Al cambiar la voz del documento se regeneran los fragmentos de audio; las voces específicas de fragmento se respetan.");
+        Label note = new Label("La fuente no cambia. La regla se guarda en el proyecto y se aplicará la próxima vez que pulses Procesar; cambiarla no inicia una generación automática.");
         note.getStyleClass().add("document-context-note");
         note.setWrapText(true);
 
         VBox body = new VBox(8, header, selected, origin, sourceSelector, sourceStatus, options, readAfterColon, note);
         body.getStyleClass().add("document-context-body");
         body.setMaxWidth(Double.MAX_VALUE);
-        ScrollPane scroll = new ScrollPane(body);
+        ScrollPane scroll = StudioViewportControls.scrollPane(body);
         scroll.setFitToWidth(true);
         scroll.setFitToHeight(true);
         scroll.getStyleClass().add("document-context-scroll");
@@ -137,12 +143,12 @@ public final class DocumentAudioNarrationPanel extends VBox {
     private void configureVoiceSelectors() {
         voiceSelector.setConverter(new StringConverter<>() {
             @Override
-            public String toString(VoiceProfile voice) {
-                return voice == null ? "" : voice.displayName();
+            public String toString(VoiceAssignmentOption voice) {
+                return voice == null ? "" : voice.toString();
             }
 
             @Override
-            public VoiceProfile fromString(String string) {
+            public VoiceAssignmentOption fromString(String string) {
                 return null;
             }
         });
@@ -164,15 +170,27 @@ public final class DocumentAudioNarrationPanel extends VBox {
         voiceSelector.setPromptText("Voz");
         toneSelector.setPromptText("Tono");
         voiceSelector.valueProperty().addListener((obs, oldValue, newValue) -> {
+            voiceStatus.setText(appliedVoiceStatus() + "\n" + voiceStatus(newValue)
+                    + ((!updatingChoices && newValue != null)
+                    ? " La configuración queda activa; el audio se actualizará al generar."
+                    : ""));
             if (!updatingChoices) {
                 updatingChoices = true;
                 try {
-                    refreshToneChoicesForSelectedVoice(profileForCurrentSource(), newValue);
+                    refreshToneChoicesForSelectedVoice(profileForCurrentSource(), voiceProfile(newValue));
                 } finally {
                     updatingChoices = false;
                 }
+                Platform.runLater(this::configureSelectedVoiceWithoutRendering);
             }
         });
+        toneSelector.valueProperty().addListener((obs, oldValue, newValue) -> {
+            if (!updatingChoices && newValue != null) {
+                Platform.runLater(this::configureSelectedVoiceWithoutRendering);
+            }
+        });
+        voiceStatus.getStyleClass().add("document-context-note");
+        voiceStatus.setWrapText(true);
         viewModel.activeVoiceLibraryProperty().addListener((obs, oldValue, newValue) -> renderOptions());
         viewModel.statusMessageProperty().addListener((obs, oldValue, newValue) -> {
             syncSourceChoices();
@@ -183,7 +201,7 @@ public final class DocumentAudioNarrationPanel extends VBox {
     private void renderOptions() {
         syncSourceChoices();
         options.getChildren().clear();
-        if (COMPUTER_AUDIO.equals(sourceSelector.getValue())) {
+        if (sourceIs("computer-audio")) {
             options.getChildren().addAll(computerAudioOptions());
         } else {
             options.getChildren().addAll(voiceEngineOptions());
@@ -191,121 +209,108 @@ public final class DocumentAudioNarrationPanel extends VBox {
     }
 
     private void syncSourceChoices() {
-        String current = sourceSelector.getValue();
-        List<String> choices = viewModel.documentAudioSourceAvailability().stream()
-                .filter(AudioEngineAvailability::usableInDocument)
-                .map(AudioEngineAvailability::displayName)
+        AudioSourceOption current = sourceSelector.getValue();
+        List<AudioSourceOption> choices = viewModel.documentAudioSourceAvailability().stream()
+                .map(AudioSourceOption::from)
                 .distinct()
                 .toList();
         if (choices.isEmpty()) {
-            choices = java.util.List.of(MOCK_VOICE, COMPUTER_AUDIO);
+            choices = java.util.List.of(
+                    new AudioSourceOption("mock", MOCK_VOICE, "Diagnóstico", true, "", ""),
+                    new AudioSourceOption("computer-audio", COMPUTER_AUDIO, "Archivo manual", true, "", ""));
         }
+        List<AudioSourceOption> availableChoices = choices;
         updatingSourceChoices = true;
         try {
-            if (!sourceSelector.getItems().equals(choices)) {
-                sourceSelector.getItems().setAll(choices);
+            if (!sourceSelector.getItems().equals(availableChoices)) {
+                sourceSelector.getItems().setAll(availableChoices);
             }
-            if (current != null && choices.contains(current)) {
-                sourceSelector.setValue(current);
-                updateSourceStatus(choices);
+            AudioSourceOption preserved = current == null ? null : availableChoices.stream()
+                    .filter(choice -> choice.id().equals(current.id())).findFirst().orElse(null);
+            if (preserved != null) {
+                sourceSelector.setValue(preserved);
+                updateSourceStatus(availableChoices);
                 return;
             }
-            String active = voiceSourceLabel(viewModel.administrationWorkspace().voice().voiceCapabilityPolicy()
-                    .activeEngineProfile(viewModel.audioEngineDescriptor()));
-            sourceSelector.setValue(choices.contains(active) ? active : choices.get(0));
-            updateSourceStatus(choices);
+            String active = viewModel.audioEngineDescriptor().engineId();
+            AudioSourceOption selected = availableChoices.stream()
+                    .filter(choice -> choice.id().equalsIgnoreCase(active)).findFirst()
+                    .orElseGet(() -> availableChoices.stream().filter(AudioSourceOption::selectable)
+                            .findFirst().orElse(availableChoices.getFirst()));
+            sourceSelector.setValue(selected);
+            updateSourceStatus(availableChoices);
         } finally {
             updatingSourceChoices = false;
         }
     }
 
-    private void updateSourceStatus(List<String> choices) {
-        String selected = sourceSelector.getValue();
-        String active = selected == null || selected.isBlank() ? (choices.isEmpty() ? MOCK_VOICE : choices.get(0)) : selected;
+    private void updateSourceStatus(List<AudioSourceOption> choices) {
+        AudioSourceOption selected = sourceSelector.getValue();
         String readinessDetail = String.join("\n", viewModel.audioEngineReadinessLines());
         sourceStatus.setTooltip(new Tooltip(readinessDetail));
-        if (COMPUTER_AUDIO.equals(active)) {
+        if (selected == null) {
+            sourceStatus.setText("Selecciona un origen de audio disponible.");
+            return;
+        }
+        if ("computer-audio".equals(selected.id())) {
             sourceStatus.setText("Audio del computador: elige un archivo local para esta selección; no usa motor de voz.");
             return;
         }
-        if (choices.contains(ADVANCED_VOICE)) {
-            sourceStatus.setText("Origen operativo: solo se listan motores que pasaron preparación y prueba suficiente para usarse en Documento.");
+        if (!selected.selectable()) {
+            sourceStatus.setText(selected.message() + (selected.recommendedAction().isBlank()
+                    ? "" : " " + selected.recommendedAction()));
             return;
         }
-        sourceStatus.setText("Voz IA avanzada no aparece aquí si no pasó prueba WAV. Usa Configuración para repararla o continúa con Voz local simple / Modo de prueba.");
+        sourceStatus.setText(selected.accessibleLabel() + ": origen operativo y listo para la lectura.");
     }
-
-    private static String voiceSourceLabel(VoiceEngineCapabilityProfile profile) {
-        if (profile == null) {
-            return MOCK_VOICE;
-        }
-        if (profile.piperMode()) {
-            return LOCAL_SIMPLE_VOICE;
-        }
-        if (profile.coquiXttsMode()) {
-            return ADVANCED_VOICE;
-        }
-        if (profile.mockMode()) {
-            return MOCK_VOICE;
-        }
-        return "Motor de voz local";
-    }
-
 
     private VoiceEngineCapabilityProfile profileForCurrentSource() {
-        String selected = sourceSelector.getValue();
-        if (LOCAL_SIMPLE_VOICE.equals(selected)) {
-            return VoiceEngineCapabilityProfile.piper(true, LOCAL_SIMPLE_VOICE);
-        }
-        if (ADVANCED_VOICE.equals(selected)) {
-            return VoiceEngineCapabilityProfile.coquiXtts(true, ADVANCED_VOICE);
-        }
-        if (MOCK_VOICE.equals(selected)) {
-            return VoiceEngineCapabilityProfile.mock();
-        }
         return viewModel.administrationWorkspace().voice().voiceCapabilityPolicy()
-                .activeEngineProfile(viewModel.audioEngineDescriptor());
-    }
-
-    private static boolean isVoiceSourceLabel(String value) {
-        return ADVANCED_VOICE.equals(value)
-                || LOCAL_SIMPLE_VOICE.equals(value)
-                || MOCK_VOICE.equals(value)
-                || "Motor de voz local".equals(value);
+                .activeEngineProfile(descriptorForCurrentSource());
     }
 
     private VBox voiceEngineOptions() {
         VoiceEngineCapabilityProfile profile = profileForCurrentSource();
+        if (profile.simpleLocalMode()) {
+            TextField nativeVoice = StudioFormControls.textField("Narrador predeterminado — voz de Piper");
+            nativeVoice.setDisable(true);
+            return new VBox(8, label("Voz de la lectura"), nativeVoice,
+                    notice("Piper usa su voz predeterminada para todos los fragmentos. Las voces y tonos personalizados quedan inactivos, pero se conservan para volver a usarlos con otro motor."));
+        }
         refreshVoiceChoices(profile);
         Label summary = new Label(generatedVoiceNotice(profile));
         summary.getStyleClass().add("document-context-copy");
         summary.setWrapText(true);
 
         Button manageVoices = ActionButtonFactory.secondary("Ir a biblioteca de voces", viewModel::showVoiceLibraryWorkspace);
-        Button useDefaultVoice = ActionButtonFactory.primary("Usar voz en todo el documento", this::useSelectedVoiceForWholeDocument);
-        useDefaultVoice.disableProperty().bind(voiceSelector.valueProperty().isNull());
+        Button useDefaultVoice = ActionButtonFactory.primary(
+                "Aplicar voz y regenerar toda la lectura",
+                this::useSelectedVoiceForWholeDocument);
+        useDefaultVoice.disableProperty().bind(Bindings.createBooleanBinding(
+                () -> voiceSelector.getValue() == null || !voiceSelector.getValue().selectable(),
+                voiceSelector.valueProperty()));
         Button assignSpecificVoice = ActionButtonFactory.secondary("Asignar voz al fragmento seleccionado", this::assignSelectedVoiceToSelectedFragment);
-        bindToSelection(assignSpecificVoice);
+        bindToSelectionAndUsableVoice(assignSpecificVoice);
         Button useGeneralVoice = ActionButtonFactory.warning(
                 "Asignar voz general",
                 "El fragmento volverá a usar la voz predeterminada del documento.",
                 viewModel::removePrimaryAssignmentForSelectedDocumentRange);
-        Button clearSpecificVoices = ActionButtonFactory.danger("Eliminar voces específicas del documento", viewModel::removeAllSpecificVoicesFromDocument);
+        Button clearSpecificVoices = ActionButtonFactory.danger("Eliminar voces específicas de la lectura", viewModel::removeAllSpecificVoicesFromDocument);
         bindToSelection(useGeneralVoice);
 
         VBox box = new VBox(8);
         box.getStyleClass().add("document-audio-flow");
-        if (profile.mockMode()) {
+        if (profile.diagnosticMode()) {
             box.getChildren().addAll(
                     label("Motor de prueba"),
-                    notice("El modo de prueba solo valida el flujo. Prepara una voz real desde Configuración para escuchar documentos."),
+                    notice("El modo de prueba solo valida el flujo. Prepara una voz real desde Configuración para escuchar la lectura."),
                     manageVoices,
                     useGeneralVoice);
             return new VBox(8, summary, box);
         }
 
-        box.getChildren().addAll(label("Voz predeterminada del documento"), voiceSelector, useDefaultVoice, manageVoices);
-        VoiceProfile selectedVoice = voiceSelector.getValue();
+        box.getChildren().addAll(label("Voz y tono predeterminados de la lectura"), voiceSelector, voiceStatus, useDefaultVoice, manageVoices);
+        VoiceProfile selectedVoice = selectedVoiceProfile();
         if (voiceSelector.getItems().isEmpty()) {
             box.getChildren().add(notice(emptyVoiceNotice(profile)));
         } else if (profile.supportsEmotion() || profile.supportsExpressiveStyle()) {
@@ -318,14 +323,15 @@ public final class DocumentAudioNarrationPanel extends VBox {
                 toneStatus.getStyleClass().add("document-context-note");
                 toneStatus.setWrapText(true);
                 toneStatus.textProperty().bind(viewModel.documentVoiceToneStatusProperty());
-                box.getChildren().addAll(label("Tono"), toneSelector, toneStatus);
+                box.getChildren().addAll(label("Tono predeterminado"), toneSelector, toneStatus);
             }
-        } else if (profile.piperMode()) {
+        } else if (profile.simpleLocalMode()) {
             box.getChildren().add(notice("La Voz local simple usa la voz local disponible. No muestra tonos por muestra humana; para tonos grabados usa Voz IA avanzada."));
         } else if (!profile.supportsAdvancedExpressiveControls()) {
             box.getChildren().add(notice(profile.blockedReason().isBlank() ? "Este motor no declara soporte expresivo avanzado." : profile.blockedReason()));
         }
-        box.getChildren().addAll(assignSpecificVoice, useGeneralVoice, clearSpecificVoices);
+        box.getChildren().addAll(label("Voz y tono del fragmento seleccionado"),
+                assignSpecificVoice, useGeneralVoice, clearSpecificVoices);
         return new VBox(8, summary, box);
     }
 
@@ -334,13 +340,13 @@ public final class DocumentAudioNarrationPanel extends VBox {
         if (profile == null) {
             return "Voz generada: elige una voz disponible para la selección o usa Audio del computador.";
         }
-        if (profile.coquiXttsMode()) {
+        if (profile.advancedAiMode()) {
             return "Voz generada: usa Narrador predeterminado o selecciona una voz registrada con muestra Neutral. Las muestras son referencias para generar texto nuevo.";
         }
-        if (profile.piperMode()) {
+        if (profile.simpleLocalMode()) {
             return "Voz generada: usa la voz local simple disponible. Si el runtime soporta el dispositivo elegido, lo recibirá al renderizar.";
         }
-        if (profile.mockMode()) {
+        if (profile.diagnosticMode()) {
             return "Voz generada: el modo de prueba valida el flujo, pero no produce una voz final real.";
         }
         return profile.sidebarNotice();
@@ -350,37 +356,70 @@ public final class DocumentAudioNarrationPanel extends VBox {
         if (updatingChoices) {
             return;
         }
-        VoiceProfile voice = voiceSelector.getValue();
+        VoiceProfile voice = selectedVoiceProfile();
         if (voice == null) {
             return;
         }
         String selectedBlockId = viewModel.selectedDocumentBlockIdProperty().get();
         boolean hasSelection = selectedBlockId != null && !selectedBlockId.isBlank();
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Usar voz en todo el documento");
-        confirm.setHeaderText("¿Quieres aplicar la voz «" + voice.displayName() + "» a todo el documento?");
-        confirm.setContentText("Los fragmentos de audio que tienen voz global se re-renderizarán.\n"
-                + "Los fragmentos de audio con voz específica se respetan."
-                + (hasSelection ? "\n\nPuedes re-renderizar desde el fragmento seleccionado o desde el inicio." : ""));
-        ButtonType fromSelection = new ButtonType("Desde fragmento seleccionado", ButtonBar.ButtonData.YES);
-        ButtonType fromStart = new ButtonType("Desde el inicio", ButtonBar.ButtonData.NO);
+        VoiceReferenceTone tone = toneSelector.getValue() == null
+                ? VoiceReferenceTone.NEUTRAL : toneSelector.getValue();
+        long overrides = viewModel.specificDocumentVoiceOverrideCount();
+        Alert confirm = NativeDialogResponse.alert(Alert.AlertType.CONFIRMATION);
+        StudioMessageDialog.configure(
+                confirm,
+                ownerWindow(),
+                "Usar voz en toda la lectura",
+                "¿Quieres aplicar «" + voice.displayName() + "» con tono "
+                        + VoiceToneLabelPolicy.comboLabel(tone) + " a toda la lectura?",
+                "Los fragmentos con configuración global se re-renderizarán.\n"
+                        + "Se respetarán " + overrides
+                        + " fragmento(s) con voz o tono específico."
+                        + (hasSelection
+                        ? "\n\nPuedes re-renderizar desde el fragmento seleccionado o desde el inicio."
+                        : ""),
+                "");
+        ButtonType fromSelection = NativeDialogResponse.button("Desde fragmento seleccionado", ButtonBar.ButtonData.YES);
+        ButtonType fromStart = NativeDialogResponse.button("Desde el inicio", ButtonBar.ButtonData.NO);
         confirm.getButtonTypes().setAll(hasSelection ? List.of(fromSelection, fromStart, ButtonType.CANCEL) : List.of(fromStart, ButtonType.CANCEL));
-        DialogStyler.apply(confirm, ownerWindow());
         confirm.showAndWait().ifPresent(button -> {
             if (button == fromSelection && hasSelection) {
-                viewModel.useVoiceForDocumentFrom(voice, selectedBlockId);
+                if (viewModel.configureVoiceForDocument(voice, tone)) {
+                    requestDocumentAudioAction(DocumentAudioAction.GENERATE_SELECTION);
+                }
             } else if (button == fromStart) {
-                viewModel.useVoiceForDocument(voice);
+                if (viewModel.configureVoiceForDocument(voice, tone)) {
+                    requestDocumentAudioAction(DocumentAudioAction.GENERATE_ALL);
+                }
             }
         });
         renderOptions();
+    }
+
+    private void configureSelectedVoiceWithoutRendering() {
+        if (updatingChoices) return;
+        VoiceProfile voice = selectedVoiceProfile();
+        if (voice == null) return;
+        VoiceReferenceTone tone = toneSelector.getValue() == null
+                ? VoiceReferenceTone.NEUTRAL : toneSelector.getValue();
+        viewModel.configureVoiceForDocument(voice, tone);
+    }
+
+    private void requestDocumentAudioAction(DocumentAudioAction action) {
+        if (documentAudioActionRequest != null) {
+            documentAudioActionRequest.accept(action);
+        } else if (action == DocumentAudioAction.GENERATE_SELECTION) {
+            viewModel.generateAudioChunksFromSelectedFragment();
+        } else {
+            viewModel.generateAudioChunksWithoutPlayback();
+        }
     }
 
     private void assignSelectedVoiceToSelectedFragment() {
         if (updatingChoices) {
             return;
         }
-        VoiceProfile voice = voiceSelector.getValue();
+        VoiceProfile voice = selectedVoiceProfile();
         if (voice == null || !hasSelectedDocumentBlock()) {
             return;
         }
@@ -399,58 +438,101 @@ public final class DocumentAudioNarrationPanel extends VBox {
 
     private void refreshVoiceChoices(VoiceEngineCapabilityProfile profile) {
         VoiceLibrary library = viewModel.activeVoiceLibraryProperty().get();
-        String previousVoiceId = voiceSelector.getValue() == null ? "" : voiceSelector.getValue().id();
+        String previousVoiceId = voiceSelector.getValue() == null ? "" : voiceSelector.getValue().voiceId();
         String configuredVoiceId = viewModel.configuredVoiceProfileId();
         updatingChoices = true;
         try {
-            List<VoiceProfile> voices = library == null
+            List<VoiceAssignmentOption> voices = library == null
                     ? List.of()
-                    : assignmentOptionsForCurrentSource(library, previousVoiceId.isBlank() ? configuredVoiceId : previousVoiceId).stream()
-                    .filter(VoiceAssignmentOption::selectable)
-                    .map(option -> library.voiceById(option.voiceId()).orElse(null))
-                    .filter(Objects::nonNull)
-                    .filter(voice -> usableInDocumentForEngine(library, voice, profile))
-                    .toList();
+                    : assignmentOptionsForCurrentSource(library, configuredVoiceId);
             voiceSelector.getItems().setAll(voices);
-            VoiceProfile selected = voices.stream()
-                    .filter(voice -> voice.id().equals(previousVoiceId))
+            VoiceAssignmentOption selected = voices.stream()
+                    .filter(voice -> voice.voiceId().equals(previousVoiceId))
                     .findFirst()
                     .orElseGet(() -> voices.stream()
-                            .filter(voice -> voice.id().equals(configuredVoiceId))
+                            .filter(voice -> voice.voiceId().equals(configuredVoiceId))
                             .findFirst()
                             .orElseGet(() -> voices.stream()
-                                    .filter(DocumentAudioNarrationPanel::usesDefaultEngineVoice)
+                                    .filter(option -> DEFAULT_NARRATOR_VOICE_ID.equalsIgnoreCase(option.voiceId()))
+                                    .filter(VoiceAssignmentOption::selectable)
                                     .findFirst()
-                                    .orElse(null)));
+                                    .orElseGet(() -> voices.stream()
+                                            .filter(VoiceAssignmentOption::selectable)
+                                            .findFirst()
+                                            .orElse(voices.isEmpty() ? null : voices.getFirst()))));
             voiceSelector.setValue(selected);
-            refreshToneChoicesForSelectedVoice(profile, selected);
+            voiceStatus.setText(appliedVoiceStatus() + "\n" + voiceStatus(selected));
+            refreshToneChoicesForSelectedVoice(profile, voiceProfile(selected));
         } finally {
             updatingChoices = false;
         }
     }
 
     private List<VoiceAssignmentOption> assignmentOptionsForCurrentSource(VoiceLibrary library, String currentVoiceId) {
+        var roots = viewModel.runtimeWorkspace();
+        VoiceAssignmentReadinessContext readiness = new VoiceAssignmentReadinessContext(
+                roots.installationRoot(), roots.runtimeRoot(),
+                viewModel.currentProjectDirectory().orElse(roots.runtimeRoot()));
         return viewModel.administrationWorkspace().voice().buildVoiceAssignmentOptions()
-                .build(library, descriptorForCurrentSource(), List.of(), currentVoiceId);
+                .build(library, descriptorForCurrentSource(), List.of(), currentVoiceId, readiness);
     }
 
     private AudioEngineDescriptor descriptorForCurrentSource() {
-        String selected = sourceSelector.getValue();
-        if (LOCAL_SIMPLE_VOICE.equals(selected)) {
-            return AudioEngineDescriptor.process(LOCAL_SIMPLE_VOICE, true, "", "Configurado desde Audio.");
+        AudioSourceOption selected = sourceSelector.getValue();
+        if (selected == null || "computer-audio".equals(selected.id())) {
+            return viewModel.audioEngineDescriptor();
         }
-        if (ADVANCED_VOICE.equals(selected)) {
-            return AudioEngineDescriptor.process(ADVANCED_VOICE, true, "", "Configurado desde Audio.");
+        AudioEngineAvailability availability = viewModel.documentAudioSourceAvailability().stream()
+                .filter(candidate -> candidate.engineId().equalsIgnoreCase(selected.id()))
+                .findFirst().orElse(null);
+        if (availability == null) return viewModel.audioEngineDescriptor();
+        java.util.Set<EngineFeature> features = new java.util.LinkedHashSet<>();
+        if (availability.supportsVoiceSamples()) features.add(EngineFeature.REFERENCE_VOICE);
+        if (availability.supportsTones()) features.add(EngineFeature.EXPRESSIVE_STYLE);
+        if (!availability.supportsVoiceSamples() && availability.realTts()) {
+            features.add(EngineFeature.PACKAGED_VOICE);
         }
-        if (MOCK_VOICE.equals(selected)) {
-            return AudioEngineDescriptor.mock();
-        }
-        return viewModel.audioEngineDescriptor();
+        return new AudioEngineDescriptor(availability.engineId(), availability.displayName(),
+                availability.mode(), availability.usableInDocument(), availability.realTts(), "",
+                availability.userMessage(), features, !availability.realTts());
+    }
+
+    private boolean sourceIs(String id) {
+        AudioSourceOption selected = sourceSelector.getValue();
+        return selected != null && id.equals(selected.id());
+    }
+
+    private void configureSourceSelectorCells() {
+        sourceSelector.setCellFactory(list -> new ListCell<>() {
+            @Override protected void updateItem(AudioSourceOption item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setTooltip(null);
+                    setDisable(false);
+                    return;
+                }
+                setText(item.accessibleLabel() + (item.selectable() ? "" : " — no disponible"));
+                setDisable(!item.selectable());
+                String detail = item.message() + (item.recommendedAction().isBlank()
+                        ? "" : " " + item.recommendedAction());
+                setTooltip(detail.isBlank() ? null : new Tooltip(detail));
+            }
+        });
+        sourceSelector.setButtonCell(new ListCell<>() {
+            @Override protected void updateItem(AudioSourceOption item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? null : item.accessibleLabel());
+            }
+        });
     }
 
     private void refreshToneChoicesForSelectedVoice(VoiceEngineCapabilityProfile profile, VoiceProfile selectedVoice) {
         VoiceLibrary library = viewModel.activeVoiceLibraryProperty().get();
         VoiceReferenceTone previousTone = toneSelector.getValue();
+        if (previousTone == null) {
+            previousTone = viewModel.configuredDocumentVoiceTone();
+        }
         List<VoiceReferenceTone> tones = registeredDocumentTones(library, selectedVoice, profile);
         toneSelector.getItems().setAll(tones);
         toneSelector.getSelectionModel().clearSelection();
@@ -478,8 +560,24 @@ public final class DocumentAudioNarrationPanel extends VBox {
         }
         return library.referenceSampleSetByVoiceId(voice.id())
                 .filter(sampleSet -> sampleSet.hasNeutral())
-                .map(sampleSet -> neutralFirst(sampleSet.registeredTones()))
+                .map(sampleSet -> neutralFirst(sampleSet.registeredTones()).stream()
+                        .filter(tone -> sampleSet.sampleFor(tone)
+                                .filter(this::referenceSampleAvailable).isPresent())
+                        .toList())
                 .orElse(List.of());
+    }
+
+    private boolean referenceSampleAvailable(
+            com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceReferenceSample sample) {
+        try {
+            var roots = viewModel.runtimeWorkspace();
+            new VoiceReferenceSamplePathResolver(roots.installationRoot(), roots.runtimeRoot())
+                    .resolve(viewModel.currentProjectDirectory().orElse(roots.runtimeRoot()), sample,
+                            "muestra de tono");
+            return true;
+        } catch (IOException | RuntimeException unavailable) {
+            return false;
+        }
     }
 
     private static List<VoiceReferenceTone> neutralFirst(List<VoiceReferenceTone> registeredTones) {
@@ -499,27 +597,27 @@ public final class DocumentAudioNarrationPanel extends VBox {
         if (voice == null || profile == null) {
             return false;
         }
-        if (profile.coquiXttsMode()) {
+        if (profile.advancedAiMode()) {
             if (usesDefaultEngineVoice(voice)
                     || usesAdvancedPredesignedNeutral(voice)
                     || OfficialAdvancedVoicePresetCatalog.isOfficialPreset(voice)) {
                 return true;
             }
             return library != null
-                    && voice.engineType() != VoiceEngineType.PIPER
+                    && profile.supportsVoiceProfile(voice)
                     && library.referenceSampleSetByVoiceId(voice.id()).filter(sampleSet -> sampleSet.hasNeutral()).isPresent();
         }
         return true;
     }
 
     private static String emptyVoiceNotice(VoiceEngineCapabilityProfile profile) {
-        if (profile.coquiXttsMode()) {
-            return "Registra una voz con muestra Neutral o restaura la biblioteca para recuperar el Narrador predeterminado. Documento solo muestra voces realmente usables.";
+        if (profile.advancedAiMode()) {
+            return "Registra una voz con muestra Neutral o restaura la biblioteca para recuperar el Narrador predeterminado. Las voces no listas permanecen visibles con su motivo.";
         }
-        if (profile.piperMode()) {
+        if (profile.simpleLocalMode()) {
             return "No hay una voz local simple disponible. Prepárala desde Configuración o Voces.";
         }
-        if (profile.mockMode()) {
+        if (profile.diagnosticMode()) {
             return "No hay una voz de prueba disponible. Revisa la biblioteca de voces inicial.";
         }
         return "No hay voces disponibles para el motor activo.";
@@ -538,18 +636,7 @@ public final class DocumentAudioNarrationPanel extends VBox {
         if (voice == null) {
             return false;
         }
-        if (profile.piperMode()) {
-            return voice.engineType() == VoiceEngineType.PIPER
-                    || voice.engineType() == VoiceEngineType.LOCAL_TTS_PROCESS
-                    || voice.engineType() == VoiceEngineType.MOCK;
-        }
-        if (profile.coquiXttsMode()) {
-            return voice.engineType() != VoiceEngineType.PIPER;
-        }
-        if (profile.mockMode()) {
-            return voice.engineType() == VoiceEngineType.MOCK;
-        }
-        return true;
+        return profile.supportsVoiceProfile(voice);
     }
 
     private VBox computerAudioOptions() {
@@ -572,7 +659,7 @@ public final class DocumentAudioNarrationPanel extends VBox {
     }
 
     private void chooseAudioFromComputer() {
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle("Elegir audio del computador");
         chooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("Audio compatible (*.wav, *.mp3, *.m4a, *.flac, *.ogg)", "*.wav", "*.mp3", "*.m4a", "*.flac", "*.ogg"),
@@ -590,7 +677,7 @@ public final class DocumentAudioNarrationPanel extends VBox {
     }
 
     private void extractAudioFromVideo() {
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle("Extraer audio de video");
         chooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("Video compatible (*.mp4, *.mov, *.mkv, *.webm)", "*.mp4", "*.mov", "*.mkv", "*.webm"),
@@ -635,5 +722,44 @@ public final class DocumentAudioNarrationPanel extends VBox {
             String blockId = viewModel.selectedDocumentBlockIdProperty().get();
             return blockId == null || blockId.isBlank();
         }, viewModel.selectedDocumentBlockIdProperty()));
+    }
+
+    private void bindToSelectionAndUsableVoice(Control control) {
+        control.disableProperty().bind(Bindings.createBooleanBinding(() -> {
+            String blockId = viewModel.selectedDocumentBlockIdProperty().get();
+            VoiceAssignmentOption voice = voiceSelector.getValue();
+            return blockId == null || blockId.isBlank() || voice == null || !voice.selectable();
+        }, viewModel.selectedDocumentBlockIdProperty(), voiceSelector.valueProperty()));
+    }
+
+    private VoiceProfile selectedVoiceProfile() {
+        return voiceProfile(voiceSelector.getValue());
+    }
+
+    private VoiceProfile voiceProfile(VoiceAssignmentOption option) {
+        VoiceLibrary library = viewModel.activeVoiceLibraryProperty().get();
+        return library == null || option == null
+                ? null
+                : library.voiceById(option.voiceId()).orElse(null);
+    }
+
+    private static String voiceStatus(VoiceAssignmentOption option) {
+        if (option == null) {
+            return "Selecciona una voz disponible.";
+        }
+        return option.status() + ". " + option.detail();
+    }
+
+    private String appliedVoiceStatus() {
+        String voiceId = viewModel.configuredVoiceProfileId();
+        VoiceLibrary library = viewModel.activeVoiceLibraryProperty().get();
+        String displayName = library == null ? voiceId : library.voiceById(voiceId)
+                .map(VoiceProfile::displayName).orElse(voiceId);
+        if (displayName == null || displayName.isBlank()) {
+            displayName = "Narrador predeterminado";
+        }
+        return "Aplicada: " + displayName + " · tono "
+                + VoiceToneLabelPolicy.comboLabel(
+                viewModel.configuredDocumentVoiceTone()) + ".";
     }
 }

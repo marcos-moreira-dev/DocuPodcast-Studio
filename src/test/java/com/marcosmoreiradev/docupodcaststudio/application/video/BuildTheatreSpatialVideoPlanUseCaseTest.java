@@ -31,6 +31,110 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class BuildTheatreSpatialVideoPlanUseCaseTest {
+    @Test
+    void stageDirectionUsesItsGeneratedAudioAndDoesNotAddSilentVisualDelay() throws Exception {
+        createImage("assets/mapas/mapa.png", Color.WHITE);
+        createImage("assets/fragmentos/uno.png", Color.ORANGE);
+        createImage("assets/personajes/capitan.png", Color.BLUE);
+        createAudio("jobs/JOB-001/audio/SEG-005.wav");
+        NarrationSegment stageDirection = new NarrationSegment(
+                "SEG-005", NarrationSegmentType.PARAGRAPH, "Acotación",
+                "Acotación: La plaza queda a oscuras y el narrador sale de escena.",
+                List.of("B0005"), "CHR-NARRATOR", "VOC-NARRATOR", "STY-NEUTRAL",
+                Map.of("theatreStageDirection", "true"));
+
+        SimpleVideoPlan plan = new BuildTheatreSpatialVideoPlanUseCase().build(
+                project("IMG-MAP"), script(List.of(stageDirection)), List.of(job()), tempDir,
+                new SimpleVideoExportSettings(SimpleVideoResolutionPreset.HD_720, 30, 5.0, false, true,
+                        com.marcosmoreiradev.docupodcaststudio.application.compute.ComputeDevicePolicy.AUTO,
+                        com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy.CPU_X264),
+                "fragments");
+
+        SimpleVideoFrame frame = plan.frames().getFirst();
+        assertEquals("jobs/JOB-001/audio/SEG-005.wav", frame.audioRelativePath());
+        assertTrue(frame.audioReady());
+        assertFalse(frame.silentVisual());
+        assertEquals(0.25, frame.silenceAfterSeconds(), 0.0001);
+        assertEquals(2.25, frame.frameDurationSeconds(), 0.0001);
+        BufferedImage rendered = ImageIO.read(tempDir.resolve(frame.imageRelativePath()).toFile());
+        Color formerCompanionArea = new Color(rendered.getRGB(rendered.getWidth() / 4, rendered.getHeight() / 2));
+        assertTrue(isWhiteish(formerCompanionArea),
+                "Una acotación no debe mostrar una tarjeta de personaje; el mapa debe ocupar el ancho disponible.");
+    }
+
+    @Test
+    void stageDirectionWithoutAudioGetsEnoughSilentReadingTime() throws Exception {
+        createImage("assets/mapas/mapa.png", Color.WHITE);
+        createImage("assets/fragmentos/uno.png", Color.ORANGE);
+        createImage("assets/personajes/capitan.png", Color.BLUE);
+        String text = "Acotación: " + "La escena cambia lentamente mientras todos observan el nuevo espacio. ".repeat(5);
+        NarrationSegment stageDirection = new NarrationSegment(
+                "SEG-005", NarrationSegmentType.PARAGRAPH, "Acotación", text,
+                List.of("B0005"), "CHR-NARRATOR", "VOC-NARRATOR", "STY-NEUTRAL",
+                Map.of("theatreStageDirection", "true"));
+
+        SimpleVideoPlan plan = new BuildTheatreSpatialVideoPlanUseCase().build(
+                project("IMG-MAP"), script(List.of(stageDirection)), List.of(), tempDir,
+                new SimpleVideoExportSettings(SimpleVideoResolutionPreset.HD_720, 30, 3.0, false, true,
+                        com.marcosmoreiradev.docupodcaststudio.application.compute.ComputeDevicePolicy.AUTO,
+                        com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy.CPU_X264),
+                "fragments");
+
+        assertTrue(plan.frames().stream().allMatch(SimpleVideoFrame::silentVisual));
+        assertTrue(plan.totalDurationSeconds() > 10.0);
+    }
+
+    @Test void sceneryExportWorksWithoutSpatialMapAndKeepsAudioDuration() throws Exception {
+        createImage("assets/personajes/capitan.png", Color.BLUE);
+        createAudio("jobs/JOB-001/audio/SEG-005.wav");
+        SimpleVideoPlan plan = new BuildTheatreSpatialVideoPlanUseCase().build(project("MISSING-MAP"), script(),
+                List.of(job()),tempDir,SimpleVideoExportSettings.defaults(),"scenery");
+        var frame=plan.frames().getFirst();
+        org.junit.jupiter.api.Assertions.assertFalse(frame.visualParts().isEmpty());
+        assertEquals(frame.audioDurationSeconds()+frame.silenceAfterSeconds(),
+                frame.visualParts().stream().mapToDouble(SimpleVideoFrame.VisualPart::durationSeconds).sum(),0.001);
+    }
+
+    @Test
+    void sceneryCaptionUsesAndFitsTheWholeInterventionWhenAudioWasSplitIntoChunks() throws Exception {
+        createImage("assets/personajes/capitan.png", Color.BLUE);
+        createAudio("jobs/JOB-001/audio/SEG-005A.wav");
+        createAudio("jobs/JOB-001/audio/SEG-005B.wav");
+        String first = "Acotación: " + "La plaza cambia lentamente mientras el pueblo observa. ".repeat(22);
+        String second = "El carpintero termina su trabajo y el narrador permanece a un costado. ".repeat(22);
+        NarrationSegment firstSegment = new NarrationSegment(
+                "SEG-005A", NarrationSegmentType.PARAGRAPH, "Acotación", first,
+                List.of("B0005"), "CHR-NARRATOR", "VOC-NARRATOR", "STY-NEUTRAL",
+                Map.of("theatreStageDirection", "true"));
+        NarrationSegment secondSegment = new NarrationSegment(
+                "SEG-005B", NarrationSegmentType.PARAGRAPH, "Acotación", second,
+                List.of("B0005"), "CHR-NARRATOR", "VOC-NARRATOR", "STY-NEUTRAL",
+                Map.of("theatreStageDirection", "true"));
+        AudioJobSnapshot splitJob = new AudioJobSnapshot("JOB-001", "Demo", AudioJobState.COMPLETED,
+                AudioGenerationStage.EXPORT_READY, 2, 2, 0, 1.0, "", "", 0,
+                "OK", "jobs/JOB-001", "", "jobs/JOB-001/audio-manifest.json", List.of(
+                new AudioSegmentSnapshot("SEG-005A", first, AudioSegmentStatus.COMPLETED,
+                        "jobs/JOB-001/audio/SEG-005A.wav", 2.0, 1, ""),
+                new AudioSegmentSnapshot("SEG-005B", second, AudioSegmentStatus.COMPLETED,
+                        "jobs/JOB-001/audio/SEG-005B.wav", 2.0, 1, "")
+        ), Instant.now(), Instant.now());
+
+        SimpleVideoExportSettings settings = new SimpleVideoExportSettings(
+                SimpleVideoResolutionPreset.HD_720, 30, 0.5, false, true,
+                com.marcosmoreiradev.docupodcaststudio.application.compute.ComputeDevicePolicy.AUTO,
+                com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy.CPU_X264);
+        SimpleVideoPlan plan = new BuildTheatreSpatialVideoPlanUseCase().build(
+                project("MISSING-MAP"), script(List.of(firstSegment, secondSegment)), List.of(splitJob), tempDir,
+                settings, "scenery");
+
+        String complete = (first.strip() + " " + second.strip()).strip();
+        int expectedPages = BuildTheatreSpatialVideoPlanUseCase.sceneryCaptionPages(complete, 1280, 720).size();
+        assertTrue(expectedPages > 1, "La prueba debe exigir varias páginas para la intervención completa.");
+        assertEquals(2, plan.frameCount());
+        assertTrue(plan.frames().stream().allMatch(frame -> frame.narrationPreview().equals(complete)));
+        assertTrue(plan.frames().stream().allMatch(frame -> frame.visualParts().size() == expectedPages));
+    }
+
     @TempDir
     Path tempDir;
 

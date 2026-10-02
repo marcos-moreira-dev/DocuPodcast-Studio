@@ -28,7 +28,9 @@ public final class VoiceCapabilityTestSynthesisGateway implements VoiceTestSynth
         OperationalSettings settings = loadSettings.load();
         EngineId selected = SelectedMediaEngines.from(settings).voice();
         VoiceSynthesisUnit unit = new VoiceSynthesisUnit(request.segmentId(), request.phrase(),
-                request.voiceProfileId(), "", request.referenceSampleFile(), request.outputFile(), Map.of("purpose", "voice-test"));
+                request.voiceProfileId(), request.performanceStyleId(), request.referenceSampleFile(),
+                request.outputFile(), Map.of("purpose", "voice-test",
+                "styleId", request.performanceStyleId()));
         ExecutionContext context = new ExecutionContext("voice-test-" + request.segmentId(), CancellationToken.NONE,
                 ProgressSink.NONE, new ExecutionPolicy(Duration.ofSeconds(settings.tts().timeoutSeconds()),
                 settings.tts().maxRetries() + 1), ResourceLease.NONE);

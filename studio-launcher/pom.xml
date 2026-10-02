@@ -8,6 +8,18 @@
     <properties>
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <slf4j.version>2.0.17</slf4j.version>
+        <logback.version>1.5.18</logback.version>
+        <junit.version>5.10.2</junit.version>
+        <lecturestudio.stylus.version>0.3.0</lecturestudio.stylus.version>
+        <docupodcast.app.heap>-Xmx2048m</docupodcast.app.heap>
+        <docupodcast.app.root>${maven.multiModuleProjectDirectory}</docupodcast.app.root>
+        <docupodcast.runtime.root>${maven.multiModuleProjectDirectory}</docupodcast.runtime.root>
+        <docupodcast.launch.smoke>false</docupodcast.launch.smoke>
+        <docupodcast.ink.inputDiagnostics>false</docupodcast.ink.inputDiagnostics>
+        <docupodcast.ink.renderDiagnostics>false</docupodcast.ink.renderDiagnostics>
+        <lecturestudio.stylus.native.jar>target/native/stylus-${lecturestudio.stylus.version}-windows-x86_64.jar</lecturestudio.stylus.native.jar>
     </properties>
     <dependencies>
         <dependency>
@@ -26,10 +38,20 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.lecturestudio.stylus</groupId>
+            <artifactId>stylus</artifactId>
+            <version>${lecturestudio.stylus.version}</version>
+            <classifier>windows-x86_64</classifier>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-graphics</artifactId>
             <version>21.0.2</version>
         </dependency>
+        <dependency><groupId>org.slf4j</groupId><artifactId>slf4j-api</artifactId><version>${slf4j.version}</version></dependency>
+        <dependency><groupId>ch.qos.logback</groupId><artifactId>logback-classic</artifactId><version>${logback.version}</version><scope>runtime</scope></dependency>
+        <dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><version>${junit.version}</version><scope>test</scope></dependency>
     </dependencies>
     <build>
         <plugins>
@@ -45,7 +67,54 @@
                 <version>0.0.8</version>
                 <configuration>
                     <mainClass>com.marcosmoreiradev.docupodcaststudio.launcher/com.marcosmoreiradev.docupodcaststudio.launcher.StudioLauncher</mainClass>
+                    <workingDirectory>${project.basedir}</workingDirectory>
+                    <options>
+                        <option>${docupodcast.app.heap}</option>
+                        <option>-Dfile.encoding=UTF-8</option>
+                        <option>--patch-module</option>
+                        <option>stylus=${lecturestudio.stylus.native.jar}</option>
+                        <option>-Ddocupodcast.launch.smoke=${docupodcast.launch.smoke}</option>
+                        <option>-Ddocupodcast.ink.inputDiagnostics=${docupodcast.ink.inputDiagnostics}</option>
+                        <option>-Ddocupodcast.ink.renderDiagnostics=${docupodcast.ink.renderDiagnostics}</option>
+                    </options>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+                <configuration>
+                    <useModulePath>false</useModulePath>
+                    <systemPropertyVariables>
+                        <!-- Composition tests create HTTP clients without entering the launcher. -->
+                        <jdk.net.unixdomain.tmpdir>${project.build.directory}</jdk.net.unixdomain.tmpdir>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.8.1</version>
+                <executions>
+                    <execution>
+                        <id>copy-stylus-native</id>
+                        <phase>process-resources</phase>
+                        <goals><goal>copy</goal></goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>org.lecturestudio.stylus</groupId>
+                                    <artifactId>stylus</artifactId>
+                                    <version>${lecturestudio.stylus.version}</version>
+                                    <classifier>windows-x86_64</classifier>
+                                    <type>jar</type>
+                                    <outputDirectory>${project.build.directory}/native</outputDirectory>
+                                    <destFileName>stylus-${lecturestudio.stylus.version}-windows-x86_64.jar</destFileName>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

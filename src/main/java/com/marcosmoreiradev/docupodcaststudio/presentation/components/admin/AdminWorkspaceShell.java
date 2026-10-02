@@ -1,5 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.components.admin;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls;
 import javafx.scene.Node;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.BorderPane;
@@ -15,7 +16,7 @@ public class AdminWorkspaceShell<M> extends BorderPane {
         setLeft(navigation);
         moduleHost.getStyleClass().add("voice-module-content");
         VBox.setVgrow(moduleHost, Priority.ALWAYS);
-        ScrollPane scroll = new ScrollPane(moduleHost);
+        ScrollPane scroll = StudioViewportControls.scrollPane(moduleHost);
         scroll.setFitToWidth(true);
         scroll.setAccessibleText("Contenido del módulo administrativo seleccionado");
         scroll.getStyleClass().add("voice-library-scroll");

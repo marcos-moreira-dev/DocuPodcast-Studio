@@ -32,15 +32,20 @@ public final class IntervencionCatalogo {
     private static List<IntervencionInfo> intervencionesDesdeScript(ReadableDocument document, NarrationScriptDocument script) {
         ArrayList<IntervencionInfo> aliases = new ArrayList<>();
         Map<String, String> blockTextById = new LinkedHashMap<>();
+        Map<String, String> blockInterventionIdById = new LinkedHashMap<>();
         for (DocumentBlock block : document.blocks()) {
             if (block != null && block.id() != null && !block.id().isBlank()) {
                 blockTextById.put(block.id(), block.text());
+                String declaredId = block.metadata().getOrDefault("theatreGrammarInterventionId", "");
+                if (!declaredId.isBlank()) {
+                    blockInterventionIdById.put(block.id(), declaredId);
+                }
             }
         }
         Set<String> seenBlocks = new LinkedHashSet<>();
         int index = 1;
         for (NarrationSegment segment : script.segments()) {
-            if (segment == null || !segment.narratable()) {
+            if (segment == null || (!segment.narratable() && !stageDirection(segment))) {
                 continue;
             }
             String blockId = segment.sourceBlockIds().stream()
@@ -48,13 +53,19 @@ public final class IntervencionCatalogo {
                     .findFirst()
                     .orElse("");
             String cueText = blockTextById.getOrDefault(blockId, segment.narrationText());
-            if (!esCueTeatral(cueText)) {
+            String declaredId = canonicalInterventionId(
+                    blockId,
+                    blockInterventionIdById.getOrDefault(blockId, ""),
+                    segment.metadata().getOrDefault("theatreGrammarInterventionId", ""));
+            if (declaredId.isBlank() && !esCueTeatral(cueText)) {
                 continue;
             }
             if (blockId.isBlank() || !seenBlocks.add(blockId)) {
                 continue;
             }
-            aliases.add(new IntervencionInfo("INTERVENCION-" + index, "Intervencion " + index, blockId, preview(cueText), fullText(cueText)));
+            aliases.add(new IntervencionInfo(declaredId.isBlank() ? "INTERVENCION-" + index : declaredId,
+                    "Intervencion " + index, blockId, preview(cueText), fullText(cueText),
+                    stageDirection(segment)));
             index++;
         }
         return List.copyOf(aliases);
@@ -64,13 +75,41 @@ public final class IntervencionCatalogo {
         ArrayList<IntervencionInfo> aliases = new ArrayList<>();
         int index = 1;
         for (DocumentBlock block : document.blocks()) {
-            if (block == null || !block.narratable() || !esCueTeatral(block.text())) {
+            if (block == null || (!block.narratable() && !stageDirection(block))) {
                 continue;
             }
-            aliases.add(new IntervencionInfo("INTERVENCION-" + index, "Intervencion " + index, block.id(), preview(block.text()), fullText(block.text())));
+            String declaredId = canonicalInterventionId(
+                    block.id(),
+                    block.metadata().getOrDefault("theatreGrammarInterventionId", ""),
+                    "");
+            if (declaredId.isBlank() && !esCueTeatral(block.text())) continue;
+            aliases.add(new IntervencionInfo(declaredId.isBlank() ? "INTERVENCION-" + index : declaredId,
+                    "Intervencion " + index, block.id(), preview(block.text()), fullText(block.text()),
+                    stageDirection(block)));
             index++;
         }
         return List.copyOf(aliases);
+    }
+
+    /**
+     * Keeps the document block as the stable identity of a theatrical intervention.
+     * Narration scripts are derived artifacts and may temporarily retain stale grammar
+     * metadata after the canonical theatre Markdown is refreshed.
+     */
+    static String canonicalInterventionId(String blockId, String blockDeclaredId, String scriptDeclaredId) {
+        String normalizedBlockId = blockId == null ? "" : blockId.strip();
+        String prefix = "B-INTERVENCION-";
+        if (normalizedBlockId.regionMatches(true, 0, prefix, 0, prefix.length())) {
+            String suffix = normalizedBlockId.substring(prefix.length()).strip();
+            if (!suffix.isBlank() && suffix.chars().allMatch(Character::isDigit)) {
+                return "INTERVENCION-" + suffix;
+            }
+        }
+        String blockValue = blockDeclaredId == null ? "" : blockDeclaredId.strip();
+        if (!blockValue.isBlank()) {
+            return blockValue;
+        }
+        return scriptDeclaredId == null ? "" : scriptDeclaredId.strip();
     }
 
     static boolean esCueTeatral(String text) {
@@ -119,6 +158,21 @@ public final class IntervencionCatalogo {
         return text == null ? "" : text.strip();
     }
 
-    public record IntervencionInfo(String alias, String displayName, String blockId, String preview, String fullText) {
+    private static boolean stageDirection(NarrationSegment segment) {
+        return segment != null && Boolean.parseBoolean(
+                segment.metadata().getOrDefault("theatreStageDirection", "false"));
+    }
+
+    private static boolean stageDirection(DocumentBlock block) {
+        return block != null && Boolean.parseBoolean(
+                block.metadata().getOrDefault("theatreStageDirection", "false"));
+    }
+
+    public record IntervencionInfo(String alias, String displayName, String blockId,
+                                   String preview, String fullText, boolean stageDirection) {
+        public IntervencionInfo(String alias, String displayName, String blockId,
+                                String preview, String fullText) {
+            this(alias, displayName, blockId, preview, fullText, false);
+        }
     }
 }

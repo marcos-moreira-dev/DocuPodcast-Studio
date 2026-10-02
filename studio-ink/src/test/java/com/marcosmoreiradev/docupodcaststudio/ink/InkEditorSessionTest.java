@@ -1,7 +1,8 @@
 package com.marcosmoreiradev.docupodcaststudio.ink;
 
 import com.marcosmoreiradev.docupodcaststudio.ink.input.*;
-import javafx.scene.Group;
+import com.marcosmoreiradev.docupodcaststudio.ink.canvas.InkCanvasSurface;
+import com.marcosmoreiradev.docupodcaststudio.ink.canvas.InkCanvasViewport;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -17,20 +18,27 @@ final class InkEditorSessionTest {
     @TempDir Path tempDir;
 
     @Test
-    void normalizesCoordinatesAndPreservesPressure() {
+    void growingViewportDoesNotClampToTheProfileInitialWidthAndPreservesPressure() {
         FakeProvider provider = new FakeProvider();
         AtomicReference<InkInputSample> received = new AtomicReference<>();
-        try (InkEditorSession<String> session = session(provider, new AtomicReference<>("a"))) {
-            session.coordinateTransform(sample -> new InkInputSample(sample.x() * 2, sample.y() - 20,
+        DrawingProfile profile = new DrawingProfile("growing", "Growing", ViewportMode.GROWING,
+                100, 80, InkInputPolicy.MOUSE_AND_NATIVE, List.of(DrawingToolId.PEN), 2, true,
+                new DrawingExportProfile(1, false, true));
+        InkCanvasSurface surface = new InkCanvasSurface();
+        surface.ensureLogicalSize(2048, 1024);
+        try (InkEditorSession<String> session = new InkEditorSession<>(profile, provider,
+                () -> "a", ignored -> {}, (state, destination, exportProfile) -> destination)) {
+            session.coordinateTransform(sample -> new InkInputSample(sample.x() * 2, sample.y() + 20,
                     sample.nanos(), sample.pressure(), sample.cursor(), sample.primaryButtonDown(),
                     sample.eraserButton(), sample.rawPressure(), sample.inputSource()));
-            session.attach(new Group(), listener(received));
-            provider.listener.onStrokeMove(new InkInputSample(80, 10, 1, .42,
+            session.attach(new InkCanvasViewport(surface, profile), listener(received));
+            provider.listener.onStrokeStart(new InkInputSample(800, 10, 1, .42,
                     InkInputCursor.PEN, true, false, .73, "stylus"));
-            assertEquals(100, received.get().x());
-            assertEquals(0, received.get().y());
+            assertEquals(1600, received.get().x());
+            assertEquals(30, received.get().y());
             assertEquals(.42, received.get().pressure());
             assertEquals(.73, received.get().rawPressure());
+            assertTrue(session.inputStatus().nativeActive());
         }
     }
 

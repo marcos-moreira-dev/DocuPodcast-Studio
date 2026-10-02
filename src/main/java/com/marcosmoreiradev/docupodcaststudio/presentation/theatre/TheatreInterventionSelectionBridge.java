@@ -56,7 +56,7 @@ final class TheatreInterventionSelectionBridge {
         }
         Optional<TheatreProjectLayer.Scene> focused = focusedScene(focusedSceneId, scenes);
         if (focused.isPresent()) {
-            return IntervencionNumberingScene.intervencionesParaEscena(
+            String focusedAlias = IntervencionNumberingScene.intervencionesParaEscena(
                             globalAliases,
                             scenes == null ? List.of() : scenes,
                             boundaryStore,
@@ -66,7 +66,13 @@ final class TheatreInterventionSelectionBridge {
                     .map(IntervencionCatalogo.IntervencionInfo::alias)
                     .findFirst()
                     .orElse("");
+            if (!focusedAlias.isBlank()) {
+                return focusedAlias;
+            }
         }
+        // A document click may cross a scene boundary before the scene fold receives
+        // focus. Fall back to the canonical global catalog so the first stage
+        // direction of the next scene is still selected instead of being discarded.
         return globalAliases.stream()
                 .filter(alias -> normalizedBlock.equals(alias.blockId()))
                 .map(IntervencionCatalogo.IntervencionInfo::alias)
@@ -78,15 +84,39 @@ final class TheatreInterventionSelectionBridge {
             DocuPodcastShellViewModel viewModel,
             StringProperty selectedIntervencion,
             IntervencionBoundaryStore boundaryStore) {
+        String blockId = viewModel.selectedDocumentBlockIdProperty().get();
+        List<IntervencionCatalogo.IntervencionInfo> aliases = IntervencionCatalogo.intervenciones(
+                viewModel.currentDocumentProperty().get(), viewModel.currentScriptProperty().get());
+        sceneForBlock(blockId, aliases, viewModel.theatreScenes(), boundaryStore)
+                .map(TheatreProjectLayer.Scene::id)
+                .filter(sceneId -> !sceneId.equals(viewModel.focusedTheatreSceneIdProperty().get()))
+                .ifPresent(viewModel::focusTheatreScene);
         String alias = aliasForBlock(
-                viewModel.selectedDocumentBlockIdProperty().get(),
+                blockId,
                 viewModel.focusedTheatreSceneIdProperty().get(),
-                IntervencionCatalogo.intervenciones(viewModel.currentDocumentProperty().get(), viewModel.currentScriptProperty().get()),
+                aliases,
                 viewModel.theatreScenes(),
                 boundaryStore);
         if (!alias.equals(selectedIntervencion.get())) {
             selectedIntervencion.set(alias);
         }
+    }
+
+    static Optional<TheatreProjectLayer.Scene> sceneForBlock(
+            String blockId,
+            List<IntervencionCatalogo.IntervencionInfo> globalAliases,
+            List<TheatreProjectLayer.Scene> scenes,
+            IntervencionBoundaryStore boundaryStore) {
+        String normalized = blockId == null ? "" : blockId.strip();
+        if (normalized.isBlank() || scenes == null || boundaryStore == null) {
+            return Optional.empty();
+        }
+        return scenes.stream()
+                .filter(scene -> IntervencionNumberingScene.intervencionesParaEscena(
+                                globalAliases, scenes, boundaryStore, scene)
+                        .stream()
+                        .anyMatch(alias -> normalized.equals(alias.blockId())))
+                .findFirst();
     }
 
     private static Optional<TheatreProjectLayer.Scene> focusedScene(

@@ -385,7 +385,7 @@ public final class TheatreDemoManifestWorkflow {
             }
         }
         for (InterventionPlan intervention : plan.interventions()) {
-            if (!characters.contains(normalizeTheatreName(intervention.characterName()))) {
+            if (!intervention.stageDirection() && !characters.contains(normalizeTheatreName(intervention.characterName()))) {
                 errors.add("Personaje desconocido: " + intervention.characterName());
             }
             validatePosition(errors, intervention.origin(), "origen de " + intervention.characterName());

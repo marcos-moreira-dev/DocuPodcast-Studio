@@ -38,13 +38,15 @@ import com.marcosmoreiradev.docupodcaststudio.application.render.BuildRenderUnit
 import com.marcosmoreiradev.docupodcaststudio.application.assets.RemoveProjectAssetUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.ImportDocumentUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.BuildDocumentOutlineUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.BuildDocumentContentProjectionUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.BuildPdfEnhancedOutlineUseCase;
-import com.marcosmoreiradev.docupodcaststudio.application.document.BuildPdfNativeTextLayerUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.BuildPdfOcrTextLayerUseCase;
-import com.marcosmoreiradev.docupodcaststudio.application.document.BuildPdfResolvedTextLayerUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.BuildPdfVisualDocumentUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.BuildPdfVisualReadingProjectionUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.ResolvePdfPageMapUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.CapturePdfVisualRegionUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.MaterializePdfDocumentContentAssetUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.CapturePdfAnalysisVisualEvidenceUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.CreatePdfFromImageFolderUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.DocumentSourceImportService;
 import com.marcosmoreiradev.docupodcaststudio.application.document.UpdateDocumentBlockTypeUseCase;
@@ -52,12 +54,48 @@ import com.marcosmoreiradev.docupodcaststudio.application.document.MaterializeIm
 import com.marcosmoreiradev.docupodcaststudio.application.document.RefreshSourceDocumentUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.ReconcileTextAnchorsUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.RenderPdfVisualPageUseCase;
-import com.marcosmoreiradev.docupodcaststudio.application.document.ResolvePdfNarratableDocumentUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.SearchPdfTextUseCase;
+import com.marcosmoreiradev.docupodcaststudio.infrastructure.document.JsonPreparedPdfDocumentRepository;
+import com.marcosmoreiradev.docupodcaststudio.infrastructure.document.BlockPdfSemanticPageResponseParser;
+import com.marcosmoreiradev.docupodcaststudio.infrastructure.document.PdfBoxNativeTextEvidenceExtractor;
+import com.marcosmoreiradev.docupodcaststudio.infrastructure.document.JsonPdfPageMapRepository;
+import com.marcosmoreiradev.docupodcaststudio.infrastructure.document.JsonPdfOperationAttemptRepository;
+import com.marcosmoreiradev.docupodcaststudio.infrastructure.document.PopplerPdfNativePageExtractor;
 import com.marcosmoreiradev.docupodcaststudio.application.document.TesseractRuntimeLocator;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PrepareDocumentListeningUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PrepareListeningSessionUseCase;
-import com.marcosmoreiradev.docupodcaststudio.application.document.PrepareStudySourceCropsUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PreparePdfPageUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.AnalyzePdfPageSemanticallyUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.ReconcilePdfOperationAttemptsUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PdfPagePreparationScheduler;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PreparePdfScopeUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.ResolvePdfPreparationScopeUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.AnalyzePreparedPdfLayoutUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.DiagnosePreparedPdfWorkspaceUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PdfDerivedTreatmentRegistry;
+import com.marcosmoreiradev.docupodcaststudio.application.document.UpdatePdfDerivedTreatmentUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.GeneratePdfDerivedTreatmentUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.OpenPreparedPdfWorkspaceUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.CreatePreparedPdfSessionWorkspaceUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.ResolveDocumentSelectionUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.BuildPreparedPdfRegionContextUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.UpdatePreparedPdfRegionOverrideUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.LocatePdfAudioSourceUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.ListPdfDerivedTreatmentsUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.RunDocumentLocalAnalysisBatchUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.ResolveDocumentTechnicalElementsUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.BuildPdfReviewDashboardUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PdfProcessingCapabilityService;
+import com.marcosmoreiradev.docupodcaststudio.application.document.ReviewPdfTreatmentBatchUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PdfDerivedTreatmentEngineRegistry;
+import com.marcosmoreiradev.docupodcaststudio.application.document.RuleBasedSmallTableNarrationEngine;
+import com.marcosmoreiradev.docupodcaststudio.application.document.AcademicTableNarrationEngine;
+import com.marcosmoreiradev.docupodcaststudio.application.document.TransversalVisualPdfTreatmentEngine;
+import com.marcosmoreiradev.docupodcaststudio.application.document.TransversalContextCorrectionPdfTreatmentEngine;
+import com.marcosmoreiradev.docupodcaststudio.application.document.TransversalNarratabilityReviewPdfTreatmentEngine;
+import com.marcosmoreiradev.docupodcaststudio.application.document.TransversalMathPdfTreatmentEngine;
+import com.marcosmoreiradev.docupodcaststudio.application.document.TransversalTableExplanationPdfTreatmentEngine;
+import com.marcosmoreiradev.docupodcaststudio.application.document.TransversalPpTableStructurePdfTreatmentEngine;
 import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.BuildDocumentStudyProjectionUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.BuildDocumentStudyTextVideoPlanUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.BuildStudyProblemsProjectionUseCase;
@@ -78,6 +116,7 @@ import com.marcosmoreiradev.docupodcaststudio.application.recording.StopAudioRec
 import com.marcosmoreiradev.docupodcaststudio.application.recording.CancelAudioRecordingUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.reading.BuildPreparedReadingProjectionUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.script.BuildNarrationScriptUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.script.BuildPreparedPdfNarrationUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.script.MaterializeNarrationScriptUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.script.UpdateNarrationSegmentTextUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.script.ValidateNarrationScriptUseCase;
@@ -109,6 +148,7 @@ import com.marcosmoreiradev.docupodcaststudio.application.services.AudioApplicat
 import com.marcosmoreiradev.docupodcaststudio.application.services.DocumentApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.application.services.DocumentStudyApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.application.export.ExportDiagnosticReportUseCase;
+import com.marcosmoreiradev.docupodcaststudio.infrastructure.observability.FileSupportBundleExporter;
 import com.marcosmoreiradev.docupodcaststudio.application.export.ExportPodcastAudioUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.export.ExportPodcastWavUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.export.ExportProjectBundleUseCase;
@@ -137,7 +177,6 @@ import com.marcosmoreiradev.docupodcaststudio.application.storyboard.BuildStoryb
 import com.marcosmoreiradev.docupodcaststudio.application.storyboard.BuildStoryboardFromImageLayersUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.visual.BuildVisualProductionProjectionUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.visual.BuildVisualPromptContextUseCase;
-import com.marcosmoreiradev.docupodcaststudio.application.visual.ComfyUiVisualEngineClient;
 import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualAssetTracePolicy;
 import com.marcosmoreiradev.docupodcaststudio.application.storyboard.ImportImageAssetUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.storyboard.MaterializeStoryboardUseCase;
@@ -161,9 +200,8 @@ import com.marcosmoreiradev.docupodcaststudio.application.compute.ProcessXttsCud
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.compute.WindowsComputeDeviceDiscoveryGateway;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.document.PdfBoxRenderEngine;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.document.PdfBoxImageFolderPdfBuilder;
-import com.marcosmoreiradev.docupodcaststudio.infrastructure.document.PdfSourceCropRenderer;
-import com.marcosmoreiradev.docupodcaststudio.infrastructure.document.TesseractPdfOcrEngine;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.document.PdfBookmarkOutlineHintProvider;
+import com.marcosmoreiradev.docupodcaststudio.infrastructure.document.TesseractPdfOcrEngine;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.audio.WavAudioDurationProbe;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.process.DefaultExternalProcessRunner;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.playback.JavaSoundSegmentAudioPlayer;
@@ -174,12 +212,7 @@ import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.InspectPipe
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.InspectXttsSetupReadinessUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.InspectXttsSmokeTestUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.InspectLocalTheatreImageSetupReadinessUseCase;
-import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.InspectLocalTheatreImageEngineUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.RunXttsReadinessSmokeUseCase;
-import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.RunLocalTheatreImageSmokeUseCase;
-import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.LocalVisualImageEngineManager;
-import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.StartLocalTheatreImageEngineUseCase;
-import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.StopLocalTheatreImageEngineUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.ConfirmXttsSmokePlaybackUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.DownloadXttsOfficialModelUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.DownloadPiperPortableRuntimeUseCase;
@@ -198,6 +231,7 @@ import com.marcosmoreiradev.docupodcaststudio.application.video.DownloadFfmpegPo
 import com.marcosmoreiradev.docupodcaststudio.application.video.BuildSimpleVideoPlanUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.video.EmbeddedFfmpegLocator;
 import com.marcosmoreiradev.docupodcaststudio.application.video.FfmpegRuntimeProbeUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.video.InspectFinalVideoRuntimeStatusUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.LoadOperationalSettingsUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.OperationalSettings;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.SaveOperationalSettingsUseCase;
@@ -205,6 +239,7 @@ import com.marcosmoreiradev.docupodcaststudio.application.settings.ValidateOpera
 import com.marcosmoreiradev.docupodcaststudio.application.runtime.AuditEngineArtifactsUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.runtime.BuildGuiSmokeChecklistUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.runtime.RuntimePathResolver;
+import com.marcosmoreiradev.docupodcaststudio.application.runtime.ApplicationRuntimeRoots;
 import com.marcosmoreiradev.docupodcaststudio.application.examples.ClasspathExampleProjectCatalog;
 import com.marcosmoreiradev.docupodcaststudio.application.examples.CreateExampleProjectUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.examples.InspectExampleProjectReadinessUseCase;
@@ -217,16 +252,27 @@ import java.util.function.Supplier;
 /** Wires the dependency bundles of each workspace without a DI framework. */
 public final class WorkspaceCompositionFactory {
     public WorkspaceApplicationServices create(InfrastructureServices infrastructure,
-                                               MediaCapabilityService mediaCapabilities) {
+                                               MediaCapabilityService mediaCapabilities,
+                                               Path applicationRoot) {
+        return create(infrastructure, mediaCapabilities, ApplicationRuntimeRoots.unified(applicationRoot));
+    }
+
+    public WorkspaceApplicationServices create(InfrastructureServices infrastructure,
+                                               MediaCapabilityService mediaCapabilities,
+                                               ApplicationRuntimeRoots runtimeRoots) {
         DefaultExternalProcessRunner processRunner = new DefaultExternalProcessRunner();
-        Path applicationRoot = RuntimePathResolver.defaultResolver().resolve().layout().applicationRoot();
+        ApplicationRuntimeRoots resolvedRoots = java.util.Objects.requireNonNull(runtimeRoots, "runtime roots");
+        Path resolvedApplicationRoot = resolvedRoots.runtimeRoot();
+        Path installationRoot = resolvedRoots.installationRoot();
         TesseractRuntimeLocator tesseractLocator = new TesseractRuntimeLocator();
         Supplier<String> tesseractCommand = () -> tesseractLocator
-                .locate(loadOperationalSettingsSafely(infrastructure), applicationRoot)
+                .locate(loadOperationalSettingsSafely(infrastructure), resolvedApplicationRoot)
                 .command();
         Supplier<OperationalSettings.OcrSettings> ocrSettings = () -> loadOperationalSettingsSafely(infrastructure).ocr();
         EmbeddedFfmpegLocator ffmpegLocator = new EmbeddedFfmpegLocator();
         FfmpegRuntimeProbeUseCase ffmpegProbe = new FfmpegRuntimeProbeUseCase(processRunner);
+        JsonPdfOperationAttemptRepository pdfOperationAttempts =
+                new JsonPdfOperationAttemptRepository();
         ProjectApplicationServices project = new ProjectApplicationServices(
                 new CreateProjectUseCase(),
                 new SaveProjectUseCase(infrastructure.projectRepository()),
@@ -237,6 +283,7 @@ public final class WorkspaceCompositionFactory {
                         infrastructure.narrationScriptWorkspaceRepository(),
                         infrastructure.storyboardWorkspaceRepository()),
                 new ValidateProjectWorkspaceIntegrityUseCase(),
+                new ReconcilePdfOperationAttemptsUseCase(pdfOperationAttempts),
                 new InspectProjectIntegrityUseCase(infrastructure.audioJobRepository()),
                 new ProjectRoundTripUseCase(
                         infrastructure.projectRepository(),
@@ -250,14 +297,89 @@ public final class WorkspaceCompositionFactory {
                 new RemoveProjectAssetUseCase()
         );
         ImportDocumentUseCase importDocument = new ImportDocumentUseCase(List.copyOf(infrastructure.documentImporters()));
-        DocumentSourceImportService documentSourceImport = new DocumentSourceImportService(importDocument);
         PdfBoxRenderEngine pdfRenderEngine = new PdfBoxRenderEngine();
-        BuildPdfNativeTextLayerUseCase buildPdfNativeTextLayer = new BuildPdfNativeTextLayerUseCase();
-        BuildDocumentOutlineUseCase buildDocumentOutline = new BuildDocumentOutlineUseCase(new PdfBookmarkOutlineHintProvider());
+        BuildDocumentOutlineUseCase buildDocumentOutline = new BuildDocumentOutlineUseCase();
+        TesseractPdfOcrEngine tesseractPdfOcrEngine =
+                new TesseractPdfOcrEngine(pdfRenderEngine, processRunner,
+                        tesseractCommand);
         BuildPdfOcrTextLayerUseCase buildPdfOcrTextLayer =
-                new BuildPdfOcrTextLayerUseCase(new TesseractPdfOcrEngine(pdfRenderEngine, processRunner, tesseractCommand));
-        BuildPdfResolvedTextLayerUseCase buildPdfResolvedTextLayer =
-                new BuildPdfResolvedTextLayerUseCase(buildPdfNativeTextLayer, buildPdfOcrTextLayer);
+                new BuildPdfOcrTextLayerUseCase(tesseractPdfOcrEngine);
+        JsonPreparedPdfDocumentRepository preparedPdfRepository = new JsonPreparedPdfDocumentRepository();
+        PdfProcessingCapabilityService pdfProcessingCapabilities =
+                new PdfProcessingCapabilityService(mediaCapabilities,
+                        () -> !tesseractCommand.get().isBlank());
+        ResolvePdfPageMapUseCase resolvePdfPageMap = ResolvePdfPageMapUseCase.fromSystemProperty(
+                preparedPdfRepository, new JsonPdfPageMapRepository());
+        CreatePreparedPdfSessionWorkspaceUseCase createPreparedPdfSessionWorkspace =
+                new CreatePreparedPdfSessionWorkspaceUseCase(
+                        preparedPdfRepository, new BuildPdfVisualDocumentUseCase(pdfRenderEngine));
+        DocumentSourceImportService documentSourceImport =
+                new DocumentSourceImportService(importDocument, createPreparedPdfSessionWorkspace);
+        OpenPreparedPdfWorkspaceUseCase openPreparedPdfWorkspace =
+                new OpenPreparedPdfWorkspaceUseCase(
+                        preparedPdfRepository, pdfOperationAttempts);
+        AnalyzePdfPageSemanticallyUseCase semanticPageReader =
+                new AnalyzePdfPageSemanticallyUseCase(
+                        pdfRenderEngine, mediaCapabilities,
+                        new BlockPdfSemanticPageResponseParser(),
+                        pdfOperationAttempts,
+                        new PdfBoxNativeTextEvidenceExtractor(),
+                        java.time.Duration.ofMinutes(20),
+                        com.marcosmoreiradev.docupodcaststudio.media.api
+                                .PdfVlmRuntimeProfile.fromSystem(),
+                        tesseractPdfOcrEngine);
+        PreparePdfPageUseCase preparePdfPage = new PreparePdfPageUseCase(
+                buildPdfOcrTextLayer, null, ocrSettings, preparedPdfRepository,
+                new PdfBoxNativeTextEvidenceExtractor(), semanticPageReader)
+                .withAlternateNativeExtractor(new PopplerPdfNativePageExtractor());
+        PdfPagePreparationScheduler pdfPagePreparationScheduler =
+                new PdfPagePreparationScheduler((request, priority) -> {
+                    if (!preparePdfPage.requiresOcrAdmission(request)) {
+                        return preparePdfPage.execute(request);
+                    }
+                    com.marcosmoreiradev.docupodcaststudio.media.api.ComputeJobPriority
+                            computePriority = priority
+                            == com.marcosmoreiradev.docupodcaststudio.application.document
+                            .PdfPreparationPriority.URGENT
+                            ? com.marcosmoreiradev.docupodcaststudio.media.api.ComputeJobPriority
+                            .INTERACTIVE_ANALYSIS
+                            : com.marcosmoreiradev.docupodcaststudio.media.api.ComputeJobPriority
+                            .BACKGROUND;
+                    var admission = new com.marcosmoreiradev.docupodcaststudio.media.api
+                            .ComputeAdmissionRequest(
+                            "pdf-page-" + request.workspace().sourceSha256()
+                                    + "-" + request.pageNumber(),
+                            "prepare-pdf-page-" + request.pageNumber(),
+                            computePriority,
+                            com.marcosmoreiradev.docupodcaststudio.media.api
+                                    .ComputeWorkloadKind.DOCUMENT_PREPARATION,
+                            com.marcosmoreiradev.docupodcaststudio.media.api
+                                    .ComputeResourceDemand.of(
+                                    com.marcosmoreiradev.docupodcaststudio.media.api
+                                            .ResourceId.CPU_HEAVY),
+                            request.cancellationToken()::cancelled);
+                    try (var ignored =
+                                 mediaCapabilities.resourceScheduler().acquire(admission)) {
+                        return preparePdfPage.execute(request);
+                    } catch (InterruptedException cancelled) {
+                        Thread.currentThread().interrupt();
+                        return new com.marcosmoreiradev.docupodcaststudio.application
+                                .document.PreparePdfPageResult(
+                                request.pageNumber(), null, false, true,
+                                java.util.List.of());
+                    }
+                });
+        ResolvePdfPreparationScopeUseCase resolvePdfPreparationScope =
+                new ResolvePdfPreparationScopeUseCase(preparedPdfRepository);
+        PreparePdfScopeUseCase preparePdfScope = new PreparePdfScopeUseCase(
+                resolvePdfPreparationScope, pdfPagePreparationScheduler);
+        CapturePdfVisualRegionUseCase capturePdfVisualRegion =
+                new CapturePdfVisualRegionUseCase(pdfRenderEngine);
+        MaterializePdfDocumentContentAssetUseCase materializePdfDocumentContentAsset =
+                new MaterializePdfDocumentContentAssetUseCase(capturePdfVisualRegion);
+        var materializeWordDocumentContentAsset =
+                new com.marcosmoreiradev.docupodcaststudio.application.document
+                        .MaterializeWordDocumentContentAssetUseCase();
         DocumentApplicationServices document = new DocumentApplicationServices(
                 importDocument,
                 documentSourceImport,
@@ -268,35 +390,76 @@ public final class WorkspaceCompositionFactory {
                 new PrepareDocumentListeningUseCase(),
                 new PrepareListeningSessionUseCase(),
                 buildDocumentOutline,
-                new BuildPdfEnhancedOutlineUseCase(buildDocumentOutline, buildPdfResolvedTextLayer),
-                buildPdfNativeTextLayer,
-                buildPdfResolvedTextLayer,
-                new BuildPdfVisualReadingProjectionUseCase(buildPdfNativeTextLayer),
+                new BuildDocumentContentProjectionUseCase(openPreparedPdfWorkspace),
+                new BuildPdfEnhancedOutlineUseCase(preparedPdfRepository,
+                        new PdfBookmarkOutlineHintProvider()),
+                new BuildPdfVisualReadingProjectionUseCase(preparedPdfRepository, resolvePdfPageMap),
                 buildPdfOcrTextLayer,
                 new BuildPdfVisualDocumentUseCase(pdfRenderEngine),
                 new RenderPdfVisualPageUseCase(pdfRenderEngine),
-                new SearchPdfTextUseCase(buildPdfResolvedTextLayer),
-                new ResolvePdfNarratableDocumentUseCase(buildPdfNativeTextLayer, buildPdfOcrTextLayer, null, ocrSettings),
-                new CapturePdfVisualRegionUseCase(pdfRenderEngine),
-                new CreatePdfFromImageFolderUseCase(new PdfBoxImageFolderPdfBuilder()),
-                new PrepareStudySourceCropsUseCase(new PdfSourceCropRenderer())
+                new SearchPdfTextUseCase(preparedPdfRepository),
+                openPreparedPdfWorkspace,
+                createPreparedPdfSessionWorkspace,
+                new ResolveDocumentSelectionUseCase(preparedPdfRepository),
+                new BuildPreparedPdfRegionContextUseCase(preparedPdfRepository),
+                new UpdatePreparedPdfRegionOverrideUseCase(preparedPdfRepository),
+                new LocatePdfAudioSourceUseCase(),
+                pdfPagePreparationScheduler,
+                resolvePdfPreparationScope,
+                preparePdfScope,
+                new AnalyzePreparedPdfLayoutUseCase(preparedPdfRepository, null),
+                PdfDerivedTreatmentRegistry.localDefaults(),
+                new GeneratePdfDerivedTreatmentUseCase(preparedPdfRepository,
+                        new PdfDerivedTreatmentEngineRegistry(
+                               java.util.List.of(
+                                       new RuleBasedSmallTableNarrationEngine(),
+                                       new AcademicTableNarrationEngine(),
+                                       new TransversalPpTableStructurePdfTreatmentEngine(
+                                               mediaCapabilities),
+                                       new TransversalTableExplanationPdfTreatmentEngine(
+                                               mediaCapabilities),
+                                        new TransversalMathPdfTreatmentEngine(mediaCapabilities),
+                                        new TransversalVisualPdfTreatmentEngine(mediaCapabilities),
+                                        new TransversalContextCorrectionPdfTreatmentEngine(
+                                                mediaCapabilities),
+                                         new TransversalNarratabilityReviewPdfTreatmentEngine(
+                                                 mediaCapabilities))),
+                        pdfOperationAttempts),
+                new RunDocumentLocalAnalysisBatchUseCase(mediaCapabilities),
+                new ResolveDocumentTechnicalElementsUseCase(preparedPdfRepository),
+                new UpdatePdfDerivedTreatmentUseCase(preparedPdfRepository),
+                new ListPdfDerivedTreatmentsUseCase(preparedPdfRepository),
+                new BuildPdfReviewDashboardUseCase(
+                        preparedPdfRepository, pdfOperationAttempts),
+                pdfProcessingCapabilities,
+                new ReviewPdfTreatmentBatchUseCase(preparedPdfRepository),
+                new DiagnosePreparedPdfWorkspaceUseCase(preparedPdfRepository),
+                new CapturePdfAnalysisVisualEvidenceUseCase(pdfRenderEngine),
+                materializePdfDocumentContentAsset,
+                materializeWordDocumentContentAsset,
+                new com.marcosmoreiradev.docupodcaststudio.application.document
+                        .PrepareWordSemanticImagesUseCase(
+                        mediaCapabilities, materializeWordDocumentContentAsset),
+                capturePdfVisualRegion,
+                new CreatePdfFromImageFolderUseCase(new PdfBoxImageFolderPdfBuilder())
         );
         ReadingProfileApplicationServices readingProfile = new ReadingProfileApplicationServices(
                 new CreateDefaultReadingProfileUseCase(),
                 new ApplyReadingProfileUseCase(),
                 new PreviewReadingProfileUseCase()
         );
-        BuildNarrationScriptUseCase internalReadingPayloadBuilder = new BuildNarrationScriptUseCase();
+        BuildNarrationScriptUseCase internalReadingPayloadBuilder =
+                new BuildNarrationScriptUseCase();
         ScriptApplicationServices script = new ScriptApplicationServices(
                 new BuildPreparedReadingProjectionUseCase(internalReadingPayloadBuilder),
                 internalReadingPayloadBuilder,
+                new BuildPreparedPdfNarrationUseCase(preparedPdfRepository, resolvePdfPageMap),
                 new ValidateNarrationScriptUseCase(),
                 new UpdateNarrationSegmentTextUseCase(),
                 new MaterializeNarrationScriptUseCase(infrastructure.narrationScriptWorkspaceRepository())
         );
-        ListAudioEngineAvailabilityUseCase listAudioEngineAvailability = new ListAudioEngineAvailabilityUseCase(
-                infrastructure.operationalSettingsRepository(),
-                applicationRoot);
+        ListAudioEngineAvailabilityUseCase listAudioEngineAvailability =
+                new ListAudioEngineAvailabilityUseCase(mediaCapabilities.platform());
         SubmitAudioGenerationJobUseCase submitAudio = new SubmitAudioGenerationJobUseCase(infrastructure.audioGenerationGateway());
         LoadPersistedAudioJobUseCase loadAudio = new LoadPersistedAudioJobUseCase(infrastructure.audioJobRepository());
         ManualAudioSegmentJobUseCase manualAudio = new ManualAudioSegmentJobUseCase(infrastructure.audioJobRepository(), new WavAudioDurationProbe());
@@ -358,7 +521,10 @@ public final class WorkspaceCompositionFactory {
                 new BuildVoiceToneRecordingPlanUseCase(),
                 new BuildVoiceAssignmentOptionsUseCase(voiceCapabilityPolicy),
                 new ResolveVoiceToneReferenceUseCase(),
-                new GenerateVoiceTestUseCase(voiceCapabilityPolicy, new ResolveVoiceToneReferenceUseCase(), infrastructure.voiceTestSynthesisGateway()),
+                new GenerateVoiceTestUseCase(voiceCapabilityPolicy, new ResolveVoiceToneReferenceUseCase(),
+                        infrastructure.voiceTestSynthesisGateway(),
+                        new com.marcosmoreiradev.docupodcaststudio.application.voice.VoiceReferenceSamplePathResolver(
+                                installationRoot, resolvedApplicationRoot)),
                 voiceCapabilityPolicy
         );
 
@@ -371,6 +537,7 @@ public final class WorkspaceCompositionFactory {
                         ffmpegProbe,
                         processRunner),
                 new ExportDiagnosticReportUseCase(),
+                new FileSupportBundleExporter(),
                 new ExportProjectBundleUseCase(infrastructure.projectBundleExporter()),
                 new InspectExportReadinessUseCase(),
                 new InspectFinalAudioExportReadinessUseCase(new ExportPodcastWavUseCase(), ffmpegLocator, ffmpegProbe),
@@ -415,14 +582,7 @@ public final class WorkspaceCompositionFactory {
                 new SubmitVideoRenderJobUseCase(infrastructure.videoRenderJobRepository()),
                 new CancelVideoRenderJobUseCase(infrastructure.videoRenderJobRepository())
         );
-        ComfyUiVisualEngineClient visualEngineClient = new ComfyUiVisualEngineClient(
-                java.net.http.HttpClient.newBuilder().connectTimeout(java.time.Duration.ofSeconds(4)).build());
         ValidateOperationalSettingsUseCase validateSettings = new ValidateOperationalSettingsUseCase();
-        LocalVisualImageEngineManager imageEngineManager = new LocalVisualImageEngineManager(
-                new InspectLocalTheatreImageSetupReadinessUseCase(),
-                processRunner,
-                visualEngineClient,
-                new WindowsComputeDeviceDiscoveryGateway(processRunner));
         SettingsApplicationServices settings = new SettingsApplicationServices(
                 new LoadOperationalSettingsUseCase(infrastructure.operationalSettingsRepository()),
                 new SaveOperationalSettingsUseCase(infrastructure.operationalSettingsRepository(), validateSettings),
@@ -449,6 +609,7 @@ public final class WorkspaceCompositionFactory {
                 new ImportPiperVoiceFolderUseCase(),
                 new ImportFfmpegRuntimeFolderUseCase(),
                 ffmpegProbe,
+                new InspectFinalVideoRuntimeStatusUseCase(resolvedApplicationRoot, ffmpegProbe),
                 new DownloadFfmpegPortableRuntimeUseCase(ffmpegProbe),
                 new InspectLocalTheatreImageSetupReadinessUseCase(),
                 new PrepareLocalTheatreImageRuntimeUseCase(),
@@ -456,15 +617,15 @@ public final class WorkspaceCompositionFactory {
                 new DownloadLocalTheatreImagePackageUseCase(),
                 new ImportLocalTheatreImagePackageUseCase(),
                 new FluxComponentImportUseCase(processRunner),
-                new InspectLocalTheatreImageEngineUseCase(imageEngineManager),
-                new StartLocalTheatreImageEngineUseCase(imageEngineManager),
-                new StopLocalTheatreImageEngineUseCase(imageEngineManager),
-                new RunLocalTheatreImageSmokeUseCase(imageEngineManager),
                 new AuditEngineArtifactsUseCase(),
                 new BuildGuiSmokeChecklistUseCase(
                         new InspectXttsSetupReadinessUseCase(),
                         new InspectPiperSetupReadinessUseCase(),
-                        ffmpegProbe)
+                        ffmpegProbe),
+                new com.marcosmoreiradev.docupodcaststudio.application.document
+                        .DownloadTesseractPortableRuntimeUseCase(),
+                new com.marcosmoreiradev.docupodcaststudio.application.document
+                        .ImportTesseractRuntimeFolderUseCase()
         );
         GrammarApplicationServices grammar = new GrammarApplicationServices(
                 new BuildGrammarTemplateUseCase(),
@@ -479,9 +640,14 @@ public final class WorkspaceCompositionFactory {
                 new BuildDocumentStudyProjectionUseCase(),
                 new BuildStudyProblemsProjectionUseCase(),
                 new BuildDocumentStudyTextVideoPlanUseCase(),
-                new com.marcosmoreiradev.docupodcaststudio.application.documentstudy.BuildDocumentStudyVideoPlanUseCase(),
+                new com.marcosmoreiradev.docupodcaststudio.application.documentstudy.BuildDocumentStudyVideoPlanUseCase(
+                        new com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentStudyVideoContentResolver(),
+                        new com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentStudySlideCompositor(),
+                        materializePdfDocumentContentAsset,
+                        materializeWordDocumentContentAsset),
                 new com.marcosmoreiradev.docupodcaststudio.application.documentstudy.BuildDocumentStudyVideoAudioOverlayPlanUseCase(),
-                new PdfBoxStudyProblemPdfExporter()
+                new PdfBoxStudyProblemPdfExporter(),
+                new com.marcosmoreiradev.docupodcaststudio.application.documentstudy.PrepareDocumentIllustrationsUseCase(mediaCapabilities)
         );
         TheatreFragmentLinkPolicy theatreLinkPolicy = new TheatreFragmentLinkPolicy();
         BuildTheatreAudioTrackTimelineUseCase theatreAudioTimeline = new BuildTheatreAudioTrackTimelineUseCase();
@@ -499,7 +665,9 @@ public final class WorkspaceCompositionFactory {
                         ffmpegProbe,
                         processRunner,
                         () -> loadOperationalSettingsSafely(infrastructure),
-                        applicationRoot)
+                        resolvedApplicationRoot,
+                        new com.marcosmoreiradev.docupodcaststudio.application.voice.VoiceReferenceSamplePathResolver(
+                                installationRoot, resolvedApplicationRoot))
         );
         VisualAssetTracePolicy visualTracePolicy = new VisualAssetTracePolicy();
         VisualProductionApplicationServices visual = new VisualProductionApplicationServices(
@@ -507,16 +675,40 @@ public final class WorkspaceCompositionFactory {
                         visualTracePolicy,
                         new TheatreGlobalVisualAssetProjectionProvider(visualTracePolicy)),
                 new BuildVisualPromptContextUseCase(),
-                visualEngineClient,
                 visualTracePolicy);
+        var theatreImportState = new com.marcosmoreiradev.docupodcaststudio.infrastructure.theatrepackage
+                .JsonTheatreImportStateRepository();
+        var theatrePackages = new com.marcosmoreiradev.docupodcaststudio.application.services
+                .TheatrePackageApplicationServices(
+                new com.marcosmoreiradev.docupodcaststudio.application.theatrepackage.RefreshTheatrePackageUseCase(
+                        new com.marcosmoreiradev.docupodcaststudio.infrastructure.theatrepackage
+                                .JsonTheatrePackageScanner(),
+                        theatreImportState,
+                        new com.marcosmoreiradev.docupodcaststudio.application.theatrepackage
+                                .ComputeTheatreRefreshPlanUseCase(),
+                        new com.marcosmoreiradev.docupodcaststudio.application.theatrepackage
+                                .PreflightTheatreRefreshUseCase(),
+                        new com.marcosmoreiradev.docupodcaststudio.infrastructure.theatrepackage
+                                .FileSystemTheatreAssetStager(),
+                        new com.marcosmoreiradev.docupodcaststudio.application.theatrepackage
+                                .ReconcileTheatreProjectUseCase(),
+                        infrastructure.projectRepository(),
+                        project.inspectProjectIntegrity(),
+                        new com.marcosmoreiradev.docupodcaststudio.infrastructure.json.AtomicJsonFileWriter()),
+                theatreImportState);
         return new WorkspaceApplicationServices(
                 new WorkspaceApplicationServices.ProjectWorkspace(project, assets, document, readingProfile, script,
-                        grammar, fragment, documentStudy, theatre),
+                        grammar, fragment, documentStudy, theatre, theatrePackages),
                 new WorkspaceApplicationServices.PlaybackWorkspace(audio, recording, playback),
                 new WorkspaceApplicationServices.GenerationWorkspace(render, storyboard, media, visual),
                 new WorkspaceApplicationServices.ExportWorkspace(export, process),
                 new WorkspaceApplicationServices.AdministrationWorkspace(voice, settings, examples, guide, resources,
-                        mediaCapabilities.platform()));
+                        mediaCapabilities.platform(),
+                        new com.marcosmoreiradev.docupodcaststudio.application.media.administration
+                                .CapabilityAdministrationService(
+                                mediaCapabilities.platform(),
+                                mediaCapabilities.resourceScheduler())),
+                new WorkspaceApplicationServices.RuntimeWorkspace(resolvedRoots));
     }
 
     private static OperationalSettings loadOperationalSettingsSafely(InfrastructureServices infrastructure) {

@@ -15,11 +15,14 @@ final class BuildEngineArtifactManifestUseCaseTest {
         assertTrue(joined.contains("ffprobe.exe"));
         assertTrue(joined.contains(".venv/Scripts/python.exe"));
         assertTrue(joined.contains("synthesize_xtts.py"));
+        assertTrue(joined.contains("synthesize_xtts_worker.py"));
         assertTrue(joined.contains("config.json"));
         assertTrue(joined.contains("*.pth|*.safetensors"));
         assertTrue(joined.contains("voz-por-defecto.wav"));
         assertTrue(manifest.requiredForFinalRc().stream().anyMatch(a -> a.id().equals("ffmpeg-exe")));
         assertTrue(manifest.requiredForFinalRc().stream().anyMatch(a -> a.id().equals("xtts-python")));
+        assertTrue(manifest.requiredForFinalRc().stream()
+                .anyMatch(a -> a.id().equals("xtts-worker-wrapper")));
     }
 
     @Test

@@ -6,9 +6,12 @@ module com.marcosmoreiradev.docupodcaststudio.ink {
     requires com.sun.jna.platform;
     requires stylus;
     requires stylus.javafx;
+    requires org.slf4j;
 
     exports com.marcosmoreiradev.docupodcaststudio.ink;
     exports com.marcosmoreiradev.docupodcaststudio.ink.canvas;
+    exports com.marcosmoreiradev.docupodcaststudio.ink.controls;
     exports com.marcosmoreiradev.docupodcaststudio.ink.input;
     exports com.marcosmoreiradev.docupodcaststudio.ink.model;
+    exports com.marcosmoreiradev.docupodcaststudio.ink.geometry;
 }

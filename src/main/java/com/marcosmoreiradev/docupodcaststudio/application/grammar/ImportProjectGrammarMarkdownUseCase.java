@@ -50,8 +50,11 @@ public final class ImportProjectGrammarMarkdownUseCase {
     }
 
     public TheatreParseResult parseTheatre(Path sourceFile) throws IOException {
-        ImportPlan plan = TheatreGrammarMarkdownParser.parse(sourceFile);
+        var configured = new com.marcosmoreiradev.docupodcaststudio.application.theatre.grammar.TheatreGrammarVoiceConfiguration()
+                .enrich(sourceFile, TheatreGrammarMarkdownParser.parse(sourceFile));
+        ImportPlan plan = configured.plan();
         List<GrammarDiagnostic> diagnostics = theatreDiagnostics(plan);
+        diagnostics.addAll(configured.diagnostics());
         int created = plan.acts().size() + plan.characters().size() + plan.objects().size() + plan.interventions().size();
         GrammarImportReport report = new GrammarImportReport(
                 ProjectGrammarKind.THEATRE_PRODUCTION,
@@ -175,7 +178,9 @@ public final class ImportProjectGrammarMarkdownUseCase {
         ArrayList<ProjectSemanticsDocument.FragmentBinding> bindings = new ArrayList<>();
         for (InterventionPlan intervention : plan.interventions()) {
             int index = Math.max(0, intervention.sequenceIndex() - 1);
-            NarrationSegment segment = index < segments.size() ? segments.get(index) : null;
+            NarrationSegment segment = segments.stream().filter(s -> intervention.stableInterventionId()
+                    .equals(s.metadata().get("theatreGrammarInterventionId"))).findFirst().orElseGet(() ->
+                    intervention.spokenText().isBlank() && index < segments.size() ? segments.get(index) : null);
             String segmentId = segment == null ? "" : segment.id();
             String blockId = firstBlockId(segment);
             LinkedHashMap<String, String> metadata = new LinkedHashMap<>();
@@ -250,7 +255,7 @@ public final class ImportProjectGrammarMarkdownUseCase {
                 .map(scene -> scene.name().toLowerCase(Locale.ROOT))
                 .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new));
         for (InterventionPlan intervention : plan.interventions()) {
-            if (!intervention.characterName().isBlank()
+            if (!intervention.stageDirection() && !intervention.characterName().isBlank()
                     && !characters.contains(intervention.characterName().toUpperCase(Locale.ROOT))) {
                 diagnostics.add(GrammarDiagnostic.warning("THEATRE_UNKNOWN_CHARACTER",
                         "Intervencion con personaje no declarado: " + intervention.characterName()));

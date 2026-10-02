@@ -2,6 +2,8 @@ package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
 import com.marcosmoreiradev.docupodcaststudio.application.compatibility.media.LegacyEnginePresetMapper;
 import com.marcosmoreiradev.docupodcaststudio.application.image.ImageEnhancementOutputProfile;
+import com.marcosmoreiradev.docupodcaststudio.application.image.ImageSuperResolutionCoordinator;
+import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile;
 import com.marcosmoreiradev.docupodcaststudio.application.media.MediaCapabilityService;
 import com.marcosmoreiradev.docupodcaststudio.application.services.StoryboardApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.ImageGenerationSettings;
@@ -43,12 +45,18 @@ public final class NarrativeImageGenerationWorkflow {
         ImageGenerationSettings image = resolved.imageGeneration();
         Path outputDirectory = projectFile.toAbsolutePath().normalize().getParent()
                 .resolve("generated/narrativa-ia").resolve(safe(segment.id()));
-        ImageEnhancementOutputProfile profile = ImageEnhancementOutputProfile.FHD_1080;
+        VisualResolutionProfile profile = ImageSuperResolutionCoordinator.resolveGenerationProfile(
+                session.project(), resolved.imageSuperResolution());
+        var delivery = profile.deliveryDimensions(16, 9);
+        var working = profile.workingDimensions(16, 9);
         ImageGenerationRequest request = new ImageGenerationRequest(
                 positivePrompt(segment),
                 "low quality, blurry, deformed hands, duplicated faces, unreadable text, watermark",
-                profile.width(), profile.height(), List.<MediaReference>of(), outputDirectory,
-                "narrativa-" + safe(segment.id()), LegacyEnginePresetMapper.image(image.preset()),
+                working.width(), working.height(), List.of(), outputDirectory,
+                "narrativa-" + safe(segment.id()),
+                Map.of("deliveryWidth", Integer.toString(delivery.width()),
+                        "deliveryHeight", Integer.toString(delivery.height())),
+                LegacyEnginePresetMapper.image(image.preset()), List.of(),
                 Math.abs(java.util.Objects.hash(segment.id(), segment.narrationText())), 1);
         ExecutionPolicy policy = new ExecutionPolicy(Duration.ofSeconds(image.timeoutSeconds()), image.maxAttempts());
         ExecutionContext context = new ExecutionContext("narrative-image-" + segment.id(), CancellationToken.NONE,
@@ -61,8 +69,15 @@ public final class NarrativeImageGenerationWorkflow {
             Thread.currentThread().interrupt();
             throw new IOException("Generación de imagen interrumpida.", ex);
         }
-        Path output = generated.images().stream().findFirst()
+        Path rawOutput = generated.images().stream().findFirst()
                 .orElseThrow(() -> new IOException("El motor no produjo una imagen."));
+        ImageSuperResolutionCoordinator.Result postprocessed =
+                new ImageSuperResolutionCoordinator(media).processGenerated(
+                        session.project(), resolved.imageSuperResolution(), rawOutput,
+                        outputDirectory, "narrativa-" + safe(segment.id()) + "-upscaled",
+                        16, 9, request.prompt(), context);
+        if (!postprocessed.warning().isBlank()) progress(progress, postprocessed.warning());
+        Path output = postprocessed.output();
         ImageAssetImportResult imported = storyboard.importImageAsset()
                 .importImage(session.project(), projectFile, output);
         session.replaceProject(imported.project(), true);

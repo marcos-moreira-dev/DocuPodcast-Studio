@@ -9,6 +9,13 @@ public final class LegacyEnginePresetMapper {
     private LegacyEnginePresetMapper() { }
 
     public static EnginePresetId image(String legacy) {
+        String value = legacy == null ? "" : legacy.strip().toUpperCase(Locale.ROOT);
+        if (value.equals("CONTEXTUAL_4GB_SD15")) return new EnginePresetId("sd15-regional-identity");
+        if (value.equals("SD15_DREAMSHAPER")) return new EnginePresetId("sd15-dreamshaper");
+        if (value.equals("PRODUCTION_SDXL_REFERENCE")) return new EnginePresetId("sdxl-reference");
+        if (value.equals("ADVANCED_FLUX_KONTEXT")) return new EnginePresetId("flux-kontext");
+        if (value.equals("HIGH_QUALITY_FLUX")) return new EnginePresetId("flux-high-quality");
+        if (value.equals("CUSTOM_COMFY_WORKFLOW")) return new EnginePresetId("custom-comfy-workflow");
         return new EnginePresetId("draft");
     }
 

@@ -12,7 +12,8 @@ public record ExportCenterContext(
         List<TheatreProjectLayer.TheatreAct> acts,
         List<TheatreProjectLayer.Scene> scenes,
         List<VideoEncoderPolicy> availableEncoders,
-        VideoEncoderPolicy defaultEncoder
+        VideoEncoderPolicy defaultEncoder,
+        String theatrePresentationMode
 ) {
     public ExportCenterContext {
         projectMode = projectMode == null ? ProjectMode.defaultMode() : projectMode;
@@ -22,6 +23,13 @@ public record ExportCenterContext(
                 ? List.of(VideoEncoderPolicy.CPU_X264, VideoEncoderPolicy.AUTO)
                 : List.copyOf(availableEncoders);
         defaultEncoder = defaultEncoder == null ? VideoEncoderPolicy.AUTO : defaultEncoder;
+        theatrePresentationMode = com.marcosmoreiradev.docupodcaststudio.application.video.TheatreStageGeometry.normalizeFrameMode(theatrePresentationMode);
+    }
+
+    public ExportCenterContext(ProjectMode mode, List<TheatreProjectLayer.TheatreAct> acts,
+                              List<TheatreProjectLayer.Scene> scenes, List<VideoEncoderPolicy> encoders,
+                              VideoEncoderPolicy encoder) {
+        this(mode,acts,scenes,encoders,encoder,"fragments");
     }
 
     public static ExportCenterContext defaults() {

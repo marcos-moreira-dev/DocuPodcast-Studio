@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.components.admin;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.SemanticActionIcons;
 import javafx.beans.property.ObjectProperty;
 import javafx.geometry.Insets;
 import javafx.scene.control.Label;
@@ -33,7 +35,8 @@ public class AdminModuleNavigation<M> extends VBox {
                 groupLabel.getStyleClass().add("voice-module-group-label");
                 getChildren().add(groupLabel);
             }
-            ToggleButton button = new ToggleButton(descriptor.title());
+            ToggleButton button = StudioFormControls.toggleButton(descriptor.title());
+            SemanticActionIcons.decorate(button, descriptor.title());
             button.getStyleClass().add("voice-module-row");
             button.setMaxWidth(Double.MAX_VALUE);
             button.setAccessibleText(descriptor.title() + ". " + descriptor.description());

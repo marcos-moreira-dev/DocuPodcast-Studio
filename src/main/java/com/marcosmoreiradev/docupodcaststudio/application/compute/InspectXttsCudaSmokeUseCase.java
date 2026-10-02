@@ -4,6 +4,7 @@ import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.InspectXtts
 import com.marcosmoreiradev.docupodcaststudio.application.runtime.RuntimeArtifactPaths;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -24,7 +25,7 @@ public final class InspectXttsCudaSmokeUseCase {
                     "Falta ejecutar la prueba CUDA de Voz IA avanzada dentro del Python local.");
         }
         try {
-            String json = Files.readString(manifest);
+            String json = Files.readString(manifest, StandardCharsets.UTF_8);
             boolean attempted = booleanValue(json, "attempted");
             boolean pythonFound = booleanValue(json, "pythonFound");
             boolean torchImportable = booleanValue(json, "torchImportable");

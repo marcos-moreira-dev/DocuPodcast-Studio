@@ -11,14 +11,14 @@ final class ProductionHardwareProfilePolicyTest {
     private final ProductionHardwareProfilePolicy policy = new ProductionHardwareProfilePolicy();
 
     @Test
-    void fourGbVramUsesConservativeProfile() {
+    void fourGbVramKeepsRequestedDeliveryAndUsesSingleGpuFirstCandidate() {
         ProductionHardwareProfileAdvice advice = policy.advise(4096, SimpleVideoResolutionPreset.UHD_4K, 4);
 
         assertTrue(advice.conservative());
         assertFalse(advice.highCapacity());
-        assertEquals(SimpleVideoResolutionPreset.HD_720, advice.recommendedResolution());
+        assertEquals(SimpleVideoResolutionPreset.UHD_4K, advice.recommendedResolution());
         assertEquals(1, advice.recommendedBatchSize());
-        assertTrue(advice.warnings().stream().anyMatch(warning -> warning.contains("4 GB VRAM")));
+        assertTrue(advice.warnings().stream().anyMatch(warning -> warning.contains("RAM/offload")));
     }
 
     @Test

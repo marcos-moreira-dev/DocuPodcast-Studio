@@ -68,8 +68,8 @@ public final class InspectLocalTheatreImageEngineArtifactsUseCase {
                     missing.add("Componente FLUX: " + component);
                 }
             }
-            if (!new FluxLicenseAcceptanceStore().accepted(root)) {
-                missing.add("Confirmacion local de licencia FLUX.1-Kontext-dev");
+            if (!new FluxLicenseAcceptanceStore().accepted(root, ImageModelPackageProfile.fromPreset(current.imageGeneration().preset()))) {
+                missing.add("Confirmación local de condiciones del modelo seleccionado");
             }
         }
 

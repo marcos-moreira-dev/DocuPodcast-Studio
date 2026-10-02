@@ -29,7 +29,7 @@ public final class NarrativeVideoSideDock extends BorderPane {
                 SideDockModuleId.NARRATIVE_VIDEO_CONTENT,
                 "Contenido del video",
                 "Genera y revisa las tomas del video narrativo por parrafo.",
-                AppIcon.VIDEO,
+                AppIcon.PRODUCT_DOCUMENTARY_VIDEO_CONTENT,
                 () -> new NarrativeVideoPanel(viewModel),
                 ignored -> viewModel.narrativeVideoConfigurationAvailable()));
         dock = new SideDockHost(
@@ -37,11 +37,11 @@ public final class NarrativeVideoSideDock extends BorderPane {
                 context,
                 registry,
                 viewModel.documentRightRailVisibleProperty(),
-                SideDockLayoutPolicy.of(84.0, 600.0, 780.0),
+                SideDockLayoutPolicy.standard(600.0, 780.0),
                 WorkspaceSideDock.RailPlacement.RIGHT);
         viewModel.currentDocumentProperty().addListener((obs, oldValue, newValue) -> refresh());
         viewModel.currentProjectModeProperty().addListener((obs, oldValue, newValue) -> refresh());
-        setCenter(dock);
+        dock.installInto(this);
     }
 
     public ReadOnlyBooleanProperty expandedProperty() {

@@ -116,7 +116,8 @@ public final class VoiceLibraryWorkspaceFileRepository implements VoiceLibraryWo
                 field(out, 5, "ownership", quote(sample.ownership().name())); out.append(",\n");
                 field(out, 5, "durationMillis", Long.toString(sample.durationMillis())); out.append(",\n");
                 field(out, 5, "createdAt", quote(sample.createdAt().toString())); out.append(",\n");
-                field(out, 5, "notes", quote(sample.notes())); out.append("\n");
+                field(out, 5, "notes", quote(sample.notes())); out.append(",\n");
+                field(out, 5, "referenceTranscript", quote(sample.referenceTranscript())); out.append("\n");
                 out.append("                }");
                 if (j < sampleSet.samples().size() - 1) out.append(',');
                 out.append("\n");

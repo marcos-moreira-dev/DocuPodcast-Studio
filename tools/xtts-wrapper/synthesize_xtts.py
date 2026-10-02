@@ -10,6 +10,7 @@ from typing import Any
 
 
 REQUIRED_MODEL_FILES = ("model.pth", "config.json", "vocab.json")
+INFERENCE_PROFILE = "coqui-native-defaults-v2"
 LEGACY_MARKERS = (
     "recursos locales ia avanzada",
     "componentes locales ia avanzada-wrapper",
@@ -30,6 +31,15 @@ def parse_args() -> argparse.Namespace:
 
 def log(message: str) -> None:
     print(f"DOCUPODCAST_XTTS: {message}", flush=True)
+
+
+def inference_options() -> dict[str, object]:
+    """Use the decoding defaults validated by Coqui XTTS itself.
+
+    Product code deliberately does not impose expressive sampling knobs here.
+    In particular, sentence splitting remains under XTTS' native policy.
+    """
+    return {}
 
 
 def normalized_text(path: Path | str) -> str:
@@ -192,6 +202,19 @@ def resolve_device(raw: str) -> Any:
     requested = (raw or "").strip().lower()
     log(f"device_requested={requested or 'auto'}")
     if requested in ("", "auto"):
+        torch = import_torch_for_device()
+        if torch.cuda.is_available():
+            log("device_policy=gpu-first")
+            return resolve_cuda_device("auto", 0)
+        xpu_device = resolve_xpu_device("auto", 0)
+        if xpu_device is not None:
+            log("device_policy=gpu-first")
+            return xpu_device
+        directml_device = resolve_directml_device("auto", 0)
+        if directml_device is not None:
+            log("device_policy=gpu-first")
+            return directml_device
+        log("device_policy=gpu-first fallback=cpu reason=no-compatible-runtime-backend")
         return "cpu"
     if requested == "cpu":
         return "cpu"
@@ -352,11 +375,13 @@ def main() -> int:
         tts.to(device)
 
     log("sintetizando")
+    log(f"inference_profile={INFERENCE_PROFILE}")
     tts.tts_to_file(
         text=text,
         file_path=str(output_path),
         speaker_wav=str(speaker_path),
         language=args.language or "es",
+        **inference_options(),
     )
     if not output_path.is_file() or output_path.stat().st_size <= 44:
         raise SystemExit(f"No se genero WAV valido: {output_path}")

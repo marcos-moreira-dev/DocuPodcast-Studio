@@ -100,6 +100,18 @@ final class TheatreCameraAndBackdropResolverTest {
         assertTrue(resolver.resolve(project, "SCN-1", "INTERVENCION-4", projectDirectory).isEmpty());
     }
 
+    @org.junit.jupiter.api.Test void interventionBackdropDoesNotLeakIntoAnotherScene() {
+        var layer=theatreWithInheritedBackdrops().withTextActionPlacements(List.of(
+                new TheatreProjectLayer.TextActionPlacement("INTERVENCION-2","SCN-1","","","","",java.util.Map.of()),
+                new TheatreProjectLayer.TextActionPlacement("INTERVENCION-3","SCN-2","","","","",java.util.Map.of())));
+        var assignments=new java.util.ArrayList<>(layer.stageBackdropAssignments());
+        assignments.add(new TheatreProjectLayer.StageBackdropAssignment("SCENE","SCN-2","BACKDROP-SCENE",""));
+        layer=layer.withStageBackdropAssignments(assignments);
+        var resolver=new TheatreStageBackdropResolver();
+        assertEquals("BACKDROP-FRAGMENT",resolver.effectiveBackdropId(layer,"SCN-1","INTERVENCION-2"));
+        assertEquals("BACKDROP-SCENE",resolver.effectiveBackdropId(layer,"SCN-2","INTERVENCION-3"));
+    }
+
     private TheatreProjectLayer theatre(List<TheatreProjectLayer.CameraCue> cues) {
         return new TheatreProjectLayer(
                 List.of(

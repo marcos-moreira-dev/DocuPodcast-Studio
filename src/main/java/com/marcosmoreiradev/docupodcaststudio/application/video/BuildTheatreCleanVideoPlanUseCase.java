@@ -87,7 +87,8 @@ public final class BuildTheatreCleanVideoPlanUseCase {
                 if (!emittedAudioIds.add(unit.segmentId())) {
                     continue;
                 }
-                double totalDurationSeconds = unit.durationSeconds() + effective.silenceAfterFrameSeconds();
+                double spokenTailSeconds = TheatreVideoTimingPolicy.spokenTailSeconds();
+                double totalDurationSeconds = unit.durationSeconds() + spokenTailSeconds;
                 List<SimpleVideoFrame.VisualPart> visualParts = visualPartsFor(
                         effective,
                         intermediateFrames,
@@ -105,7 +106,7 @@ public final class BuildTheatreCleanVideoPlanUseCase {
                         imageRelativePath,
                         unit.audioRelativePath(),
                         unit.durationSeconds(),
-                        effective.silenceAfterFrameSeconds(),
+                        spokenTailSeconds,
                         true,
                         true,
                         false,
@@ -117,7 +118,7 @@ public final class BuildTheatreCleanVideoPlanUseCase {
             throw new IOException("No hay unidades teatrales con audio e imagen para exportar.");
         }
         return new SimpleVideoPlan("Video teatral limpio - " + script.title(), frames,
-                effective.silenceAfterFrameSeconds(), Instant.now());
+                TheatreVideoTimingPolicy.spokenTailSeconds(), Instant.now());
     }
 
     public List<String> missingVisualSegmentIds(DocuPodcastProject project,

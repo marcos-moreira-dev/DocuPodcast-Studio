@@ -6,6 +6,7 @@ import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.PiperSetupR
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.XttsDocumentGenerationReadinessReport;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.OperationalSettings;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.OperationalSettingsRepository;
+import com.marcosmoreiradev.docupodcaststudio.media.api.MediaEnginePlatform;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -18,6 +19,16 @@ public final class ListAudioEngineAvailabilityUseCase {
     private final Path applicationRoot;
     private final InspectXttsDocumentGenerationReadinessUseCase xttsReadiness;
     private final InspectPiperSetupReadinessUseCase piperReadiness;
+    private final ListVoiceEngineOperationalStatesUseCase operationalStates;
+
+    /** Product constructor: readiness comes from the same registry used to synthesize audio. */
+    public ListAudioEngineAvailabilityUseCase(MediaEnginePlatform platform) {
+        this.settingsRepository = null;
+        this.applicationRoot = Path.of(".").toAbsolutePath().normalize();
+        this.xttsReadiness = null;
+        this.piperReadiness = null;
+        this.operationalStates = new ListVoiceEngineOperationalStatesUseCase(platform);
+    }
 
     public ListAudioEngineAvailabilityUseCase(OperationalSettingsRepository settingsRepository, Path applicationRoot) {
         this(settingsRepository, applicationRoot,
@@ -33,9 +44,16 @@ public final class ListAudioEngineAvailabilityUseCase {
         this.applicationRoot = applicationRoot == null ? Path.of(".").toAbsolutePath().normalize() : applicationRoot.toAbsolutePath().normalize();
         this.xttsReadiness = Objects.requireNonNull(xttsReadiness, "xttsReadiness");
         this.piperReadiness = Objects.requireNonNull(piperReadiness, "piperReadiness");
+        this.operationalStates = null;
     }
 
     public List<AudioEngineAvailability> list() {
+        if (operationalStates != null) {
+            java.util.ArrayList<AudioEngineAvailability> result = new java.util.ArrayList<>();
+            operationalStates.list().stream().map(AudioEngineAvailability::from).forEach(result::add);
+            result.add(AudioEngineAvailability.computerAudio());
+            return List.copyOf(result);
+        }
         OperationalSettings settings = loadSettings();
         XttsDocumentGenerationReadinessReport xtts = xttsReadiness.inspect(settings, applicationRoot);
         PiperSetupReadinessReport piper = piperReadiness.inspect(settings, applicationRoot);

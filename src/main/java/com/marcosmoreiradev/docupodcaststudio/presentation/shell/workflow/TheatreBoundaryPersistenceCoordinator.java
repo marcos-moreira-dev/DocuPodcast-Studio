@@ -4,11 +4,15 @@ import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreExample
 import com.marcosmoreiradev.docupodcaststudio.domain.document.ReadableDocument;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.DocuPodcastProject;
 import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationScriptDocument;
+import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreProjectLayer;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.ProjectSession;
 import com.marcosmoreiradev.docupodcaststudio.presentation.theatre.IntervencionBoundaryStore;
 import com.marcosmoreiradev.docupodcaststudio.presentation.theatre.IntervencionCatalogo;
 
 import java.util.LinkedHashMap;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -18,8 +22,11 @@ public final class TheatreBoundaryPersistenceCoordinator {
     private static final String SEPARATOR = "|";
 
     public void hydrate(DocuPodcastProject project, IntervencionBoundaryStore store) {
-        Map<String, IntervencionBoundaryStore.SceneBoundary> restored = new LinkedHashMap<>();
+        Map<String, IntervencionBoundaryStore.SceneBoundary> restored = derivedBoundaries(
+                project == null ? TheatreProjectLayer.empty() : project.theatre());
         if (project != null) {
+            Map<String, String> sceneByIntervention = sceneByIntervention(project.theatre());
+            Map<String, Integer> sequenceByIntervention = sequenceByIntervention(project.theatre());
             project.viewState().forEach((key, value) -> {
                 if (key == null || !key.startsWith(VIEW_PREFIX)) {
                     return;
@@ -28,12 +35,67 @@ public final class TheatreBoundaryPersistenceCoordinator {
                 String[] parts = (value == null ? "" : value).split("\\|", -1);
                 String startId = parts.length > 0 ? parts[0].strip() : "";
                 String endId = parts.length > 1 ? parts[1].strip() : "";
-                if (!sceneId.isBlank()) {
+                if (validBoundary(sceneId, startId, endId, sceneByIntervention, sequenceByIntervention)) {
                     restored.put(sceneId, new IntervencionBoundaryStore.SceneBoundary(startId, endId));
                 }
             });
         }
         store.replaceAll(restored);
+    }
+
+    static Map<String, IntervencionBoundaryStore.SceneBoundary> derivedBoundaries(TheatreProjectLayer theatre) {
+        TheatreProjectLayer safe = theatre == null ? TheatreProjectLayer.empty() : theatre;
+        Map<String, Integer> sequence = sequenceByIntervention(safe);
+        Map<String, List<String>> idsByScene = new LinkedHashMap<>();
+        safe.scenes().forEach(scene -> idsByScene.put(scene.id(), new ArrayList<>()));
+        safe.textActionPlacements().forEach(placement ->
+                idsByScene.computeIfAbsent(placement.sceneId(), ignored -> new ArrayList<>())
+                        .add(placement.intervencionId()));
+        Map<String, IntervencionBoundaryStore.SceneBoundary> result = new LinkedHashMap<>();
+        idsByScene.forEach((sceneId, ids) -> {
+            List<String> ordered = ids.stream()
+                    .filter(id -> sequence.containsKey(id))
+                    .distinct()
+                    .sorted(Comparator.comparingInt(sequence::get))
+                    .toList();
+            if (!sceneId.isBlank() && !ordered.isEmpty()) {
+                result.put(sceneId, new IntervencionBoundaryStore.SceneBoundary(
+                        ordered.getFirst(), ordered.getLast()));
+            }
+        });
+        return result;
+    }
+
+    private static boolean validBoundary(
+            String sceneId,
+            String startId,
+            String endId,
+            Map<String, String> sceneByIntervention,
+            Map<String, Integer> sequenceByIntervention) {
+        if (sceneId.isBlank() || startId.isBlank() || endId.isBlank()) {
+            return false;
+        }
+        if (!sceneId.equals(sceneByIntervention.get(startId))
+                || !sceneId.equals(sceneByIntervention.get(endId))) {
+            return false;
+        }
+        Integer start = sequenceByIntervention.get(startId);
+        Integer end = sequenceByIntervention.get(endId);
+        return start != null && end != null && start <= end;
+    }
+
+    private static Map<String, String> sceneByIntervention(TheatreProjectLayer theatre) {
+        Map<String, String> result = new LinkedHashMap<>();
+        theatre.textActionPlacements().forEach(placement ->
+                result.putIfAbsent(placement.intervencionId(), placement.sceneId()));
+        return result;
+    }
+
+    private static Map<String, Integer> sequenceByIntervention(TheatreProjectLayer theatre) {
+        Map<String, Integer> result = new LinkedHashMap<>();
+        theatre.intervenciones().forEach(intervention ->
+                result.put(intervention.id(), intervention.sequenceIndex()));
+        return result;
     }
 
     public void persist(ProjectSession session, IntervencionBoundaryStore store) {

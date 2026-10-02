@@ -84,6 +84,17 @@ public record AudioEngineAvailability(
                 "Selecciona una oración y elige un archivo compatible.");
     }
 
+    public static AudioEngineAvailability from(VoiceEngineOperationalState state) {
+        if (state == null) {
+            throw new IllegalArgumentException("voice engine state is required");
+        }
+        return new AudioEngineAvailability(
+                state.engineId(), state.displayName(), state.engineId(),
+                state.registered() && state.ready(), state.realTts(),
+                state.supportsVoiceSamples(), state.supportsTones(),
+                state.statusLabel(), state.message(), state.recommendedAction());
+    }
+
     private static String normalize(String value) {
         return value == null ? "" : value.strip();
     }

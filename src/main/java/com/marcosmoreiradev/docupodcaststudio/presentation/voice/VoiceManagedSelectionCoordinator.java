@@ -4,20 +4,9 @@ import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceProfile;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.DocuPodcastShellViewModel;
 import javafx.scene.control.TextArea;
 
-/** Keeps Manage Voices selection effects explicit without growing the workspace view. */
+/** Keeps voice-selection effects explicit without coupling a character to a synthesis provider. */
 final class VoiceManagedSelectionCoordinator {
     private VoiceManagedSelectionCoordinator() {
-    }
-
-    static void synchronizeEngine(DocuPodcastShellViewModel viewModel, VoiceProfile voice) {
-        if (voice == null) {
-            return;
-        }
-        if (VoiceProfilePresentationPolicy.simpleVoice(voice)) {
-            viewModel.selectDocumentAudioSource("Voz local simple");
-        } else if (VoiceProfilePresentationPolicy.advancedVoice(voice)) {
-            viewModel.selectDocumentAudioSource("Voz IA avanzada");
-        }
     }
 
     static void resetGeneratedTest(DocuPodcastShellViewModel viewModel, TextArea generatedTestText, VoiceProfile voice) {

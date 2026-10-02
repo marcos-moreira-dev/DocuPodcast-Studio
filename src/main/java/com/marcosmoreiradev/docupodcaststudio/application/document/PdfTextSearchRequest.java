@@ -1,17 +1,12 @@
 package com.marcosmoreiradev.docupodcaststudio.application.document;
 
-import com.marcosmoreiradev.docupodcaststudio.domain.document.ReadableDocument;
-
-import java.nio.file.Path;
-
 /** Search request for PDF visual text layers. */
 public record PdfTextSearchRequest(
-        ReadableDocument document,
+        PreparedPdfWorkspaceRef workspace,
         String query,
         boolean includeOcr,
         int maxResults,
-        int maxOcrPages,
-        Path cacheDirectory
+        int maxOcrPages
 ) {
     public PdfTextSearchRequest {
         query = query == null ? "" : query.strip();

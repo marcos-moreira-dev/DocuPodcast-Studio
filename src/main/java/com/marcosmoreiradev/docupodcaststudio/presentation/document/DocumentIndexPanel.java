@@ -1,21 +1,27 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.document;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFeedbackControls;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioCollectionControls;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
+
 import com.marcosmoreiradev.docupodcaststudio.application.document.BuildDocumentOutlineUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.BuildPdfEnhancedOutlineUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.DocumentOutlineEntry;
 import com.marcosmoreiradev.docupodcaststudio.application.document.DocumentOutlineProjection;
+import com.marcosmoreiradev.docupodcaststudio.application.document.DocumentOutlineOrigin;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PdfTextSearchProjection;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PdfTextSearchRequest;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PreparedPdfSource;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PdfTextSearchResult;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PdfVisualTextHighlight;
-import com.marcosmoreiradev.docupodcaststudio.application.document.PdfNarratableDocumentRequest;
-import com.marcosmoreiradev.docupodcaststudio.application.document.PdfNarratableDocumentResolution;
-import com.marcosmoreiradev.docupodcaststudio.application.document.ResolvePdfNarratableDocumentUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PdfPreparationScope;
 import com.marcosmoreiradev.docupodcaststudio.application.document.SearchPdfTextUseCase;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlock;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlockType;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.ReadableDocument;
-import com.marcosmoreiradev.docupodcaststudio.domain.document.SourceDocumentFormat;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionButtonFactory;
 import javafx.application.Platform;
 import javafx.beans.value.ObservableValue;
 import javafx.concurrent.Task;
@@ -32,7 +38,6 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -41,11 +46,60 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
-import java.util.function.Supplier;
 
 /** Navigable document outline rendered from an application projection without altering the source document. */
 public final class DocumentIndexPanel extends BorderPane {
+    private com.marcosmoreiradev.docupodcaststudio.application.document.PdfReadingPreferencesUseCase readingPreferences;
+    private final ComboBox<com.marcosmoreiradev.docupodcaststudio.domain.document.pdf.PdfReadingStrategy> readingStrategy =
+            StudioFormControls.comboBox();
+    private final Label readingDescription = note("");
+    private final VBox readingPreferencesBox = new VBox(6);
+    private boolean syncingPreferences;
+
+    public DocumentIndexPanel withReadingPreferences(
+            com.marcosmoreiradev.docupodcaststudio.application.document.PdfReadingPreferencesUseCase preferences) {
+        readingPreferences = Objects.requireNonNull(preferences);
+        readingStrategy.getItems().setAll(
+                com.marcosmoreiradev.docupodcaststudio.domain.document.pdf.PdfReadingStrategy.values());
+        readingStrategy.setMaxWidth(Double.MAX_VALUE);
+        readingStrategy.setId("pdf-reading-strategy");
+        Label label = new Label("Cómo leer este PDF");
+        label.setLabelFor(readingStrategy);
+        readingPreferencesBox.getChildren().setAll(label, readingStrategy, readingDescription);
+        readingStrategy.setOnAction(event -> {
+            if (syncingPreferences || readingStrategy.getValue() == null) return;
+            PreparedPdfSource source = pdfSourceProperty == null ? null : pdfSourceProperty.getValue();
+            if (source == null) return;
+            try {
+                readingPreferences.update(source.workspace(), readingStrategy.getValue());
+                readingDescription.setText(readingStrategy.getValue().description()
+                        + " Se aplicará al preparar el documento.");
+            } catch (java.io.IOException failure) {
+                refreshReadingPreferences(source);
+                readingDescription.setText("No se pudo guardar la preferencia: " + failure.getMessage());
+            }
+        });
+        renderActive();
+        return this;
+    }
+
+    private void refreshReadingPreferences(PreparedPdfSource source) {
+        if (readingPreferences == null) return;
+        syncingPreferences = true;
+        try {
+            var preference = readingPreferences.read(source.workspace()).readingStrategy();
+            readingStrategy.setValue(preference);
+            readingStrategy.setDisable(false);
+            readingDescription.setText(preference.description());
+        } catch (java.io.IOException failure) {
+            readingStrategy.setDisable(true);
+            readingDescription.setText("No se pudo leer la preferencia del documento.");
+        } finally {
+            syncingPreferences = false;
+        }
+    }
     private final ObservableValue<ReadableDocument> documentProperty;
+    private final ObservableValue<PreparedPdfSource> pdfSourceProperty;
     private final ObservableValue<String> selectedBlockIdProperty;
     private final Consumer<String> onBlockSelected;
     private final Consumer<PdfVisualTextHighlight> onPdfHighlightSelected;
@@ -53,31 +107,32 @@ public final class DocumentIndexPanel extends BorderPane {
     private final BuildDocumentOutlineUseCase buildOutline;
     private final BuildPdfEnhancedOutlineUseCase buildEnhancedOutline;
     private final SearchPdfTextUseCase searchPdfText;
-    private final ResolvePdfNarratableDocumentUseCase resolvePdfNarratableDocument;
-    private final Consumer<ReadableDocument> onNarratableDocumentResolved;
-    private final Supplier<Path> ocrCacheDirectory;
+    private final PdfIndexPreparationHandler prepareForSearch;
     private final VBox header = new VBox(4);
-    private final TextField pdfSearch = new TextField();
-    private final TextField pdfPageJump = new TextField();
-    private final Button nativeSearchButton = new Button("Buscar");
-    private final Button ocrSearchButton = new Button("Mejorar busqueda");
-    private final Button clearSearchButton = new Button("Limpiar");
-    private final Button pdfPageJumpButton = new Button("Ir a pagina");
-    private final ProgressIndicator searchProgress = new ProgressIndicator();
+    private final TextField pdfSearch = StudioFormControls.textField();
+    private final TextField pdfPageJump = StudioFormControls.textField();
+    private final Button nativeSearchButton = ActionButtonFactory.primary("Buscar");
+    private final Button clearSearchButton = ActionButtonFactory.secondary("Limpiar");
+    private final Button expandSearchButton = ActionButtonFactory.secondary("Ampliar búsqueda");
+    private final ComboBox<PdfPreparationScope> searchScope = StudioFormControls.comboBox();
+    private final TextField rangeStart = StudioFormControls.textField();
+    private final TextField rangeEnd = StudioFormControls.textField();
+    private final Button pdfPageJumpButton = ActionButtonFactory.primary("Ir a pagina");
+    private final ProgressIndicator searchProgress = StudioFeedbackControls.progressIndicator();
     private final Label searchStatus = note("");
     private final Label pdfPageJumpStatus = note("");
     private final HBox searchActions = new HBox(6);
     private final HBox pageJumpActions = new HBox(6);
     private final VBox searchBox = new VBox(6);
     private final VBox pageJumpBox = new VBox(6);
-    private final TextField bookmarkName = new TextField();
-    private final TextField bookmarkPage = new TextField();
-    private final Button addBookmarkButton = new Button("Agregar marcador");
-    private final Button goBookmarkButton = new Button("Ir");
-    private final Button deleteBookmarkButton = new Button("Eliminar");
-    private final ComboBox<DocumentBookmarkEntry> bookmarkChoice = new ComboBox<>();
+    private final TextField bookmarkName = StudioFormControls.textField();
+    private final TextField bookmarkPage = StudioFormControls.textField();
+    private final Button addBookmarkButton = ActionButtonFactory.primary("Agregar marcador");
+    private final Button goBookmarkButton = ActionButtonFactory.secondary("Ir");
+    private final Button deleteBookmarkButton = ActionButtonFactory.danger("Eliminar");
+    private final ComboBox<DocumentBookmarkEntry> bookmarkChoice = StudioFormControls.comboBox();
     private final VBox bookmarksBox = new VBox(6);
-    private final TreeView<IndexEntry> tree = new TreeView<>();
+    private final TreeView<IndexEntry> tree = StudioCollectionControls.treeView();
     private boolean syncingSelection;
     private boolean selectionUpdateQueued;
     private String pendingSelectionBlockId = "";
@@ -95,7 +150,20 @@ public final class DocumentIndexPanel extends BorderPane {
                               Consumer<String> onBlockSelected,
                               BuildDocumentOutlineUseCase buildOutline) {
         this(documentProperty, selectedBlockIdProperty, onBlockSelected, buildOutline,
-                null, null, null, null, null, null, null);
+                null, null, null, null, null, null);
+    }
+
+    public DocumentIndexPanel(ObservableValue<ReadableDocument> documentProperty,
+                              ObservableValue<String> selectedBlockIdProperty,
+                              Consumer<String> onBlockSelected,
+                              BuildDocumentOutlineUseCase buildOutline,
+                              BuildPdfEnhancedOutlineUseCase buildEnhancedOutline,
+                              SearchPdfTextUseCase searchPdfText,
+                              Consumer<PdfVisualTextHighlight> onPdfHighlightSelected,
+                              IntConsumer onPdfPageSelected) {
+        this(documentProperty, selectedBlockIdProperty, onBlockSelected, buildOutline,
+                buildEnhancedOutline, searchPdfText, onPdfHighlightSelected, onPdfPageSelected,
+                null, null);
     }
 
     public DocumentIndexPanel(ObservableValue<ReadableDocument> documentProperty,
@@ -106,26 +174,53 @@ public final class DocumentIndexPanel extends BorderPane {
                               SearchPdfTextUseCase searchPdfText,
                               Consumer<PdfVisualTextHighlight> onPdfHighlightSelected,
                               IntConsumer onPdfPageSelected,
-                              Supplier<Path> ocrCacheDirectory,
-                              ResolvePdfNarratableDocumentUseCase resolvePdfNarratableDocument,
-                              Consumer<ReadableDocument> onNarratableDocumentResolved) {
+                              PdfIndexPreparationHandler prepareForSearch) {
+        this(documentProperty, selectedBlockIdProperty, onBlockSelected, buildOutline,
+                buildEnhancedOutline, searchPdfText, onPdfHighlightSelected, onPdfPageSelected,
+                prepareForSearch, null);
+    }
+
+    public DocumentIndexPanel(ObservableValue<ReadableDocument> documentProperty,
+                              ObservableValue<PreparedPdfSource> pdfSourceProperty,
+                              ObservableValue<String> selectedBlockIdProperty,
+                              Consumer<String> onBlockSelected,
+                              BuildDocumentOutlineUseCase buildOutline,
+                              BuildPdfEnhancedOutlineUseCase buildEnhancedOutline,
+                              SearchPdfTextUseCase searchPdfText,
+                              Consumer<PdfVisualTextHighlight> onPdfHighlightSelected,
+                              IntConsumer onPdfPageSelected,
+                              PdfIndexPreparationHandler prepareForSearch) {
+        this(documentProperty, selectedBlockIdProperty, onBlockSelected, buildOutline,
+                buildEnhancedOutline, searchPdfText, onPdfHighlightSelected, onPdfPageSelected,
+                prepareForSearch, pdfSourceProperty);
+    }
+
+    private DocumentIndexPanel(ObservableValue<ReadableDocument> documentProperty,
+                               ObservableValue<String> selectedBlockIdProperty,
+                               Consumer<String> onBlockSelected,
+                               BuildDocumentOutlineUseCase buildOutline,
+                               BuildPdfEnhancedOutlineUseCase buildEnhancedOutline,
+                               SearchPdfTextUseCase searchPdfText,
+                               Consumer<PdfVisualTextHighlight> onPdfHighlightSelected,
+                               IntConsumer onPdfPageSelected,
+                               PdfIndexPreparationHandler prepareForSearch,
+                               ObservableValue<PreparedPdfSource> pdfSourceProperty) {
         this.documentProperty = Objects.requireNonNull(documentProperty, "documentProperty");
+        this.pdfSourceProperty = pdfSourceProperty;
         this.selectedBlockIdProperty = selectedBlockIdProperty;
         this.onBlockSelected = Objects.requireNonNull(onBlockSelected, "onBlockSelected");
         this.buildOutline = Objects.requireNonNull(buildOutline, "buildOutline");
         this.buildEnhancedOutline = buildEnhancedOutline;
         this.searchPdfText = searchPdfText;
-        this.resolvePdfNarratableDocument = resolvePdfNarratableDocument;
-        this.onNarratableDocumentResolved = onNarratableDocumentResolved;
+        this.prepareForSearch = prepareForSearch;
         this.onPdfHighlightSelected = onPdfHighlightSelected;
         this.onPdfPageSelected = onPdfPageSelected;
-        this.ocrCacheDirectory = ocrCacheDirectory == null ? () -> null : ocrCacheDirectory;
         getStyleClass().add("document-index-panel");
         header.getStyleClass().add("document-index-header");
         pdfSearch.getStyleClass().add("document-index-search-field");
         nativeSearchButton.getStyleClass().add("document-index-search-button");
-        ocrSearchButton.getStyleClass().add("document-index-search-button");
         clearSearchButton.getStyleClass().add("document-index-search-button");
+        expandSearchButton.getStyleClass().add("document-index-search-button");
         pdfPageJump.getStyleClass().add("document-index-search-field");
         pdfPageJumpButton.getStyleClass().add("document-index-search-button");
         bookmarkName.getStyleClass().add("document-index-search-field");
@@ -134,9 +229,9 @@ public final class DocumentIndexPanel extends BorderPane {
         addBookmarkButton.getStyleClass().add("document-index-search-button");
         goBookmarkButton.getStyleClass().add("document-index-search-button");
         deleteBookmarkButton.getStyleClass().add("document-index-search-button");
-        Tooltip.install(ocrSearchButton, new Tooltip("Intenta detectar texto en paginas donde la busqueda normal no alcance."));
         Tooltip.install(nativeSearchButton, new Tooltip("Buscar en el texto ya disponible del PDF."));
         Tooltip.install(clearSearchButton, new Tooltip("Volver al temario o a las paginas del PDF."));
+        Tooltip.install(expandSearchButton, new Tooltip("Preparar explícitamente más páginas y repetir la búsqueda."));
         Tooltip.install(pdfPageJumpButton, new Tooltip("Saltar directamente a una pagina del PDF."));
         Tooltip.install(addBookmarkButton, new Tooltip("Guardar una pagina con un nombre corto para volver despues."));
         Tooltip.install(goBookmarkButton, new Tooltip("Saltar al marcador seleccionado."));
@@ -145,9 +240,26 @@ public final class DocumentIndexPanel extends BorderPane {
         searchProgress.setVisible(false);
         searchProgress.setManaged(false);
         searchActions.getStyleClass().add("document-index-search-actions");
-        searchActions.getChildren().setAll(nativeSearchButton, ocrSearchButton, clearSearchButton, searchProgress);
+        searchScope.getItems().setAll(PdfPreparationScope.CURRENT_SECTION,
+                PdfPreparationScope.FROM_CURRENT_TO_SECTION_END,
+                PdfPreparationScope.PAGE_RANGE,
+                PdfPreparationScope.WHOLE_DOCUMENT);
+        searchScope.setValue(PdfPreparationScope.CURRENT_SECTION);
+        rangeStart.setPromptText("Desde");
+        rangeEnd.setPromptText("Hasta");
+        rangeStart.setPrefColumnCount(5);
+        rangeEnd.setPrefColumnCount(5);
+        HBox range = new HBox(6, rangeStart, rangeEnd);
+        range.visibleProperty().bind(searchScope.valueProperty().isEqualTo(PdfPreparationScope.PAGE_RANGE));
+        range.managedProperty().bind(range.visibleProperty());
+        searchActions.getChildren().setAll(nativeSearchButton, clearSearchButton, searchProgress);
         searchBox.getStyleClass().add("document-index-search");
-        searchBox.getChildren().setAll(pdfSearch, searchActions, searchStatus);
+        if (prepareForSearch == null) {
+            searchBox.getChildren().setAll(pdfSearch, searchActions, searchStatus);
+        } else {
+            searchBox.getChildren().setAll(pdfSearch, searchActions, searchScope, range,
+                    expandSearchButton, searchStatus);
+        }
         pageJumpActions.getStyleClass().add("document-index-search-actions");
         pageJumpActions.getChildren().setAll(pdfPageJumpButton);
         pageJumpBox.getStyleClass().add("document-index-page-jump");
@@ -192,22 +304,53 @@ public final class DocumentIndexPanel extends BorderPane {
                 onBlockSelected.accept(value.blockId());
             }
         });
-        nativeSearchButton.setOnAction(event -> runPdfSearch(false));
-        ocrSearchButton.setOnAction(event -> runPdfSearch(true));
-        clearSearchButton.setOnAction(event -> render(documentProperty.getValue()));
+        nativeSearchButton.setOnAction(event -> runPdfSearch());
+        clearSearchButton.setOnAction(event -> renderActive());
+        expandSearchButton.setOnAction(event -> expandPdfSearch());
         pdfPageJumpButton.setOnAction(event -> goToPdfPage());
-        pdfSearch.setOnAction(event -> runPdfSearch(false));
+        pdfSearch.setOnAction(event -> runPdfSearch());
         pdfPageJump.setOnAction(event -> goToPdfPage());
         addBookmarkButton.setOnAction(event -> addBookmark());
         goBookmarkButton.setOnAction(event -> goToBookmark());
         deleteBookmarkButton.setOnAction(event -> deleteBookmark());
         setTop(header);
         setCenter(tree);
-        documentProperty.addListener((obs, oldValue, newValue) -> render(newValue));
+        documentProperty.addListener((obs, oldValue, newValue) -> renderActive());
+        if (pdfSourceProperty != null) {
+            pdfSourceProperty.addListener((obs, oldValue, newValue) -> renderActive());
+        }
         if (selectedBlockIdProperty != null) {
             selectedBlockIdProperty.addListener((obs, oldValue, newValue) -> queueSelectionRefresh(newValue));
         }
-        render(documentProperty.getValue());
+        renderActive();
+    }
+
+    private void renderActive() {
+        PreparedPdfSource source = pdfSourceProperty == null ? null : pdfSourceProperty.getValue();
+        if (source != null) renderPdf(source);
+        else render(documentProperty.getValue());
+    }
+
+    private void renderPdf(PreparedPdfSource source) {
+        resetIndexCache(null);
+        header.getChildren().clear();
+        DocumentOutlineProjection projection = buildEnhancedOutline == null
+                ? new DocumentOutlineProjection(DocumentOutlineOrigin.FLAT, "Índice del PDF",
+                "No hay proyección de estructura disponible.", List.of(), 0, 0)
+                : buildEnhancedOutline.build(source.workspace());
+        currentProjection = projection;
+        Label title = new Label("Índice del documento");
+        title.getStyleClass().add("document-side-title");
+        header.getChildren().addAll(title,
+                note("Títulos y secciones del documento."), pdfSearchControls());
+        if (readingPreferences != null) {
+            refreshReadingPreferences(source);
+            header.getChildren().add(readingPreferencesBox);
+        }
+        TreeItem<IndexEntry> root = outlineRoot(projection);
+        tree.setRoot(root);
+        expandFirstLevel(root);
+        queueSelectionRefresh(currentSelectedBlockId());
     }
 
     private void render(ReadableDocument document) {
@@ -220,12 +363,6 @@ public final class DocumentIndexPanel extends BorderPane {
         Label purpose = note(purposeText(document, projection));
         Label detail = note(projection.detail());
         header.getChildren().addAll(title, purpose, detail);
-        if (pdfSearchAvailable(document)) {
-            header.getChildren().add(pdfSearchControls());
-        }
-        if (pdfPagesFallback(document, projection)) {
-            header.getChildren().add(pdfPageJumpControls(projection));
-        }
         if (document != null) {
             header.getChildren().add(bookmarkControls(document));
         }
@@ -233,7 +370,6 @@ public final class DocumentIndexPanel extends BorderPane {
         tree.setRoot(root);
         expandFirstLevel(root);
         queueSelectionRefresh(currentSelectedBlockId());
-        maybeEnhancePdfOutline(document, projection);
     }
 
     private static Label note(String text) {
@@ -241,10 +377,6 @@ public final class DocumentIndexPanel extends BorderPane {
         label.setWrapText(true);
         label.getStyleClass().add("document-side-muted");
         return label;
-    }
-
-    private boolean pdfSearchAvailable(ReadableDocument document) {
-        return document != null && document.format() == SourceDocumentFormat.PDF && searchPdfText != null;
     }
 
     private VBox pdfSearchControls() {
@@ -263,46 +395,7 @@ public final class DocumentIndexPanel extends BorderPane {
 
     private VBox bookmarkControls(ReadableDocument document) {
         refreshBookmarkChoices(document);
-        if (document != null && document.format() == SourceDocumentFormat.PDF
-                && (bookmarkPage.getText() == null || bookmarkPage.getText().isBlank())) {
-            bookmarkPage.setText(pdfPageJump.getText() == null || pdfPageJump.getText().isBlank()
-                    ? "1"
-                    : pdfPageJump.getText().strip());
-        }
         return bookmarksBox;
-    }
-
-    private static boolean pdfPagesFallback(ReadableDocument document, DocumentOutlineProjection projection) {
-        return document != null
-                && document.format() == SourceDocumentFormat.PDF
-                && projection != null
-                && projection.origin() == com.marcosmoreiradev.docupodcaststudio.application.document.DocumentOutlineOrigin.PDF_PAGES;
-    }
-
-    private void maybeEnhancePdfOutline(ReadableDocument document, DocumentOutlineProjection baseProjection) {
-        if (document == null || document.format() != SourceDocumentFormat.PDF
-                || buildEnhancedOutline == null
-                || strongProjection(baseProjection)) {
-            return;
-        }
-        Task<DocumentOutlineProjection> task = new Task<>() {
-            @Override
-            protected DocumentOutlineProjection call() {
-                return buildEnhancedOutline.build(document, ocrCacheDirectory.get());
-            }
-        };
-        task.setOnSucceeded(event -> {
-            if (document != documentProperty.getValue()) {
-                return;
-            }
-            DocumentOutlineProjection enhanced = task.getValue();
-            if (betterProjection(enhanced, baseProjection)) {
-                applyProjection(enhanced);
-            }
-        });
-        Thread worker = new Thread(task, "pdf-outline-enhance");
-        worker.setDaemon(true);
-        worker.start();
     }
 
     private static boolean strongProjection(DocumentOutlineProjection projection) {
@@ -330,12 +423,6 @@ public final class DocumentIndexPanel extends BorderPane {
         header.getChildren().addAll(title,
                 note(purposeText(documentProperty.getValue(), projection)),
                 note(projection.detail()));
-        if (pdfSearchAvailable(documentProperty.getValue())) {
-            header.getChildren().add(pdfSearchControls());
-        }
-        if (pdfPagesFallback(documentProperty.getValue(), projection)) {
-            header.getChildren().add(pdfPageJumpControls(projection));
-        }
         if (documentProperty.getValue() != null) {
             header.getChildren().add(bookmarkControls(documentProperty.getValue()));
         }
@@ -562,9 +649,9 @@ public final class DocumentIndexPanel extends BorderPane {
         }
     }
 
-    private void runPdfSearch(boolean includeOcr) {
-        ReadableDocument document = documentProperty.getValue();
-        if (!pdfSearchAvailable(document)) {
+    private void runPdfSearch() {
+        PreparedPdfSource source = pdfSourceProperty == null ? null : pdfSourceProperty.getValue();
+        if (source == null || searchPdfText == null) {
             return;
         }
         String query = pdfSearch.getText() == null ? "" : pdfSearch.getText().strip();
@@ -572,56 +659,63 @@ public final class DocumentIndexPanel extends BorderPane {
             searchStatus.setText("Escribe texto para buscar en el PDF.");
             return;
         }
-        setSearchBusy(true, includeOcr ? "Mejorando busqueda..." : "Buscando en el PDF...");
-        Task<PdfSearchOutcome> task = new Task<>() {
+        setSearchBusy(true, "Buscando en las páginas preparadas...");
+        Task<PdfTextSearchProjection> task = new Task<>() {
             @Override
-            protected PdfSearchOutcome call() {
-                Path cache = ocrCacheDirectory.get();
-                PdfNarratableDocumentResolution resolution = null;
-                ReadableDocument searchable = document;
-                if (includeOcr && resolvePdfNarratableDocument != null) {
-                    resolution = resolvePdfNarratableDocument.resolve(new PdfNarratableDocumentRequest(document, cache, false, 24));
-                    searchable = resolution.document() == null ? document : resolution.document();
-                }
-                PdfTextSearchProjection projection = searchPdfText.search(new PdfTextSearchRequest(
-                        searchable,
-                        query,
-                        includeOcr && resolvePdfNarratableDocument == null,
-                        80,
-                        24,
-                        cache));
-                return new PdfSearchOutcome(projection, resolution);
+            protected PdfTextSearchProjection call() {
+                return searchPdfText.search(new PdfTextSearchRequest(
+                        source.workspace(), query, false, 80, 24));
             }
         };
         task.setOnSucceeded(event -> {
-            if (document != documentProperty.getValue()) {
+            if (pdfSourceProperty == null || source != pdfSourceProperty.getValue()) {
                 return;
             }
             setSearchBusy(false, "");
-            PdfSearchOutcome outcome = task.getValue();
-            if (outcome != null && outcome.resolution() != null && outcome.resolution().changed()
-                    && outcome.resolution().document() != null && onNarratableDocumentResolved != null) {
-                onNarratableDocumentResolved.accept(outcome.resolution().document());
-            }
-            showSearchResults(outcome == null ? null : outcome.projection(), includeOcr);
+            showSearchResults(task.getValue());
         });
         task.setOnFailed(event -> setSearchBusy(false,
                 "No se pudo buscar en PDF: " + diagnostic(task.getException())));
-        Thread worker = new Thread(task, includeOcr ? "pdf-search-ocr" : "pdf-search-native");
+        Thread worker = new Thread(task, "pdf-search-prepared-pages");
         worker.setDaemon(true);
         worker.start();
+    }
+
+    private void expandPdfSearch() {
+        PreparedPdfSource source = pdfSourceProperty == null ? null : pdfSourceProperty.getValue();
+        if (source == null || prepareForSearch == null) return;
+        PdfPreparationScope scope = searchScope.getValue() == null
+                ? PdfPreparationScope.CURRENT_SECTION : searchScope.getValue();
+        int start = scope == PdfPreparationScope.PAGE_RANGE ? parsePositiveInt(rangeStart.getText()) : 0;
+        int end = scope == PdfPreparationScope.PAGE_RANGE ? parsePositiveInt(rangeEnd.getText()) : 0;
+        if (scope == PdfPreparationScope.PAGE_RANGE && (start <= 0 || end < start)) {
+            searchStatus.setText("Indica un rango de páginas válido.");
+            return;
+        }
+        expandSearchButton.setDisable(true);
+        prepareForSearch.prepare(source, scope, start, end, () -> {
+            expandSearchButton.setDisable(false);
+            runPdfSearch();
+        }, message -> {
+            searchStatus.setText(message == null ? "" : message);
+            if (message != null && (message.startsWith("No se pudo")
+                    || message.startsWith("Preparación cancelada")
+                    || message.startsWith("Indica"))) {
+                expandSearchButton.setDisable(false);
+            }
+        });
     }
 
     private void setSearchBusy(boolean busy, String status) {
         searchProgress.setVisible(busy);
         searchProgress.setManaged(busy);
         nativeSearchButton.setDisable(busy);
-        ocrSearchButton.setDisable(busy);
         clearSearchButton.setDisable(busy);
+        expandSearchButton.setDisable(busy);
         searchStatus.setText(status == null ? "" : status);
     }
 
-    private void showSearchResults(PdfTextSearchProjection projection, boolean includeOcr) {
+    private void showSearchResults(PdfTextSearchProjection projection) {
         if (projection == null) {
             searchStatus.setText("Sin resultados.");
             return;
@@ -634,22 +728,15 @@ public final class DocumentIndexPanel extends BorderPane {
         if (root.getChildren().isEmpty()) {
             root.getChildren().add(new TreeItem<>(IndexEntry.message(
                     "Sin resultados",
-                    includeOcr ? "No se encontro texto despues de mejorar la busqueda." : "No se encontro texto. Prueba Mejorar busqueda.")));
+                    "No se encontró texto en las páginas ya preparadas.")));
         }
         tree.setRoot(root);
         expandFirstLevel(root);
-        String improved = includeOcr ? " con busqueda mejorada" : "";
-        searchStatus.setText(projection.results().size() + " resultado(s)" + improved
-                + " en " + projection.scannedPages() + " pagina(s).");
+        searchStatus.setText(projection.results().size() + " resultado(s) en "
+                + projection.scannedPages() + " página(s) preparada(s).");
     }
 
     private static String purposeText(ReadableDocument document, DocumentOutlineProjection projection) {
-        if (document != null && document.format() == SourceDocumentFormat.PDF && projection != null) {
-            if (projection.origin() == com.marcosmoreiradev.docupodcaststudio.application.document.DocumentOutlineOrigin.PDF_PAGES) {
-                return "Paginas del PDF.";
-            }
-            return "Temario del PDF.";
-        }
         return "Origen del indice: " + (projection == null ? "" : projection.origin().label()) + ".";
     }
 
@@ -821,9 +908,6 @@ public final class DocumentIndexPanel extends BorderPane {
         }
     }
 
-    private record PdfSearchOutcome(PdfTextSearchProjection projection, PdfNarratableDocumentResolution resolution) {
-    }
-
     private record IndexEntry(String blockId, DocumentBlockType kind, String label, PdfVisualTextHighlight highlight) {
         static IndexEntry root() {
             return new IndexEntry("", DocumentBlockType.EMPTY, "Documento", null);
@@ -839,7 +923,7 @@ public final class DocumentIndexPanel extends BorderPane {
 
         static IndexEntry searchResult(PdfTextSearchResult result) {
             String label = "p. " + result.pageNumber() + " - " + result.snippet();
-            return new IndexEntry(result.blockId(), DocumentBlockType.PARAGRAPH, label, result.toHighlight());
+            return new IndexEntry(result.regionId(), DocumentBlockType.PARAGRAPH, label, result.toHighlight());
         }
     }
 }

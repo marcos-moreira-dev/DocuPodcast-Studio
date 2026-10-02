@@ -31,9 +31,13 @@ import java.util.Objects;
 public final class VoiceSampleWorkflowCoordinator {
     private static final String OWN_VOICE_ID = "VOC-OWN-PLACEHOLDER";
     private final WorkspaceApplicationServices applicationServices;
+    private final VoiceReferenceSamplePathResolver samplePathResolver;
 
     public VoiceSampleWorkflowCoordinator(WorkspaceApplicationServices applicationServices) {
         this.applicationServices = Objects.requireNonNull(applicationServices, "applicationServices");
+        this.samplePathResolver = new VoiceReferenceSamplePathResolver(
+                applicationServices.runtime().installationRoot(),
+                applicationServices.runtime().runtimeRoot());
     }
 
     public VoiceRegistrationWizardPlan registrationPlan(VoiceLibrary library, VoiceProfile voice) {
@@ -127,8 +131,7 @@ public final class VoiceSampleWorkflowCoordinator {
             if (root == null) {
                 throw new IOException("La ruta de la biblioteca de voces no tiene carpeta contenedora.");
             }
-            return VoiceReferenceSamplePathResolver.fromCurrentApplicationRoot()
-                    .resolve(root, sample, "muestra de voz");
+            return samplePathResolver.resolve(root, sample, "muestra de voz");
         }
         if (!java.nio.file.Files.isRegularFile(raw.normalize())) {
             throw new IOException("La muestra de voz registrada no existe: " + raw.normalize());

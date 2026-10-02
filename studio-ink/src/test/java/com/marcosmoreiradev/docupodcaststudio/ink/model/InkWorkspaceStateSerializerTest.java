@@ -93,4 +93,26 @@ final class InkWorkspaceStateSerializerTest {
         assertEquals(400, parsed.images().get(0).fitWidth());
         assertTrue(parsed.images().get(0).crop().active());
     }
+
+    @Test
+    void normalizesLegacyCanvasCommandsWithoutASecondConsumerParser() throws Exception {
+        String legacy = """
+                {
+                  "width": 640,
+                  "height": 480,
+                  "strokes": [
+                    {"type":"DRAW","x1":10,"y1":20,"x2":50,"y2":60,
+                     "controlX":30,"controlY":45,"quadratic":true,
+                     "color":"#112233ff","width":4}
+                  ]
+                }
+                """;
+
+        InkWorkspaceState parsed = InkWorkspaceStateSerializer.fromJson(legacy);
+
+        assertEquals(1, parsed.strokes().size());
+        assertEquals(3, parsed.strokes().getFirst().points().size());
+        assertEquals(30, parsed.strokes().getFirst().points().get(1).x());
+        assertEquals("#112233ff", parsed.strokes().getFirst().color());
+    }
 }

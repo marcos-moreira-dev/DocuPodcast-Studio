@@ -1,6 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.application.runtime;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -82,7 +83,7 @@ public final class RunMigrationClosureChecklistUseCase {
             for (Path file : stream.filter(Files::isRegularFile)
                     .filter(path -> path.toString().endsWith(".java"))
                     .toList()) {
-                String lower = Files.readString(file).toLowerCase(Locale.ROOT);
+                String lower = Files.readString(file, StandardCharsets.UTF_8).toLowerCase(Locale.ROOT);
                 if (lower.contains("youtube")
                         || lower.contains("whisper")
                         || lower.contains("stt/")
@@ -97,6 +98,6 @@ public final class RunMigrationClosureChecklistUseCase {
 
     private static String read(Path root, String relative) throws IOException {
         Path file = root.resolve(relative).normalize();
-        return Files.isRegularFile(file) ? Files.readString(file) : "";
+        return Files.isRegularFile(file) ? Files.readString(file, StandardCharsets.UTF_8) : "";
     }
 }

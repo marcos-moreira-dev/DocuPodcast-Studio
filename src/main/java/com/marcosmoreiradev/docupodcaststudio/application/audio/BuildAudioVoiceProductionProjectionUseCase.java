@@ -2,6 +2,7 @@ package com.marcosmoreiradev.docupodcaststudio.application.audio;
 
 import com.marcosmoreiradev.docupodcaststudio.application.fragment.FragmentWorkspaceProjection;
 import com.marcosmoreiradev.docupodcaststudio.application.voice.VoiceReferenceAvailability;
+import com.marcosmoreiradev.docupodcaststudio.application.voice.EffectiveVoiceAssignmentResolver;
 import com.marcosmoreiradev.docupodcaststudio.domain.fragment.DocumentFragment;
 import com.marcosmoreiradev.docupodcaststudio.domain.fragment.FragmentAssetBinding;
 import com.marcosmoreiradev.docupodcaststudio.domain.fragment.FragmentAssetRole;
@@ -24,6 +25,8 @@ import java.util.Optional;
 /** Builds a cross-mode audio/voice production view from the canonical fragment projection. */
 public final class BuildAudioVoiceProductionProjectionUseCase {
     private static final String DEFAULT_NARRATOR_VOICE_ID = "VOC-NARRATOR";
+    private static final EffectiveVoiceAssignmentResolver VOICE_RESOLVER =
+            new EffectiveVoiceAssignmentResolver();
 
     public AudioVoiceProductionProjection build(
             FragmentWorkspaceProjection projection,
@@ -140,10 +143,11 @@ public final class BuildAudioVoiceProductionProjectionUseCase {
             VoiceLibrary library,
             List<AudioEngineReadinessUiItem> engineReadiness
     ) {
-        String voiceId = explicitVoiceId(bindings)
-                .or(() -> theatreVoiceId(fragment, project))
-                .or(() -> Optional.ofNullable(segment).map(NarrationSegment::voiceProfileId))
-                .orElse(DEFAULT_NARRATOR_VOICE_ID);
+        String voiceId = VOICE_RESOLVER.resolve(
+                explicitVoiceId(bindings),
+                theatreVoiceId(fragment, project),
+                effectiveDocumentDefaultVoice(segment, project),
+                DEFAULT_NARRATOR_VOICE_ID).voiceProfileId();
         if (normalize(voiceId).isBlank()) {
             voiceId = DEFAULT_NARRATOR_VOICE_ID;
         }
@@ -155,6 +159,20 @@ public final class BuildAudioVoiceProductionProjectionUseCase {
         VoiceProfile voice = profile.get();
         VoiceReferenceAvailability availability = availability(voice, engineReadiness);
         return new VoiceChoice(voice.id(), voice.displayName(), availability, messageFor(voice, availability));
+    }
+
+    private static String effectiveDocumentDefaultVoice(
+            NarrationSegment segment,
+            DocuPodcastProject project) {
+        String segmentVoice = segment == null || segment.voiceProfileId() == null
+                ? "" : segment.voiceProfileId().strip();
+        if (project == null
+                || (!segmentVoice.isBlank()
+                && !DEFAULT_NARRATOR_VOICE_ID.equalsIgnoreCase(segmentVoice))) {
+            return segmentVoice;
+        }
+        String projectVoice = project.documentDefaultVoiceProfileId();
+        return projectVoice.isBlank() ? segmentVoice : projectVoice;
     }
 
     private static Optional<String> explicitVoiceId(List<FragmentAssetBinding> bindings) {

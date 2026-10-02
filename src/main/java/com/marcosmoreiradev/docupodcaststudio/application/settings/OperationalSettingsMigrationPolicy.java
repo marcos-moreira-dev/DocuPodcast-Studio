@@ -35,6 +35,8 @@ public final class OperationalSettingsMigrationPolicy {
                 tts,
                 current.video(),
                 current.imageGeneration(),
+                current.imageSuperResolution(),
+                current.mediaEngines(),
                 current.frameGeneration(),
                 current.compute(),
                 current.ocr(),

@@ -99,3 +99,83 @@
     -fx-pref-height: 30px;
     -fx-max-height: 30px;
 }
+
+/* Compact canvas-editor toolbar shared by Documentary, Theatre and composition surfaces. */
+.studio-canvas-toolbar {
+    -fx-background-color: -docu-bg-chrome;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 0 0 1 0;
+    -fx-effect: -docu-shadow-soft;
+}
+
+.studio-canvas-toolbar-row {
+    -fx-background-color: transparent;
+    -fx-padding: 1 0 1 0;
+    -fx-alignment: center-left;
+}
+
+.studio-canvas-toolbar-group-label {
+    -fx-text-fill: -docu-text-muted;
+    -fx-font-size: 10px;
+    -fx-font-weight: 800;
+    -fx-padding: 8 2 0 1;
+    -fx-text-transform: uppercase;
+}
+
+.studio-canvas-toolbar .button,
+.studio-canvas-toolbar .toggle-button,
+.studio-canvas-toolbar .color-picker,
+.studio-canvas-toolbar .combo-box,
+.studio-canvas-toolbar .check-box {
+    -fx-min-height: 34px;
+}
+
+.studio-canvas-toolbar .toggle-button:selected {
+    -fx-background-color: -docu-accent;
+    -fx-border-color: -docu-accent;
+    -fx-text-fill: white;
+}
+
+.studio-canvas-toolbar .toggle-button:selected .text,
+.studio-canvas-toolbar .toggle-button:selected .label {
+    -fx-text-fill: white;
+}
+
+.studio-canvas-selection-bounds {
+    -fx-fill: transparent;
+    -fx-stroke: -docu-accent;
+    -fx-stroke-width: 1.25;
+    -fx-stroke-dash-array: 5 4;
+    -fx-stroke-dash-offset: 0;
+}
+
+.studio-canvas-selection-handle {
+    -fx-alignment: center;
+    -fx-background-color: white;
+    -fx-background-radius: 5;
+    -fx-border-color: -docu-accent;
+    -fx-border-radius: 5;
+    -fx-border-width: 1.25;
+    -fx-text-fill: -docu-accent;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 0;
+}
+
+.studio-canvas-selection-handle.rotation {
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+}
+
+.studio-canvas-selection-rotation-guide {
+    -fx-stroke: -docu-accent;
+    -fx-stroke-width: 1.25;
+    -fx-stroke-dash-array: 3 3;
+}
+
+.studio-canvas-selection-marquee {
+    -fx-fill: rgba(98, 87, 205, 0.10);
+    -fx-stroke: -docu-accent;
+    -fx-stroke-width: 1;
+    -fx-stroke-dash-array: 4 3;
+}

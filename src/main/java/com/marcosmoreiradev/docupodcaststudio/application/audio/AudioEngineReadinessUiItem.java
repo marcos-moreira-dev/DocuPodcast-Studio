@@ -2,12 +2,7 @@ package com.marcosmoreiradev.docupodcaststudio.application.audio;
 
 import java.util.Objects;
 
-/**
- * Human, operational state of an audio origin for UI surfaces.
- *
- * <p>This is not a decorative metric. It tells the user whether the engine can be used in Documento,
- * why it may be hidden there, and what action is available in Configuración or Voces.</p>
- */
+/** Human, operational state of an audio origin for all UI surfaces. */
 public record AudioEngineReadinessUiItem(
         String engineId,
         String displayName,
@@ -27,21 +22,16 @@ public record AudioEngineReadinessUiItem(
 
     public static AudioEngineReadinessUiItem fromAvailability(AudioEngineAvailability availability) {
         Objects.requireNonNull(availability, "availability");
-        boolean documentVisible = availability.usableInDocument();
         String label = availability.statusLabel();
         if (!availability.usableInDocument() && "xtts".equals(availability.engineId())) {
-            label = "No aparece en Documento: falta prueba WAV válida";
+            label = "Visible pero no seleccionable: Voz IA avanzada requiere reparación";
         } else if (!availability.usableInDocument() && "piper".equals(availability.engineId())) {
-            label = "No aparece en Documento: falta preparar Voz local simple";
+            label = "Visible pero no seleccionable: Voz local simple requiere reparación";
         }
         return new AudioEngineReadinessUiItem(
-                availability.engineId(),
-                availability.displayName(),
-                label,
-                availability.usableInDocument(),
-                documentVisible,
-                availability.userMessage(),
-                availability.recommendedAction());
+                availability.engineId(), availability.displayName(), label,
+                availability.usableInDocument(), true,
+                availability.userMessage(), availability.recommendedAction());
     }
 
     public String compactLine() {

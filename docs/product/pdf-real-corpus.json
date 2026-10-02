@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "outputDirectory": "target/pdf-real-corpus",
+  "documents": [
+    {
+      "id": "kress",
+      "path": "C:\\Users\\MARCOS MOREIRA\\Desktop\\Numerical Analysis - Rainer Kress.pdf",
+      "pageCount": 342,
+      "sha256": "2631606a9815ebd76573160f825d6be0e95fd35c3e731fa0abd52671cbf20cdf",
+      "kind": "scanned",
+      "annotatedPages": [20, 100, 340]
+    },
+    {
+      "id": "burden",
+      "path": "C:\\Users\\MARCOS MOREIRA\\Desktop\\Numerical Analysis NINTH EDITION Richard L. Burden.pdf",
+      "pageCount": 895,
+      "sha256": "c5af17c41cc4049f9b3f028ad513182d316d6d1c7a1d683250fb18bda2e48d6d",
+      "kind": "digital-hybrid",
+      "annotatedPages": [20, 50, 100, 500, 895]
+    },
+    {
+      "id": "subconjuntos-poda",
+      "path": "C:\\Users\\MARCOS MOREIRA\\Downloads\\De_los_subconjuntos_a_la_poda.pdf",
+      "pageCount": 118,
+      "sha256": "e1d79ff6607cedbd0381ccf9ce8f472e542e5013588e6ca8ed3055852022fccf",
+      "kind": "digital-academic",
+      "annotatedPages": [14, 19, 49, 54, 73, 82, 93, 97, 102]
+    }
+  ]
+}

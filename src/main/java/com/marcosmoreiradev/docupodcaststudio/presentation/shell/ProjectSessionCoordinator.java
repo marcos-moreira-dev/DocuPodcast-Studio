@@ -24,6 +24,10 @@ public final class ProjectSessionCoordinator {
         return Optional.ofNullable(activeSession);
     }
 
+    public void activate(ProjectSession session) {
+        activeSession = Objects.requireNonNull(session, "session");
+    }
+
     public boolean hasActiveSession() {
         return activeSession != null;
     }

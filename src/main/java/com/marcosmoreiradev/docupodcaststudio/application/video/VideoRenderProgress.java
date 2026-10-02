@@ -23,6 +23,14 @@ public record VideoRenderProgress(
         return Math.min(1.0, Math.max(0.0, (double) completedFrames / (double) totalFrames));
     }
 
+    /** Final assembly/mixing/verification have no honest frame denominator. */
+    public boolean determinateProgress() {
+        return switch (stage) {
+            case MIXING_TRACKS, VERIFYING_OUTPUT, IDLE -> false;
+            default -> totalFrames > 0;
+        };
+    }
+
     public static VideoRenderProgress idle() {
         return new VideoRenderProgress(VideoRenderStage.IDLE, 0, 0, "", false, false);
     }
@@ -40,6 +48,20 @@ public record VideoRenderProgress(
     public static VideoRenderProgress rendering(int completedFrames, int totalFrames, String currentStep) {
         return new VideoRenderProgress(VideoRenderStage.RENDERING_WITH_FFMPEG, completedFrames, totalFrames,
                 currentStep == null || currentStep.isBlank() ? "Renderizando video final..." : currentStep, true, true);
+    }
+
+    public static VideoRenderProgress assembling(int totalFrames, String detail) {
+        return assembling(0, totalFrames, detail);
+    }
+
+    public static VideoRenderProgress assembling(int completedFrames, int totalFrames,
+                                                   String detail) {
+        return new VideoRenderProgress(VideoRenderStage.ASSEMBLING_FINAL,
+                completedFrames, totalFrames,
+                detail == null || detail.isBlank()
+                        ? "Uniendo y comprimiendo la línea de tiempo completa. Esta fase puede tardar en videos largos."
+                        : detail,
+                true, true);
     }
 
     public static VideoRenderProgress mixing(int totalFrames, String detail) {

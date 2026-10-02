@@ -29,24 +29,18 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
-import java.util.stream.Stream;
 
 /** Local OCR backend using Tesseract CLI TSV output. */
 public final class TesseractPdfOcrEngine implements PdfOcrEngine {
     private static final Duration OCR_TIMEOUT = Duration.ofMinutes(3);
     private static final String OCR_CACHE_VERSION = "pdf-ocr-v2";
-    private static final Path TEMP_PLAIN_TEXT_CACHE_DIRECTORY = Path.of(
-            System.getProperty("java.io.tmpdir"), "docupodcast-studio", "pdf-ocr-text");
-    private static final AtomicBoolean CLEANUP_HOOK_INSTALLED = new AtomicBoolean(false);
 
     private final PdfRenderEngine renderEngine;
     private final ExternalProcessRunner processRunner;
@@ -88,7 +82,7 @@ public final class TesseractPdfOcrEngine implements PdfOcrEngine {
         if (tsv == null) {
             Path imagePath = writeTempPageImage(page);
             try {
-                tsv = runTesseract(imagePath, request.languages());
+                tsv = runTesseract(imagePath, request.languages(), request.pageSegmentationMode());
                 writeCache(cacheFile, tsv);
             } finally {
                 deleteQuietly(imagePath);
@@ -98,7 +92,6 @@ public final class TesseractPdfOcrEngine implements PdfOcrEngine {
         PdfOcrPageResult parsed = tsvParser.parse(tsv, page.pageNumber(), page.dpi(),
                 page.image().getWidth(), page.image().getHeight(), page.pageWidthPoints(), page.pageHeightPoints());
         parsed = withDominantLineColors(parsed, page.image());
-        writePlainTextPageCache(request, parsed);
         warnings.addAll(parsed.warnings());
         return new PdfOcrPageResult(parsed.pageNumber(), parsed.dpi(), parsed.imageWidthPixels(),
                 parsed.imageHeightPixels(), parsed.pageWidthPoints(), parsed.pageHeightPoints(),
@@ -196,6 +189,15 @@ public final class TesseractPdfOcrEngine implements PdfOcrEngine {
 
     private PdfPageRenderResult renderPage(PdfOcrRequest request) throws PdfOcrException {
         try {
+            if (request.cropRegion() != null) {
+                PdfPageRegion crop = request.cropRegion();
+                return renderEngine.renderCrop(new com.marcosmoreiradev
+                        .docupodcaststudio.application.document.PdfCropRenderRequest(
+                        request.sourcePdf(), request.pageNumber(),
+                        crop.xMinPoints(), crop.yMinPoints(), crop.xMaxPoints(),
+                        crop.yMaxPoints(), 2.0, request.dpi(),
+                        request.maxPixelCount(), Color.WHITE, true));
+            }
             return renderEngine.renderPage(new PdfPageRenderRequest(
                     request.sourcePdf(),
                     request.pageNumber(),
@@ -220,11 +222,11 @@ public final class TesseractPdfOcrEngine implements PdfOcrEngine {
         }
     }
 
-    private String runTesseract(Path imagePath, String languages) throws PdfOcrException {
+    private String runTesseract(Path imagePath, String languages, int pageSegmentationMode) throws PdfOcrException {
         PdfOcrException lastFailure = null;
         for (String candidateLanguages : languageCandidates(languages)) {
             try {
-                return runTesseractWithLanguages(imagePath, candidateLanguages);
+                return runTesseractWithLanguages(imagePath, candidateLanguages, pageSegmentationMode);
             } catch (PdfOcrException ex) {
                 if (ex.code() == PdfOcrErrorCode.TESSERACT_NOT_FOUND) {
                     throw ex;
@@ -242,7 +244,8 @@ public final class TesseractPdfOcrEngine implements PdfOcrEngine {
                 "No se pudo ejecutar OCR local: no hay idiomas OCR candidatos.");
     }
 
-    private String runTesseractWithLanguages(Path imagePath, String languages) throws PdfOcrException {
+    private String runTesseractWithLanguages(Path imagePath, String languages, int pageSegmentationMode)
+            throws PdfOcrException {
         String command = resolvedTesseractCommand();
         Path outputBase = tesseractOutputBase();
         Path tsvOutput = Path.of(outputBase.toString() + ".tsv");
@@ -256,6 +259,10 @@ public final class TesseractPdfOcrEngine implements PdfOcrEngine {
         args.add(outputBase.toString());
         args.add("-l");
         args.add(languages);
+        args.add("--oem");
+        args.add("3");
+        args.add("--psm");
+        args.add(Integer.toString(pageSegmentationMode));
         args.add("tsv");
         ExternalProcessRequest request = ExternalProcessRequest.of(args, "tesseract-pdf-ocr", OCR_TIMEOUT);
         try {
@@ -387,85 +394,23 @@ public final class TesseractPdfOcrEngine implements PdfOcrEngine {
         }
     }
 
-    private static void writePlainTextPageCache(PdfOcrRequest request, PdfOcrPageResult parsed) {
-        if (request == null || parsed == null) {
-            return;
-        }
-        Path directory = plainTextCacheDirectory(request.cacheDirectory());
-        if (request.cacheDirectory() == null) {
-            installPlainTextCacheCleanupHook();
-        }
-        try {
-            Files.createDirectories(directory);
-            String text = parsed.lines().stream()
-                    .map(line -> line.text() == null ? "" : line.text().strip())
-                    .filter(line -> !line.isBlank())
-                    .collect(java.util.stream.Collectors.joining(System.lineSeparator()));
-            Files.writeString(plainTextCacheFile(request, directory), text, StandardCharsets.UTF_8);
-        } catch (IOException ignored) {
-            // Auxiliary text cache must never block OCR.
-        }
-    }
-
-    private static Path plainTextCacheDirectory(Path cacheDirectory) {
-        return cacheDirectory == null
-                ? TEMP_PLAIN_TEXT_CACHE_DIRECTORY
-                : cacheDirectory.resolve("text").normalize();
-    }
-
-    private static Path plainTextCacheFile(PdfOcrRequest request, Path directory) throws IOException {
-        Path source = request.sourcePdf().toAbsolutePath().normalize();
-        String languages = safeFileToken(request.languages());
-        String seed = OCR_CACHE_VERSION + "|" + source + "|" + Files.getLastModifiedTime(source).toMillis() + "|"
-                + request.pageNumber() + "|" + request.dpi() + "|" + request.languages();
-        String hash = sha256(seed).substring(0, 16);
-        String name = "pdf-ocr-" + hash
-                + "-p" + String.format(java.util.Locale.ROOT, "%05d", request.pageNumber())
-                + "-dpi" + request.dpi()
-                + "-" + languages + ".txt";
-        return directory.resolve(name);
-    }
-
-    private static String safeFileToken(String value) {
-        String raw = value == null || value.isBlank() ? PdfOcrRequest.DEFAULT_LANGUAGES : value.strip();
-        String token = raw.replaceAll("[^A-Za-z0-9+_-]+", "_");
-        return token.isBlank() ? "ocr" : token;
-    }
-
-    private static void installPlainTextCacheCleanupHook() {
-        if (!CLEANUP_HOOK_INSTALLED.compareAndSet(false, true)) {
-            return;
-        }
-        Runtime.getRuntime().addShutdownHook(new Thread(
-                () -> deletePlainTextCacheDirectory(TEMP_PLAIN_TEXT_CACHE_DIRECTORY),
-                "docupodcast-pdf-ocr-text-cleanup"));
-    }
-
-    private static void deletePlainTextCacheDirectory(Path directory) {
-        if (directory == null || !Files.exists(directory)) {
-            return;
-        }
-        try (Stream<Path> paths = Files.walk(directory)) {
-            paths.sorted(Comparator.reverseOrder()).forEach(path -> {
-                try {
-                    Files.deleteIfExists(path);
-                } catch (IOException ignored) {
-                    // Best-effort cleanup on process exit.
-                }
-            });
-        } catch (IOException ignored) {
-            // Best-effort cleanup on process exit.
-        }
-    }
-
-    private static Path cacheFile(PdfOcrRequest request) throws PdfOcrException {
+    private Path cacheFile(PdfOcrRequest request) throws PdfOcrException {
         if (request.cacheDirectory() == null) {
             return null;
         }
         try {
             Path source = request.sourcePdf().toAbsolutePath().normalize();
-            String seed = OCR_CACHE_VERSION + "|" + source + "|" + Files.getLastModifiedTime(source).toMillis() + "|"
+            String seed = OCR_CACHE_VERSION + "|pdf=" + sha256(source) + "|"
                     + request.pageNumber() + "|" + request.dpi() + "|" + request.languages();
+            seed += "|tesseract=" + tesseractCommand.get()
+                    + "|oem=3|psm=" + request.pageSegmentationMode()
+                    + "|rotation=" + request.normalizedRotationDegrees() + "|preprocess=render-rgb-v1"
+                    + "|parser=tsv-v1|grouping=paragraph-v2|classifier=narratability-v2";
+            if (request.cropRegion() != null) {
+                PdfPageRegion crop = request.cropRegion();
+                seed += "|crop=" + crop.xMinPoints() + ',' + crop.yMinPoints()
+                        + ',' + crop.xMaxPoints() + ',' + crop.yMaxPoints();
+            }
             return request.cacheDirectory().resolve("pdf-ocr-" + sha256(seed) + ".tsv");
         } catch (IOException ex) {
             throw new PdfOcrException(PdfOcrErrorCode.CACHE_FAILED,
@@ -477,6 +422,21 @@ public final class TesseractPdfOcrEngine implements PdfOcrEngine {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("SHA-256 no disponible", ex);
+        }
+    }
+
+    private static String sha256(Path path) throws IOException {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            try (var input = Files.newInputStream(path)) {
+                byte[] buffer = new byte[64 * 1024];
+                for (int read; (read = input.read(buffer)) >= 0; ) {
+                    if (read > 0) digest.update(buffer, 0, read);
+                }
+            }
+            return HexFormat.of().formatHex(digest.digest());
         } catch (NoSuchAlgorithmException ex) {
             throw new IllegalStateException("SHA-256 no disponible", ex);
         }

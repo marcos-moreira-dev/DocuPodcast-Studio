@@ -27,9 +27,10 @@ public final class InkInputProviderRegistry {
     }
 
     public static InkInputProviderRegistry localDefaults() {
-        return new InkInputProviderRegistry()
-                .register(DrawingFeatureCatalog.DOCUMENT_PROBLEM, InkInputProviderFactory::createLectureStudioOnly)
-                .register(DrawingFeatureCatalog.FREE_COMPOSITION, InkInputProviderFactory::createDefault)
-                .register(DrawingFeatureCatalog.THEATRE_FRAME, InkInputProviderFactory::createNativeOnly);
+        DrawingFeatureCatalog catalog = DrawingFeatureCatalog.official();
+        InkInputProviderRegistry registry = new InkInputProviderRegistry();
+        catalog.profiles().forEach(profile -> registry.register(profile.id(),
+                () -> InkInputProviderFactory.create(profile.inputPolicy())));
+        return registry;
     }
 }

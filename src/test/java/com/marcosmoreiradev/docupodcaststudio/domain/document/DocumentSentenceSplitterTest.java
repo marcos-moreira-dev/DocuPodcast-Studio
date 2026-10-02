@@ -29,4 +29,23 @@ class DocumentSentenceSplitterTest {
         assertEquals("Una oración sin punto final", spans.get(0).text());
         assertTrue(spans.get(0).range().length() > 0);
     }
+
+    @Test
+    void keepsDecimalNumberingTogetherAndNeverCreatesPunctuationOnlyUnits() {
+        List<DocumentSentenceSpan> spans = DocumentSentenceSplitter.split(
+                "BLK-003", "Ahora veremos: 0.2 Mapa de batalla.");
+
+        assertEquals(1, spans.size());
+        assertEquals("Ahora veremos: 0.2 Mapa de batalla.", spans.getFirst().text());
+    }
+
+    @Test
+    void absorbsDuplicatedTerminalPunctuationIntoThePreviousSentence() {
+        List<DocumentSentenceSpan> spans = DocumentSentenceSplitter.split(
+                "BLK-004", "¿Cómo organizo la solución?. El mapa, sin rodeos..");
+
+        assertEquals(2, spans.size());
+        assertEquals("¿Cómo organizo la solución?.", spans.get(0).text());
+        assertEquals("El mapa, sin rodeos..", spans.get(1).text());
+    }
 }

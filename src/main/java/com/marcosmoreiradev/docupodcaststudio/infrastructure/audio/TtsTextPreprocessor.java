@@ -1,7 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.infrastructure.audio;
 
 import java.text.Normalizer;
-import java.util.Locale;
 import java.util.regex.Pattern;
 
 /** Normalizes segment text before sending it to external TTS engines. */
@@ -37,57 +36,8 @@ public final class TtsTextPreprocessor {
         if (text.length() > MAX_CHARS) {
             text = text.substring(0, MAX_CHARS).strip() + "...";
         }
-        if (text.isBlank()) {
-            return "Pausa breve.";
-        }
         return text;
     }
-
-
-    public static String sanitizeForEngine(String raw, String engineDisplayName, String commandTemplate) {
-        String text = sanitize(raw);
-        if (looksLikeXtts(engineDisplayName, commandTemplate)) {
-            return normalizeForXtts(text);
-        }
-        if (looksLikePiper(engineDisplayName, commandTemplate)) {
-            return normalizeForPiper(text);
-        }
-        return text;
-    }
-
-    private static boolean looksLikeXtts(String engineDisplayName, String commandTemplate) {
-        String label = engineLabel(engineDisplayName, commandTemplate);
-        return label.contains("xtts") || label.contains("coqui") || label.contains("voz ia avanzada");
-    }
-
-    private static boolean looksLikePiper(String engineDisplayName, String commandTemplate) {
-        String label = engineLabel(engineDisplayName, commandTemplate);
-        return label.contains("piper") || label.contains("voz local simple");
-    }
-
-    private static String engineLabel(String engineDisplayName, String commandTemplate) {
-        return ((engineDisplayName == null ? "" : engineDisplayName) + " "
-                + (commandTemplate == null ? "" : commandTemplate)).toLowerCase(Locale.ROOT);
-    }
-
-    private static String normalizeForXtts(String text) {
-        String value = text == null ? "" : text;
-        value = value.replace("...", " pausa ");
-        value = WHITESPACE.matcher(value).replaceAll(" ").strip();
-        value = value.replace(".", "");
-        value = value.strip();
-        return value.isBlank() ? "Pausa breve" : value;
-    }
-
-    private static String normalizeForPiper(String text) {
-        String value = text == null ? "" : text;
-        value = value.replace('ñ', 'n').replace('Ñ', 'N');
-        value = value.replace('¿', '?').replace('¡', '!');
-        value = Normalizer.normalize(value, Normalizer.Form.NFD)
-                .replaceAll("\\p{M}+", "");
-        return value;
-    }
-
     public static boolean changed(String original, String sanitized) {
         String raw = original == null ? "" : original.strip();
         String clean = sanitized == null ? "" : sanitized.strip();

@@ -3,6 +3,7 @@ package com.marcosmoreiradev.docupodcaststudio.application.modelsetup;
 import com.marcosmoreiradev.docupodcaststudio.application.runtime.RuntimeArtifactPaths;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -21,7 +22,7 @@ public final class InspectXttsSmokeTestUseCase {
         }
         try {
             long bytes = Files.size(audio);
-            String json = Files.readString(manifest);
+            String json = Files.readString(manifest, StandardCharsets.UTF_8);
             boolean generated = json.contains("\"generated\": true") && bytes > 44L;
             boolean playback = json.contains("\"playbackConfirmed\": true");
             Instant generatedAt = parseInstant(json);

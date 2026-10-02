@@ -58,15 +58,19 @@ public final class ValidateOperationalSettingsUseCase {
         }
         if (compute.policy().canUseGpu()
                 && !compute.allowGpuForTts()
-                && !compute.allowGpuForVideo()) {
-            warnings.add("La política de cómputo permite GPU, pero voz y video tienen GPU desactivada.");
+                && !compute.allowGpuForVideo()
+                && !compute.allowGpuForContentAnalysis()) {
+            warnings.add("La política de cómputo permite GPU, pero voz, video y análisis documental "
+                    + "tienen GPU desactivada.");
         }
         if (compute.videoEncoderPolicy().hardwareAccelerated() && !compute.allowGpuForVideo()) {
             warnings.add("El encoder de video solicita GPU, pero el uso de GPU para video está desactivado.");
         }
         info.add("Dispositivo de inferencia: " + compute.policy().label()
                 + " · Voz GPU=" + yesNo(compute.allowGpuForTts())
-                + " · Video GPU=" + yesNo(compute.allowGpuForVideo()) + ".");
+                + " · Video GPU=" + yesNo(compute.allowGpuForVideo())
+                + " · Análisis GPU=" + yesNo(compute.allowGpuForContentAnalysis())
+                + " · RAM de apoyo=" + yesNo(compute.allowRamOffloadForContentAnalysis()) + ".");
         info.add("Encoder video: " + compute.videoEncoderPolicy().label() + ".");
     }
 

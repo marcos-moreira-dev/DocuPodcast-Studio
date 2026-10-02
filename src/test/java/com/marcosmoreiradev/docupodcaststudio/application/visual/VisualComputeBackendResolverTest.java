@@ -71,10 +71,27 @@ final class VisualComputeBackendResolverTest {
     }
 
     @Test
-    void rejectsAutoMissingDeviceAndUnsupportedBackend() {
-        IllegalStateException automatic = assertThrows(IllegalStateException.class,
-                () -> resolver.resolve(settings("auto"), List.of(ComputeDeviceDescriptor.cpu("CPU")),
-                        capabilities("--cpu")));
+    void automaticPolicyPrioritizesCompatibleDedicatedGpuAndFallsBackToCpu() {
+        OperationalSettings.ComputeSettings automaticSettings = new OperationalSettings.ComputeSettings(
+                ComputeDevicePolicy.AUTO, "", true, true, VideoEncoderPolicy.AUTO);
+        VisualComputeBinding automatic = resolver.resolve(
+                automaticSettings,
+                List.of(ComputeDeviceDescriptor.cpu("CPU"),
+                        ComputeDeviceDescriptor.gpu("gpu-intel-0", "Intel UHD Graphics 630", "Intel"),
+                        ComputeDeviceDescriptor.gpu("gpu-nvidia-0", "NVIDIA GeForce GTX 1650", "NVIDIA")),
+                capabilities("--cpu", "--cuda-device", "--directml"));
+        VisualComputeBinding cpu = resolver.resolve(
+                automaticSettings,
+                List.of(ComputeDeviceDescriptor.cpu("CPU")),
+                capabilities("--cpu"));
+
+        assertEquals(VisualComputeBackend.CUDA, automatic.backend());
+        assertEquals("gpu-nvidia-0", automatic.selectedDeviceId());
+        assertEquals(VisualComputeBackend.CPU, cpu.backend());
+    }
+
+    @Test
+    void rejectsMissingSpecificDeviceAndUnsupportedBackend() {
         IllegalStateException missing = assertThrows(IllegalStateException.class,
                 () -> resolver.resolve(settings("gpu-nvidia-0"), List.of(ComputeDeviceDescriptor.cpu("CPU")),
                         capabilities("--cuda-device")));
@@ -83,8 +100,7 @@ final class VisualComputeBackendResolverTest {
                         List.of(ComputeDeviceDescriptor.gpu("gpu-amd-0", "AMD Radeon", "AMD")),
                         capabilities("--cpu")));
 
-        assertTrue(automatic.getMessage().contains("no usa fallback automatico"));
-        assertTrue(missing.getMessage().contains("no esta disponible"));
+        assertTrue(missing.getMessage().contains("no está disponible"));
         assertTrue(unsupported.getMessage().contains("--directml"));
     }
 

@@ -26,6 +26,44 @@ final class ExportPodcastWavUseCaseTest {
     Path temp;
 
     @Test
+    void compressedFinalAudioUsesRequestedCodecWithoutVideoForEachDocument() throws Exception {
+        Path project = Files.createDirectories(temp.resolve("audio-batch"));
+        writeSilentWav(project.resolve("one.wav"), 8000, 1, 16, 800);
+        writeSilentWav(project.resolve("two.wav"), 8000, 1, 16, 1600);
+        Path executable = Files.writeString(temp.resolve("ffmpeg.exe"), "test executable");
+        java.util.ArrayList<List<String>> compressions = new java.util.ArrayList<>();
+        com.marcosmoreiradev.docupodcaststudio.application.process.ExternalProcessRunner runner = request -> {
+            List<String> command = request.command();
+            if (command.contains("-codec:a")) {
+                compressions.add(command);
+                Path assembled = Path.of(command.get(command.indexOf("-i") + 1));
+                assertTrue(Files.size(assembled) > 44, "The audio must be composed before compression");
+                Files.write(Path.of(command.getLast()), new byte[128]);
+            }
+            return new com.marcosmoreiradev.docupodcaststudio.application.process.ExternalProcessResult(
+                    0, false, false, "ffmpeg test", "", "test", java.time.Duration.ZERO);
+        };
+        var exporter = new ExportPodcastAudioUseCase(new ExportPodcastWavUseCase(),
+                new com.marcosmoreiradev.docupodcaststudio.application.video.EmbeddedFfmpegLocator(),
+                new com.marcosmoreiradev.docupodcaststudio.application.video.FfmpegRuntimeProbeUseCase(runner), runner);
+        for (var format : List.of(AudioExportFormat.MP3, AudioExportFormat.AAC)) {
+            for (String document : List.of("one", "two")) {
+                var manifest = new PlaybackManifest("PLAY-" + document, "JOB-" + document,
+                        List.of(new PlaybackCue("SEG-1", "UNIT-1", 0, .2,
+                                "AUDIO-1", document + ".wav", "", document)), "", Instant.EPOCH);
+                var result = exporter.exportPlaybackManifest(manifest, project,
+                        temp.resolve(document + format.extension()), temp, executable);
+                assertEquals(format, result.format());
+                assertTrue(Files.isRegularFile(result.targetFile()));
+                var command = compressions.getLast();
+                assertTrue(command.contains("-vn"));
+                assertTrue(command.contains(format == AudioExportFormat.MP3 ? "libmp3lame" : "aac"));
+            }
+        }
+        assertEquals(4, compressions.size());
+    }
+
+    @Test
     void concatenatesCompletedSegmentWavsWhenNoFinalAudioExists() throws Exception {
         Path project = temp.resolve("project");
         Files.createDirectories(project.resolve("jobs/JOB-001/audio"));

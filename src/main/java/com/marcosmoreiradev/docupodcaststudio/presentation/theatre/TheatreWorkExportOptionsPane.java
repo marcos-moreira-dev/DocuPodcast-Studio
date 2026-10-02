@@ -17,8 +17,8 @@ import java.util.List;
 public final class TheatreWorkExportOptionsPane extends VBox {
     private final VideoEncodingOptionsPane video;
     private final CheckBox useFragmentImages = check("Usar imagenes de fragmentos", true);
-    private final ComboBox<TheatreFrameLayout> frameLayout = new ComboBox<>();
-    private final ColorPicker backgroundColor = new ColorPicker(Color.WHITE);
+    private final ComboBox<TheatreFrameLayout> frameLayout = StudioFormControls.comboBox();
+    private final ColorPicker backgroundColor = StudioFormControls.colorPicker(Color.WHITE);
     private final TextOverlayOptionsPane text = new TextOverlayOptionsPane();
     private final CheckBox showSpatialMap = check("Mapa espacial lateral", false);
     private final CheckBox showCharacters = check("Mostrar personajes", true);
@@ -74,9 +74,8 @@ public final class TheatreWorkExportOptionsPane extends VBox {
     }
 
     private static CheckBox check(String text, boolean selected) {
-        CheckBox box = new CheckBox(text);
+        CheckBox box = StudioFormControls.checkBox(text);
         box.setSelected(selected);
-        box.getStyleClass().add("ui-form-toggle");
         return box;
     }
 

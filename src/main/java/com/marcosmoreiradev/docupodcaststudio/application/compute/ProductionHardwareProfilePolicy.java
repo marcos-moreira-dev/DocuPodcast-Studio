@@ -16,15 +16,16 @@ public final class ProductionHardwareProfilePolicy {
         int batch = Math.max(1, requestedBatchSize);
         ArrayList<String> warnings = new ArrayList<>();
         if (detectedVramMb > 0 && detectedVramMb <= 4096) {
-            if (resolution.width() > SimpleVideoResolutionPreset.HD_720.width()
-                    || resolution.height() > SimpleVideoResolutionPreset.HD_720.height()) {
-                warnings.add("Hardware actual cercano a 4 GB VRAM: usa 720p para evitar fallos por memoria.");
+            if (resolution.width() > SimpleVideoResolutionPreset.LOW_540.width()
+                    || resolution.height() > SimpleVideoResolutionPreset.LOW_540.height()) {
+                warnings.add("Hardware actual cercano a 4 GB VRAM: se mantiene la entrega solicitada; "
+                        + "usa GPU-first, lote 1, RAM/offload y postproceso por mosaicos.");
             }
             if (batch > 1) {
                 warnings.add("Hardware actual cercano a 4 GB VRAM: usa lotes de 1 candidato visual por vez.");
             }
-            return new ProductionHardwareProfileAdvice("4 GB VRAM conservador", detectedVramMb,
-                    SimpleVideoResolutionPreset.HD_720, 1, true, false, warnings);
+            return new ProductionHardwareProfileAdvice("GPU-first con RAM de apoyo", detectedVramMb,
+                    resolution, 1, true, false, warnings);
         }
         if (detectedVramMb >= 24576) {
             return new ProductionHardwareProfileAdvice("24 GB VRAM produccion amplia", detectedVramMb,

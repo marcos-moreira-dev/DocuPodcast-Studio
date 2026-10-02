@@ -1,5 +1,9 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.dialogs;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioDialogShell;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFeedbackControls;
+
 import com.marcosmoreiradev.docupodcaststudio.presentation.notification.DialogStyler;
 import javafx.concurrent.Task;
 import javafx.geometry.Insets;
@@ -15,7 +19,7 @@ import javafx.stage.Window;
 
 /** Non-blocking progress dialog for source-document imports. */
 public final class DocumentImportProgressDialog {
-    private final Dialog<Void> dialog = new Dialog<>();
+    private final Dialog<Void> dialog = StudioDialogShell.dialog();
     private final Label detail = new Label("Preparando documento...");
 
     public DocumentImportProgressDialog(Window owner, String filename) {
@@ -28,7 +32,7 @@ public final class DocumentImportProgressDialog {
         }
         detail.setWrapText(true);
         detail.setText("Leyendo " + (filename == null || filename.isBlank() ? "la fuente documental" : filename) + " para mostrarla en Documento.");
-        ProgressIndicator indicator = new ProgressIndicator();
+        ProgressIndicator indicator = StudioFeedbackControls.progressIndicator();
         indicator.setPrefSize(48, 48);
         HBox progressLine = new HBox(18, indicator, detail);
         progressLine.setAlignment(Pos.CENTER_LEFT);

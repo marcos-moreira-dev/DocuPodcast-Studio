@@ -4,6 +4,7 @@ import java.util.Locale;
 
 /** Target delivery profile for enhanced theatrical images. */
 public enum ImageEnhancementOutputProfile {
+    LOW_540("540p", 960, 540, ImageEnhancementPipelineProfile.LIGHT_UPSCALE, false, 512, 64),
     HD_720("720p", 1280, 720, ImageEnhancementPipelineProfile.LIGHT_UPSCALE, false, 512, 64),
     FHD_1080("1080p", 1920, 1080, ImageEnhancementPipelineProfile.RESTORE_UPSCALE, false, 768, 96),
     QHD_2K("2K/QHD", 2560, 1440, ImageEnhancementPipelineProfile.TILED_PROFESSIONAL, true, 1024, 128),
@@ -63,5 +64,15 @@ public enum ImageEnhancementOutputProfile {
 
     public String workflowId() {
         return name().toLowerCase(Locale.ROOT).replace('_', '-');
+    }
+
+    public com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile visualResolutionProfile() {
+        return switch (this) {
+            case LOW_540 -> com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile.P540;
+            case HD_720 -> com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile.P720;
+            case FHD_1080 -> com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile.P1080;
+            case QHD_2K -> com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile.QHD_2K;
+            case UHD_4K -> com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile.UHD_4K;
+        };
     }
 }

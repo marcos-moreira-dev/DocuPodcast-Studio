@@ -36,9 +36,12 @@ import java.util.concurrent.atomic.AtomicLong;
  * adapter reports native capabilities only after a real stylus event arrives.</p>
  */
 public final class LectureStudioStylusInputProvider implements InkInputProvider {
+    private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger(LectureStudioStylusInputProvider.class);
     private static final String DISABLE_PROPERTY = "docupodcast.ink.disableNativeStylus";
     private static final String NATIVE_LIBRARY_RESOURCE = "stylus.dll";
     private static final long FALLBACK_SUPPRESSION_NANOS = 150_000_000L;
+    private static final int MAX_NATIVE_EVENTS_PER_PULSE = 192;
+    private static final long MAX_NATIVE_DRAIN_NANOS = 4_000_000L;
     private static final double MIN_STYLUS_CONTACT_PRESSURE = 0.01;
     private static final boolean INK_INPUT_DIAGNOSTICS =
             Boolean.getBoolean("docupodcast.ink.inputDiagnostics");
@@ -281,7 +284,12 @@ public final class LectureStudioStylusInputProvider implements InkInputProvider 
         }
         List<InkInputSample> moveBatch = new ArrayList<>();
         PendingStylusEvent packet;
-        while ((packet = pendingStylusEvents.poll()) != null) {
+        int processed = 0;
+        long drainStarted = System.nanoTime();
+        while (processed < MAX_NATIVE_EVENTS_PER_PULSE
+                && System.nanoTime() - drainStarted < MAX_NATIVE_DRAIN_NANOS
+                && (packet = pendingStylusEvents.poll()) != null) {
+            processed++;
             StylusEvent event = packet.event();
             boolean primaryButtonEvent = isPrimaryButton(event);
             InkInputCursor cursor = cursorFromStylusEvent(event);
@@ -351,6 +359,9 @@ public final class LectureStudioStylusInputProvider implements InkInputProvider 
             }
         }
         flushMoveBatch(activeListener, moveBatch);
+        // A high-frequency tablet must not monopolize the JavaFX thread. Leave
+        // remaining packets for the next pulse so buttons, layout and painting
+        // continue to receive time even while the pen is hovering or drawing.
         if (!pendingStylusEvents.isEmpty() && stylusDrainScheduled.compareAndSet(false, true)) {
             Platform.runLater(this::drainStylusEvents);
         }
@@ -410,7 +421,12 @@ public final class LectureStudioStylusInputProvider implements InkInputProvider 
     private void clearStrokeState() {
         strokeActive = false;
         lastAcceptedTargetLocalPoint = null;
-        coordinateResolver.clearLockedSpace();
+        // Keep the coordinate space learned for this target between strokes.
+        // Native pen packets can beat the first JavaFX mouse event when focus
+        // returns from a toolbar. Re-detecting here used the stale toolbar
+        // anchor for exactly that first stroke and produced a visible offset.
+        // attach/detach, layout/zoom changes and resetCoordinateState() remain
+        // the explicit boundaries that invalidate the calibration.
     }
 
     private void clearPointerState(String reason) {
@@ -768,7 +784,7 @@ public final class LectureStudioStylusInputProvider implements InkInputProvider 
 
     private static void reportInputDiagnostic(String message) {
         if (INK_INPUT_DIAGNOSTICS) {
-            System.out.println("[LectureStudioStylus] " + message);
+            LOGGER.debug("LectureStudio stylus: {}", message);
         }
     }
 

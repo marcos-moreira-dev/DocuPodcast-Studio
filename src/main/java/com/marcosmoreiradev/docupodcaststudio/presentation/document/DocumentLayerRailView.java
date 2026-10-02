@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.document;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeSourceChooser;
+
 import com.marcosmoreiradev.docupodcaststudio.domain.assignment.NarrativeLayerKind;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.DocuPodcastShellViewModel;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionButtonFactory;
@@ -67,7 +69,7 @@ public final class DocumentLayerRailView extends VBox {
     }
 
     private void chooseAudioFromComputer() {
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle("Elegir audio del computador");
         chooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("Audio compatible (*.wav, *.mp3, *.m4a, *.flac, *.ogg)", "*.wav", "*.mp3", "*.m4a", "*.flac", "*.ogg"),
@@ -85,7 +87,7 @@ public final class DocumentLayerRailView extends VBox {
     }
 
     private void extractAudioFromVideo() {
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle("Extraer audio de video");
         chooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("Video compatible (*.mp4, *.mov, *.mkv, *.webm)", "*.mp4", "*.mov", "*.mkv", "*.webm"),

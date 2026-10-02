@@ -55,9 +55,11 @@ final class WorkspaceSideDockRestoreTest {
 
         assertEquals(SideDockModuleId.DOCUMENT_STUDY_VIDEO, dock.activeModuleId());
         assertFalse(dock.expandedProperty().get());
+        assertTrue(fx(() -> ((VBox) dock.getRight()).getChildren().stream()
+                .filter(Button.class::isInstance).map(Button.class::cast)
+                .noneMatch(button -> button.getStyleClass().contains("side-dock-rail-button-active"))));
         Button moduleButton = fx(() -> ((VBox) dock.getRight()).getChildren().stream()
                 .filter(Button.class::isInstance).map(Button.class::cast)
-                .filter(button -> button.getStyleClass().contains("side-dock-rail-button-active"))
                 .findFirst().orElseThrow());
 
         fx(() -> { moduleButton.fire(); return null; });
@@ -66,6 +68,52 @@ final class WorkspaceSideDockRestoreTest {
         assertTrue(dock.expandedProperty().get());
         assertSame(first, restored);
         assertEquals(1, creations.get());
+    }
+
+    @Test
+    void collapsedRailUsesTheReferenceFooterWidthRange() throws Exception {
+        SideDockModule module = new SideDockModule() {
+            @Override public SideDockModuleId id() { return SideDockModuleId.DOCUMENT_STUDY_VIDEO; }
+            @Override public String title() { return "Video documental"; }
+            @Override public String tooltip() { return "Configurar video"; }
+            @Override public String iconText() { return "video"; }
+            @Override public boolean supports(SideDockContext context) { return true; }
+            @Override public Parent createView(SideDockContext context) { return new VBox(); }
+        };
+        WorkspaceSideDock dock = fx(() -> new WorkspaceSideDock(
+                new SideDockContext(WorkspaceKind.DOCUMENT_READER, "Documento"),
+                new SideDockModuleRegistry().register(module), true,
+                WorkspaceSideDock.RailPlacement.LEFT,
+                VBox::new));
+
+        assertEquals(WorkspaceSideDock.FOOTER_MIN_WIDTH, dock.getMinWidth());
+        assertEquals(WorkspaceSideDock.FOOTER_WIDTH, dock.getPrefWidth());
+        assertEquals(WorkspaceSideDock.FOOTER_MAX_WIDTH, dock.getMaxWidth());
+    }
+
+    @Test
+    void productIntentCanActivateASpecificModuleWithoutDependingOnRegistrationOrder() throws Exception {
+        SideDockModule first = module(SideDockModuleId.DOCUMENT_STUDY_VIDEO);
+        SideDockModule intended = module(SideDockModuleId.DOCUMENT_TECHNICAL_PROBLEM);
+        WorkspaceSideDock dock = fx(() -> new WorkspaceSideDock(
+                new SideDockContext(WorkspaceKind.DOCUMENT_READER, "Documento"),
+                new SideDockModuleRegistry().register(first).register(intended), true));
+
+        fx(() -> { dock.activateModule(SideDockModuleId.DOCUMENT_TECHNICAL_PROBLEM); return null; });
+
+        assertEquals(SideDockModuleId.DOCUMENT_TECHNICAL_PROBLEM, dock.activeModuleId());
+        assertTrue(dock.expandedProperty().get());
+    }
+
+    private static SideDockModule module(SideDockModuleId id) {
+        return new SideDockModule() {
+            @Override public SideDockModuleId id() { return id; }
+            @Override public String title() { return id.name(); }
+            @Override public String tooltip() { return id.name(); }
+            @Override public String iconText() { return "module"; }
+            @Override public boolean supports(SideDockContext context) { return true; }
+            @Override public Parent createView(SideDockContext context) { return new VBox(); }
+        };
     }
 
     private static <T> T fx(Callable<T> action) throws Exception {

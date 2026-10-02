@@ -74,8 +74,12 @@ public final class PdfBoxRenderEngine implements PdfRenderEngine {
             }
             BufferedImage rendered = renderer.renderImageWithDPI(pageIndex, safeDpi, ImageType.RGB);
             BufferedImage image = opaqueCopy(rendered, request.backgroundColor());
+            int rotation = Math.floorMod(page.getRotation(), 360);
+            boolean swapsAxes = rotation == 90 || rotation == 270;
             return new PdfPageRenderResult(request.pageNumber(), document.getNumberOfPages(),
-                    box.getWidth(), box.getHeight(), safeDpi, image, "pdfbox-page",
+                    swapsAxes ? box.getHeight() : box.getWidth(),
+                    swapsAxes ? box.getWidth() : box.getHeight(),
+                    safeDpi, image, "pdfbox-page",
                     renderWarnings(request.dpi(), safeDpi));
         } catch (InvalidPasswordException ex) {
             throw new PdfRenderException(PdfRenderErrorCode.PASSWORD_REQUIRED,

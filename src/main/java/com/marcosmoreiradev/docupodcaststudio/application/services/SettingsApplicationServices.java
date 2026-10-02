@@ -12,7 +12,6 @@ import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.InspectPipe
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.InspectXttsSetupReadinessUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.InspectXttsSmokeTestUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.InspectLocalTheatreImageSetupReadinessUseCase;
-import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.InspectLocalTheatreImageEngineUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.DownloadXttsOfficialModelUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.DownloadPiperPortableRuntimeUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.DownloadLocalTheatreImagePackageUseCase;
@@ -26,18 +25,18 @@ import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.PrepareXtts
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.SelectPiperAsEngineUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.SelectXttsAsEngineUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.RunXttsReadinessSmokeUseCase;
-import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.RunLocalTheatreImageSmokeUseCase;
-import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.StartLocalTheatreImageEngineUseCase;
-import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.StopLocalTheatreImageEngineUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.ConfirmXttsSmokePlaybackUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.runtime.AuditEngineArtifactsUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.runtime.BuildGuiSmokeChecklistUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.video.ImportFfmpegRuntimeFolderUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.video.DownloadFfmpegPortableRuntimeUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.video.FfmpegRuntimeProbeUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.video.InspectFinalVideoRuntimeStatusUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.LoadOperationalSettingsUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.SaveOperationalSettingsUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.ValidateOperationalSettingsUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.DownloadTesseractPortableRuntimeUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.ImportTesseractRuntimeFolderUseCase;
 
 /** Operational settings use cases. */
 public record SettingsApplicationServices(
@@ -66,6 +65,7 @@ public record SettingsApplicationServices(
         ImportPiperVoiceFolderUseCase importPiperVoiceFolder,
         ImportFfmpegRuntimeFolderUseCase importFfmpegRuntimeFolder,
         FfmpegRuntimeProbeUseCase inspectFfmpegRuntime,
+        InspectFinalVideoRuntimeStatusUseCase inspectFinalVideoRuntimeStatus,
         DownloadFfmpegPortableRuntimeUseCase downloadFfmpegPortableRuntime,
         InspectLocalTheatreImageSetupReadinessUseCase inspectLocalTheatreImageSetupReadiness,
         PrepareLocalTheatreImageRuntimeUseCase prepareLocalTheatreImageRuntime,
@@ -73,11 +73,12 @@ public record SettingsApplicationServices(
         DownloadLocalTheatreImagePackageUseCase downloadLocalTheatreImagePackage,
         ImportLocalTheatreImagePackageUseCase importLocalTheatreImagePackage,
         FluxComponentImportUseCase importFluxComponents,
-        InspectLocalTheatreImageEngineUseCase inspectLocalTheatreImageEngine,
-        StartLocalTheatreImageEngineUseCase startLocalTheatreImageEngine,
-        StopLocalTheatreImageEngineUseCase stopLocalTheatreImageEngine,
-        RunLocalTheatreImageSmokeUseCase runLocalTheatreImageSmoke,
         AuditEngineArtifactsUseCase auditEngineArtifacts,
-        BuildGuiSmokeChecklistUseCase buildGuiSmokeChecklist
+        BuildGuiSmokeChecklistUseCase buildGuiSmokeChecklist,
+        DownloadTesseractPortableRuntimeUseCase downloadTesseractPortableRuntime,
+        ImportTesseractRuntimeFolderUseCase importTesseractRuntimeFolder
 ) {
+    public DependencyPreparationService dependencyPreparation() {
+        return new DependencyPreparationService(this);
+    }
 }

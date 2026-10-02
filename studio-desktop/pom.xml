@@ -11,13 +11,18 @@
         <maven.compiler.release>21</maven.compiler.release>
         <docupodcast.app.heap>-Xmx2048m</docupodcast.app.heap>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <javafx.version>21.0.2</javafx.version>
         <lecturestudio.stylus.version>0.3.0</lecturestudio.stylus.version>
-        <lecturestudio.stylus.native.jar>${maven.multiModuleProjectDirectory}/target/native/stylus-${lecturestudio.stylus.version}-windows-x86_64.jar</lecturestudio.stylus.native.jar>
+        <lecturestudio.stylus.native.jar>../target/native/stylus-${lecturestudio.stylus.version}-windows-x86_64.jar</lecturestudio.stylus.native.jar>
         <docupodcast.ink.inputDiagnostics>false</docupodcast.ink.inputDiagnostics>
         <docupodcast.ink.renderDiagnostics>false</docupodcast.ink.renderDiagnostics>
         <junit.version>5.10.2</junit.version>
         <archunit.version>1.4.2</archunit.version>
+        <slf4j.version>2.0.17</slf4j.version>
+        <logback.version>1.5.18</logback.version>
+        <testfx.version>4.0.17</testfx.version>
+        <monocle.version>21.0.2</monocle.version>
     </properties>
 
     <dependencies>
@@ -30,6 +35,12 @@
             <groupId>com.marcosmoreiradev</groupId>
             <artifactId>studio-ink</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.marcosmoreiradev</groupId>
+            <artifactId>studio-local-media-adapters</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
         </dependency>
         <dependency><groupId>org.openjfx</groupId><artifactId>javafx-controls</artifactId><version>${javafx.version}</version></dependency>
         <dependency><groupId>org.openjfx</groupId><artifactId>javafx-graphics</artifactId><version>${javafx.version}</version></dependency>
@@ -44,6 +55,11 @@
         <dependency><groupId>net.java.dev.jna</groupId><artifactId>jna-platform</artifactId><version>5.19.1</version></dependency>
         <dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><version>${junit.version}</version><scope>test</scope></dependency>
         <dependency><groupId>com.tngtech.archunit</groupId><artifactId>archunit-junit5</artifactId><version>${archunit.version}</version><scope>test</scope></dependency>
+        <dependency><groupId>org.slf4j</groupId><artifactId>slf4j-api</artifactId><version>${slf4j.version}</version></dependency>
+        <dependency><groupId>ch.qos.logback</groupId><artifactId>logback-classic</artifactId><version>${logback.version}</version><scope>test</scope></dependency>
+        <dependency><groupId>org.testfx</groupId><artifactId>testfx-core</artifactId><version>${testfx.version}</version><scope>test</scope></dependency>
+        <dependency><groupId>org.testfx</groupId><artifactId>testfx-junit5</artifactId><version>${testfx.version}</version><scope>test</scope></dependency>
+        <dependency><groupId>org.testfx</groupId><artifactId>openjfx-monocle</artifactId><version>${monocle.version}</version><scope>test</scope></dependency>
     </dependencies>
 
     <build>
@@ -77,9 +93,12 @@
                 <groupId>org.openjfx</groupId><artifactId>javafx-maven-plugin</artifactId><version>0.0.8</version>
                 <configuration>
                     <mainClass>com.marcosmoreiradev.docupodcaststudio/com.marcosmoreiradev.docupodcaststudio.DocuPodcastStudioApp</mainClass>
+                    <workingDirectory>${project.basedir}</workingDirectory>
                     <options>
                         <option>${docupodcast.app.heap}</option>
-                        <option>--patch-module=stylus=${lecturestudio.stylus.native.jar}</option>
+                        <option>-Dfile.encoding=UTF-8</option>
+                        <option>--patch-module</option>
+                        <option>stylus=${lecturestudio.stylus.native.jar}</option>
                         <option>-Ddocupodcast.ink.inputDiagnostics=${docupodcast.ink.inputDiagnostics}</option>
                         <option>-Ddocupodcast.ink.renderDiagnostics=${docupodcast.ink.renderDiagnostics}</option>
                     </options>
@@ -90,8 +109,50 @@
                 <configuration>
                     <workingDirectory>${maven.multiModuleProjectDirectory}</workingDirectory>
                     <jdkToolchain><version>21</version><vendor>temurin</vendor></jdkToolchain>
+                    <excludes><exclude>**/*E2ETest.java</exclude></excludes>
                 </configuration>
             </plugin>
         </plugins>
     </build>
+    <profiles>
+        <profile>
+            <id>gui-e2e</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <version>3.2.5</version>
+                        <configuration>
+                            <workingDirectory>${maven.multiModuleProjectDirectory}</workingDirectory>
+                            <includes><include>**/*E2ETest.java</include></includes>
+                            <argLine>
+                                --add-exports=javafx.graphics/com.sun.glass.ui=ALL-UNNAMED
+                                --add-exports=javafx.graphics/com.sun.glass.events=ALL-UNNAMED
+                                --add-exports=javafx.graphics/com.sun.glass.utils=ALL-UNNAMED
+                                --add-exports=javafx.graphics/com.sun.javafx.application=ALL-UNNAMED
+                                --add-exports=javafx.graphics/com.sun.javafx.tk=ALL-UNNAMED
+                                --add-exports=javafx.graphics/com.sun.javafx.util=ALL-UNNAMED
+                                --add-exports=javafx.base/com.sun.javafx.logging=ALL-UNNAMED
+                                --add-opens=javafx.graphics/com.sun.glass.ui=ALL-UNNAMED
+                                --add-opens=javafx.graphics/com.sun.javafx.application=ALL-UNNAMED
+                            </argLine>
+                            <systemPropertyVariables>
+                                <testfx.robot>glass</testfx.robot>
+                                <testfx.headless>true</testfx.headless>
+                                <glass.platform>Monocle</glass.platform>
+                                <monocle.platform>Headless</monocle.platform>
+                                <prism.order>sw</prism.order>
+                                <prism.text>t2k</prism.text>
+                                <java.awt.headless>true</java.awt.headless>
+                            </systemPropertyVariables>
+                        </configuration>
+                        <executions>
+                            <execution><goals><goal>integration-test</goal><goal>verify</goal></goals></execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

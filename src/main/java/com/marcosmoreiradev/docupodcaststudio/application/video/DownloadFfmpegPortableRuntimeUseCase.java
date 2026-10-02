@@ -63,6 +63,11 @@ public final class DownloadFfmpegPortableRuntimeUseCase {
 
     public FfmpegRuntimeDownloadReport download(OperationalSettings settings, Path applicationRoot,
                                                 ModelSetupProgressListener listener) {
+        return download(settings, applicationRoot, listener, false);
+    }
+
+    public FfmpegRuntimeDownloadReport download(OperationalSettings settings, Path applicationRoot,
+                                                ModelSetupProgressListener listener, boolean forceRedownload) {
         ModelSetupProgressListener progress = listener == null ? ModelSetupProgressListener.noop() : listener;
         Path root = applicationRoot == null ? Path.of(".").toAbsolutePath().normalize() : applicationRoot.toAbsolutePath().normalize();
         RuntimeArtifactPaths paths = RuntimeArtifactPaths.fromRoot(root);
@@ -78,7 +83,7 @@ public final class DownloadFfmpegPortableRuntimeUseCase {
             progress.onProgress("Verificando si Video local ya está preparado...");
             FfmpegToolDiscovery existing = new EmbeddedFfmpegLocator().locate(root, null);
             FfmpegRuntimeReport existingReport = probe.inspect(existing);
-            if (existingReport.readyForFinalVideo()) {
+            if (!forceRedownload && existingReport.readyForFinalVideo()) {
                 progress.onProgress("Video local ya está listo dentro del programa.");
                 return new FfmpegRuntimeDownloadReport(true, zip, extracted, targetBin,
                         existingReport.ffmpegExecutable(), existingReport.ffprobeExecutable(), existingReport,

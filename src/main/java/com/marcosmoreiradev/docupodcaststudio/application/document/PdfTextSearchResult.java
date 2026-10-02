@@ -4,7 +4,7 @@ package com.marcosmoreiradev.docupodcaststudio.application.document;
 public record PdfTextSearchResult(
         String id,
         int pageNumber,
-        String blockId,
+        String regionId,
         String snippet,
         PdfPageRegion region,
         PdfTextLayerOrigin origin,
@@ -12,7 +12,7 @@ public record PdfTextSearchResult(
 ) {
     public PdfTextSearchResult {
         id = id == null || id.isBlank() ? "pdf-search-" + pageNumber : id.strip();
-        blockId = blockId == null ? "" : blockId.strip();
+        regionId = regionId == null ? "" : regionId.strip();
         snippet = snippet == null ? "" : snippet.strip();
         origin = origin == null ? PdfTextLayerOrigin.UNAVAILABLE : origin;
         confidence = Double.isFinite(confidence) ? Math.max(0.0, Math.min(1.0, confidence)) : 0.0;

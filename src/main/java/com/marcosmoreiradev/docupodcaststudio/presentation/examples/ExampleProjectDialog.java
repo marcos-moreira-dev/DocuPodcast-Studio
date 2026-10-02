@@ -1,5 +1,11 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.examples;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeDialogResponse;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioDialogShell;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls;
+
 import com.marcosmoreiradev.docupodcaststudio.application.examples.ExampleProjectDescriptor;
 import com.marcosmoreiradev.docupodcaststudio.application.examples.ExampleProjectReadinessReport;
 import com.marcosmoreiradev.docupodcaststudio.application.examples.InspectExampleProjectReadinessUseCase;
@@ -39,11 +45,11 @@ public final class ExampleProjectDialog {
     }
 
     public Optional<ExampleProjectDescriptor> show(Window owner) {
-        Dialog<ExampleProjectDescriptor> dialog = new Dialog<>();
+        Dialog<ExampleProjectDescriptor> dialog = StudioDialogShell.dialog();
         dialog.setTitle("Ejemplos");
         dialog.setHeaderText("Crear proyecto demo");
         DialogStyler.apply(dialog, owner);
-        ButtonType cancel = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
+        ButtonType cancel = NativeDialogResponse.button("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
         dialog.getDialogPane().getButtonTypes().add(cancel);
         dialog.getDialogPane().setContent(content(dialog));
         dialog.setResultConverter(button -> null);
@@ -63,7 +69,7 @@ public final class ExampleProjectDialog {
         for (ExampleProjectDescriptor example : examples) {
             cards.getChildren().add(card(dialog, example));
         }
-        ScrollPane scroll = new ScrollPane(cards);
+        ScrollPane scroll = StudioViewportControls.scrollPane(cards);
         scroll.setFitToWidth(true);
         scroll.setPrefViewportHeight(410);
         scroll.getStyleClass().add("examples-scroll");

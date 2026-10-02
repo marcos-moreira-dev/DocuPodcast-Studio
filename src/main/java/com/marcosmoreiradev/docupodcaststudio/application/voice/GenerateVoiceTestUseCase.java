@@ -29,17 +29,29 @@ public final class GenerateVoiceTestUseCase {
     private final VoiceCapabilityPolicy capabilityPolicy;
     private final ResolveVoiceToneReferenceUseCase resolveToneReference;
     private final VoiceTestSynthesisGateway synthesisGateway;
+    private final VoiceReferenceSamplePathResolver samplePathResolver;
 
     public GenerateVoiceTestUseCase() {
-        this(new VoiceCapabilityPolicy(), new ResolveVoiceToneReferenceUseCase(), VoiceTestSynthesisGateway.unavailable());
+        this(new VoiceCapabilityPolicy(), new ResolveVoiceToneReferenceUseCase(),
+                VoiceTestSynthesisGateway.unavailable(),
+                VoiceReferenceSamplePathResolver.fromCurrentApplicationRoot());
     }
 
     public GenerateVoiceTestUseCase(VoiceCapabilityPolicy capabilityPolicy,
                                     ResolveVoiceToneReferenceUseCase resolveToneReference,
                                     VoiceTestSynthesisGateway synthesisGateway) {
+        this(capabilityPolicy, resolveToneReference, synthesisGateway,
+                VoiceReferenceSamplePathResolver.fromCurrentApplicationRoot());
+    }
+
+    public GenerateVoiceTestUseCase(VoiceCapabilityPolicy capabilityPolicy,
+                                    ResolveVoiceToneReferenceUseCase resolveToneReference,
+                                    VoiceTestSynthesisGateway synthesisGateway,
+                                    VoiceReferenceSamplePathResolver samplePathResolver) {
         this.capabilityPolicy = Objects.requireNonNull(capabilityPolicy, "capabilityPolicy");
         this.resolveToneReference = Objects.requireNonNull(resolveToneReference, "resolveToneReference");
         this.synthesisGateway = Objects.requireNonNull(synthesisGateway, "synthesisGateway");
+        this.samplePathResolver = Objects.requireNonNull(samplePathResolver, "samplePathResolver");
     }
 
     public VoiceGeneratedTestResult generate(Path projectFile, VoiceLibrary library, VoiceGeneratedTestRequest request) throws IOException {
@@ -52,15 +64,21 @@ public final class GenerateVoiceTestUseCase {
         if (voice.isEmpty()) {
             return VoiceGeneratedTestResult.blocked(request.tone(), "Selecciona una voz existente antes de generar la prueba.", false);
         }
-        if (engine.mockMode()) {
+        if (engine.diagnosticMode()) {
             return VoiceGeneratedTestResult.blocked(request.tone(),
                     "Modo de prueba no genera voces reales. Activa Voz IA avanzada o Voz local simple para generar una prueba audible.",
                     true);
         }
-        if (engine.piperMode()) {
+        VoiceProfileCapability compatibility = capabilityPolicy.evaluateVoice(
+                voice.get(), request.engineDescriptor());
+        if (!compatibility.synthesizableNow()) {
+            return VoiceGeneratedTestResult.blocked(request.tone(),
+                    compatibility.message(), compatibility.requiresEngineConfiguration());
+        }
+        if (engine.simpleLocalMode()) {
             return generateLocalSimpleTest(projectFile, voice.get(), request, engine);
         }
-        if (!engine.coquiXttsMode() || !engine.canSynthesizeNow()) {
+        if (!engine.advancedAiMode() || !engine.canSynthesizeNow()) {
             return VoiceGeneratedTestResult.blocked(request.tone(),
                     "Prepara Voz IA avanzada en Configuración antes de generar una prueba con muestra de referencia.", true);
         }
@@ -142,9 +160,10 @@ public final class GenerateVoiceTestUseCase {
                 voice.id(),
                 referenceSample,
                 text,
-                audio,
-                workDir,
-                request.engineDescriptor()));
+                 audio,
+                 workDir,
+                 request.engineDescriptor(),
+                 tone.name()));
     }
 
     private static Path projectRoot(Path projectFile) {
@@ -159,9 +178,8 @@ public final class GenerateVoiceTestUseCase {
         return parent;
     }
 
-    private static Path resolveReferenceSample(Path projectRoot, VoiceReferenceSample sample) throws IOException {
-        return VoiceReferenceSamplePathResolver.fromCurrentApplicationRoot()
-                .resolve(projectRoot, sample, "muestra de voz");
+    private Path resolveReferenceSample(Path projectRoot, VoiceReferenceSample sample) throws IOException {
+        return samplePathResolver.resolve(projectRoot, sample, "muestra de voz");
     }
 
     private static String manifestJson(VoiceProfile voice, VoiceGeneratedTestRequest request,

@@ -15,9 +15,9 @@ public final class DiagnosticUserDecisionFactory {
         return new UserVisibleDecision(
                 DecisionSeverity.INFORMATION,
                 "DocuPodcast Studio",
-                "Reporte diagnóstico exportado",
-                "Se creó el reporte para revisar estado técnico, motores, audio, visuales y exportación. Archivo: " + path,
-                "Reporte Markdown: " + path,
+                "Paquete de soporte exportado",
+                "Se creó un ZIP local sanitizado con estado técnico y logs recientes. No se subió ningún archivo. Archivo: " + path,
+                "Paquete ZIP sanitizado: " + path,
                 true);
     }
 

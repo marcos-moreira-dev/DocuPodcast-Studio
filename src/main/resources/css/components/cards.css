@@ -42,21 +42,84 @@
 }
 
 .ui-collapsible-section {
-    -fx-background-color: -docu-bg-card;
-    -fx-border-color: -docu-border-soft;
+    -fx-background-color: -docu-accordion-content;
+    -fx-border-color: -docu-accordion-header;
     -fx-border-width: 1px;
     -fx-background-radius: 4px;
     -fx-border-radius: 4px;
 }
 
 .ui-collapsible-section-header {
-    -fx-padding: 7px 10px;
-    -fx-background-color: -docu-bg-card-soft;
+    -fx-padding: 9px 12px;
+    -fx-background-color: -docu-accordion-header;
+    -fx-background-radius: 4px 4px 0 0;
     -fx-cursor: hand;
 }
 
+.ui-collapsible-section-header:hover {
+    -fx-background-color: -docu-accordion-header-hover;
+}
+
+.ui-collapsible-section-header .label,
+.ui-collapsible-section-header .document-side-panel-title,
+.ui-collapsible-section-header .document-side-panel-summary {
+    -fx-text-fill: -docu-accordion-header-text;
+}
+
+.ui-collapsible-section-header .document-side-panel-toggle {
+    -fx-background-color: transparent;
+    -fx-border-color: rgba(255, 255, 255, 0.62);
+}
+
+.ui-collapsible-section-header .ui-lucide-icon-shape {
+    -fx-stroke: -docu-accordion-header-text;
+}
+
 .ui-collapsible-section-content {
-    -fx-padding: 10px 12px;
+    -fx-padding: 12px;
+    -fx-background-color: -docu-accordion-content;
+}
+
+/* Official JavaFX Accordion skin: purple disclosure header, white expanded content. */
+.ui-accordion {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.ui-accordion-pane {
+    -fx-text-fill: -docu-accordion-header-text;
+    -fx-background-color: -docu-accordion-content;
+}
+
+.ui-accordion-pane > .title {
+    -fx-background-color: -docu-accordion-header;
+    -fx-border-color: -docu-accordion-header;
+    -fx-background-radius: 5px;
+    -fx-border-radius: 5px;
+    -fx-padding: 9px 12px;
+}
+
+.ui-accordion-pane > .title:hover,
+.ui-accordion-pane:focused > .title {
+    -fx-background-color: -docu-accordion-header-hover;
+    -fx-border-color: -docu-accordion-header-text;
+}
+
+.ui-accordion-pane > .title > .text {
+    -fx-fill: -docu-accordion-header-text;
+    -fx-font-weight: 800;
+}
+
+.ui-accordion-pane > .title > .arrow-button .arrow {
+    -fx-background-color: -docu-accordion-header-text;
+}
+
+.ui-accordion-pane > .content,
+.ui-accordion-content {
+    -fx-background-color: -docu-accordion-content;
+    -fx-border-color: -docu-border-soft;
+    -fx-border-width: 0 1px 1px 1px;
+    -fx-padding: 12px;
 }
 
 .ui-note {

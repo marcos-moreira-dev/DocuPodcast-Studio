@@ -1,6 +1,16 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.theatre;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeSourceChooser;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeDialogResponse;
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.StudioMessageDialog;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
+
 import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreProjectLayer;
+import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreInteractionTargetPolicy;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreContextExportEstimate;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreContextExportScope;
 import com.marcosmoreiradev.docupodcaststudio.application.video.TheatreSpatialRoleIcon;
@@ -8,6 +18,7 @@ import com.marcosmoreiradev.docupodcaststudio.application.video.TheatreStageGeom
 import com.marcosmoreiradev.docupodcaststudio.domain.document.ReadableDocument;
 import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationScriptDocument;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionButtonFactory;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.ResponsiveActionGroup;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.SectionHeader;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.DocuPodcastShellViewModel;
 import javafx.beans.property.SimpleStringProperty;
@@ -59,7 +70,7 @@ import java.util.function.Consumer;
 public final class TheatreSpatialActionMapPanel extends BorderPane {
     private static final double SPATIAL_IMAGE_FIT_WIDTH = 760.0;
     private static final double SPATIAL_IMAGE_FIT_HEIGHT = 476.0;
-    private static final double SPATIAL_MARKER_SIZE = 101.0;
+    private static final double SPATIAL_MARKER_SIZE = 50.5;
     private static final double SPATIAL_ARROW_TRIM_FACTOR = 0.56;
     private static final double SPATIAL_SELF_LOOP_SCALE_FACTOR = 0.34;
     private static final double SPATIAL_SELF_LOOP_RIGHT_OFFSET_FACTOR = 0.44;
@@ -81,7 +92,7 @@ public final class TheatreSpatialActionMapPanel extends BorderPane {
             "Publico",
             "Para si mismo",
             "Entidad no presente en escenario");
-    private static final String ALL_REMAINING_TARGET = "Todos los personajes restantes";
+    private static final String ALL_REMAINING_TARGET = TheatreInteractionTargetPolicy.ALL_REMAINING;
     private static final String ABSENT_LOCATION = "no presente";
 
     private final DocuPodcastShellViewModel viewModel;
@@ -96,7 +107,7 @@ public final class TheatreSpatialActionMapPanel extends BorderPane {
         this.boundaryStore = boundaryStore == null ? new IntervencionBoundaryStore() : boundaryStore;
         getStyleClass().add("theatre-spatial-action-map-panel");
         setPadding(new Insets(10));
-        actionFolds = new TheatreSceneFoldList(viewModel, this::sceneActionCanvas);
+        actionFolds = new TheatreSceneFoldList(viewModel, this.boundaryStore, this::sceneActionCanvas);
         this.boundaryStore.revisionProperty().addListener((obs, oldValue, newValue) -> actionFolds.refresh());
 
         viewModel.activeTextActionPlacementProperty().addListener((obs, oldValue, newValue) -> drawSpatialOverlay());
@@ -111,7 +122,7 @@ public final class TheatreSpatialActionMapPanel extends BorderPane {
                 actionFolds);
         body.getStyleClass().add("theatre-map-body");
 
-        ScrollPane scroll = new ScrollPane(body);
+        ScrollPane scroll = StudioViewportControls.scrollPane(body);
         scroll.setFitToWidth(true);
         scroll.getStyleClass().add("document-context-scroll");
         setCenter(scroll);
@@ -128,23 +139,31 @@ public final class TheatreSpatialActionMapPanel extends BorderPane {
         HBox.setHgrow(header, Priority.ALWAYS);
         box.getChildren().add(headerRow);
 
-        Label modeLabel = new Label("Modo acompañante:");
+        Label modeLabel = new Label("Vista:");
         modeLabel.getStyleClass().add("theatre-mode-label");
         ToggleGroup modeGroup = new ToggleGroup();
-        RadioButton fragRadio = new RadioButton("Fragmentos visuales");
+        RadioButton fragRadio = StudioFormControls.radioButton("Fragmentos visuales");
         fragRadio.getStyleClass().add("theatre-spatial-radio-button");
         fragRadio.setToggleGroup(modeGroup);
         fragRadio.setSelected("fragments".equals(viewModel.spatialFrameModeProperty().get()));
-        RadioButton charRadio = new RadioButton("Fotos de personajes");
+        RadioButton charRadio = StudioFormControls.radioButton("Fotos de personajes");
         charRadio.getStyleClass().add("theatre-spatial-radio-button");
         charRadio.setToggleGroup(modeGroup);
         charRadio.setSelected("characters".equals(viewModel.spatialFrameModeProperty().get()));
-        RadioButton noneRadio = new RadioButton("Sin acompañante");
+        RadioButton sceneryRadio = StudioFormControls.radioButton("Fotos de personajes y escenografía");
+        sceneryRadio.setToggleGroup(modeGroup);
+        sceneryRadio.setSelected("scenery".equals(viewModel.spatialFrameModeProperty().get()));
+        RadioButton noneRadio = StudioFormControls.radioButton("Sin acompañante");
         noneRadio.getStyleClass().add("theatre-spatial-radio-button");
         noneRadio.setToggleGroup(modeGroup);
-        noneRadio.setSelected(!"fragments".equals(viewModel.spatialFrameModeProperty().get()) && !"characters".equals(viewModel.spatialFrameModeProperty().get()));
+        noneRadio.setSelected("none".equals(viewModel.spatialFrameModeProperty().get()));
         modeGroup.selectedToggleProperty().addListener((obs, oldValue, newValue) -> {
-            if (newValue == fragRadio) {
+            String selectedMode = newValue == sceneryRadio ? "scenery" : newValue == fragRadio ? "fragments"
+                    : newValue == charRadio ? "characters" : "none";
+            if (selectedMode.equals(viewModel.spatialFrameModeProperty().get())) return;
+            if (newValue == sceneryRadio) {
+                viewModel.setSpatialFrameMode("scenery");
+            } else if (newValue == fragRadio) {
                 viewModel.setSpatialFrameMode("fragments");
             } else if (newValue == charRadio) {
                 viewModel.setSpatialFrameMode("characters");
@@ -153,60 +172,97 @@ public final class TheatreSpatialActionMapPanel extends BorderPane {
             }
         });
 
-        Button fullscreenBtn = ActionButtonFactory.secondary("Ver mapa en pantalla completa",
+        viewModel.spatialFrameModeProperty().addListener((obs, oldValue, mode) -> modeGroup.selectToggle(
+                "scenery".equals(mode) ? sceneryRadio : "characters".equals(mode) ? charRadio
+                        : "none".equals(mode) ? noneRadio : fragRadio));
+
+        Button fullscreenBtn = ActionButtonFactory.secondary("Ver en pantalla completa",
                 () -> TheatreFullscreenMapView.show(viewModel, placements,
                         getScene() == null ? List.of() : getScene().getStylesheets(),
                         viewModel::runDocumentPrimaryAction));
         Button packagesBtn = ActionButtonFactory.secondary("Exportar paquetes IA", this::exportarPaquetesIaMasivos);
-        FlowPane radioFlow = new FlowPane(14, 8, fragRadio, charRadio, noneRadio);
+        FlowPane radioFlow = new FlowPane(14, 8, fragRadio, charRadio, sceneryRadio, noneRadio);
         radioFlow.getStyleClass().add("theatre-spatial-mode-radios");
         radioFlow.setPrefWrapLength(520);
         VBox modeBox = new VBox(6, modeLabel, radioFlow);
         modeBox.getStyleClass().add("theatre-spatial-mode-box");
         modeBox.setPadding(new Insets(8, 10, 8, 0));
-        VBox controls = new VBox(8, modeBox, new HBox(8, fullscreenBtn, packagesBtn));
+        HBox actionButtons = new HBox(8, fullscreenBtn, packagesBtn);
+        ResponsiveActionGroup.install(actionButtons, 360, fullscreenBtn, packagesBtn);
+        VBox controls = new VBox(8, modeBox, actionButtons);
         controls.getStyleClass().add("theatre-spatial-controls");
         controls.setAlignment(Pos.CENTER_LEFT);
         box.getChildren().add(controls);
 
         StackPane frame = spatialMapFrame(SPATIAL_IMAGE_FIT_WIDTH, SPATIAL_IMAGE_FIT_HEIGHT, true);
         StackPane.setAlignment(frame, Pos.CENTER);
-        box.getChildren().add(frame);
+        TheatreSceneryPane scenery = new TheatreSceneryPane();
+        Label speech = new Label();
+        speech.setWrapText(true);
+        speech.setMaxWidth(Double.MAX_VALUE);
+        speech.getStyleClass().add("theatre-scenery-caption");
+        VBox stageView = new VBox(8, scenery, speech);
+        stageView.setFillWidth(true);
+        stageView.prefWidthProperty().bind(box.widthProperty());
+        scenery.prefHeightProperty().bind(scenery.widthProperty().multiply(9.0/16));
+        Runnable updateStage = () -> {
+            boolean active = "scenery".equals(viewModel.spatialFrameModeProperty().get());
+            frame.setVisible(!active); frame.setManaged(!active);
+            stageView.setVisible(active); stageView.setManaged(active);
+            if (active) {
+                var placement = viewModel.activeTextActionPlacementProperty().get();
+                scenery.update(viewModel, placement);
+                speech.setText(TheatreFullscreenMapView.caption(viewModel, placement));
+            }
+        };
+        viewModel.spatialFrameModeProperty().addListener((o,a,b) -> updateStage.run());
+        viewModel.activeTextActionPlacementProperty().addListener((o,a,b) -> updateStage.run());
+        updateStage.run();
+        box.getChildren().addAll(frame, stageView);
         return box;
     }
 
     private void exportarPaquetesIaMasivos() {
-        DirectoryChooser chooser = new DirectoryChooser();
+        DirectoryChooser chooser = NativeSourceChooser.directoryChooser();
         chooser.setTitle("Elegir carpeta destino para paquetes IA teatrales");
         viewModel.currentProjectDirectory().filter(Files::isDirectory).map(Path::toFile).ifPresent(chooser::setInitialDirectory);
         java.io.File selected = chooser.showDialog(getScene() == null ? null : getScene().getWindow());
         if (selected == null) return;
         try {
             TheatreContextExportEstimate estimate = viewModel.estimateTheatreContextPackages(TheatreContextExportScope.all());
-            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-            confirm.setTitle("Exportar paquetes IA");
-            confirm.setHeaderText("Se exportaran " + estimate.packages() + " paquetes de intervencion");
-            confirm.setContentText("Destino:\n" + selected.toPath()
-                    + "\n\nTamaño estimado: " + humanBytes(estimate.estimatedBytes())
-                    + "\nArchivos estimados: " + estimate.files()
-                    + "\n\nEsto puede ocupar bastante espacio porque los assets se copian por intervencion.");
+            Alert confirm = NativeDialogResponse.alert(Alert.AlertType.CONFIRMATION);
             Window owner = getScene() == null ? null : getScene().getWindow();
-            if (owner != null) confirm.initOwner(owner);
+            StudioMessageDialog.configure(
+                    confirm,
+                    owner,
+                    "Exportar paquetes IA",
+                    "Se exportarán " + estimate.packages() + " paquetes de intervención",
+                    "Tamaño estimado: " + humanBytes(estimate.estimatedBytes())
+                            + ". Archivos estimados: " + estimate.files()
+                            + ". Esto puede ocupar bastante espacio porque los assets se copian "
+                            + "por intervención.",
+                    "Destino:\n" + selected.toPath());
             if (confirm.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
             var result = viewModel.exportTheatreContextPackages(TheatreContextExportScope.all(), selected.toPath());
-            Alert done = new Alert(Alert.AlertType.INFORMATION);
-            done.setTitle("Paquetes IA exportados");
-            done.setHeaderText(result.packages() + " paquetes creados");
-            done.setContentText("Carpeta raiz:\n" + result.root());
-            if (owner != null) done.initOwner(owner);
+            Alert done = NativeDialogResponse.alert(Alert.AlertType.INFORMATION);
+            StudioMessageDialog.configure(
+                    done,
+                    owner,
+                    "Paquetes IA exportados",
+                    result.packages() + " paquetes creados",
+                    "La exportación finalizó correctamente.",
+                    "Carpeta raíz:\n" + result.root());
             done.showAndWait();
         } catch (IOException | RuntimeException ex) {
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle("No se pudieron exportar paquetes IA");
-            alert.setHeaderText("Error al preparar paquetes masivos");
-            alert.setContentText(ex.getMessage() == null ? ex.toString() : ex.getMessage());
+            Alert alert = NativeDialogResponse.alert(Alert.AlertType.ERROR);
             Window owner = getScene() == null ? null : getScene().getWindow();
-            if (owner != null) alert.initOwner(owner);
+            StudioMessageDialog.configure(
+                    alert,
+                    owner,
+                    "No se pudieron exportar paquetes IA",
+                    "Error al preparar paquetes masivos",
+                    ex.getMessage() == null ? ex.toString() : ex.getMessage(),
+                    StudioMessageDialog.technicalDetail(ex));
             alert.showAndWait();
         }
     }
@@ -276,7 +332,7 @@ public final class TheatreSpatialActionMapPanel extends BorderPane {
                 TheatreInterventionSelectionBridge.blockSelector(viewModel, scene),
                 alias -> mostrarEditorAccion(scene, alias),
                 alias -> exportarContextoIntervencion(scene, alias));
-        ScrollPane canvasScroll = new ScrollPane(canvas);
+        ScrollPane canvasScroll = StudioViewportControls.scrollPane(canvas);
         canvasScroll.getStyleClass().add("theatre-action-canvas-scroll");
         canvasScroll.setFitToWidth(false);
         canvasScroll.setFitToHeight(false);
@@ -297,7 +353,7 @@ public final class TheatreSpatialActionMapPanel extends BorderPane {
         if (scene == null || alias == null) {
             return;
         }
-        DirectoryChooser chooser = new DirectoryChooser();
+        DirectoryChooser chooser = NativeSourceChooser.directoryChooser();
         chooser.setTitle("Elegir carpeta para paquete IA");
         viewModel.currentProjectDirectory()
                 .filter(Files::isDirectory)
@@ -309,25 +365,26 @@ public final class TheatreSpatialActionMapPanel extends BorderPane {
         }
         try {
             Path folder = viewModel.exportTheatreInterventionContext(scene.id(), alias.alias(), selected.toPath());
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Paquete IA creado");
-            alert.setHeaderText("Contexto visual de " + TheatreZigzagLayout.displayLabel(alias.alias()) + " exportado");
-            alert.setContentText("Carpeta creada:\n" + folder
-                    + "\n\nEstas imagenes sirven como contexto rapido para una IA generadora de imagen unificada.");
+            Alert alert = NativeDialogResponse.alert(Alert.AlertType.INFORMATION);
             Window owner = getScene() == null ? null : getScene().getWindow();
-            if (owner != null) {
-                alert.initOwner(owner);
-            }
+            StudioMessageDialog.configure(
+                    alert,
+                    owner,
+                    "Paquete IA creado",
+                    "Contexto visual de " + TheatreZigzagLayout.displayLabel(alias.alias()) + " exportado",
+                    "Estas imágenes sirven como contexto rápido para una IA generadora de imagen unificada.",
+                    "Carpeta creada:\n" + folder);
             alert.showAndWait();
         } catch (IOException | RuntimeException ex) {
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle("No se pudo exportar el paquete IA");
-            alert.setHeaderText("No se pudo crear el contexto de " + TheatreZigzagLayout.displayLabel(alias.alias()));
-            alert.setContentText(ex.getMessage() == null ? ex.toString() : ex.getMessage());
+            Alert alert = NativeDialogResponse.alert(Alert.AlertType.ERROR);
             Window owner = getScene() == null ? null : getScene().getWindow();
-            if (owner != null) {
-                alert.initOwner(owner);
-            }
+            StudioMessageDialog.configure(
+                    alert,
+                    owner,
+                    "No se pudo exportar el paquete IA",
+                    "No se pudo crear el contexto de " + TheatreZigzagLayout.displayLabel(alias.alias()),
+                    ex.getMessage() == null ? ex.toString() : ex.getMessage(),
+                    StudioMessageDialog.technicalDetail(ex));
             alert.showAndWait();
         }
     }
@@ -349,15 +406,15 @@ public final class TheatreSpatialActionMapPanel extends BorderPane {
         }
         TheatreProjectLayer.TextActionPlacement existing = placements.getOrDefault(placementKey(scene.id(), alias.alias()), TheatreProjectLayer.TextActionPlacement.empty());
         Optional<TheatreProjectLayer.TextActionPlacement> previous = colocacionAnterior(scene, alias);
-        Label title = new Label("Editar " + alias.alias() + " - " + cueLabel(alias.preview()));
+        String speakerName = speakerName(alias, existing);
+        Label title = new Label("Editar " + alias.alias() + (speakerName.isBlank() ? "" : " - " + speakerName));
         title.getStyleClass().add("theatre-character-dialog-title");
-        Label subtitle = new Label("Define quien habla, hacia quien se dirige y donde queda cada participante en el escenario.");
+        Label subtitle = new Label("El hablante viene del guion y no cambia aquí. Define su ubicación, a quién se dirige y dónde queda cada participante en el escenario.");
         subtitle.setWrapText(true);
         subtitle.getStyleClass().add("theatre-spatial-dialog-subtitle");
 
         VBox characterPositions = new VBox(8);
         characterPositions.getStyleClass().add("theatre-spatial-dialog-field-list");
-        String speakerName = cueLabel(alias.preview());
         ComboBox<String> origin = locationCombo(existing.origin().isBlank() ? STAGE_LOCATIONS.get(4) : existing.origin());
         Map<String, CheckBox> interactionInputs = new LinkedHashMap<>();
         FlowPane interactionTargets = interactionTargetSelector(existing.interactionTarget(), speakerName, interactionInputs);
@@ -369,7 +426,7 @@ public final class TheatreSpatialActionMapPanel extends BorderPane {
         }
         bindPresenceToInteractionTargets(interactionInputs, characterLocationInputs, speakerName);
 
-        CheckBox preservePrevious = new CheckBox("Preservar las posiciones de los personajes del texto anterior");
+        CheckBox preservePrevious = StudioFormControls.checkBox("Preservar las posiciones de los personajes del texto anterior");
         preservePrevious.setDisable(previous.isEmpty());
         preservePrevious.selectedProperty().addListener((obs, oldValue, selected) -> {
             if (!selected || previous.isEmpty()) {
@@ -382,14 +439,14 @@ public final class TheatreSpatialActionMapPanel extends BorderPane {
                     combo.setValue(prev.characterLocations().getOrDefault(character, combo.getValue())));
         });
 
-        Button accept = ActionButtonFactory.primary("Aceptar", () -> {
+        Button accept = ActionButtonFactory.primary("Guardar cambios", () -> {
             Map<String, String> characterLocations = new LinkedHashMap<>();
             characterLocationInputs.forEach((character, combo) -> characterLocations.put(character, combo.getValue()));
             String interactionTarget = selectedInteractionTargets(interactionInputs, characterLocationInputs, speakerName);
             TheatreProjectLayer.TextActionPlacement updated = new TheatreProjectLayer.TextActionPlacement(
                     alias.alias(),
                     scene.id(),
-                    characterIdForDisplay(cueLabel(alias.preview()), existing.characterId()),
+                    characterIdForDisplay(speakerName, existing.characterId()),
                     origin.getValue(),
                     computedDestination(origin.getValue(), interactionTarget, characterLocations, speakerName),
                     interactionTarget,
@@ -401,18 +458,43 @@ public final class TheatreSpatialActionMapPanel extends BorderPane {
         });
         Button cancel = ActionButtonFactory.secondary("Cancelar", () -> ((Stage) origin.getScene().getWindow()).close());
 
-        VBox interactionGroup = dialogGroup("Interaccion de personajes",
-                formRow("Ubicacion de " + speakerName, origin),
-                formRow("Interactua con", interactionTargets));
+        Label speakerValue = new Label(speakerName.isBlank() ? "Sin hablante en el guion" : speakerName);
+        speakerValue.getStyleClass().add("theatre-spatial-dialog-readonly-value");
+        Label interventionReference = new Label(alias.fullText().isBlank()
+                ? "Sin texto de referencia"
+                : alias.fullText());
+        interventionReference.setWrapText(true);
+        interventionReference.setMaxWidth(Double.MAX_VALUE);
+        interventionReference.getStyleClass().add("theatre-spatial-dialog-reference-text");
+        VBox interactionGroup = dialogGroup("Direccion de la intervencion",
+                formRow("Texto de referencia", interventionReference),
+                formRow("Personaje que habla", speakerValue),
+                formRow("Ubicacion de " + (speakerName.isBlank() ? "quien habla" : speakerName) + " (hablante)", origin),
+                formRow("Se dirige a", interactionTargets));
         VBox positionsGroup = dialogGroup("Ubicacion de personajes en el escenario",
                 characterPositions,
                 preservePrevious);
-        HBox actions = new HBox(10, accept, cancel);
+        Region actionSpacer = new Region();
+        HBox.setHgrow(actionSpacer, Priority.ALWAYS);
+        HBox actions = new HBox(10, actionSpacer, cancel, accept);
         actions.setAlignment(Pos.CENTER_LEFT);
         actions.getStyleClass().add("theatre-spatial-dialog-actions");
 
-        VBox root = new VBox(14, title, subtitle, interactionGroup, positionsGroup, actions);
-        root.setPadding(new Insets(22));
+        VBox heading = new VBox(6, title, subtitle);
+        heading.getStyleClass().add("theatre-spatial-dialog-heading");
+
+        VBox editableContent = new VBox(14, interactionGroup, positionsGroup);
+        editableContent.getStyleClass().add("theatre-spatial-dialog-content");
+        ScrollPane editorScroll = new ScrollPane(editableContent);
+        editorScroll.setFitToWidth(true);
+        editorScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        editorScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        editorScroll.getStyleClass().add("theatre-spatial-dialog-scroll");
+
+        BorderPane root = new BorderPane();
+        root.setTop(heading);
+        root.setCenter(editorScroll);
+        root.setBottom(actions);
         root.getStyleClass().addAll("theatre-character-dialog-root", "theatre-spatial-dialog-root");
 
         Stage stage = new Stage();
@@ -421,11 +503,13 @@ public final class TheatreSpatialActionMapPanel extends BorderPane {
             stage.initOwner(owner);
         }
         stage.setTitle("Editar " + alias.alias());
-        Scene dialog = new Scene(root, 600, 680);
+        Scene dialog = new Scene(root, 680, 720);
         if (getScene() != null) {
             dialog.getStylesheets().addAll(getScene().getStylesheets());
         }
         stage.setScene(dialog);
+        stage.setMinWidth(580);
+        stage.setMinHeight(520);
         stage.show();
     }
 
@@ -454,7 +538,7 @@ public final class TheatreSpatialActionMapPanel extends BorderPane {
     }
 
     private ComboBox<String> locationCombo(String selected, boolean allowAbsent) {
-        ComboBox<String> combo = new ComboBox<>();
+        ComboBox<String> combo = StudioFormControls.comboBox();
         ArrayList<String> options = new ArrayList<>(STAGE_LOCATIONS);
         if (allowAbsent) {
             options.add(ABSENT_LOCATION);
@@ -489,7 +573,7 @@ public final class TheatreSpatialActionMapPanel extends BorderPane {
         FlowPane flow = new FlowPane(10, 8);
         flow.getStyleClass().add("theatre-spatial-dialog-targets");
         for (String target : interactionTargetOptions(speakerName)) {
-            CheckBox check = new CheckBox(target);
+            CheckBox check = StudioFormControls.checkBox(target);
             check.getStyleClass().add("theatre-spatial-dialog-target-check");
             inputs.put(target, check);
             flow.getChildren().add(check);
@@ -522,7 +606,7 @@ public final class TheatreSpatialActionMapPanel extends BorderPane {
         boolean allRemainingSelected = allRemaining != null && allRemaining.isSelected();
         boolean hasPresentRemaining = inputs.keySet().stream()
                 .filter(name -> !ALL_REMAINING_TARGET.equals(name))
-                .filter(name -> !TheatreSpatialRoleIcon.isAudience(name))
+                .filter(name -> !isSpecialTarget(name))
                 .filter(name -> speakerName == null || speakerName.isBlank() || !name.equalsIgnoreCase(speakerName))
                 .anyMatch(name -> !targetAbsent(name, characterLocationInputs));
         if (allRemaining != null) {
@@ -555,7 +639,7 @@ public final class TheatreSpatialActionMapPanel extends BorderPane {
             check.setSelected(false);
         });
         List<String> selected = interactionTargets(targets);
-        boolean allRemainingSelected = selected.stream().anyMatch(value -> value.equalsIgnoreCase(ALL_REMAINING_TARGET));
+        boolean allRemainingSelected = selected.stream().anyMatch(TheatreInteractionTargetPolicy::isAllRemaining);
         if (allRemainingSelected && inputs.containsKey(ALL_REMAINING_TARGET)) {
             inputs.get(ALL_REMAINING_TARGET).setSelected(true);
             return;
@@ -574,13 +658,7 @@ public final class TheatreSpatialActionMapPanel extends BorderPane {
         }
         CheckBox allRemaining = inputs.get(ALL_REMAINING_TARGET);
         if (allRemaining != null && allRemaining.isSelected()) {
-            return inputs.keySet().stream()
-                    .filter(name -> !ALL_REMAINING_TARGET.equals(name))
-                    .filter(name -> !TheatreSpatialRoleIcon.isAudience(name))
-                    .filter(name -> speakerName == null || speakerName.isBlank() || !name.equalsIgnoreCase(speakerName))
-                    .filter(name -> !targetAbsent(name, characterLocationInputs))
-                    .reduce((left, right) -> left + ", " + right)
-                    .orElse("");
+            return ALL_REMAINING_TARGET;
         }
         return inputs.entrySet().stream()
                 .filter(entry -> entry.getValue().isSelected())
@@ -637,18 +715,27 @@ public final class TheatreSpatialActionMapPanel extends BorderPane {
     }
 
     private List<String> interactionTargetOptions(String speakerName) {
-        ArrayList<String> names = new ArrayList<>(detectedCharacterOptions());
-        if (speakerName != null && !speakerName.isBlank()
-                && names.stream().noneMatch(name -> name.equalsIgnoreCase(speakerName))) {
-            names.add(0, speakerName);
-        }
-        if (names.stream().anyMatch(name -> speakerName == null || !name.equalsIgnoreCase(speakerName))) {
+        ArrayList<String> names = new ArrayList<>(withoutSpeaker(detectedCharacterOptions(), speakerName));
+        if (!names.isEmpty()) {
             names.add(ALL_REMAINING_TARGET);
         }
-        if (names.stream().noneMatch(TheatreSpatialRoleIcon::isAudience)) {
-            names.add("Publico");
+        for (String special : SPECIAL_INTERACTION_TARGETS) {
+            if (names.stream().noneMatch(name -> name.equalsIgnoreCase(special))) {
+                names.add(special);
+            }
         }
         return List.copyOf(names);
+    }
+
+    static List<String> withoutSpeaker(List<String> characters, String speakerName) {
+        String speaker = speakerName == null ? "" : speakerName.strip();
+        if (characters == null || characters.isEmpty()) {
+            return List.of();
+        }
+        return characters.stream()
+                .filter(name -> name != null && !name.isBlank())
+                .filter(name -> speaker.isBlank() || !name.equalsIgnoreCase(speaker))
+                .toList();
     }
 
     private List<String> actionReceiverOptions(String speakerName) {
@@ -657,6 +744,47 @@ public final class TheatreSpatialActionMapPanel extends BorderPane {
                 .filter(name -> speaker.isBlank() || !name.equalsIgnoreCase(speaker))
                 .filter(name -> !isSpecialTarget(name))
                 .toList();
+    }
+
+    private String speakerName(IntervencionCatalogo.IntervencionInfo alias,
+                               TheatreProjectLayer.TextActionPlacement existing) {
+        if (alias == null) {
+            return "";
+        }
+        String blockCharacter = viewModel.currentDocumentProperty().get() == null
+                ? ""
+                : viewModel.currentDocumentProperty().get().blockById(alias.blockId())
+                .map(block -> block.metadata().getOrDefault("characterName", ""))
+                .orElse("");
+        String scriptCharacter = viewModel.currentScriptProperty().get() == null
+                ? ""
+                : viewModel.currentScriptProperty().get().segments().stream()
+                .filter(segment -> segment.sourceBlockIds().contains(alias.blockId()))
+                .map(segment -> segment.metadata().getOrDefault("characterName", ""))
+                .filter(value -> !value.isBlank())
+                .findFirst()
+                .orElse("");
+        String existingCharacter = existing == null ? "" : characterDisplayName(existing.characterId());
+        return resolveSpeakerName(blockCharacter, scriptCharacter, existingCharacter,
+                alias.preview(), alias.stageDirection());
+    }
+
+    static String resolveSpeakerName(String blockCharacter, String scriptCharacter,
+                                     String existingCharacter, String preview,
+                                     boolean stageDirection) {
+        if (stageDirection) {
+            return "ACOTACION";
+        }
+        for (String candidate : List.of(
+                blockCharacter == null ? "" : blockCharacter,
+                scriptCharacter == null ? "" : scriptCharacter,
+                existingCharacter == null ? "" : existingCharacter,
+                cueLabel(preview))) {
+            if (!candidate.isBlank()) {
+                return candidate.strip();
+            }
+        }
+        return "";
     }
 
     private void drawSpatialOverlay() {
@@ -679,7 +807,14 @@ public final class TheatreSpatialActionMapPanel extends BorderPane {
             destinationLocations(placement).forEach(destination ->
                     drawActionArrow(gc, origin, stagePoint(destination), placement.intervencionId().equals(activeAlias)));
         });
-        drawCharacterLocationLabels(gc, visible);
+        drawCharacterLocationMarkers(gc, visible);
+        visible.stream().findFirst().ifPresent(placement -> TheatreSpatialOverlayLegend.draw(
+                gc,
+                overlay.getWidth(),
+                overlay.getHeight(),
+                activeSpeakerName(placement),
+                activeTargetName(placement),
+                sceneCastNames(placement)));
         gc.setLineWidth(2);
     }
 
@@ -848,7 +983,7 @@ public final class TheatreSpatialActionMapPanel extends BorderPane {
                         viewModel.currentScriptProperty().get()));
     }
 
-    private void drawCharacterLocationLabels(GraphicsContext gc, List<TheatreProjectLayer.TextActionPlacement> visible) {
+    private void drawCharacterLocationMarkers(GraphicsContext gc, List<TheatreProjectLayer.TextActionPlacement> visible) {
         Map<String, MarkerGroup> markersByLocation = new LinkedHashMap<>();
         List<String> selfLoopLocations = selfLoopLocations(visible);
         visible.forEach(placement -> markerParticipants(placement).forEach(participant -> {
@@ -868,8 +1003,85 @@ public final class TheatreSpatialActionMapPanel extends BorderPane {
         markersByLocation.forEach((location, group) -> {
             StagePoint point = markerPointForSelfLoop(stagePoint(location), group.selfLoop());
             drawSpatialMarker(gc, point, group.role());
-            drawCharacterLabel(gc, point, group.names(), group.speakers(), 0);
         });
+    }
+
+    private String activeSpeakerName(TheatreProjectLayer.TextActionPlacement placement) {
+        if (placement == null) {
+            return "";
+        }
+        String display = characterDisplayName(placement.characterId());
+        if (!display.isBlank()) {
+            return display;
+        }
+        String fallback = placement.characterLocations().keySet().stream()
+                .filter(name -> !isSpecialTarget(name))
+                .findFirst()
+                .orElse("");
+        return fallback.isBlank() ? placement.characterId() : fallback;
+    }
+
+    private String activeTargetName(TheatreProjectLayer.TextActionPlacement placement) {
+        if (placement == null) {
+            return "";
+        }
+        ArrayList<String> targets = new ArrayList<>();
+        for (String target : interactionTargets(placement.interactionTarget())) {
+            String normalized = target == null ? "" : target.strip();
+            if (normalized.isBlank()) {
+                continue;
+            }
+            if (isSelfTarget(normalized)) {
+                addUniqueName(targets, "SÍ MISMO");
+            } else if (TheatreSpatialRoleIcon.isAudience(normalized)) {
+                addUniqueName(targets, "PÚBLICO");
+            } else if (isOffstageTarget(normalized)) {
+                addUniqueName(targets, "FUERA DE ESCENA");
+            } else if (ALL_REMAINING_TARGET.equalsIgnoreCase(normalized)) {
+                addUniqueName(targets, ALL_REMAINING_TARGET);
+            } else {
+                String display = characterDisplayName(characterIdForDisplay(normalized, ""));
+                addUniqueName(targets, display.isBlank() ? normalized : display);
+            }
+        }
+        if (targets.isEmpty() && TheatreSpatialRoleIcon.isAudience(placement.destination())) {
+            targets.add("PÚBLICO");
+        }
+        return String.join(" + ", targets);
+    }
+
+    private List<String> sceneCastNames(TheatreProjectLayer.TextActionPlacement active) {
+        if (active == null) {
+            return List.of();
+        }
+        ArrayList<String> cast = new ArrayList<>();
+        placements.values().stream()
+                .filter(candidate -> active.sceneId().equals(candidate.sceneId()))
+                .forEach(candidate -> {
+                    addCharacterName(cast, candidate.characterId());
+                    candidate.characterLocations().forEach((character, location) -> {
+                        if (!isAbsentLocation(location) && !isSpecialTarget(character)) {
+                            addCharacterName(cast, character);
+                        }
+                    });
+                });
+        addUniqueName(cast, activeSpeakerName(active));
+        return List.copyOf(cast);
+    }
+
+    private void addCharacterName(List<String> names, String characterOrId) {
+        if (characterOrId == null || characterOrId.isBlank() || isSpecialTarget(characterOrId)) {
+            return;
+        }
+        String display = characterDisplayName(characterIdForDisplay(characterOrId, characterOrId));
+        addUniqueName(names, display.isBlank() ? characterOrId : display);
+    }
+
+    private static void addUniqueName(List<String> names, String name) {
+        if (name == null || name.isBlank() || names.stream().anyMatch(value -> value.equalsIgnoreCase(name))) {
+            return;
+        }
+        names.add(name.strip());
     }
 
     private List<String> selfLoopLocations(List<TheatreProjectLayer.TextActionPlacement> visible) {
@@ -1047,7 +1259,7 @@ public final class TheatreSpatialActionMapPanel extends BorderPane {
     }
 
     private static List<String> interactionTargets(String target) {
-        String normalized = target == null ? "" : target.strip();
+        String normalized = TheatreInteractionTargetPolicy.canonicalize(target);
         if (normalized.isBlank()) {
             return List.of();
         }

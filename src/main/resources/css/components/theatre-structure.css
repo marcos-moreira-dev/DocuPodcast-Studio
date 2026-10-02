@@ -148,7 +148,7 @@
 }
 
 .theatre-fullscreen-root {
-    -fx-background-color: #030712;
+    -fx-background-color: #000000;
 }
 
 .theatre-fullscreen-playbar {
@@ -197,8 +197,20 @@
     -fx-effect: dropshadow(one-pass-box, rgba(0, 0, 0, 0.90), 3, 0, 1, 1);
 }
 
+.theatre-scenery-caption {
+    -fx-background-color: #000000;
+    -fx-text-fill: #FDECC8;
+    -fx-font-family: "Georgia", "Cambria", serif;
+    -fx-font-style: italic;
+    -fx-font-weight: 900;
+    -fx-font-size: 20px;
+    -fx-line-spacing: 2px;
+    -fx-padding: 18px 22px 20px 22px;
+    -fx-effect: dropshadow(one-pass-box, rgba(0, 0, 0, 0.90), 3, 0, 1, 1);
+}
+
 .theatre-fullscreen-companion-title {
-    -fx-text-fill: white;
+    -fx-text-fill: #FDECC8;
     -fx-font-family: "Georgia", "Cambria", serif;
     -fx-font-weight: 900;
     -fx-font-size: 24px;
@@ -210,20 +222,20 @@
 }
 
 .theatre-fullscreen-character-name {
-    -fx-text-fill: white;
+    -fx-text-fill: #FDECC8;
     -fx-font-family: "Georgia", "Cambria", serif;
     -fx-font-weight: 900;
     -fx-effect: dropshadow(one-pass-box, rgba(0, 0, 0, 0.86), 3, 0, 1, 1);
 }
 
 .theatre-fullscreen-companion-muted {
-    -fx-text-fill: white;
+    -fx-text-fill: #FDECC8;
     -fx-font-family: "Georgia", "Cambria", serif;
     -fx-effect: dropshadow(one-pass-box, rgba(0, 0, 0, 0.86), 3, 0, 1, 1);
 }
 
 .theatre-fullscreen-companion-text {
-    -fx-text-fill: white;
+    -fx-text-fill: #FDECC8;
     -fx-font-size: 12;
 }
 
@@ -260,9 +272,36 @@
     -fx-background-color: #F8FAFC;
 }
 
+.theatre-spatial-dialog-heading {
+    -fx-padding: 22 22 14 22;
+    -fx-background-color: #F8FAFC;
+    -fx-border-color: transparent transparent #E2E8F0 transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.theatre-spatial-dialog-content {
+    -fx-padding: 16 20 22 20;
+}
+
+.theatre-spatial-dialog-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-border-color: transparent;
+}
+
+.theatre-spatial-dialog-scroll > .viewport {
+    -fx-background-color: #F8FAFC;
+}
+
 .theatre-spatial-dialog-subtitle {
     -fx-text-fill: -docu-text-muted;
     -fx-font-size: 12.5px;
+}
+
+.theatre-spatial-dialog-reference-text {
+    -fx-font-style: italic;
+    -fx-text-fill: #6B7280;
+    -fx-line-spacing: 2px;
 }
 
 .theatre-spatial-dialog-group {
@@ -320,7 +359,10 @@
 }
 
 .theatre-spatial-dialog-actions {
-    -fx-padding: 2 0 0 0;
+    -fx-padding: 14 22 18 22;
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #E2E8F0 transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
 }
 
 .theatre-action-canvas-shell {

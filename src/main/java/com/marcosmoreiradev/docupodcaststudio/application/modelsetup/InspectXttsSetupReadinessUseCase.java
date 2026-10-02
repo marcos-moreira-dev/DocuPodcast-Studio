@@ -45,7 +45,9 @@ public final class InspectXttsSetupReadinessUseCase {
 
         List<String> missing = new ArrayList<>();
         List<String> warnings = new ArrayList<>();
-        requireFile(setupScript, "Runtime: script de preparación Python local", missing);
+        if (!Files.isRegularFile(setupScript)) {
+            warnings.add("La herramienta antigua de preparación no está disponible; el runtime ya instalado se valida directamente.");
+        }
         requireFile(python, "Runtime: Python local portable", missing);
         requireFile(wrapper, "Runtime: wrapper Voz IA avanzada", missing);
         requireFile(speakerWav, "Runtime: voz neutral o muestra WAV", missing);

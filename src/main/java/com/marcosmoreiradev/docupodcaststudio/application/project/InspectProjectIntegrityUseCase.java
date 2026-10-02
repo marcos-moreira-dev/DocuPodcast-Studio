@@ -212,10 +212,14 @@ public final class InspectProjectIntegrityUseCase {
         boolean declaresNarrationScript = project.assets().containsKind(ProjectAssetKind.NARRATION_SCRIPT);
         boolean declaresStoryboard = project.assets().containsKind(ProjectAssetKind.STORYBOARD_MANIFEST);
 
-        if ((kind == ProjectKind.DOCUMENT_ONLY || declaresImportedDocument) && hydration.importedDocument().isEmpty()) {
+        if ((kind == ProjectKind.DOCUMENT_ONLY || declaresImportedDocument) && hydration.documentSource().isEmpty()) {
+            String documentAssetPath = project.assets().byKind(ProjectAssetKind.IMPORTED_DOCUMENT).stream()
+                    .findFirst()
+                    .map(ProjectAssetReference::relativePath)
+                    .orElse("document/manifest.json");
             issues.add(ProjectIntegrityIssue.error(
                     "DOCUMENT_MATERIALIZATION_MISSING",
-                    "document/document.json",
+                    documentAssetPath,
                     "El proyecto declara documento importado pero no se pudo rehidratar el documento narrable.",
                     "Usa Refrescar contenido o reimporta el documento fuente."));
         }
@@ -274,7 +278,7 @@ public final class InspectProjectIntegrityUseCase {
                 .map(document -> document.blocks().stream().map(DocumentBlock::id).collect(Collectors.toUnmodifiableSet()))
                 .orElse(Set.of());
         boolean hasScript = hydration.narrationScript().isPresent();
-        boolean hasDocument = hydration.importedDocument().isPresent();
+        boolean hasBlockDocument = hydration.importedDocument().isPresent();
 
         for (NarrativeLayerAssignment layer : project.narrativeLayerAssignments()) {
             if (hasScript && !segmentIds.contains(layer.textRange().segmentId())) {
@@ -284,7 +288,7 @@ public final class InspectProjectIntegrityUseCase {
                         "La capa referencia un segmento inexistente: " + layer.textRange().segmentId() + ".",
                         "Reasigna la capa desde el documento actual o elimina la capa obsoleta."));
             }
-            if (hasDocument && layer.hasDocumentRange() && !blockIds.contains(layer.documentRange().blockId())) {
+            if (hasBlockDocument && layer.hasDocumentRange() && !blockIds.contains(layer.documentRange().blockId())) {
                 issues.add(ProjectIntegrityIssue.error(
                         "LAYER_DOCUMENT_BLOCK_MISSING",
                         layer.id(),
@@ -382,7 +386,13 @@ public final class InspectProjectIntegrityUseCase {
     }
 
     private void validateAudioJobs(Path projectRoot, List<AudioJobSnapshot> jobs, List<ProjectIntegrityIssue> issues) {
-        for (AudioJobSnapshot job : jobs) {
+        for (AudioJobSnapshot job : latestAudioJobsByDocument(jobs)) {
+            // A running job is already repairing/completing its own persisted state. Reporting
+            // it as "resumable" while generation is in progress produces a misleading warning
+            // whenever Express opens the child project for inspection.
+            if (job.state().running()) {
+                continue;
+            }
             AudioJobMaintenanceReport report = inspectAudioJobMaintenance.inspect(projectRoot, job);
             switch (report.status()) {
                 case READY -> { }
@@ -415,6 +425,29 @@ public final class InspectProjectIntegrityUseCase {
                         "Reanuda o regenera el job desde Audio/Documento."));
             }
         }
+    }
+
+    private static List<AudioJobSnapshot> latestAudioJobsByDocument(List<AudioJobSnapshot> jobs) {
+        ArrayList<AudioJobSnapshot> latest = new ArrayList<>();
+        for (AudioJobSnapshot candidate : jobs) {
+            int existingIndex = -1;
+            for (int index = 0; index < latest.size(); index++) {
+                if (latest.get(index).documentName().equals(candidate.documentName())) {
+                    existingIndex = index;
+                    break;
+                }
+            }
+            if (existingIndex < 0) {
+                latest.add(candidate);
+                continue;
+            }
+            AudioJobSnapshot existing = latest.get(existingIndex);
+            int recency = candidate.updatedAt().compareTo(existing.updatedAt());
+            if (recency > 0 || (recency == 0 && candidate.jobId().compareTo(existing.jobId()) > 0)) {
+                latest.set(existingIndex, candidate);
+            }
+        }
+        return List.copyOf(latest);
     }
 
     private static void validateVideoPackageIfPresent(Path projectRoot, List<ProjectIntegrityIssue> issues) {

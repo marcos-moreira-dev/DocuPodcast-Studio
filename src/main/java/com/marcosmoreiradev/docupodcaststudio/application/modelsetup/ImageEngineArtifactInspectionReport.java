@@ -38,7 +38,9 @@ public record ImageEngineArtifactInspectionReport(
     }
 
     public boolean modelReady() {
-        return checkpointStatus.ready() && workflowStatus.ready();
+        return checkpointStatus.ready() && workflowStatus.ready()
+                && missingRequirements.stream().allMatch(requirement -> requirement.startsWith("Runtime local")
+                    || requirement.startsWith("Lanzador compatible"));
     }
 
     public boolean basicReady() {

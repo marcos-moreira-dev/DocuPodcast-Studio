@@ -26,7 +26,7 @@ public record VisualClipGenerationRequest(
         negativePrompt = optional(negativePrompt);
         startFrame = Objects.requireNonNull(startFrame, "startFrame").toAbsolutePath().normalize();
         width = Math.max(360, width);
-        height = Math.max(640, height);
+        height = Math.max(360, height);
         framesPerSecond = Math.max(12, Math.min(60, framesPerSecond));
         durationSeconds = Math.max(0.25, Math.min(10.0, durationSeconds));
         references = Objects.requireNonNullElseGet(references, VisualReferenceBundle::empty);

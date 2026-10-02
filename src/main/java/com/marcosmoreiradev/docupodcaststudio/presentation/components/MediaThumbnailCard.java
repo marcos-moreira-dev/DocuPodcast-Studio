@@ -186,7 +186,7 @@ public final class MediaThumbnailCard extends HBox {
             box.getChildren().add(badge);
         }
         if (cornerAction != null) {
-            Button toggle = new Button("Alt");
+            Button toggle = ActionButtonFactory.secondary("Alt");
             toggle.getStyleClass().add("document-media-thumbnail-corner-action");
             toggle.setFocusTraversable(false);
             toggle.setOnAction(event -> {
@@ -196,6 +196,14 @@ public final class MediaThumbnailCard extends HBox {
             Tooltip.install(toggle, new Tooltip(safe(cornerTooltip, "Alternar variante visual")));
             StackPane.setAlignment(toggle, Pos.TOP_RIGHT);
             box.getChildren().add(toggle);
+        } else if (cornerTooltip != null && !cornerTooltip.isBlank()) {
+            // Passive semantic state: deliberately a label, never an action.
+            Label status = new Label(cornerTooltip);
+            status.getStyleClass().add("document-media-thumbnail-corner-status");
+            status.setMouseTransparent(true);
+            Tooltip.install(status, new Tooltip("Descripción narrable disponible"));
+            StackPane.setAlignment(status, Pos.BOTTOM_RIGHT);
+            box.getChildren().add(status);
         }
         if (emptyAction != null && emptyActionIcon != null) {
             Button action = ActionButtonFactory.iconOnly(

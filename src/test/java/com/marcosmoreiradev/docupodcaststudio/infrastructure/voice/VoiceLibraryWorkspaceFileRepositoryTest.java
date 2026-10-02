@@ -52,7 +52,8 @@ final class VoiceLibraryWorkspaceFileRepositoryTest {
                 VoiceFileOwnership.PROJECT_ASSET,
                 0,
                 Instant.parse("2026-01-01T00:00:00Z"),
-                ""
+                "",
+                "Esta es la muestra feliz."
         ));
 
         new VoiceLibraryWorkspaceFileRepository().materialize(library, projectFile);
@@ -61,5 +62,6 @@ final class VoiceLibraryWorkspaceFileRepositoryTest {
         assertTrue(json.contains("VOICE-SAMPLE-VOC-OWN-PLACEHOLDER-HAPPY"));
         assertTrue(json.contains("\"tone\": \"HAPPY\""));
         assertTrue(json.contains("voices/samples/happy.wav"));
+        assertTrue(json.contains("\"referenceTranscript\": \"Esta es la muestra feliz.\""));
     }
 }

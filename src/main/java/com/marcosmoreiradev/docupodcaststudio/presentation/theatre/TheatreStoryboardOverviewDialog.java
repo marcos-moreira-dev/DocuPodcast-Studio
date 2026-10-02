@@ -1,5 +1,9 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.theatre;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeSourceChooser;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls;
+
 import com.marcosmoreiradev.docupodcaststudio.application.storyboard.UpsertTheatreStoryboardFrameVariantUseCase;
 import com.marcosmoreiradev.docupodcaststudio.domain.assets.ProjectAssetReference;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.DocuPodcastProject;
@@ -71,7 +75,7 @@ public final class TheatreStoryboardOverviewDialog {
 
         VBox content = new VBox(18);
         content.setPadding(new Insets(8, 22, 24, 22));
-        ScrollPane scroll = new ScrollPane(content);
+        ScrollPane scroll = StudioViewportControls.scrollPane(content);
         scroll.setFitToWidth(true);
         root.setCenter(scroll);
 
@@ -247,7 +251,7 @@ public final class TheatreStoryboardOverviewDialog {
         }
 
         String extension = fileExtension(source).orElse(".png");
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle("Exportar frame");
         chooser.setInitialFileName(safeFileName(title) + extension);
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Imagen " + extension, "*" + extension));

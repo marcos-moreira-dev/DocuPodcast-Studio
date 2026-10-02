@@ -11,11 +11,9 @@ public record StudioInkPlatform(DrawingFeatureCatalog drawingFeatures, InkInputP
 
     public static StudioInkPlatform local() {
         DrawingFeatureCatalog catalog = DrawingFeatureCatalog.official();
-        InkInputProviderRegistry providers = new InkInputProviderRegistry()
-                .register(DrawingFeatureCatalog.DOCUMENT_PROBLEM, InkInputProviderFactory::createLectureStudioOnly)
-                .register(DrawingFeatureCatalog.FREE_COMPOSITION, InkInputProviderFactory::createDefault)
-                .register(DrawingFeatureCatalog.DOCUMENTARY_ILLUSTRATION, InkInputProviderFactory::createNativeOnly)
-                .register(DrawingFeatureCatalog.THEATRE_FRAME, InkInputProviderFactory::createNativeOnly);
+        InkInputProviderRegistry providers = new InkInputProviderRegistry();
+        catalog.profiles().forEach(profile -> providers.register(profile.id(),
+                () -> InkInputProviderFactory.create(profile.inputPolicy())));
         return new StudioInkPlatform(catalog, providers);
     }
 }

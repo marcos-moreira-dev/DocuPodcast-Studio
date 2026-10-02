@@ -13,7 +13,11 @@ import java.util.List;
 
 /** Minimal map composition controls embedded in Export Center. */
 public final class TheatreMapExportOptionsPane extends VBox {
-    private final ComboBox<TheatreMapCompanionMode> companion = new ComboBox<>();
+    public void setPresentationMode(String mode) {
+        companion.setValue(java.util.Arrays.stream(TheatreMapCompanionMode.values())
+                .filter(value -> value.frameMode().equals(mode)).findFirst().orElse(TheatreMapCompanionMode.FRAGMENT_VISUALS));
+    }
+    private final ComboBox<TheatreMapCompanionMode> companion = StudioFormControls.comboBox();
     private final VideoEncodingOptionsPane video;
 
     public TheatreMapExportOptionsPane(List<VideoEncoderPolicy> encoders, VideoEncoderPolicy defaultEncoder) {

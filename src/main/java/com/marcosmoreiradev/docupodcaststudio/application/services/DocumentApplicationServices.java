@@ -3,24 +3,45 @@ package com.marcosmoreiradev.docupodcaststudio.application.services;
 import com.marcosmoreiradev.docupodcaststudio.application.document.ImportDocumentUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.DocumentSourceImportService;
 import com.marcosmoreiradev.docupodcaststudio.application.document.BuildDocumentOutlineUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.BuildDocumentContentProjectionUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.BuildPdfEnhancedOutlineUseCase;
-import com.marcosmoreiradev.docupodcaststudio.application.document.BuildPdfNativeTextLayerUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.BuildPdfOcrTextLayerUseCase;
-import com.marcosmoreiradev.docupodcaststudio.application.document.BuildPdfResolvedTextLayerUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.BuildPdfVisualDocumentUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.BuildPdfVisualReadingProjectionUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.CapturePdfVisualRegionUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.CapturePdfAnalysisVisualEvidenceUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.MaterializePdfDocumentContentAssetUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.MaterializeWordDocumentContentAssetUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PrepareWordSemanticImagesUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.CreatePdfFromImageFolderUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.MaterializeImportedDocumentUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.RefreshSourceDocumentUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.ReconcileTextAnchorsUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.RenderPdfVisualPageUseCase;
-import com.marcosmoreiradev.docupodcaststudio.application.document.ResolvePdfNarratableDocumentUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.SearchPdfTextUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PrepareDocumentListeningUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PrepareListeningSessionUseCase;
-import com.marcosmoreiradev.docupodcaststudio.application.document.PrepareStudySourceCropsUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PdfPagePreparationScheduler;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PreparePdfScopeUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.ResolvePdfPreparationScopeUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.UpdateDocumentBlockTypeUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.AnalyzePreparedPdfLayoutUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.DiagnosePreparedPdfWorkspaceUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PdfDerivedTreatmentRegistry;
+import com.marcosmoreiradev.docupodcaststudio.application.document.UpdatePdfDerivedTreatmentUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.GeneratePdfDerivedTreatmentUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.OpenPreparedPdfWorkspaceUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.CreatePreparedPdfSessionWorkspaceUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.ResolveDocumentSelectionUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.BuildPreparedPdfRegionContextUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.UpdatePreparedPdfRegionOverrideUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.LocatePdfAudioSourceUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.ListPdfDerivedTreatmentsUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.RunDocumentLocalAnalysisBatchUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.ResolveDocumentTechnicalElementsUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.BuildPdfReviewDashboardUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PdfProcessingCapabilityService;
+import com.marcosmoreiradev.docupodcaststudio.application.document.ReviewPdfTreatmentBatchUseCase;
 
 /** Document import, materialization and review use cases. */
 public record DocumentApplicationServices(
@@ -33,17 +54,38 @@ public record DocumentApplicationServices(
         PrepareDocumentListeningUseCase prepareDocumentListening,
         PrepareListeningSessionUseCase prepareListeningSession,
         BuildDocumentOutlineUseCase buildDocumentOutline,
+        BuildDocumentContentProjectionUseCase buildDocumentContentProjection,
         BuildPdfEnhancedOutlineUseCase buildPdfEnhancedOutline,
-        BuildPdfNativeTextLayerUseCase buildPdfNativeTextLayer,
-        BuildPdfResolvedTextLayerUseCase buildPdfResolvedTextLayer,
         BuildPdfVisualReadingProjectionUseCase buildPdfVisualReadingProjection,
         BuildPdfOcrTextLayerUseCase buildPdfOcrTextLayer,
         BuildPdfVisualDocumentUseCase buildPdfVisualDocument,
         RenderPdfVisualPageUseCase renderPdfVisualPage,
         SearchPdfTextUseCase searchPdfText,
-        ResolvePdfNarratableDocumentUseCase resolvePdfNarratableDocument,
+        OpenPreparedPdfWorkspaceUseCase openPreparedPdfWorkspace,
+        CreatePreparedPdfSessionWorkspaceUseCase createPreparedPdfSessionWorkspace,
+        ResolveDocumentSelectionUseCase resolveDocumentSelection,
+        BuildPreparedPdfRegionContextUseCase buildPreparedPdfRegionContext,
+        UpdatePreparedPdfRegionOverrideUseCase updatePreparedPdfRegionOverride,
+        LocatePdfAudioSourceUseCase locatePdfAudioSource,
+        PdfPagePreparationScheduler pdfPagePreparationScheduler,
+        ResolvePdfPreparationScopeUseCase resolvePdfPreparationScope,
+        PreparePdfScopeUseCase preparePdfScope,
+        AnalyzePreparedPdfLayoutUseCase analyzePreparedPdfLayout,
+        PdfDerivedTreatmentRegistry pdfDerivedTreatments,
+        GeneratePdfDerivedTreatmentUseCase generatePdfDerivedTreatment,
+        RunDocumentLocalAnalysisBatchUseCase runLocalAnalysisBatch,
+        ResolveDocumentTechnicalElementsUseCase resolveTechnicalElements,
+        UpdatePdfDerivedTreatmentUseCase updatePdfDerivedTreatment,
+        ListPdfDerivedTreatmentsUseCase listPdfDerivedTreatments,
+        BuildPdfReviewDashboardUseCase buildPdfReviewDashboard,
+        PdfProcessingCapabilityService pdfProcessingCapabilities,
+        ReviewPdfTreatmentBatchUseCase reviewPdfTreatmentBatch,
+        DiagnosePreparedPdfWorkspaceUseCase diagnosePreparedPdfWorkspace,
+        CapturePdfAnalysisVisualEvidenceUseCase capturePdfAnalysisVisualEvidence,
+        MaterializePdfDocumentContentAssetUseCase materializePdfDocumentContentAsset,
+        MaterializeWordDocumentContentAssetUseCase materializeWordDocumentContentAsset,
+        PrepareWordSemanticImagesUseCase prepareWordSemanticImages,
         CapturePdfVisualRegionUseCase capturePdfVisualRegion,
-        CreatePdfFromImageFolderUseCase createPdfFromImageFolder,
-        PrepareStudySourceCropsUseCase prepareStudySourceCrops
+        CreatePdfFromImageFolderUseCase createPdfFromImageFolder
 ) {
 }

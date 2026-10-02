@@ -1,5 +1,14 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.voice;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeSourceChooser;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeDialogResponse;
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.StudioMessageDialog;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioCollectionControls;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
+
 import com.marcosmoreiradev.docupodcaststudio.application.voice.VoiceEngineCapabilityProfile;
 import com.marcosmoreiradev.docupodcaststudio.application.voice.VoiceLibraryCapabilityReport;
 import com.marcosmoreiradev.docupodcaststudio.application.voice.VoiceProfileCapability;
@@ -62,15 +71,15 @@ public final class VoiceLibraryWorkspaceView extends BorderPane {
     private final VoiceWorkspaceShell shell;
     private final VoiceSampleActions sampleActions;
     private final VoiceEngineSettingsControls engineSettings;
-    private final ListView<VoiceProfile> voiceBrowser = new ListView<>();
-    private final TextField voiceNameField = new TextField();
+    private final ListView<VoiceProfile> voiceBrowser = StudioCollectionControls.listView();
+    private final TextField voiceNameField = StudioFormControls.textField();
     private final VBox selectedVoiceDetails = new VBox(8);
-    private final ListView<String> summaryList = new ListView<>();
-    private final ComboBox<VoiceToneRecordingPrompt> tonePromptSelector = new ComboBox<>();
+    private final ListView<String> summaryList = StudioCollectionControls.listView();
+    private final ComboBox<VoiceToneRecordingPrompt> tonePromptSelector = StudioFormControls.comboBox();
     private final Label tonePromptText = new Label("Selecciona una voz para ver la frase guía del tono.");
     private final Label toneRecordingContract = new Label("Cancelar no reemplaza muestras anteriores.");
     private final Label selectedSampleStatus = new Label("Sin muestra.");
-    private final TextArea generatedTestText = new TextArea();
+    private final TextArea generatedTestText = StudioFormControls.textArea();
     private final Label generatedTestStatus = new Label();
     private final BooleanProperty voiceTestGenerating = new SimpleBooleanProperty(false);
     private final VoiceReadyToneMicroCard readyToneMicroCard = new VoiceReadyToneMicroCard();
@@ -157,7 +166,8 @@ public final class VoiceLibraryWorkspaceView extends BorderPane {
                         .orElse(1800L);
             }
         });
-        this.engineSettings = new VoiceEngineSettingsControls(viewModel, lines -> summaryList.getItems().setAll(lines));
+        this.engineSettings = new VoiceEngineSettingsControls(
+                viewModel, lines -> summaryList.getItems().setAll(lines));
         getStyleClass().add("voice-library-workspace");
         setPadding(new Insets(10));
 
@@ -215,7 +225,6 @@ public final class VoiceLibraryWorkspaceView extends BorderPane {
                     managedVoiceSelection.set(newValue);
                     voiceNameField.setText(newValue.displayName());
                     if (activeModule.get() == VoiceModuleId.MANAGE) {
-                        VoiceManagedSelectionCoordinator.synchronizeEngine(viewModel, newValue);
                         VoiceManagedSelectionCoordinator.resetGeneratedTest(viewModel, generatedTestText, newValue);
                     }
                 }
@@ -339,6 +348,9 @@ public final class VoiceLibraryWorkspaceView extends BorderPane {
         VBox box = moduleRoot("Configurar motor", "Motor activo", "Selecciona y verifica el motor de voz desde una superficie humana. La configuración interna compartida se sincroniza con Configuración.");
         engineSettings.refresh();
         VBox selection = engineSettings.selectionSection();
+        Button openAdministration = ActionButtonFactory.secondary(
+                "Motores y dependencias", this::openVoiceEngineSettings);
+        selection.getChildren().add(openAdministration);
         VBox card = section("Prueba rápida del motor seleccionado");
         card.getStyleClass().add("voice-engine-test-card");
         if (generatedTestText.getText() == null || generatedTestText.getText().isBlank()) {
@@ -354,8 +366,7 @@ public final class VoiceLibraryWorkspaceView extends BorderPane {
                 "Motor y dispositivo seleccionados",
                 "Genera un WAV corto con el motor y dispositivo de la columna izquierda. Si elegiste GPU, se intentará esa GPU y el diagnóstico indicará si el runtime la rechaza.",
                 generatedTestText, generatedTestStatus, test, play);
-        Button configure = ActionButtonFactory.secondary("Abrir configuración completa", this::openVoiceEngineSettings);
-        card.getChildren().addAll(testPanel, VoiceActionStrip.of(configure));
+        card.getChildren().add(testPanel);
         VBox detail = detailStack(card);
         box.getChildren().add(masterDetail(selection, detail));
         return box;
@@ -407,11 +418,6 @@ public final class VoiceLibraryWorkspaceView extends BorderPane {
                 || VoiceProfilePresentationPolicy.predefinedVoice(voice))) {
             backToManageVoices();
             return manageModule(viewModel.voiceCapabilityReport());
-        }
-        if (editingExisting && voice != null) {
-            VoiceManagedSelectionCoordinator.synchronizeEngine(viewModel, voice);
-        } else {
-            viewModel.selectDocumentAudioSource("Voz IA avanzada");
         }
         updateTonePromptControls(voice);
         detachNode(voiceNameField);
@@ -503,7 +509,6 @@ public final class VoiceLibraryWorkspaceView extends BorderPane {
         voiceBrowser.getSelectionModel().clearSelection();
         voiceNameField.setText("");
         updateTonePromptControls(null);
-        viewModel.selectDocumentAudioSource("Voz IA avanzada");
         generatedTestText.setText("Esta es una prueba de lectura con la nueva voz.");
         summaryList.getItems().setAll("Nueva voz: escribe un nombre y registra Neutral. Las demás emociones son opcionales.");
         renderSelectedVoice(null);
@@ -523,7 +528,6 @@ public final class VoiceLibraryWorkspaceView extends BorderPane {
             summaryList.getItems().setAll("Las voces prediseñadas no se editan. Crea una voz nueva para registrar tus muestras.");
             return;
         }
-        VoiceManagedSelectionCoordinator.synchronizeEngine(viewModel, selected);
         managedVoiceSelection.set(selected);
         voiceNameField.setText(selected.displayName());
         updateTonePromptControls(selected);
@@ -537,11 +541,17 @@ public final class VoiceLibraryWorkspaceView extends BorderPane {
             summaryList.getItems().setAll("Selecciona una voz antes de eliminarla.");
             return;
         }
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Eliminar voz");
-        confirm.setHeaderText("Eliminar voz \"" + selected.displayName() + "\"");
-        confirm.setContentText(viewModel.deleteVoiceProfileImpactLabel(selected)
-                + "\\n\\nTambién se retirarán sus emociones registradas y los archivos de audio gestionados por el proyecto. Los fragmentos que usen esta voz deberán volver a asignarse.");
+        Alert confirm = NativeDialogResponse.alert(Alert.AlertType.CONFIRMATION);
+        StudioMessageDialog.configure(
+                confirm,
+                getScene() == null ? null : getScene().getWindow(),
+                "Eliminar voz",
+                "Eliminar voz \"" + selected.displayName() + "\"",
+                viewModel.deleteVoiceProfileImpactLabel(selected)
+                        + "\n\nTambién se retirarán sus emociones registradas y los archivos de audio "
+                        + "gestionados por el proyecto. Los fragmentos que usen esta voz deberán "
+                        + "volver a asignarse.",
+                "");
         Optional<ButtonType> choice = confirm.showAndWait();
         if (choice.isEmpty() || choice.get() != ButtonType.OK) {
             summaryList.getItems().setAll("Eliminación cancelada. La voz se conserva.");
@@ -564,7 +574,7 @@ public final class VoiceLibraryWorkspaceView extends BorderPane {
             summaryList.getItems().setAll("Selecciona una voz antes de exportar sus muestras.");
             return;
         }
-        DirectoryChooser chooser = new DirectoryChooser();
+        DirectoryChooser chooser = NativeSourceChooser.directoryChooser();
         chooser.setTitle("Exportar muestras de " + selected.displayName());
         File target = chooser.showDialog(getScene() == null ? null : getScene().getWindow());
         if (target == null) {
@@ -710,7 +720,7 @@ public final class VoiceLibraryWorkspaceView extends BorderPane {
     }
 
     private Button playGeneratedVoiceTestButton() {
-        Button button = ActionButtonFactory.secondary("▶ Escuchar voz de prueba", "Reproducir voz de prueba generada", this::playGeneratedVoiceTest);
+        Button button = ActionButtonFactory.secondary("Escuchar voz de prueba", "Reproducir voz de prueba generada", this::playGeneratedVoiceTest);
         button.disableProperty().bind(Bindings.or(Bindings.isNull(viewModel.lastGeneratedVoiceTestPathProperty()), voiceTestGenerating));
         return button;
     }
@@ -719,7 +729,6 @@ public final class VoiceLibraryWorkspaceView extends BorderPane {
         if (voiceTestGenerating.get()) { return; }
         VoiceProfile voice = voiceBrowser.getSelectionModel().getSelectedItem();
         try {
-            VoiceManagedSelectionCoordinator.synchronizeEngine(viewModel, voice);
             var job = viewModel.prepareVoiceTestGeneration(voice, selectedReferenceTone(), generatedTestText.getText());
             viewModel.markVoiceTestGenerationStarted();
             voiceTestGenerating.set(true);
@@ -900,7 +909,7 @@ public final class VoiceLibraryWorkspaceView extends BorderPane {
     }
 
     private boolean localSimpleMode() {
-        return activeEngineProfile().piperMode();
+        return activeEngineProfile().simpleLocalMode();
     }
 
     private Optional<VoiceReferenceSampleSet> sampleSetFor(VoiceProfile voice) {
@@ -984,8 +993,9 @@ public final class VoiceLibraryWorkspaceView extends BorderPane {
     }
 
     private void openVoiceEngineSettings() {
-        new SettingsDialog(viewModel.administrationWorkspace().mediaEngines()).showVoiceEngines(
+        new SettingsDialog(viewModel.administrationWorkspace().capabilities()).showVoiceEngines(
                 getScene() == null ? null : getScene().getWindow(), viewModel.administrationWorkspace().settings());
+        engineSettings.refresh();
         summaryList.getItems().setAll("Configuración cerrada. Vuelve a verificar o actualizar la biblioteca si cambiaste el motor de voz.");
     }
 

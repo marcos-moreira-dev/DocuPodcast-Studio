@@ -1,18 +1,23 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.export;
 
-import com.marcosmoreiradev.docupodcaststudio.domain.document.ReadableDocument;
-import com.marcosmoreiradev.docupodcaststudio.domain.document.SourceDocumentFormat;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PreparedPdfSource;
+import com.marcosmoreiradev.docupodcaststudio.application.document.ProjectDocumentSource;
 
 public final class ProjectExportEligibilityPolicy {
-    private static final String PDF_TITLE = "Exportacion no disponible para PDF";
-    private static final String PDF_MESSAGE = "El centro de exportacion solo esta disponible para proyectos basados en "
-            + "documentos Word/DOCX o texto editable preparado. Para renderizar audio o video final, DocuPodcast Studio "
-            + "fuerza el trabajo sobre un guion editable con diseno creativo previo. Los PDF quedan para lectura, estudio, "
-            + "OCR y capturas visuales; no son candidatos a renderizacion final.";
+    private static final String PDF_TITLE = "Prepara el contenido PDF para exportar";
+    private static final String PDF_MESSAGE = "El PDF todavía no dispone de una proyección audiovisual preparada. "
+            + "Procesa su lectura para construir contenido, narración y visuales antes de abrir el centro de exportaciones.";
 
-    public ExportEligibility evaluate(ReadableDocument document) {
-        if (document != null && document.format() == SourceDocumentFormat.PDF) {
-            return ExportEligibility.denied(PDF_TITLE, PDF_MESSAGE);
+    public ExportEligibility evaluate(ProjectDocumentSource source) {
+        return evaluate(source, false);
+    }
+
+    public ExportEligibility evaluate(ProjectDocumentSource source,
+                                      boolean exportProjectionAvailable) {
+        if (source instanceof PreparedPdfSource) {
+            return exportProjectionAvailable
+                    ? ExportEligibility.allowed()
+                    : ExportEligibility.denied(PDF_TITLE, PDF_MESSAGE);
         }
         return ExportEligibility.allowed();
     }

@@ -1,4 +1,4 @@
-package com.marcosmoreiradev.docupodcaststudio.inkcatalog;
+package com.marcosmoreiradev.docupodcaststudio.ink;
 
 import com.marcosmoreiradev.docupodcaststudio.ink.DrawingFeatureCatalog;
 import com.marcosmoreiradev.docupodcaststudio.ink.DrawingProfile;
@@ -23,6 +23,14 @@ final class DrawingFeatureCatalogTest {
         assertEquals(720, profile.logicalHeight());
         assertEquals(50, profile.historyLimit());
         assertTrue(profile.supports(DrawingToolId.PEN));
+    }
+
+    @Test
+    void documentProblemDeclaresNotebookGeometryAndMeasurementTools() {
+        DrawingProfile profile = DrawingFeatureCatalog.official().require(DrawingFeatureCatalog.DOCUMENT_PROBLEM);
+        assertTrue(profile.supports(DrawingToolId.STRAIGHT_LINE));
+        assertTrue(profile.supports(DrawingToolId.ANGLE_MEASURE));
+        assertTrue(profile.supports(DrawingToolId.REGION_SELECT));
     }
 
     @Test

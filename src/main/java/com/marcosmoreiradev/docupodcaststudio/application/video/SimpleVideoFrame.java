@@ -20,7 +20,8 @@ public record SimpleVideoFrame(
         boolean audioReady,
         boolean silentVisual,
         List<CharacterLabel> characterLabels,
-        List<VisualPart> visualParts
+        List<VisualPart> visualParts,
+        NarratedFrameBinding visualBinding
 ) {
     public SimpleVideoFrame {
         id = token(id, "id");
@@ -51,6 +52,25 @@ public record SimpleVideoFrame(
                 imageRelativePath = visualParts.getFirst().imageRelativePath();
             }
         }
+        if (visualBinding != null) {
+            if (!id.equals(visualBinding.frameId())) {
+                throw new IllegalArgumentException("visualBinding.frameId must match frame id");
+            }
+            if (!segmentId.equals(visualBinding.segmentId())) {
+                throw new IllegalArgumentException("visualBinding.segmentId must match segment id");
+            }
+        }
+    }
+
+    public SimpleVideoFrame(
+            String id, String segmentId, String title, String narrationPreview,
+            String imageAssetId, String imageRelativePath, String audioRelativePath,
+            double audioDurationSeconds, double silenceAfterSeconds,
+            boolean imageAssigned, boolean audioReady, boolean silentVisual,
+            List<CharacterLabel> characterLabels, List<VisualPart> visualParts) {
+        this(id, segmentId, title, narrationPreview, imageAssetId, imageRelativePath,
+                audioRelativePath, audioDurationSeconds, silenceAfterSeconds,
+                imageAssigned, audioReady, silentVisual, characterLabels, visualParts, null);
     }
 
     public SimpleVideoFrame(
@@ -67,7 +87,7 @@ public record SimpleVideoFrame(
             boolean audioReady
     ) {
         this(id, segmentId, title, narrationPreview, imageAssetId, imageRelativePath, audioRelativePath,
-                audioDurationSeconds, silenceAfterSeconds, imageAssigned, audioReady, false, List.of(), List.of());
+                audioDurationSeconds, silenceAfterSeconds, imageAssigned, audioReady, false, List.of(), List.of(), null);
     }
 
     public SimpleVideoFrame(
@@ -85,7 +105,7 @@ public record SimpleVideoFrame(
             boolean silentVisual
     ) {
         this(id, segmentId, title, narrationPreview, imageAssetId, imageRelativePath, audioRelativePath,
-                audioDurationSeconds, silenceAfterSeconds, imageAssigned, audioReady, silentVisual, List.of(), List.of());
+                audioDurationSeconds, silenceAfterSeconds, imageAssigned, audioReady, silentVisual, List.of(), List.of(), null);
     }
 
     public SimpleVideoFrame(
@@ -104,7 +124,7 @@ public record SimpleVideoFrame(
             List<CharacterLabel> characterLabels
     ) {
         this(id, segmentId, title, narrationPreview, imageAssetId, imageRelativePath, audioRelativePath,
-                audioDurationSeconds, silenceAfterSeconds, imageAssigned, audioReady, silentVisual, characterLabels, List.of());
+                audioDurationSeconds, silenceAfterSeconds, imageAssigned, audioReady, silentVisual, characterLabels, List.of(), null);
     }
 
     public record CharacterLabel(String characterName, double x, double y) {

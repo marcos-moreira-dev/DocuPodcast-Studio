@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -54,6 +55,43 @@ final class ValidateProjectWorkspaceIntegrityUseCaseTest {
 
         assertFalse(result.valid());
         assertTrue(result.messages().stream().anyMatch(message -> message.contains("Falta el archivo del asset DOC-001")));
+    }
+
+    @Test
+    void missingRecoverableDeliveryAssetsDegradeButDoNotInvalidateProject() throws Exception {
+        Path projectFile = tempDir.resolve("demo.docupodcast.json");
+        Files.writeString(projectFile, "{}");
+        DocuPodcastProject project = DocuPodcastProject.createNew("Degradado")
+                .withAsset(asset("FINAL", ProjectAssetKind.AUDIO_FINAL,
+                        "jobs/JOB/final/podcast.wav"))
+                .withAsset(asset("MANIFEST", ProjectAssetKind.AUDIO_MANIFEST,
+                        "jobs/JOB/audio-manifest.json"))
+                .withAsset(asset("MP4", ProjectAssetKind.EXPORT,
+                        "exports/final.mp4"))
+                .withAsset(asset("THUMB", ProjectAssetKind.THUMBNAIL,
+                        "document/thumb.png"))
+                .withAsset(asset("CROP", ProjectAssetKind.STUDY_SOURCE_CROP,
+                        "document/crop.png"));
+
+        assertTrue(useCase.validate(project, projectFile,
+                ProjectWorkspaceHydration.empty()).valid());
+        ProjectDerivedAssetReport report = new InspectMissingDerivedAssetsUseCase()
+                .inspect(project, projectFile);
+        assertTrue(report.degraded());
+        assertEquals(5, report.warnings().size());
+    }
+
+    @Test
+    void missingCanonicalSourceStillRejectsOpen() throws Exception {
+        Path projectFile = tempDir.resolve("demo.docupodcast.json");
+        Files.writeString(projectFile, "{}");
+        DocuPodcastProject project = DocuPodcastProject.createNew("Fuente")
+                .withAsset(asset("SOURCE", ProjectAssetKind.SOURCE_DOCUMENT,
+                        "source/document.pdf"));
+        ProjectValidationResult result = useCase.validate(project, projectFile,
+                ProjectWorkspaceHydration.empty());
+        assertFalse(result.valid());
+        assertTrue(result.messages().stream().anyMatch(value -> value.contains("SOURCE")));
     }
 
     @Test

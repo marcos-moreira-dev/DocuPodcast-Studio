@@ -24,6 +24,11 @@ public final class FluxComponentImportUseCase {
     }
 
     public FluxComponentImportReport importFrom(Path source, Path applicationRoot, ModelSetupProgressListener listener) {
+        return importFrom(source, applicationRoot, listener, ImageModelPackageProfile.HIGH_QUALITY_FLUX);
+    }
+
+    public FluxComponentImportReport importFrom(Path source, Path applicationRoot, ModelSetupProgressListener listener,
+                                               ImageModelPackageProfile profile) {
         ModelSetupProgressListener progress = listener == null ? ModelSetupProgressListener.noop() : listener;
         if (source == null || !Files.exists(source)) {
             return new FluxComponentImportReport(false, source, List.of(), "Selecciona un archivo o carpeta FLUX existente.");
@@ -37,8 +42,10 @@ public final class FluxComponentImportUseCase {
             if (Files.isDirectory(source) && Files.isRegularFile(source.resolve("model.safetensors.index.json"))) {
                 progress.onProgress("Validando shards T5-v1.1-XXL y espacio libre...");
                 Path target = models.resolve("text_encoders/t5xxl_bf16.safetensors");
+                if (Files.exists(target)) throw new IOException("T5 ya existe; no se reemplazó el archivo administrado.");
                 ensureFreeSpace(target, T5_REQUIRED_FREE_BYTES);
                 mergeT5(source, target, root, progress);
+                validateTensorContainer(target);
                 installed.add(target);
             } else if (Files.isDirectory(source)) {
                 importRecognizedDirectory(source, models, installed, progress);
@@ -49,7 +56,8 @@ public final class FluxComponentImportUseCase {
                 return new FluxComponentImportReport(false, source, List.of(),
                         "No se reconocieron componentes FLUX. Selecciona flux1-dev, ae, clip_l, T5XXL o una carpeta Diffusers text_encoder/text_encoder_2.");
             }
-            FluxModelBundle bundle = FluxModelBundle.inspect(root);
+            FluxModelBundle bundle = profile == ImageModelPackageProfile.ADVANCED_FLUX_KONTEXT
+                    ? FluxModelBundle.inspectKontext(root) : FluxModelBundle.inspect(root);
             String suffix = bundle.ready() ? " Bundle FLUX completo." : " Aun faltan: " + String.join(", ", bundle.missingComponents()) + ".";
             return new FluxComponentImportReport(true, source, installed,
                     "Componentes FLUX importados: " + installed.size() + "." + suffix);
@@ -62,14 +70,21 @@ public final class FluxComponentImportUseCase {
         }
     }
 
-    private static void importRecognizedDirectory(Path source, Path models, List<Path> installed,
-                                                  ModelSetupProgressListener progress) throws IOException {
+    private void importRecognizedDirectory(Path source, Path models, List<Path> installed,
+                                                  ModelSetupProgressListener progress) throws IOException, InterruptedException {
         try (var stream = Files.walk(source, 3)) {
             for (Path file : stream.filter(Files::isRegularFile).toList()) {
                 String name = file.getFileName().toString().toLowerCase(Locale.ROOT);
                 boolean officialClipFolder = file.getParent() != null && file.getParent().getFileName() != null
                         && file.getParent().getFileName().toString().equalsIgnoreCase("text_encoder");
-                if (name.equals("model.safetensors") && officialClipFolder) {
+                if (name.equals("model.safetensors.index.json") && file.getParent().getFileName().toString().equals("text_encoder_2")) {
+                    Path target = models.resolve("text_encoders/t5xxl_bf16.safetensors");
+                    if (Files.exists(target)) throw new IOException("T5 ya existe; no se reemplazó el archivo administrado.");
+                    ensureFreeSpace(target, T5_REQUIRED_FREE_BYTES);
+                    mergeT5(file.getParent(), target, models.getParent().getParent(), progress);
+                    validateTensorContainer(target);
+                    installed.add(target);
+                } else if (name.equals("model.safetensors") && officialClipFolder) {
                     Path target = models.resolve("text_encoders/clip_l.safetensors");
                     install(file, target, progress);
                     installed.add(target);
@@ -84,8 +99,8 @@ public final class FluxComponentImportUseCase {
                                              ModelSetupProgressListener progress) throws IOException {
         String name = source.getFileName().toString().toLowerCase(Locale.ROOT);
         Path target;
-        if (name.equals("flux1-dev.safetensors")) {
-            target = models.resolve("flux1-dev.safetensors");
+        if (name.equals("flux1-dev.safetensors") || name.equals("flux1-kontext-dev.safetensors")) {
+            target = models.resolve(name);
         } else if (name.equals("ae.safetensors")) {
             target = models.resolve("vae/ae.safetensors");
         } else if (name.equals("clip_l.safetensors") || name.equals("model.safetensors")) {
@@ -100,21 +115,54 @@ public final class FluxComponentImportUseCase {
     }
 
     private static boolean recognizedFlatName(String name) {
-        return name.equals("flux1-dev.safetensors") || name.equals("ae.safetensors")
+        return name.equals("flux1-dev.safetensors") || name.equals("flux1-kontext-dev.safetensors") || name.equals("ae.safetensors")
                 || name.equals("clip_l.safetensors") || name.startsWith("t5xxl");
     }
 
     private static void install(Path source, Path target, ModelSetupProgressListener progress) throws IOException {
+        validateTensorContainer(source);
         Files.createDirectories(target.getParent());
         if (Files.exists(target) && Files.isSameFile(source, target)) {
             return;
         }
         progress.onProgress("Importando " + source.getFileName() + "...");
+        if (Files.exists(target)) {
+            if (Files.size(source) == Files.size(target) && Files.mismatch(source, target) == -1) return;
+            throw new IOException("Ya existe " + target.getFileName() + ". No se reemplazó el recurso existente.");
+        }
+        Path staging = Files.createTempFile(target.getParent(), "flux-import-", ".part");
         try {
-            Files.deleteIfExists(target);
-            Files.createLink(target, source.toAbsolutePath().normalize());
-        } catch (IOException | UnsupportedOperationException ex) {
-            Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+            Files.copy(source, staging, StandardCopyOption.REPLACE_EXISTING);
+            Files.move(staging, target);
+        } finally {
+            Files.deleteIfExists(staging);
+        }
+    }
+
+    /** Bounded structural check; not a model identity/hash verification or inference test. */
+    public static void validateTensorContainer(Path source) throws IOException {
+        long size = Files.size(source);
+        try (var input = Files.newInputStream(source)) {
+            byte[] prefix = input.readNBytes(8);
+            if (prefix.length != 8) throw new IOException("Archivo incompleto: " + source.getFileName());
+            long headerSize = java.nio.ByteBuffer.wrap(prefix).order(java.nio.ByteOrder.LITTLE_ENDIAN).getLong();
+            if (headerSize < 2 || headerSize > 8_000_000 || headerSize >= size - 8)
+                throw new IOException("Cabecera de modelo inválida: " + source.getFileName());
+            String header = new String(input.readNBytes((int) headerSize), java.nio.charset.StandardCharsets.UTF_8).strip();
+            if (!header.startsWith("{") || !header.endsWith("}"))
+                throw new IOException("Cabecera de modelo inválida: " + source.getFileName());
+            var offsets = java.util.regex.Pattern.compile("\\\"data_offsets\\\"\\s*:\\s*\\[\\s*(\\d+)\\s*,\\s*(\\d+)\\s*\\]").matcher(header);
+            boolean tensor = false;
+            while (offsets.find()) {
+                tensor = true;
+                long start = Long.parseLong(offsets.group(1));
+                long end = Long.parseLong(offsets.group(2));
+                if (start > end || end > size - 8 - headerSize)
+                    throw new IOException("Datos de modelo truncados: " + source.getFileName());
+            }
+            if (!tensor) throw new IOException("El archivo no contiene tensores reconocibles: " + source.getFileName());
+        } catch (NumberFormatException failure) {
+            throw new IOException("Tamaño de tensor inválido: " + source.getFileName(), failure);
         }
     }
 

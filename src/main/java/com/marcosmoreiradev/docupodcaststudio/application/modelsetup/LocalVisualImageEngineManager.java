@@ -314,10 +314,10 @@ public class LocalVisualImageEngineManager {
         FluxModelBundle fluxBundle = null;
         ComfyUiWorkflowSpec workflow = ComfyUiWorkflowSpec.sd15();
         if (presetSupport.fluxCompatible()) {
-            if (!new FluxLicenseAcceptanceStore().accepted(root)) {
+            if (!new FluxLicenseAcceptanceStore().accepted(root, presetSupport.modelPackageProfile())) {
                 return new ImageEngineSmokeReport(false, ImageEngineRuntimeState.ERROR,
                         ImageEngineSmokeStage.VERIFYING_MODEL, null,
-                        "Confirma primero que iniciaste sesion y aceptaste la licencia FLUX.1-Kontext-dev en Configuracion.",
+                        "Importa el modelo descargado y confirma sus condiciones en Configuración. Esta confirmación no inicia sesión en el proveedor.",
                         "licenseAccepted=false\nlicenseUrl=" + FluxLicenseAcceptanceStore.LICENSE_URL);
             }
             fluxBundle = presetSupport.kontextWorkflow()

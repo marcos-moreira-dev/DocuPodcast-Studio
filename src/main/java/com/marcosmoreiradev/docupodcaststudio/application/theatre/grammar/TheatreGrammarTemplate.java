@@ -19,53 +19,43 @@ public final class TheatreGrammarTemplate {
 
                 # Titulo de la obra
 
-                > DocuPodcast Teatro Grammar v1
-                > Escribe cualquier obra en Markdown. Una IA puede completar este archivo y DocuPodcast puede importarlo.
-                > Usa `tono=` con uno de los codigos de TONO_CATALOGO cuando quieras fijar emocion/interpretacion.
-                > Usa `interaccion=` con uno o varios destinos separados por coma: otro personaje, Publico o el mismo personaje.
-                > Usa `plano=` con un tipo de plano teatral embebido; se hereda desde esa intervencion hacia adelante.
-                > Usa `aplicar_plano=false` cuando el fragmento no deba usar la guia de plano como contexto IA.
-                > Usa `fondo=` para asignar un telon/fondo desde la intervencion y `quitar_fondo=true` para cortar la herencia.
-                > Usa `contexto_ia=` para guardar un texto contextual editable por intervencion.
-                > Usa `voces=CAPITAN BIGOTE, TENIENTE TORNILLO` para marcar una intervencion teatral de voces simultaneas.
-
-                ## Metadatos
-                - idioma: es
-                - mapa espacial: https://ejemplo.com/mapa-espacial.png
-                - referencia visual general: https://ejemplo.com/obra.jpg
+                > DocuPodcast Teatro Grammar v2
+                > grammarVersion: theatre-v2
+                > Esta es la semantica legible del paquete oficial. Las rutas siempre son relativas y solo se declaran si el archivo existe.
+                > Zonas: fondo_izquierda, fondo_centro, fondo_derecha, centro_izquierda, centro, centro_derecha, frente_izquierda, frente_centro, frente_derecha.
+                > `hereda=anterior`, `hereda=ninguna` o `hereda=INTERVENCION-N`. El cambio de escena corta la herencia anterior por defecto.
 
                 ## Personajes
-                - personaje: NARRADOR | nota=voz externa opcional | foto=https://ejemplo.com/narrador.png
-                - personaje: CAPITAN BIGOTE | alias=BIGOTE | nota=piloto veterano | foto=https://ejemplo.com/capitan.png
+                - personaje: Narrador | id=NARRADOR | aliases=CRONISTA | voz=narrador_neutro | nota=voz externa opcional
+                - personaje: Capitan Bigote | id=CAPITAN_BIGOTE | aliases=BIGOTE | voz=hombre_45_ecuador | nota=piloto veterano
+                - assets/personajes/CAPITAN_BIGOTE/frontal.png | escena=SCN-HANGAR | angulo=frontal
 
                 ## Objetos
-                - objeto: avion antiguo | nota=biplano central de la escena | foto=https://ejemplo.com/avion.png
-                - objeto: mapa de ruta | nota=papel que guia el vuelo | foto=https://ejemplo.com/mapa.png
+                - objeto: Avion antiguo | id=AVION | nota=biplano central
+                - objeto: Mapa de ruta | id=MAPA_RUTA | nota=papel que guia el vuelo
 
-                ## Acto: Acto 1
+                ## Acto: Acto 1 | id=ACT-1
                 notas: Presenta el mundo, el conflicto y las reglas visuales.
 
-                ### Escena: El hangar
-                > fondo_escenario=assets/fondos/hangar-amanecer.png
+                ### Escena: El hangar | id=SCN-HANGAR
+                > mapa_espacial=assets/mapas/hangar.png | fondo_escenario=assets/fondos/hangar-amanecer.png
                 notas: Amanecer. Avion antiguo al centro. Herramientas dispersas.
 
-                ACOTACION: El hangar espera al amanecer.
-                NARRADOR: En el viejo aerodromo, dos aviadores preparan el primer vuelo publico.
-                > tono=SOLEMN | plano=CERCA_CENTRO_NIVEL | contexto_ia=Toma frontal del escenario; mantener camara fija y luz de amanecer.
-                CAPITAN BIGOTE: Teniente, revise el combustible, el viento y la dignidad de esta maquina.
-                > origen=centro derecha | interaccion=TENIENTE TORNILLO, Publico | tono=SERIOUS | plano=CERCA_DERECHA_NIVEL | fondo=assets/fondos/hangar-amanecer.png
-                TENIENTE TORNILLO: Combustible hay. Viento hay.
-                > origen=centro izquierda | interaccion=CAPITAN BIGOTE | tono=CALM
-                TODOS: Que sorpresa.
-                > voces=CAPITAN BIGOTE, TENIENTE TORNILLO | tono=EXCITED
-                ![fragmento visual: hangar](https://ejemplo.com/hangar.png)
+                Narrador: En el viejo aerodromo comienza la historia.
+                > id=INTERVENCION-1 | hereda=ninguna | presentes=NARRADOR@frente_centro,CAPITAN_BIGOTE@centro_derecha | tono=SOLEMN | plano=CERCA_CENTRO_NIVEL | microexpresion=serenidad | emoji=🎙️
+                Capitan Bigote: Revisemos la maquina.
+                > id=INTERVENCION-2 | hereda=anterior | interaccion=NARRADOR | presentes=CAPITAN_BIGOTE@frente_centro | orientaciones=CAPITAN_BIGOTE@izquierda | miradas=CAPITAN_BIGOTE@NARRADOR | objetos=MAPA_RUTA@portado:CAPITAN_BIGOTE | eventos=MOVE:CAPITAN_BIGOTE@frente_centro;TAKE:CAPITAN_BIGOTE:MAPA_RUTA
+                CAPITAN BIGOTE: Teniente, revise el combustible.
+                > id=INTERVENCION-3 | hereda=anterior | interaccion=TENIENTE TORNILLO, Publico | tono=SERIOUS | plano=CERCA_DERECHA_NIVEL | aplicar_plano=false | fondo=assets/fondos/hangar-amanecer.png | contexto_ia=Toma frontal controlada.
+                TENIENTE TORNILLO: Combustible hay.
+                > id=INTERVENCION-4 | hereda=anterior | quitar_fondo=true | tono=CALM
 
-                ### Escena: Pista exterior
-                notas: El avion sale del hangar. Viento visible.
-
-                ACOTACION: La puerta del hangar se abre.
-                CAPITAN BIGOTE: Hoy volaremos hacia el Tornillo Dorado.
-                > origen=frente centro | interaccion=CAPITAN BIGOTE | tono=HEROIC | plano=PANORAMICA_CENTRO_NIVEL | quitar_fondo=true
+                ## INSTRUCCIONES PARA IA GENERADORA DE PAQUETES
+                Crea `obra.teatro.md`, `docupodcast-theatre.json` schemaVersion 2 y solamente los archivos declarados bajo `assets/`.
+                Cada asset declarado necesita path, logicalId, kind, sha256 y size correctos. Nunca uses rutas absolutas ni `..`.
+                Si una imagen, frame o audio opcional no existe, NO lo declares, NO inventes una ruta y NO crees un archivo vacio.
+                Conserva IDs de personajes, objetos e intervenciones; los nombres visibles pueden cambiar sin cambiar los IDs.
+                Empaca esos elementos directamente o dentro de una unica carpeta raiz. Carpeta y ZIP tienen la misma semantica.
                 """.formatted(toneCatalog);
     }
 }

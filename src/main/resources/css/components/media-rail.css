@@ -141,6 +141,17 @@
 
 .document-media-thumbnail-corner-action { -fx-min-width: 24px; -fx-min-height: 20px; -fx-padding: 1px 4px; -fx-background-color: rgba(255, 255, 255, 0.92); -fx-border-color: #9AA8FF; -fx-border-radius: 4px; -fx-background-radius: 4px; -fx-font-size: 9px; -fx-font-weight: 700; }
 
+.document-media-thumbnail-corner-status {
+    -fx-padding: 1px 4px;
+    -fx-background-color: rgba(236, 253, 245, 0.94);
+    -fx-background-radius: 4px;
+    -fx-border-color: #34A879;
+    -fx-border-radius: 4px;
+    -fx-font-size: 9px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #176B4B;
+}
+
 .document-media-frame-title {
     -fx-font-size: 12px;
     -fx-font-weight: 700;

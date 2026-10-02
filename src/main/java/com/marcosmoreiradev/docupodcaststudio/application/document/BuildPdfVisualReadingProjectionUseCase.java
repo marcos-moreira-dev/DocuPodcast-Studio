@@ -1,284 +1,322 @@
 package com.marcosmoreiradev.docupodcaststudio.application.document;
 
-import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlock;
-import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentSentenceSpan;
+import com.marcosmoreiradev.docupodcaststudio.domain.document.pdf.PdfNarratability;
+import com.marcosmoreiradev.docupodcaststudio.domain.document.pdf.PdfRegion;
+import com.marcosmoreiradev.docupodcaststudio.domain.document.pdf.PdfRegionOrigin;
+import com.marcosmoreiradev.docupodcaststudio.domain.document.pdf.PreparedPdfPage;
+import com.marcosmoreiradev.docupodcaststudio.domain.document.pdf.PdfPageMap;
+import com.marcosmoreiradev.docupodcaststudio.domain.document.pdf.PdfPageNode;
+import com.marcosmoreiradev.docupodcaststudio.domain.document.pdf.PdfPageNodeKind;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentSentenceSplitter;
-import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentTextRange;
-import com.marcosmoreiradev.docupodcaststudio.domain.document.ReadableDocument;
-import com.marcosmoreiradev.docupodcaststudio.domain.document.SourceDocumentFormat;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Objects;
 
-/** Builds the PDF visual read/highlight layer without depending on presentation or PDFBox. */
+/** Builds visual highlights directly from canonical PDF V2 pages. */
 public final class BuildPdfVisualReadingProjectionUseCase {
-    private final BuildPdfNativeTextLayerUseCase buildNativeTextLayer;
+    private final PreparedPdfDocumentRepository repository;
+    private final ResolvePdfPageMapUseCase pageMapResolver;
+    private final SecondarySemanticComponentClassifier semanticClassifier =
+            new SecondarySemanticComponentClassifier();
+    private final PdfTextVisualBoundsResolver textVisualBounds =
+            new PdfTextVisualBoundsResolver();
 
-    public BuildPdfVisualReadingProjectionUseCase(BuildPdfNativeTextLayerUseCase buildNativeTextLayer) {
-        this.buildNativeTextLayer = buildNativeTextLayer == null
-                ? new BuildPdfNativeTextLayerUseCase()
-                : buildNativeTextLayer;
+    public BuildPdfVisualReadingProjectionUseCase(PreparedPdfDocumentRepository repository) {
+        this(repository, null);
     }
 
-    public PdfVisualReadingProjection build(ReadableDocument document) {
-        if (document == null || document.format() != SourceDocumentFormat.PDF) {
-            return new PdfVisualReadingProjection(List.of(), Map.of(), List.of("No hay PDF visual activo."));
+    public BuildPdfVisualReadingProjectionUseCase(PreparedPdfDocumentRepository repository,
+                                                   ResolvePdfPageMapUseCase pageMapResolver) {
+        this.repository = Objects.requireNonNull(repository, "repository");
+        this.pageMapResolver = pageMapResolver;
+    }
+
+    public PdfVisualReadingProjection build(PreparedPdfWorkspaceRef workspace) {
+        if (workspace == null) {
+            return new PdfVisualReadingProjection(List.of(), Map.of(),
+                    List.of("No hay PDF V2 activo."));
         }
-        ReadableDocument ocrDocument = document.withBlocks(document.blocks().stream()
-                .filter(BuildPdfVisualReadingProjectionUseCase::isOcrBlock)
-                .toList());
-        List<PdfTextLayer> layers = buildNativeTextLayer.build(ocrDocument);
+        try {
+            if (pageMapResolver != null) {
+                return buildFromPageMaps(workspace);
+            }
+            List<PreparedPdfPage> pages = repository.loadPages(workspace.projectRoot());
+            ArrayList<PdfTextLayer> layers = new ArrayList<>();
+            Map<String, PdfVisualTextHighlight> highlights = new LinkedHashMap<>();
+            ArrayList<PdfVisualTextTarget> targets = new ArrayList<>();
+            for (PreparedPdfPage page : pages) {
+                ArrayList<PdfTextLine> lines = new ArrayList<>();
+                for (PdfRegion region : page.regions()) {
+                    // Structural parents remain canonical hierarchy only. They
+                    // deliberately have no playback/highlight representation.
+                    if (region.container() || !region.playbackTarget()) continue;
+                    PdfPageRegion box = new PdfPageRegion(page.pageNumber(), region.xMin(), region.yMin(),
+                            region.xMax(), region.yMax(), page.widthPoints(), page.heightPoints());
+                    PdfTextVisualBoundsResolver.Resolution visual =
+                            textVisualBounds.resolve(region, box);
+                    List<PdfPageRegion> playbackBoxes = visual.source()
+                            == PdfTextVisualBoundsResolver.Source.OCR_WORDS
+                            ? List.of(visual.tightTextBBox())
+                            : PdfTextVisualBoundsResolver.textualType(region)
+                            ? List.of(box) : playbackBoxes(region, box);
+                    PdfTextLayerOrigin origin = visual.source()
+                            == PdfTextVisualBoundsResolver.Source.OCR_WORDS
+                            ? PdfTextLayerOrigin.OCR_LOCAL
+                            : PdfTextVisualBoundsResolver.textualType(region)
+                            ? PdfTextLayerOrigin.NATIVE_BBOX
+                            : origin(region.evidence().origin());
+                    lines.add(new PdfTextLine(page.pageNumber(), region.effectiveText(), box,
+                            List.of(), region.evidence().confidence()));
+                    highlights.put(region.id(), new PdfVisualTextHighlight(
+                            page.pageNumber(), playbackBoxes, region.effectiveText(), origin));
+                    boolean semantic = semanticClassifier.classify(region).secondary();
+                    targets.add(new PdfVisualTextTarget(
+                            region.id() + (semantic ? "-C" : "-B"), region.id(),
+                            0, region.effectiveText().length(), page.pageNumber(), box,
+                            playbackBoxes, List.of(region.id()), region.effectiveText(), origin,
+                            semantic ? PdfVisualTextTargetKind.SEMANTIC_COMPONENT
+                                    : PdfVisualTextTargetKind.BLOCK));
+                    if (!semantic && region.effectiveNarratability() == PdfNarratability.NARRATABLE) {
+                        targets.addAll(sentenceTargets(region, box, origin));
+                    }
+                }
+                PdfTextLayerOrigin pageOrigin = page.regions().stream()
+                        .filter(PdfRegion::playbackTarget)
+                        .map(value -> origin(value.evidence().origin()))
+                        .anyMatch(value -> value == PdfTextLayerOrigin.OCR_LOCAL)
+                        ? PdfTextLayerOrigin.OCR_LOCAL : PdfTextLayerOrigin.NATIVE_BBOX;
+                layers.add(new PdfTextLayer(page.pageNumber(), pageOrigin, lines, page.warnings()));
+            }
+            if (highlights.isEmpty()) {
+                return new PdfVisualReadingProjection(layers, highlights, targets,
+                        List.of("El PDF no tiene páginas V2 preparadas para lectura y resaltado."));
+            }
+            return new PdfVisualReadingProjection(layers, highlights, targets, List.of());
+        } catch (IOException ex) {
+            return new PdfVisualReadingProjection(List.of(), Map.of(),
+                    List.of("No se pudo leer la preparación PDF V2: " + ex.getMessage()));
+        }
+    }
+
+    private PdfVisualReadingProjection buildFromPageMaps(PreparedPdfWorkspaceRef workspace) throws IOException {
+        ArrayList<PdfTextLayer> layers = new ArrayList<>();
         Map<String, PdfVisualTextHighlight> highlights = new LinkedHashMap<>();
-        List<PdfVisualTextTarget> targets = new ArrayList<>();
-        for (DocumentBlock block : document.blocks()) {
-            if (!isOcrBlock(block) || !block.narratable() || PdfNarratableTextClassifier.shouldSkip(block.text())) {
-                continue;
-            }
-            regionFromBlock(block).ifPresent(region -> {
-                PdfTextLayerOrigin origin = originFromBlock(block);
-                highlights.put(block.id(), new PdfVisualTextHighlight(region.pageNumber(), region, block.text(), origin));
-                targets.add(blockTarget(block, region, origin));
-                targets.addAll(sentenceTargets(block, region, origin));
-            });
-        }
-        if (highlights.isEmpty()) {
-            return new PdfVisualReadingProjection(layers, highlights, targets,
-                    List.of("El PDF no tiene capa textual u OCR confiable para lectura/resaltado."));
-        }
-        return new PdfVisualReadingProjection(layers, highlights, targets, List.of());
-    }
-
-    private static boolean isOcrBlock(DocumentBlock block) {
-        return block != null
-                && Boolean.parseBoolean(block.metadata().getOrDefault("ocr", "false"))
-                && "ocr-local".equalsIgnoreCase(block.metadata().getOrDefault("extractionMode", ""));
-    }
-
-    private static PdfVisualTextTarget blockTarget(DocumentBlock block, PdfPageRegion region, PdfTextLayerOrigin origin) {
-        DocumentTextRange range = new DocumentTextRange(block.id(), 0, block.text().length());
-        return new PdfVisualTextTarget(block.id() + "-B", block.id(), range, region.pageNumber(), region,
-                block.text(), origin, PdfVisualTextTargetKind.BLOCK);
-    }
-
-    private static List<PdfVisualTextTarget> sentenceTargets(DocumentBlock block, PdfPageRegion blockRegion,
-                                                            PdfTextLayerOrigin origin) {
-        List<DocumentSentenceSpan> spans = DocumentSentenceSplitter.split(block);
-        if (spans.isEmpty()) {
-            return List.of();
-        }
-        boolean hasLineFragments = !lineFragments(block, blockRegion).isEmpty();
         ArrayList<PdfVisualTextTarget> targets = new ArrayList<>();
-        for (DocumentSentenceSpan span : spans) {
-            if (span.blank() || PdfNarratableTextClassifier.shouldSkip(span.text())) {
-                continue;
+        ArrayList<String> warnings = new ArrayList<>();
+        for (int pageNumber : repository.listPreparedPageNumbers(workspace.projectRoot())) {
+            PdfPageMapResolution resolution = pageMapResolver.resolve(workspace, pageNumber);
+            PdfPageMap pageMap = resolution.pageMap();
+            Map<String, PdfRegion> sourceRegions = repository.loadPage(
+                            workspace.projectRoot(), pageNumber)
+                    .map(page -> page.regions().stream().collect(
+                            java.util.stream.Collectors.toMap(PdfRegion::id,
+                                    value -> value, (left, right) -> left,
+                                    LinkedHashMap::new)))
+                    .map(value -> (Map<String, PdfRegion>) value)
+                    .orElseGet(Map::of);
+            warnings.addAll(resolution.warnings());
+            ArrayList<PdfTextLine> lines = new ArrayList<>();
+            java.util.Set<String> narratableRegionIds = pageMap.narrationBindings().stream()
+                    .flatMap(binding -> binding.sourceRegionIds().stream()).collect(java.util.stream.Collectors.toSet());
+            for (PdfPageNode node : pageMap.nodes()) {
+                if (node.kind() == PdfPageNodeKind.LINE) {
+                    lines.add(new PdfTextLine(pageNumber, node.text().literalText(), region(pageNumber, node.geometry()),
+                            List.of(), node.evidence().confidence()));
+                } else if (node.kind() == PdfPageNodeKind.BLOCK) {
+                    PdfPageRegion box = region(pageNumber, node.geometry());
+                    PdfRegion sourceRegion = sourceRegions.get(node.legacyRegionId());
+                    PdfTextVisualBoundsResolver.Resolution visual = sourceRegion == null
+                            ? new PdfTextVisualBoundsResolver.Resolution(box,
+                            PdfTextVisualBoundsResolver.Source.SEMANTIC_FALLBACK, 0)
+                            : textVisualBounds.resolve(sourceRegion, box);
+                    PdfPageRegion visibleBox = visual.tightTextBBox();
+                    PdfTextLayerOrigin origin = visual.source()
+                            == PdfTextVisualBoundsResolver.Source.OCR_WORDS
+                            ? PdfTextLayerOrigin.OCR_LOCAL
+                            : sourceRegion != null
+                            && PdfTextVisualBoundsResolver.textualType(sourceRegion)
+                            ? PdfTextLayerOrigin.NATIVE_BBOX
+                            : origin(node.evidence().origin());
+                    highlights.put(node.legacyRegionId(), new PdfVisualTextHighlight(
+                            pageNumber, visibleBox, node.text().literalText(), origin));
+                    targets.add(new PdfVisualTextTarget(node.id(), node.legacyRegionId(),
+                            node.text().startOffset(), node.text().endOffset(), pageNumber, box,
+                            List.of(visibleBox), List.of(node.legacyRegionId()),
+                            node.text().literalText(), origin, PdfVisualTextTargetKind.BLOCK));
+                } else if (node.kind() == PdfPageNodeKind.VISUAL_OBJECT) {
+                    PdfPageRegion box = region(pageNumber, node.geometry());
+                    PdfTextLayerOrigin origin = origin(node.evidence().origin());
+                    java.util.LinkedHashSet<String> sourceIds = new java.util.LinkedHashSet<>();
+                    if (!node.legacyRegionId().isBlank()) sourceIds.add(node.legacyRegionId());
+                    node.childIds().stream().map(pageMap::node).flatMap(java.util.Optional::stream)
+                            .map(PdfPageNode::legacyRegionId).filter(value -> !value.isBlank()).forEach(sourceIds::add);
+                    sourceIds.forEach(id -> highlights.put(id, new PdfVisualTextHighlight(
+                            pageNumber, box, node.text().literalText(), origin)));
+                    if (semanticClassifier.classifySemanticType(
+                            node.semanticType()).secondary() && !sourceIds.isEmpty()) {
+                        String anchorId = node.legacyRegionId().isBlank()
+                                ? sourceIds.getFirst() : node.legacyRegionId();
+                        targets.add(new PdfVisualTextTarget(
+                                node.id(), anchorId, 0,
+                                node.text().literalText().length(), pageNumber, box,
+                                List.of(box), List.copyOf(sourceIds),
+                                node.text().literalText(), origin,
+                                PdfVisualTextTargetKind.SEMANTIC_COMPONENT));
+                    }
+                } else if (node.kind() == PdfPageNodeKind.SENTENCE
+                        && narratableRegionIds.contains(node.legacyRegionId())) {
+                    PdfPageRegion box = region(pageNumber, node.geometry());
+                    List<PdfPageRegion> parts = node.geometryParts().stream()
+                            .map(value -> region(pageNumber, value)).toList();
+                    targets.add(new PdfVisualTextTarget(node.id(), node.legacyRegionId(),
+                            node.text().startOffset(), node.text().endOffset(), pageNumber, box, parts,
+                            node.text().literalText(), origin(node.evidence().origin()),
+                            PdfVisualTextTargetKind.SENTENCE));
+                }
             }
-            Optional<PdfPageRegion> region = sentenceRegion(block, blockRegion, span.range(), hasLineFragments);
-            region.ifPresent(pdfRegion -> targets.add(new PdfVisualTextTarget(
-                    span.id(),
-                    span.blockId(),
-                    span.range(),
-                    pdfRegion.pageNumber(),
-                    pdfRegion,
-                    span.text(),
-                    origin,
-                    PdfVisualTextTargetKind.SENTENCE)));
-        }
-        return List.copyOf(targets);
-    }
-
-    private static Optional<PdfPageRegion> sentenceRegion(DocumentBlock block,
-                                                          PdfPageRegion blockRegion,
-                                                          DocumentTextRange range,
-                                                          boolean hasLineFragments) {
-        if (rangeCoversMost(range, block.text())) {
-            return Optional.of(blockRegion);
-        }
-        if (!hasLineFragments) {
-            return Optional.empty();
-        }
-        List<LineFragment> fragments = lineFragments(block, blockRegion);
-        ArrayList<PdfPageRegion> parts = new ArrayList<>();
-        for (LineFragment fragment : fragments) {
-            Optional<PdfPageRegion> overlap = overlapRegion(fragment, range);
-            overlap.ifPresent(parts::add);
-        }
-        return union(parts, blockRegion);
-    }
-
-    private static Optional<PdfPageRegion> overlapRegion(LineFragment fragment, DocumentTextRange range) {
-        int start = Math.max(fragment.startOffset(), range.startOffset());
-        int end = Math.min(fragment.endOffset(), range.endOffset());
-        if (start >= end || fragment.endOffset() <= fragment.startOffset()) {
-            return Optional.empty();
-        }
-        PdfPageRegion region = fragment.region();
-        double width = region.xMaxPoints() - region.xMinPoints();
-        double denominator = Math.max(1.0, fragment.endOffset() - fragment.startOffset());
-        double xMin = region.xMinPoints() + width * (start - fragment.startOffset()) / denominator;
-        double xMax = region.xMinPoints() + width * (end - fragment.startOffset()) / denominator;
-        try {
-            return Optional.of(new PdfPageRegion(region.pageNumber(), xMin, region.yMinPoints(), xMax,
-                    region.yMaxPoints(), region.pageWidthPoints(), region.pageHeightPoints()));
-        } catch (IllegalArgumentException ex) {
-            return Optional.empty();
-        }
-    }
-
-    private static Optional<PdfPageRegion> union(List<PdfPageRegion> regions, PdfPageRegion fallback) {
-        if (regions == null || regions.isEmpty()) {
-            return Optional.empty();
-        }
-        double xMin = regions.stream().mapToDouble(PdfPageRegion::xMinPoints).min().orElse(fallback.xMinPoints());
-        double yMin = regions.stream().mapToDouble(PdfPageRegion::yMinPoints).min().orElse(fallback.yMinPoints());
-        double xMax = regions.stream().mapToDouble(PdfPageRegion::xMaxPoints).max().orElse(fallback.xMaxPoints());
-        double yMax = regions.stream().mapToDouble(PdfPageRegion::yMaxPoints).max().orElse(fallback.yMaxPoints());
-        try {
-            return Optional.of(new PdfPageRegion(fallback.pageNumber(), xMin, yMin, xMax, yMax,
-                    fallback.pageWidthPoints(), fallback.pageHeightPoints()));
-        } catch (IllegalArgumentException ex) {
-            return Optional.empty();
-        }
-    }
-
-    private static boolean rangeCoversMost(DocumentTextRange range, String text) {
-        int length = text == null ? 0 : text.length();
-        return length <= 0 || range == null || range.length() >= Math.max(1, Math.round(length * 0.86f));
-    }
-
-    private static PdfTextLayerOrigin originFromBlock(DocumentBlock block) {
-        if (block != null && Boolean.parseBoolean(block.metadata().getOrDefault("ocr", "false"))) {
-            return PdfTextLayerOrigin.OCR_LOCAL;
-        }
-        return PdfTextLayerOrigin.NATIVE_BBOX;
-    }
-
-    private static Optional<PdfPageRegion> regionFromBlock(DocumentBlock block) {
-        if (block == null) {
-            return Optional.empty();
-        }
-        Map<String, String> metadata = block.metadata();
-        if (!"pdf-points".equalsIgnoreCase(metadata.getOrDefault("bboxUnits", ""))) {
-            return Optional.empty();
-        }
-        Optional<Integer> page = parsePositiveInt(metadata.get("sourcePage"));
-        Optional<double[]> bbox = parseBbox(metadata.get("bbox"));
-        Optional<Double> width = parsePositiveDouble(metadata.get("pageWidth"));
-        Optional<Double> height = parsePositiveDouble(metadata.get("pageHeight"));
-        if (page.isEmpty() || bbox.isEmpty() || width.isEmpty() || height.isEmpty()) {
-            return Optional.empty();
-        }
-        try {
-            double[] parts = bbox.get();
-            return Optional.of(new PdfPageRegion(page.get(), parts[0], parts[1], parts[2], parts[3],
-                    width.get(), height.get()));
-        } catch (IllegalArgumentException ex) {
-            return Optional.empty();
-        }
-    }
-
-    private static List<LineFragment> lineFragments(DocumentBlock block, PdfPageRegion fallback) {
-        if (block == null || fallback == null) {
-            return List.of();
-        }
-        String bboxes = block.metadata().getOrDefault("lineBboxes", "");
-        String ranges = block.metadata().getOrDefault("lineCharRanges", "");
-        if (bboxes.isBlank() || ranges.isBlank()) {
-            return List.of();
-        }
-        String[] bboxParts = bboxes.split("\\s*;\\s*");
-        String[] rangeParts = ranges.split("\\s*;\\s*");
-        int count = Math.min(bboxParts.length, rangeParts.length);
-        ArrayList<LineFragment> fragments = new ArrayList<>();
-        for (int i = 0; i < count; i++) {
-            Optional<double[]> bbox = parseBbox(bboxParts[i]);
-            Optional<int[]> range = parseRange(rangeParts[i]);
-            if (bbox.isEmpty() || range.isEmpty()) {
-                continue;
+            if (lines.isEmpty()) {
+                pageMap.nodes(PdfPageNodeKind.BLOCK).forEach(node -> lines.add(new PdfTextLine(
+                        pageNumber, node.text().literalText(), region(pageNumber, node.geometry()),
+                        List.of(), node.evidence().confidence())));
             }
-            try {
-                double[] parts = bbox.get();
-                fragments.add(new LineFragment(new PdfPageRegion(
-                        fallback.pageNumber(), parts[0], parts[1], parts[2], parts[3],
-                        fallback.pageWidthPoints(), fallback.pageHeightPoints()),
-                        range.get()[0], range.get()[1]));
-            } catch (IllegalArgumentException ex) {
-                // Ignore one bad auxiliary fragment; the block-level target remains available.
+            PdfTextLayerOrigin layerOrigin = pageMap.nodes().stream()
+                    .map(node -> origin(node.evidence().origin()))
+                    .anyMatch(value -> value == PdfTextLayerOrigin.OCR_LOCAL)
+                    ? PdfTextLayerOrigin.OCR_LOCAL : PdfTextLayerOrigin.NATIVE_BBOX;
+            layers.add(new PdfTextLayer(pageNumber, layerOrigin, lines, resolution.warnings()));
+        }
+        if (highlights.isEmpty()) warnings.add("El PDF no tiene PageMap textual disponible.");
+        return new PdfVisualReadingProjection(layers, highlights, targets, warnings);
+    }
+
+    private static PdfPageRegion region(int pageNumber,
+                                        com.marcosmoreiradev.docupodcaststudio.domain.document.pdf.PdfPageGeometry geometry) {
+        return new PdfPageRegion(pageNumber, geometry.xMin(), geometry.yMin(), geometry.xMax(), geometry.yMax(),
+                geometry.pageWidth(), geometry.pageHeight());
+    }
+
+    private static PdfTextLayerOrigin origin(String origin) {
+        return origin != null && (origin.equals("OCR_LOCAL") || origin.equals("HYBRID"))
+                ? PdfTextLayerOrigin.OCR_LOCAL : PdfTextLayerOrigin.NATIVE_BBOX;
+    }
+
+    private static List<PdfVisualTextTarget> sentenceTargets(PdfRegion region,
+                                                             PdfPageRegion box,
+                                                             PdfTextLayerOrigin origin) {
+        ArrayList<PdfVisualTextTarget> result = new ArrayList<>();
+        for (var span : DocumentSentenceSplitter.split(
+                region.id(), region.effectiveText())) {
+            int start = span.range().startOffset();
+            int end = span.range().endOffset();
+            SentenceGeometry geometry = sentenceGeometry(region, start, end, box);
+            result.add(new PdfVisualTextTarget(
+                    region.id() + "-S-" + start, region.id(), start, end,
+                    region.pageNumber(), geometry.boundingBox(), geometry.lineBoxes(),
+                    span.text(), origin,
+                    PdfVisualTextTargetKind.SENTENCE));
+        }
+        return List.copyOf(result);
+    }
+
+    private static List<PdfPageRegion> playbackBoxes(PdfRegion region, PdfPageRegion fallback) {
+        String value = region.attributes().getOrDefault("playbackBboxes", "");
+        if (value.isBlank()) return List.of(fallback);
+        boolean rasterGrounded = "OCR_RASTER_PAGE".equals(
+                region.attributes().getOrDefault("playbackGeometryOrigin", ""));
+        ArrayList<PdfPageRegion> result = new ArrayList<>();
+        try {
+            for (String encoded : value.split(";")) {
+                String[] coordinates = encoded.split(",", 4);
+                if (coordinates.length != 4) return List.of(fallback);
+                PdfPageRegion box = new PdfPageRegion(region.pageNumber(),
+                        Double.parseDouble(coordinates[0]), Double.parseDouble(coordinates[1]),
+                        Double.parseDouble(coordinates[2]), Double.parseDouble(coordinates[3]),
+                        fallback.pageWidthPoints(), fallback.pageHeightPoints());
+                if (!rasterGrounded && (box.xMinPoints() < fallback.xMinPoints() - 1.0
+                        || box.yMinPoints() < fallback.yMinPoints() - 1.0
+                        || box.xMaxPoints() > fallback.xMaxPoints() + 1.0
+                        || box.yMaxPoints() > fallback.yMaxPoints() + 1.0)) {
+                    return List.of(fallback);
+                }
+                result.add(box);
             }
+            return result.isEmpty() ? List.of(fallback) : List.copyOf(result);
+        } catch (IllegalArgumentException malformed) {
+            return List.of(fallback);
         }
-        return List.copyOf(fragments);
     }
 
-    private static Optional<int[]> parseRange(String value) {
-        if (value == null || value.isBlank()) {
-            return Optional.empty();
+    private static SentenceGeometry sentenceGeometry(
+            PdfRegion region, int start, int end, PdfPageRegion fallback) {
+        if (!region.effectiveText().equals(region.text())) {
+            return SentenceGeometry.fallback(fallback);
         }
-        String[] parts = value.strip().split("\\s*-\\s*");
-        if (parts.length != 2) {
-            return Optional.empty();
+        String boxesValue = region.attributes().getOrDefault("lineBboxes", "");
+        String rangesValue = region.attributes().getOrDefault("lineCharRanges", "");
+        String[] boxes = boxesValue.split(";");
+        String[] ranges = rangesValue.split(";");
+        if (boxes.length == 0 || boxes.length != ranges.length) {
+            return SentenceGeometry.fallback(fallback);
         }
+        ArrayList<PdfPageRegion> lineBoxes = new ArrayList<>();
+        double xMin = Double.POSITIVE_INFINITY;
+        double yMin = Double.POSITIVE_INFINITY;
+        double xMax = Double.NEGATIVE_INFINITY;
+        double yMax = Double.NEGATIVE_INFINITY;
+        boolean matched = false;
         try {
-            int start = Integer.parseInt(parts[0]);
-            int end = Integer.parseInt(parts[1]);
-            return end > start && start >= 0 ? Optional.of(new int[] { start, end }) : Optional.empty();
-        } catch (NumberFormatException ex) {
-            return Optional.empty();
-        }
-    }
-
-    private static Optional<double[]> parseBbox(String value) {
-        if (value == null || value.isBlank()) {
-            return Optional.empty();
-        }
-        String[] parts = value.strip().split("\\s*,\\s*");
-        if (parts.length != 4) {
-            return Optional.empty();
-        }
-        double[] parsed = new double[4];
-        for (int i = 0; i < parts.length; i++) {
-            Optional<Double> number = parseDouble(parts[i]);
-            if (number.isEmpty()) {
-                return Optional.empty();
+            for (int index = 0; index < boxes.length; index++) {
+                String[] range = ranges[index].split("-", 2);
+                String[] coordinates = boxes[index].split(",", 4);
+                if (range.length != 2 || coordinates.length != 4) {
+                    return SentenceGeometry.fallback(fallback);
+                }
+                int lineStart = Integer.parseInt(range[0]);
+                int lineEnd = Integer.parseInt(range[1]);
+                if (lineEnd <= start || lineStart >= end) continue;
+                PdfPageRegion lineBox = new PdfPageRegion(
+                        region.pageNumber(),
+                        Double.parseDouble(coordinates[0]),
+                        Double.parseDouble(coordinates[1]),
+                        Double.parseDouble(coordinates[2]),
+                        Double.parseDouble(coordinates[3]),
+                        fallback.pageWidthPoints(), fallback.pageHeightPoints());
+                lineBoxes.add(lineBox);
+                xMin = Math.min(xMin, lineBox.xMinPoints());
+                yMin = Math.min(yMin, lineBox.yMinPoints());
+                xMax = Math.max(xMax, lineBox.xMaxPoints());
+                yMax = Math.max(yMax, lineBox.yMaxPoints());
+                matched = true;
             }
-            parsed[i] = number.get();
-        }
-        return Optional.of(parsed);
-    }
-
-    private static Optional<Integer> parsePositiveInt(String value) {
-        if (value == null || value.isBlank()) {
-            return Optional.empty();
-        }
-        try {
-            int parsed = Integer.parseInt(value.strip());
-            return parsed > 0 ? Optional.of(parsed) : Optional.empty();
-        } catch (NumberFormatException ex) {
-            return Optional.empty();
+            if (!matched) return SentenceGeometry.fallback(fallback);
+            return new SentenceGeometry(
+                    new PdfPageRegion(region.pageNumber(), xMin, yMin, xMax, yMax,
+                            fallback.pageWidthPoints(), fallback.pageHeightPoints()),
+                    lineBoxes);
+        } catch (IllegalArgumentException malformedEvidence) {
+            return SentenceGeometry.fallback(fallback);
         }
     }
 
-    private static Optional<Double> parsePositiveDouble(String value) {
-        return parseDouble(value).filter(parsed -> parsed > 0.0);
-    }
-
-    private static Optional<Double> parseDouble(String value) {
-        if (value == null || value.isBlank()) {
-            return Optional.empty();
+    private record SentenceGeometry(
+            PdfPageRegion boundingBox,
+            List<PdfPageRegion> lineBoxes) {
+        private SentenceGeometry {
+            lineBoxes = lineBoxes == null || lineBoxes.isEmpty()
+                    ? List.of(boundingBox) : List.copyOf(lineBoxes);
         }
-        try {
-            double parsed = Double.parseDouble(value.strip());
-            return Double.isFinite(parsed) ? Optional.of(parsed) : Optional.empty();
-        } catch (NumberFormatException ex) {
-            return Optional.empty();
+
+        static SentenceGeometry fallback(PdfPageRegion region) {
+            return new SentenceGeometry(region, List.of(region));
         }
     }
 
-    private record LineFragment(PdfPageRegion region, int startOffset, int endOffset) {
-        private LineFragment {
-            startOffset = Math.max(0, startOffset);
-            endOffset = Math.max(startOffset, endOffset);
-        }
+    private static PdfTextLayerOrigin origin(PdfRegionOrigin origin) {
+        return origin == PdfRegionOrigin.OCR_LOCAL || origin == PdfRegionOrigin.HYBRID
+                ? PdfTextLayerOrigin.OCR_LOCAL : PdfTextLayerOrigin.NATIVE_BBOX;
     }
 }

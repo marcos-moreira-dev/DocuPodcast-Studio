@@ -2,6 +2,8 @@ package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
 import com.marcosmoreiradev.docupodcaststudio.application.project.ProjectWorkspaceHydration;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.ReadableDocument;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PreparedPdfSource;
+import com.marcosmoreiradev.docupodcaststudio.application.document.ProjectDocumentSource;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.DocuPodcastProject;
 import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationScriptDocument;
 import com.marcosmoreiradev.docupodcaststudio.domain.storyboard.StoryboardDocument;
@@ -17,7 +19,8 @@ public record OpenedProjectContext(
         ProjectWorkspaceHydration hydration,
         WorkspaceKind activeWorkspace,
         String selectedScriptSegmentId,
-        String lastStoryboardImageAssetId
+        String lastStoryboardImageAssetId,
+        java.util.List<String> recoveryWarnings
 ) {
     public OpenedProjectContext {
         project = java.util.Objects.requireNonNull(project, "project");
@@ -26,10 +29,20 @@ public record OpenedProjectContext(
         activeWorkspace = java.util.Objects.requireNonNull(activeWorkspace, "activeWorkspace");
         selectedScriptSegmentId = selectedScriptSegmentId == null ? "" : selectedScriptSegmentId;
         lastStoryboardImageAssetId = lastStoryboardImageAssetId == null ? "" : lastStoryboardImageAssetId;
+        recoveryWarnings = recoveryWarnings == null ? java.util.List.of()
+                : java.util.List.copyOf(recoveryWarnings);
     }
 
     public Optional<ReadableDocument> importedDocument() {
         return hydration.importedDocument();
+    }
+
+    public Optional<ProjectDocumentSource> documentSource() {
+        return hydration.documentSource();
+    }
+
+    public Optional<PreparedPdfSource> preparedPdfSource() {
+        return hydration.preparedPdfSource();
     }
 
     public Optional<NarrationScriptDocument> narrationScript() {

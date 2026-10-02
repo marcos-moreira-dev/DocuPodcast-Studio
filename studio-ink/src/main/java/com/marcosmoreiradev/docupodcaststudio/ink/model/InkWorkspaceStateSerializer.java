@@ -22,6 +22,9 @@ public final class InkWorkspaceStateSerializer {
         double height = doubleValue(root.get("height"), 1.0);
         String background = stringValue(root.get("background"), "#ffffffff");
         List<InkStroke> strokes = strokes(root.get("inkStrokes"));
+        if (strokes.isEmpty()) {
+            strokes = legacyCommandStrokes(root.get("strokes"));
+        }
         List<InkPlacedImage> images = images(root.get("images"));
         Map<String, String> metadata = metadata(root.get("metadata"));
         return InkWorkspaceState.create(width, height, background, strokes, images, metadata);
@@ -172,6 +175,48 @@ public final class InkWorkspaceStateSerializer {
                 }
             }
             strokes.add(new InkStroke(tool, color, width, points));
+        }
+        return List.copyOf(strokes);
+    }
+
+    /**
+     * Reads version 1/2 sidecars whose ink was persisted as individual canvas commands.
+     * Commands are normalized into the current stroke model so consumers do not need a
+     * second JSON parser. Quadratic commands retain their control point as an intermediate
+     * sample; region erasers cannot be represented as a stroke and are intentionally ignored.
+     */
+    @SuppressWarnings("unchecked")
+    private static List<InkStroke> legacyCommandStrokes(Object value) {
+        if (!(value instanceof List<?> rawList)) {
+            return List.of();
+        }
+        ArrayList<InkStroke> strokes = new ArrayList<>();
+        for (Object item : rawList) {
+            if (!(item instanceof Map<?, ?> rawCommand)) {
+                continue;
+            }
+            Map<String, Object> command = (Map<String, Object>) rawCommand;
+            String type = stringValue(command.get("type"), "DRAW");
+            if ("ERASE_REGION".equalsIgnoreCase(type)) {
+                continue;
+            }
+            ArrayList<InkPoint> points = new ArrayList<>();
+            points.add(InkPoint.of(
+                    doubleValue(command.get("x1"), 0.0),
+                    doubleValue(command.get("y1"), 0.0), 0L));
+            if (booleanValue(command.get("quadratic"), false)) {
+                points.add(InkPoint.of(
+                        doubleValue(command.get("controlX"), 0.0),
+                        doubleValue(command.get("controlY"), 0.0), 0L));
+            }
+            points.add(InkPoint.of(
+                    doubleValue(command.get("x2"), 0.0),
+                    doubleValue(command.get("y2"), 0.0), 0L));
+            strokes.add(new InkStroke(
+                    InkTool.fromToken(type),
+                    stringValue(command.get("color"), "#000000ff"),
+                    doubleValue(command.get("width"), 1.0),
+                    points));
         }
         return List.copyOf(strokes);
     }

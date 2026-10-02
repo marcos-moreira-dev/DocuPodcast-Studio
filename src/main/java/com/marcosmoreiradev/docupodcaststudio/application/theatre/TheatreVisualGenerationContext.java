@@ -15,7 +15,12 @@ public record TheatreVisualGenerationContext(
         TheatreImageContextAsset previousFrame,
         TheatreImageContextAsset nextFrame,
         TheatreImageContextAsset drawnFrame,
-        TheatreImageContextAsset cameraGuide
+        TheatreImageContextAsset cameraGuide,
+        TheatreImageContextAsset activeStoryboardFrame,
+        String activeStoryboardVariant,
+        List<TheatreCharacterGenerationContext> characters,
+        String actNotes,
+        String sceneNotes
 ) {
     public TheatreVisualGenerationContext(TheatreImageGenerationUnit unit,
                                           List<TheatreImageContextAsset> identityReferences,
@@ -25,13 +30,31 @@ public record TheatreVisualGenerationContext(
                                           TheatreImageContextAsset nextFrame,
                                           TheatreImageContextAsset drawnFrame) {
         this(unit, identityReferences, objectReferences, environmentReferences,
-                previousFrame, nextFrame, drawnFrame, null);
+                previousFrame, nextFrame, drawnFrame, null, drawnFrame,
+                drawnFrame == null ? "" : "drawn", List.of(), "", "");
+    }
+
+    public TheatreVisualGenerationContext(TheatreImageGenerationUnit unit,
+                                          List<TheatreImageContextAsset> identityReferences,
+                                          List<TheatreImageContextAsset> objectReferences,
+                                          List<TheatreImageContextAsset> environmentReferences,
+                                          TheatreImageContextAsset previousFrame,
+                                          TheatreImageContextAsset nextFrame,
+                                          TheatreImageContextAsset drawnFrame,
+                                          TheatreImageContextAsset cameraGuide) {
+        this(unit, identityReferences, objectReferences, environmentReferences,
+                previousFrame, nextFrame, drawnFrame, cameraGuide, drawnFrame,
+                drawnFrame == null ? "" : "drawn", List.of(), "", "");
     }
 
     public TheatreVisualGenerationContext {
         identityReferences = copy(identityReferences);
         objectReferences = copy(objectReferences);
         environmentReferences = copy(environmentReferences);
+        activeStoryboardVariant = activeStoryboardVariant == null ? "" : activeStoryboardVariant.strip();
+        characters = characters == null ? List.of() : List.copyOf(characters);
+        actNotes = actNotes == null ? "" : actNotes.strip();
+        sceneNotes = sceneNotes == null ? "" : sceneNotes.strip();
     }
 
     public List<TheatreImageContextAsset> allAssets() {
@@ -43,7 +66,15 @@ public record TheatreVisualGenerationContext(
         add(result, nextFrame);
         add(result, drawnFrame);
         add(result, cameraGuide);
-        return List.copyOf(result);
+        add(result, activeStoryboardFrame);
+        return result.stream().filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.collectingAndThen(
+                        java.util.stream.Collectors.toMap(
+                                asset -> asset.role() + ':' + asset.assetId(),
+                                asset -> asset,
+                                (first, ignored) -> first,
+                                java.util.LinkedHashMap::new),
+                        map -> List.copyOf(map.values())));
     }
 
     public List<VisualConditioningReference> conditioningReferences() {
@@ -55,6 +86,9 @@ public record TheatreVisualGenerationContext(
         add(result, drawnFrame, VisualConditioningRole.DRAWN_GUIDE, 0.30);
         add(result, previousFrame, VisualConditioningRole.PREVIOUS_FRAME, 0.35);
         add(result, nextFrame, VisualConditioningRole.NEXT_FRAME, 0.35);
+        if (activeStoryboardFrame != null && drawnFrame == null) {
+            add(result, activeStoryboardFrame, VisualConditioningRole.CAMERA_GUIDE, 0.65);
+        }
         return List.copyOf(result);
     }
 
@@ -63,8 +97,12 @@ public record TheatreVisualGenerationContext(
     }
 
     public boolean hasStructureGuide() {
-        return (drawnFrame != null && !drawnFrame.imageUri().isBlank())
+        return (activeStoryboardFrame != null && !activeStoryboardFrame.imageUri().isBlank())
                 || (cameraGuide != null && !cameraGuide.imageUri().isBlank());
+    }
+
+    public List<TheatreCharacterGenerationContext> missingCharacterIdentities() {
+        return characters.stream().filter(character -> !character.identityReady()).toList();
     }
 
     private static List<TheatreImageContextAsset> copy(List<TheatreImageContextAsset> values) {

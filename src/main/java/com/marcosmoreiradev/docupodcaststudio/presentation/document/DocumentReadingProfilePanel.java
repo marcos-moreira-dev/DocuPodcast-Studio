@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.document;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
+
 import com.marcosmoreiradev.docupodcaststudio.application.reading.ReadingProfilePreview;
 import com.marcosmoreiradev.docupodcaststudio.application.reading.ReadingProfilePreviewItem;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlockType;
@@ -65,24 +67,24 @@ public final class DocumentReadingProfilePanel extends ScrollPane {
         title("Perfil de lectura");
         muted("Ajusta cómo DocuPodcast interpreta tu Word antes de preparar la lectura. Los cambios manuales por bloque se respetan.");
 
-        TextField name = new TextField(profile.name());
+        TextField name = StudioFormControls.textField(profile.name());
         name.setMaxWidth(Double.MAX_VALUE);
-        TextArea description = new TextArea(profile.description());
+        TextArea description = StudioFormControls.textArea(profile.description());
         description.setWrapText(true);
         description.setPrefRowCount(3);
 
-        TextField titleKeywords = new TextField(toCsv(profile.headingRules().titleStyleKeywords()));
-        TextField headingKeywords = new TextField(toCsv(profile.headingRules().headingStyleKeywords()));
-        TextField subheadingKeywords = new TextField(toCsv(profile.headingRules().subheadingStyleKeywords()));
-        Spinner<Integer> maxBoldWords = new Spinner<>(1, 60, profile.headingRules().maxShortBoldWords());
+        TextField titleKeywords = StudioFormControls.textField(toCsv(profile.headingRules().titleStyleKeywords()));
+        TextField headingKeywords = StudioFormControls.textField(toCsv(profile.headingRules().headingStyleKeywords()));
+        TextField subheadingKeywords = StudioFormControls.textField(toCsv(profile.headingRules().subheadingStyleKeywords()));
+        Spinner<Integer> maxBoldWords = StudioFormControls.spinner(1, 60, profile.headingRules().maxShortBoldWords());
         maxBoldWords.setEditable(true);
-        CheckBox shortBoldAsSubheading = new CheckBox("Texto breve en negrita puede ser subtítulo");
+        CheckBox shortBoldAsSubheading = StudioFormControls.checkBox("Texto breve en negrita puede ser subtítulo");
         shortBoldAsSubheading.setSelected(profile.headingRules().treatShortBoldParagraphAsSubheading());
 
-        ComboBox<ImageNarrationPolicy> imagePolicy = new ComboBox<>(FXCollections.observableArrayList(ImageNarrationPolicy.values()));
+        ComboBox<ImageNarrationPolicy> imagePolicy = StudioFormControls.comboBox(FXCollections.observableArrayList(ImageNarrationPolicy.values()));
         imagePolicy.setValue(profile.imagePolicy());
         imagePolicy.setMaxWidth(Double.MAX_VALUE);
-        ComboBox<TableNarrationPolicy> tablePolicy = new ComboBox<>(FXCollections.observableArrayList(TableNarrationPolicy.values()));
+        ComboBox<TableNarrationPolicy> tablePolicy = StudioFormControls.comboBox(FXCollections.observableArrayList(TableNarrationPolicy.values()));
         tablePolicy.setValue(profile.tablePolicy());
         tablePolicy.setMaxWidth(Double.MAX_VALUE);
 

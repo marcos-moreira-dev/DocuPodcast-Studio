@@ -14,7 +14,8 @@ public record VoiceTestSynthesisRequest(
         Path textFile,
         Path outputFile,
         Path workingDirectory,
-        AudioEngineDescriptor engineDescriptor
+        AudioEngineDescriptor engineDescriptor,
+        String performanceStyleId
 ) {
     public VoiceTestSynthesisRequest {
         segmentId = normalize(segmentId).isBlank() ? "voice-test" : normalize(segmentId);
@@ -22,6 +23,16 @@ public record VoiceTestSynthesisRequest(
         language = normalize(language).isBlank() ? "es" : normalize(language);
         voiceProfileId = normalize(voiceProfileId).isBlank() ? "VOC-NARRATOR" : normalize(voiceProfileId);
         engineDescriptor = engineDescriptor == null ? AudioEngineDescriptor.mock() : engineDescriptor;
+        performanceStyleId = normalize(performanceStyleId);
+    }
+
+    /** Compatibility constructor for callers that do not request an expressive style. */
+    public VoiceTestSynthesisRequest(String segmentId, String phrase, String language,
+                                     String voiceProfileId, Path referenceSampleFile,
+                                     Path textFile, Path outputFile, Path workingDirectory,
+                                     AudioEngineDescriptor engineDescriptor) {
+        this(segmentId, phrase, language, voiceProfileId, referenceSampleFile,
+                textFile, outputFile, workingDirectory, engineDescriptor, "");
     }
 
     public boolean hasReferenceSample() {

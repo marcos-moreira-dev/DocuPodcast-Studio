@@ -3,6 +3,7 @@ package com.marcosmoreiradev.docupodcaststudio.infrastructure.settings;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.OperationalSettings;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.FrameGenerationSettings;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.ImageGenerationSettings;
+import com.marcosmoreiradev.docupodcaststudio.application.settings.ImageSuperResolutionSettings;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.OperationalSettingsRepository;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.OperationalSettingsMigrationPolicy;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.SelectedMediaEngines;
@@ -108,6 +109,15 @@ public final class PropertiesOperationalSettingsRepository implements Operationa
                         boolValue(p, "image.lowVram", true),
                         p.getProperty("image.memoryProfile", ""),
                         intValue(p, "image.maxAttempts", 2)),
+                new ImageSuperResolutionSettings(
+                        p.getProperty("visual.generationProfile", "P1080"),
+                        boolValue(p, "upscale.enabled", false),
+                        p.getProperty("upscale.targetProfile", "QHD_2K"),
+                        p.getProperty("upscale.modelName", "RealESRGAN_x4plus.pth"),
+                        boolValue(p, "refinement.enabled", false),
+                        p.getProperty("refinement.preset", "conservative"),
+                        p.getProperty("refinement.engineId",
+                                ImageSuperResolutionSettings.DEFAULT_REFINEMENT_ENGINE)),
                 new OperationalSettings.MediaEngineSelectionSettings(
                         p.getProperty("capability.voice.engine", p.getProperty("tts.engineMode", "piper")),
                         p.getProperty("capability.image.engine",
@@ -126,7 +136,9 @@ public final class PropertiesOperationalSettingsRepository implements Operationa
                         p.getProperty("compute.selectedDeviceId", ""),
                         boolValue(p, "compute.allowGpuForTts", true),
                         boolValue(p, "compute.allowGpuForVideo", true),
-                        p.getProperty("video.encoderPolicy", "AUTO")),
+                        p.getProperty("video.encoderPolicy", "AUTO"),
+                        boolValue(p, "compute.allowGpuForContentAnalysis", true),
+                        boolValue(p, "compute.allowRamOffloadForContentAnalysis", true)),
                 new OperationalSettings.OcrSettings(
                         p.getProperty("ocr.engineMode", "managed-local"),
                         p.getProperty("ocr.tesseractExecutable", ""),
@@ -189,6 +201,14 @@ public final class PropertiesOperationalSettingsRepository implements Operationa
         p.setProperty("image.lowVram", Boolean.toString(current.imageGeneration().lowVram()));
         p.setProperty("image.memoryProfile", current.imageGeneration().memoryProfile());
         p.setProperty("image.maxAttempts", Integer.toString(current.imageGeneration().maxAttempts()));
+        p.setProperty("visual.generationProfile", current.imageSuperResolution().generationProfile());
+        p.setProperty("upscale.enabled", Boolean.toString(current.imageSuperResolution().enabled()));
+        p.setProperty("upscale.targetProfile", current.imageSuperResolution().targetProfile());
+        p.setProperty("upscale.modelName", current.imageSuperResolution().modelName());
+        p.setProperty("refinement.enabled",
+                Boolean.toString(current.imageSuperResolution().refinementEnabled()));
+        p.setProperty("refinement.preset", current.imageSuperResolution().refinementPreset());
+        p.setProperty("refinement.engineId", current.imageSuperResolution().refinementEngineId());
         p.setProperty("frames.mode", current.frameGeneration().mode());
         p.setProperty("frames.scope", current.frameGeneration().scope());
         p.setProperty("frames.outputDirectory", current.frameGeneration().outputDirectory());
@@ -197,6 +217,10 @@ public final class PropertiesOperationalSettingsRepository implements Operationa
         p.setProperty("compute.selectedDeviceId", current.compute().selectedDeviceId());
         p.setProperty("compute.allowGpuForTts", Boolean.toString(current.compute().allowGpuForTts()));
         p.setProperty("compute.allowGpuForVideo", Boolean.toString(current.compute().allowGpuForVideo()));
+        p.setProperty("compute.allowGpuForContentAnalysis",
+                Boolean.toString(current.compute().allowGpuForContentAnalysis()));
+        p.setProperty("compute.allowRamOffloadForContentAnalysis",
+                Boolean.toString(current.compute().allowRamOffloadForContentAnalysis()));
         p.setProperty("video.encoderPolicy", current.compute().videoEncoderPolicy().name());
         p.setProperty("ocr.engineMode", current.ocr().engineMode());
         p.setProperty("ocr.tesseractExecutable", current.ocr().tesseractExecutable());

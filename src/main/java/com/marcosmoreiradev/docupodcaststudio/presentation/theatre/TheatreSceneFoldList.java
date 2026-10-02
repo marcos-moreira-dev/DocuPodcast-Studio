@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.theatre;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
+
 import com.marcosmoreiradev.docupodcaststudio.domain.document.ReadableDocument;
 import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationScriptDocument;
 import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreProjectLayer;
@@ -30,6 +32,7 @@ final class TheatreSceneFoldList extends VBox {
     private static final String DEFAULT_ACT_ID = "ACT-ACTO-1";
 
     private final DocuPodcastShellViewModel viewModel;
+    private final IntervencionBoundaryStore boundaryStore;
     private final Function<TheatreProjectLayer.Scene, Node> sceneContentFactory;
     private final Set<String> expandedActIds = new LinkedHashSet<>();
     private final Set<String> expandedSceneIds = new LinkedHashSet<>();
@@ -37,8 +40,11 @@ final class TheatreSceneFoldList extends VBox {
 
     TheatreSceneFoldList(
             DocuPodcastShellViewModel viewModel,
+            IntervencionBoundaryStore boundaryStore,
             Function<TheatreProjectLayer.Scene, Node> sceneContentFactory) {
         this.viewModel = viewModel;
+        this.boundaryStore = boundaryStore == null
+                ? viewModel.intervencionBoundaryStore() : boundaryStore;
         this.sceneContentFactory = sceneContentFactory == null ? scene -> null : sceneContentFactory;
         getStyleClass().addAll("theatre-act-list", "theatre-shared-scene-folds");
         setSpacing(8);
@@ -46,6 +52,19 @@ final class TheatreSceneFoldList extends VBox {
         viewModel.currentDocumentProperty().addListener((obs, oldValue, newValue) -> refresh());
         viewModel.currentScriptProperty().addListener((obs, oldValue, newValue) -> refresh());
         viewModel.dirtyProperty().addListener((obs, oldValue, newValue) -> refresh());
+        viewModel.focusedTheatreSceneIdProperty().addListener((obs, oldValue, newValue) -> {
+            String sceneId = newValue == null ? "" : newValue.strip();
+            if (sceneId.isBlank() || !expandedSceneIds.add(sceneId)) {
+                return;
+            }
+            viewModel.theatreScenes().stream()
+                    .filter(scene -> sceneId.equals(scene.id()))
+                    .findFirst()
+                    .map(TheatreSceneFoldList::sceneActId)
+                    .filter(id -> !id.isBlank())
+                    .ifPresent(expandedActIds::add);
+            refresh();
+        });
     }
 
     void refresh() {
@@ -56,6 +75,10 @@ final class TheatreSceneFoldList extends VBox {
         if (!expansionInitialized) {
             acts.forEach(act -> expandedActIds.add(act.id()));
             scenes.stream().findFirst().ifPresent(scene -> expandedSceneIds.add(scene.id()));
+            String focusedSceneId = viewModel.focusedTheatreSceneIdProperty().get();
+            if (focusedSceneId != null && !focusedSceneId.isBlank()) {
+                expandedSceneIds.add(focusedSceneId.strip());
+            }
             expansionInitialized = true;
         }
         getChildren().clear();
@@ -131,20 +154,49 @@ final class TheatreSceneFoldList extends VBox {
         });
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox header = new HBox(7, chevron, title, spacer, edit, delete);
+        Label loading = new Label("Cargando…");
+        loading.getStyleClass().add("theatre-scene-description");
+        loading.setVisible(false);
+        loading.setManaged(false);
+        VBox body = new VBox(7);
+        body.getStyleClass().add("theatre-scene-body");
+        HBox header = new HBox(7, chevron, title, loading, spacer, edit, delete);
         header.getStyleClass().add("theatre-scene-header");
         header.setAlignment(Pos.CENTER_LEFT);
         header.setOnMouseClicked(event -> {
-            viewModel.focusTheatreScene(scene.id());
+            boolean opening = !expandedSceneIds.contains(scene.id());
             toggle(expandedSceneIds, scene.id());
-            refresh();
+            chevron.setText(opening ? "\u25be" : "\u25b8");
+            if (opening) {
+                card.getChildren().add(body);
+                loadSceneBody(scene, card, body, loading, true);
+            } else {
+                card.getChildren().remove(body);
+                loading.setVisible(false);
+                loading.setManaged(false);
+            }
             event.consume();
         });
         card.getChildren().add(header);
 
         if (expanded) {
-            VBox body = new VBox(7);
-            body.getStyleClass().add("theatre-scene-body");
+            card.getChildren().add(body);
+            loadSceneBody(scene, card, body, loading, false);
+        }
+        return card;
+    }
+
+    private void loadSceneBody(TheatreProjectLayer.Scene scene, VBox card, VBox body,
+                               Label loading, boolean focus) {
+        loading.setVisible(true);
+        loading.setManaged(true);
+        // Give JavaFX a pulse to paint the acknowledgement before constructing scene nodes.
+        javafx.animation.PauseTransition pending = new javafx.animation.PauseTransition(javafx.util.Duration.millis(40));
+        pending.setOnFinished(event -> {
+            if (card.getParent() == null || !card.getChildren().contains(body)
+                    || !expandedSceneIds.contains(scene.id())) return;
+            try {
+            body.getChildren().clear();
             Label description = new Label(scene.notes().isBlank()
                     ? "Sin descripcion."
                     : TheatreCharacterPresentation.excerpt(scene.notes(), 180));
@@ -155,9 +207,34 @@ final class TheatreSceneFoldList extends VBox {
             if (content != null) {
                 body.getChildren().add(content);
             }
-            card.getChildren().add(body);
-        }
-        return card;
+            if (focus) {
+                viewModel.focusTheatreScene(scene.id());
+                firstSceneBlockId(scene).ifPresent(viewModel::selectDocumentBlock);
+            }
+            } catch (RuntimeException ex) {
+                body.getChildren().setAll(emptyNote("No se pudo cargar el cuadro. Ciérralo y vuelve a abrirlo."));
+                org.slf4j.LoggerFactory.getLogger(TheatreSceneFoldList.class)
+                        .warn("Unable to load theatre scene {}", scene.id(), ex);
+            } finally {
+                loading.setVisible(false);
+                loading.setManaged(false);
+            }
+        });
+        pending.play();
+    }
+
+    private java.util.Optional<String> firstSceneBlockId(TheatreProjectLayer.Scene scene) {
+        List<IntervencionCatalogo.IntervencionInfo> aliases =
+                IntervencionCatalogo.intervenciones(
+                        viewModel.currentDocumentProperty().get(),
+                        viewModel.currentScriptProperty().get());
+        return IntervencionNumberingScene.intervencionesParaEscena(
+                        aliases, viewModel.theatreScenes(),
+                        boundaryStore, scene)
+                .stream()
+                .map(IntervencionCatalogo.IntervencionInfo::blockId)
+                .filter(id -> id != null && !id.isBlank())
+                .findFirst();
     }
 
     private TheatreProjectLayer.TheatreAct sceneAct(TheatreProjectLayer.Scene scene) {
@@ -193,7 +270,7 @@ final class TheatreSceneFoldList extends VBox {
     private void showActEditor(TheatreProjectLayer.TheatreAct act) {
         boolean creating = act == null;
         Label title = dialogTitle(creating ? "Nuevo acto" : "Editar acto");
-        TextField name = new TextField(creating ? "Acto " + (viewModel.theatreActs().size() + 1) : act.displayName());
+        TextField name = StudioFormControls.textField(creating ? "Acto " + (viewModel.theatreActs().size() + 1) : act.displayName());
         name.getStyleClass().add("theatre-object-name-field");
         name.setPromptText("Nombre del acto");
         name.setMaxWidth(Double.MAX_VALUE);
@@ -222,7 +299,7 @@ final class TheatreSceneFoldList extends VBox {
         }
         boolean creating = scene == null;
         Label title = dialogTitle(creating ? "Nueva escena en " + act.displayName() : "Editar escena");
-        TextField name = new TextField(creating ? "" : scene.displayName());
+        TextField name = StudioFormControls.textField(creating ? "" : scene.displayName());
         name.getStyleClass().add("theatre-object-name-field");
         name.setPromptText("Nombre de la escena");
         name.setMaxWidth(Double.MAX_VALUE);

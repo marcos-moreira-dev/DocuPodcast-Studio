@@ -7,6 +7,32 @@ package com.marcosmoreiradev.docupodcaststudio.presentation.components;
  * mapping here avoids scattering glyphs or ad-hoc image paths across views.</p>
  */
 public enum AppIcon {
+    PRODUCT_SOURCE_DOCUMENT("/icons/product/source-document.png", "Fuente documental", true),
+    PRODUCT_PROJECT_NEW("/icons/product/project-new.png", "Nuevo proyecto", true),
+    PRODUCT_PROJECT_OPEN("/icons/product/project-open.png", "Abrir proyecto", true),
+    PRODUCT_PROJECT_SAVE("/icons/product/project-save.png", "Guardar proyecto", true),
+    PRODUCT_SETTINGS("/icons/product/settings.png", "Configuración", true),
+    PRODUCT_GUIDE("/icons/product/guide.png", "Guía", true),
+    PRODUCT_READING_PREPARE("/icons/product/reading-prepare.png", "Preparar lectura", true),
+    PRODUCT_AUDIO_GENERATE("/icons/product/audio-generate.png", "Generar audio", true),
+    PRODUCT_AUDIO_CANCEL("/icons/product/audio-cancel.png", "Cancelar audio", true),
+    PRODUCT_HOME("/icons/product/home.png", "Inicio", true),
+    PRODUCT_PLAYBAR_DOCK("/icons/product/playbar-dock.png", "Controles de lectura", true),
+    PRODUCT_THEATRE_STRUCTURE("/icons/product/theatre-structure.png", "Estructura teatral", true),
+    PRODUCT_THEATRE_GRAMMAR_IMPORT("/icons/product/theatre-grammar-import.png", "Importar gramática teatral", true),
+    PRODUCT_THEATRE_GRAMMAR_TEMPLATE("/icons/product/theatre-grammar-template.png", "Plantilla teatral", true),
+    PRODUCT_THEATRE_FRAME_STUDIO("/icons/product/theatre-frame-studio.png", "Frames de la obra", true),
+    PRODUCT_EXAMPLE_PROJECT("/icons/product/example-project.png", "Proyecto de ejemplo", true),
+    PRODUCT_DOCUMENT_FRAGMENT("/icons/product/document-fragment.png", "Fragmento documental", true),
+    PRODUCT_DOCUMENT_INDEX_PREFERENCES("/icons/product/document-index-preferences.png", "Índices y preferencias", true),
+    PRODUCT_DOCUMENT_AUDIO("/icons/product/document-audio.png", "Audio del documento", true),
+    PRODUCT_DOCUMENTARY_VIDEO_CONTENT("/icons/product/documentary-video-content.png", "Contenido del video", true),
+    PRODUCT_THEATRE_MEDIA_LAYERS("/icons/product/theatre-media-layers.png", "Capas multimedia", true),
+    PRODUCT_THEATRE_CHARACTERS("/icons/product/theatre-characters.png", "Personajes", true),
+    PRODUCT_THEATRE_TEXT_MAP("/icons/product/theatre-text-map.png", "Mapa textual", true),
+    PRODUCT_THEATRE_SPATIAL_ACTIONS("/icons/product/theatre-spatial-actions.png", "Mapa espacial y acciones", true),
+    PRODUCT_THEATRE_OBJECTS("/icons/product/theatre-objects.png", "Objetos teatrales", true),
+
     OPEN_SOURCE("open-source.png", "Abrir fuente"),
     LISTEN("listen.png", "Escuchar"),
     NEW_PROJECT("new-project.png", "Nuevo proyecto"),
@@ -42,19 +68,31 @@ public enum AppIcon {
     REFRESH("refresh.png", "Refrescar"),
     DEFAULT("help.png", "Acción");
 
-    private final String fileName;
+    private final String resourcePath;
     private final String accessibleText;
+    private final boolean productAsset;
 
     AppIcon(String fileName, String accessibleText) {
-        this.fileName = fileName;
+        this.resourcePath = "/icons/ui/" + fileName;
         this.accessibleText = accessibleText;
+        this.productAsset = false;
+    }
+
+    AppIcon(String resourcePath, String accessibleText, boolean productAsset) {
+        this.resourcePath = productAsset ? resourcePath : "/icons/ui/" + resourcePath;
+        this.accessibleText = accessibleText;
+        this.productAsset = productAsset;
     }
 
     public String resourcePath() {
-        return "/icons/ui/" + fileName;
+        return resourcePath;
     }
 
     public String accessibleText() {
         return accessibleText;
+    }
+
+    public boolean isProductAsset() {
+        return productAsset;
     }
 }

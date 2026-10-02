@@ -104,6 +104,10 @@
     -fx-text-fill: -docu-accent-ink;
 }
 
+.status-generation-button .ui-lucide-icon-shape {
+    -fx-stroke: #111827;
+}
+
 .status-generation-danger-button {
     -fx-background-color: -docu-danger-soft;
     -fx-border-color: -docu-danger;

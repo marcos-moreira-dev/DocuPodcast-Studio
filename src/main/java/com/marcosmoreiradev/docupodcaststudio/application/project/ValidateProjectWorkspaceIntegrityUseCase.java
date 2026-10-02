@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
  * were actually rehydrated and that cross-artifact references are coherent.</p>
  */
 public final class ValidateProjectWorkspaceIntegrityUseCase {
+    private final ProjectAssetAuthorityPolicy authority = new ProjectAssetAuthorityPolicy();
     public ProjectValidationResult validate(DocuPodcastProject project, Path projectFile, ProjectWorkspaceHydration hydration) {
         Objects.requireNonNull(project, "project");
         Objects.requireNonNull(projectFile, "projectFile");
@@ -32,7 +33,7 @@ public final class ValidateProjectWorkspaceIntegrityUseCase {
 
         Path projectRoot = projectRoot(projectFile, messages);
         if (projectRoot != null) {
-            validateAssetFiles(project, projectRoot, messages);
+            validateAssetFiles(project, projectRoot, messages, authority);
         }
         validateMaterializedArtifacts(project, safeHydration, messages);
         validateStoryboardBindings(project, safeHydration, messages);
@@ -54,7 +55,9 @@ public final class ValidateProjectWorkspaceIntegrityUseCase {
         return root;
     }
 
-    private static void validateAssetFiles(DocuPodcastProject project, Path projectRoot, List<String> messages) {
+    private static void validateAssetFiles(DocuPodcastProject project, Path projectRoot,
+                                           List<String> messages,
+                                           ProjectAssetAuthorityPolicy authority) {
         for (ProjectAssetReference asset : project.assets().references()) {
             Path resolved = projectRoot.resolve(asset.relativePath()).normalize();
             if (!resolved.startsWith(projectRoot)) {
@@ -62,6 +65,7 @@ public final class ValidateProjectWorkspaceIntegrityUseCase {
                 continue;
             }
             if (!Files.exists(resolved)) {
+                if (authority.recoverable(asset.kind())) continue;
                 messages.add("Falta el archivo del asset " + asset.id() + " (" + asset.kind() + "): " + asset.relativePath() + ".");
                 continue;
             }
@@ -80,8 +84,13 @@ public final class ValidateProjectWorkspaceIntegrityUseCase {
         boolean declaresNarrationScript = project.assets().containsKind(ProjectAssetKind.NARRATION_SCRIPT);
         boolean declaresStoryboard = project.assets().containsKind(ProjectAssetKind.STORYBOARD_MANIFEST);
 
-        if ((kind == ProjectKind.DOCUMENT_ONLY || declaresImportedDocument) && hydration.importedDocument().isEmpty()) {
-            messages.add("El proyecto declara documento importado pero no se pudo rehidratar document/document.json.");
+        if ((kind == ProjectKind.DOCUMENT_ONLY || declaresImportedDocument) && hydration.documentSource().isEmpty()) {
+            String documentAssetPath = project.assets().byKind(ProjectAssetKind.IMPORTED_DOCUMENT).stream()
+                    .findFirst()
+                    .map(ProjectAssetReference::relativePath)
+                    .orElse("document/manifest.json");
+            messages.add("El proyecto declara documento importado pero no se pudo rehidratar "
+                    + documentAssetPath + ".");
         }
         if (requiresScript(kind) && hydration.narrationScript().isEmpty()) {
             messages.add("El proyecto declara lectura preparada interna pero no se pudo rehidratar script/narration-script.json.");
@@ -95,9 +104,6 @@ public final class ValidateProjectWorkspaceIntegrityUseCase {
         if (declaresStoryboard && hydration.storyboard().isEmpty()) {
             messages.add("Existe asset de storyboard, pero el manifiesto de storyboard no se cargó.");
         }
-        if (kind == ProjectKind.AUDIO_PROJECT && !hasAnyAudioAsset(project)) {
-            messages.add("El proyecto de audio no tiene clips, audio final ni manifest de audio registrados.");
-        }
     }
 
     private static boolean requiresScript(ProjectKind kind) {
@@ -109,12 +115,6 @@ public final class ValidateProjectWorkspaceIntegrityUseCase {
 
     private static boolean requiresStoryboard(ProjectKind kind) {
         return kind == ProjectKind.STORYBOARD || kind == ProjectKind.FULL_PROJECT;
-    }
-
-    private static boolean hasAnyAudioAsset(DocuPodcastProject project) {
-        return project.assets().containsKind(ProjectAssetKind.AUDIO_CLIP)
-                || project.assets().containsKind(ProjectAssetKind.AUDIO_FINAL)
-                || project.assets().containsKind(ProjectAssetKind.AUDIO_MANIFEST);
     }
 
     private static void validateStoryboardBindings(DocuPodcastProject project, ProjectWorkspaceHydration hydration, List<String> messages) {

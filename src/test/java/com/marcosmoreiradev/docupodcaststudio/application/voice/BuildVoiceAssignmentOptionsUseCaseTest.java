@@ -3,8 +3,12 @@ package com.marcosmoreiradev.docupodcaststudio.application.voice;
 import com.marcosmoreiradev.docupodcaststudio.application.audio.AudioEngineDescriptor;
 import com.marcosmoreiradev.docupodcaststudio.domain.voice.OfficialAdvancedVoicePresetCatalog;
 import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceLibrary;
+import com.marcosmoreiradev.docupodcaststudio.domain.voice.VoiceProfile;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -13,6 +17,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class BuildVoiceAssignmentOptionsUseCaseTest {
     private final BuildVoiceAssignmentOptionsUseCase useCase = new BuildVoiceAssignmentOptionsUseCase();
+
+    @TempDir
+    Path temp;
 
     @Test
     void currentVoiceStaysVisibleEvenWhenBlockedByEngine() {
@@ -46,7 +53,8 @@ final class BuildVoiceAssignmentOptionsUseCaseTest {
         VoiceAssignmentOption option = option(library(), piper(), "", advancedVoiceId);
 
         assertFalse(option.selectable());
-        assertTrue(option.status().contains("Voz local simple") || option.detail().contains("Voz IA avanzada"));
+        assertTrue(option.status().contains("sin referencias"));
+        assertTrue(option.detail().contains("Coqui XTTS") && option.detail().contains("Qwen3-TTS"));
     }
 
     @Test
@@ -57,6 +65,67 @@ final class BuildVoiceAssignmentOptionsUseCaseTest {
 
         assertTrue(option.selectable());
         assertEquals(VoiceReferenceAvailability.BUILT_IN, option.availability());
+    }
+
+    @Test
+    void qwenEnablesTheSameOfficialPresetWithoutChangingItsProviderIdentity() {
+        String advancedVoiceId = OfficialAdvancedVoicePresetCatalog.PRIMARY_PRESET_ID;
+
+        VoiceAssignmentOption option = option(library(), qwen(), "", advancedVoiceId);
+
+        assertTrue(option.selectable());
+        assertEquals(VoiceReferenceAvailability.BUILT_IN, option.availability());
+    }
+
+    @Test
+    void readinessContextKeepsMissingOfficialPresetVisibleButDisabled() {
+        String advancedVoiceId = OfficialAdvancedVoicePresetCatalog.PRIMARY_PRESET_ID;
+        VoiceLibrary library = library();
+
+        VoiceAssignmentOption option = useCase.build(library, xtts(), List.of(), "",
+                        readiness(temp.resolve("installation"), temp.resolve("runtime"), temp.resolve("project")))
+                .stream().filter(candidate -> candidate.voiceId().equals(advancedVoiceId))
+                .findFirst().orElseThrow();
+
+        assertFalse(option.selectable());
+        assertEquals(VoiceReferenceAvailability.MISSING_SAMPLE, option.availability());
+        assertTrue(option.detail().contains("Biblioteca de voces"));
+    }
+
+    @Test
+    void readinessContextEnablesOfficialPresetOnlyWhenNeutralFileResolves() throws Exception {
+        VoiceLibrary library = library();
+        String advancedVoiceId = OfficialAdvancedVoicePresetCatalog.PRIMARY_PRESET_ID;
+        Path installation = temp.resolve("installation");
+        var neutral = library.referenceSampleSetByVoiceId(advancedVoiceId).orElseThrow()
+                .neutralSample().orElseThrow();
+        Path file = installation.resolve(neutral.fileUri());
+        Files.createDirectories(file.getParent());
+        Files.write(file, new byte[] {1, 2, 3});
+
+        VoiceAssignmentOption option = useCase.build(library, xtts(), List.of(), "",
+                        readiness(installation, temp.resolve("runtime"), temp.resolve("project")))
+                .stream().filter(candidate -> candidate.voiceId().equals(advancedVoiceId))
+                .findFirst().orElseThrow();
+
+        assertTrue(option.selectable());
+        assertEquals(VoiceReferenceAvailability.BUILT_IN, option.availability());
+    }
+
+    @Test
+    void legacyAdvancedNarratorResolvesItsPackagedDefaultSpeaker() throws Exception {
+        Path installation = temp.resolve("installation");
+        Path speaker = installation.resolve("models/tts/xtts/speakers/voz-por-defecto.wav");
+        Files.createDirectories(speaker.getParent());
+        Files.write(speaker, new byte[] {4, 5, 6});
+
+        VoiceLibrary legacyLibrary = library().withVoice(VoiceProfile.ownVoicePlaceholder());
+        VoiceAssignmentOption option = useCase.build(legacyLibrary, xtts(), List.of(), "",
+                        readiness(installation, temp.resolve("runtime"), temp.resolve("project")))
+                .stream().filter(candidate -> candidate.voiceId().equals("VOC-OWN-PLACEHOLDER"))
+                .findFirst().orElseThrow();
+
+        assertTrue(option.selectable());
     }
 
     @Test
@@ -94,10 +163,27 @@ final class BuildVoiceAssignmentOptionsUseCaseTest {
     }
 
     private static AudioEngineDescriptor piper() {
-        return AudioEngineDescriptor.process("Voz local simple", true, "piper", "Configurado para prueba.");
+        return AudioEngineDescriptor.process("Voz local simple", true, "piper",
+                "Configurado para prueba.", java.util.Set.of(
+                        com.marcosmoreiradev.docupodcaststudio.media.api.EngineFeature.PACKAGED_VOICE));
     }
 
     private static AudioEngineDescriptor xtts() {
-        return AudioEngineDescriptor.process("Voz IA avanzada", true, "xtts", "Configurado para prueba.");
+        return AudioEngineDescriptor.process("Voz IA avanzada", true, "xtts",
+                "Configurado para prueba.", java.util.Set.of(
+                        com.marcosmoreiradev.docupodcaststudio.media.api.EngineFeature.REFERENCE_VOICE,
+                        com.marcosmoreiradev.docupodcaststudio.media.api.EngineFeature.EXPRESSIVE_STYLE));
+    }
+
+    private static AudioEngineDescriptor qwen() {
+        return AudioEngineDescriptor.process("Qwen3-TTS local · 1.7B Q8", true,
+                "qwen3-tts-local", "Configurado para prueba.", java.util.Set.of(
+                        com.marcosmoreiradev.docupodcaststudio.media.api.EngineFeature.REFERENCE_VOICE,
+                        com.marcosmoreiradev.docupodcaststudio.media.api.EngineFeature.EXPRESSIVE_STYLE));
+    }
+
+    private static VoiceAssignmentReadinessContext readiness(
+            Path installation, Path runtime, Path project) {
+        return new VoiceAssignmentReadinessContext(installation, runtime, project);
     }
 }

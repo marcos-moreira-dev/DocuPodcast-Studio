@@ -17,7 +17,8 @@ public record ProjectExperience(
         Set<AppCommandId> commands,
         Set<SideDockModuleId> sideDocks,
         Set<String> exports,
-        Set<CapabilityId> capabilities) {
+        Set<CapabilityId> capabilities,
+        Set<ProductRequirementId> requirements) {
     public ProjectExperience {
         mode = Objects.requireNonNull(mode, "mode");
         maturity = Objects.requireNonNullElse(maturity, ProductMaturity.STABLE);
@@ -28,5 +29,10 @@ public record ProjectExperience(
         sideDocks = sideDocks == null ? Set.of() : Set.copyOf(sideDocks);
         exports = exports == null ? Set.of() : Set.copyOf(exports);
         capabilities = capabilities == null ? Set.of() : Set.copyOf(capabilities);
+        requirements = requirements == null ? Set.of() : Set.copyOf(requirements);
+    }
+
+    public boolean requires(ProductRequirementId requirement) {
+        return requirement != null && requirements.contains(requirement);
     }
 }

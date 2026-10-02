@@ -30,6 +30,11 @@ public record DocumentBlock(
     }
 
     public boolean narratable() {
+        String decision = metadata.getOrDefault("narratability", "").strip();
+        if ("NON_NARRATABLE".equalsIgnoreCase(decision)
+                || "UNCERTAIN".equalsIgnoreCase(decision)) {
+            return false;
+        }
         return type.narratableByDefault() && !text.isBlank();
     }
 
@@ -65,6 +70,9 @@ public record DocumentBlock(
         if (manual) {
             next.put("manualOverride", "true");
             next.put("manualOverrideReason", reason == null || reason.isBlank() ? "user-action" : reason.strip());
+            next.put("narratability",
+                    newType.narratableByDefault() ? "NARRATABLE" : "NON_NARRATABLE");
+            next.put("narratabilitySource", "manual-override");
         }
         next.put("previousType", type.name());
         return new DocumentBlock(id, Objects.requireNonNull(newType, "newType"), text, originalStyle, next);

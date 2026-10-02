@@ -1,8 +1,12 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.document;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeDialogResponse;
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.StudioMessageDialog;
+
 import com.marcosmoreiradev.docupodcaststudio.ink.model.InkWorkspaceState;
 import com.marcosmoreiradev.docupodcaststudio.ink.model.InkWorkspaceStateSerializer;
 import com.marcosmoreiradev.docupodcaststudio.ink.DrawingProfile;
+import com.marcosmoreiradev.docupodcaststudio.ink.input.InkInputProvider;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.CollapsibleSection;
 import com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.InkCompositionProfile;
 import com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.InkCompositionResult;
@@ -23,7 +27,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.stage.Screen;
 import javafx.stage.Window;
 
-import javax.imageio.ImageIO;
+import com.marcosmoreiradev.docupodcaststudio.ink.canvas.InkImageFileStore;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -33,19 +37,19 @@ import java.util.Map;
 
 /** Guided documentary illustration editor for one Word paragraph. */
 public final class DocumentParagraphSketchDialog extends Dialog<DocumentParagraphSketchDialog.Result> {
-    private final ButtonType saveType = new ButtonType("Guardar ilustracion", ButtonBar.ButtonData.OK_DONE);
+    private final ButtonType saveType = NativeDialogResponse.button("Guardar ilustracion", ButtonBar.ButtonData.OK_DONE);
     private final InkCompositionWorkspace workspace;
     private boolean saved;
 
     public DocumentParagraphSketchDialog(Window owner, String paragraphText, Path existingState,
-                                         DrawingProfile drawingProfile) {
+                                         DrawingProfile drawingProfile, InkInputProvider inputProvider) {
         initOwner(owner);
         setTitle("Ilustrar parrafo");
         setResizable(true);
         getDialogPane().getButtonTypes().addAll(saveType, ButtonType.CANCEL);
 
         workspace = new InkCompositionWorkspace(
-                InkCompositionProfile.documentaryIllustration(drawingProfile), readState(existingState));
+                InkCompositionProfile.documentaryIllustration(drawingProfile), readState(existingState), inputProvider);
         Label reference = new Label(paragraphText == null ? "" : paragraphText);
         reference.setWrapText(true);
         reference.setMaxWidth(Double.MAX_VALUE);
@@ -123,11 +127,14 @@ public final class DocumentParagraphSketchDialog extends Dialog<DocumentParagrap
     }
 
     private void showError(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.initOwner(getOwner());
-        alert.setTitle("Ilustrar parrafo");
-        alert.setHeaderText("No se pudo guardar la ilustracion");
-        alert.setContentText(message == null ? "Error de guardado." : message);
+        Alert alert = NativeDialogResponse.alert(Alert.AlertType.ERROR);
+        StudioMessageDialog.configure(
+                alert,
+                getOwner(),
+                "Ilustrar párrafo",
+                "No se pudo guardar la ilustración",
+                message == null ? "Error de guardado." : message,
+                "");
         alert.showAndWait();
     }
 
@@ -147,9 +154,7 @@ public final class DocumentParagraphSketchDialog extends Dialog<DocumentParagrap
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) output.setRGB(x, y, reader.getArgb(x, y));
         }
-        if (!ImageIO.write(output, "png", target.toFile())) {
-            throw new IOException("No se pudo escribir el PNG de la ilustracion.");
-        }
+        InkImageFileStore.writePng(output, target);
     }
 
     public record Result(Path png, String inkStateJson, Map<String, Path> stagedSources) {

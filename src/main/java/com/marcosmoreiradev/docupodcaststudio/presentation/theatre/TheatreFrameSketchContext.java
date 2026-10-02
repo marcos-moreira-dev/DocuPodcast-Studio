@@ -1,5 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.theatre;
 
+import com.marcosmoreiradev.docupodcaststudio.application.storyboard.TheatreDrawingVaultItem;
 import java.util.List;
 
 /** Presentation context for editing a drawn storyboard frame for one narration intervention. */
@@ -14,7 +15,8 @@ public record TheatreFrameSketchContext(
         String activeVisualVariant,
         String cameraGuideUri,
         String cameraGuideLabel,
-        List<ObjectPreview> sceneObjects
+        List<ObjectPreview> sceneObjects,
+        List<TheatreDrawingVaultItem> drawingVault
 ) {
     public TheatreFrameSketchContext {
         segmentId = normalize(segmentId);
@@ -28,6 +30,15 @@ public record TheatreFrameSketchContext(
         cameraGuideUri = normalize(cameraGuideUri);
         cameraGuideLabel = normalize(cameraGuideLabel);
         sceneObjects = sceneObjects == null ? List.of() : List.copyOf(sceneObjects);
+        drawingVault = drawingVault == null ? List.of() : List.copyOf(drawingVault);
+    }
+
+    public TheatreFrameSketchContext(String segmentId, String interventionId, String title,
+                                     String interventionText, String officialImageUri, String drawnFrameUri,
+                                     String drawnFrameStateUri, String activeVisualVariant, String cameraGuideUri,
+                                     String cameraGuideLabel, List<ObjectPreview> sceneObjects) {
+        this(segmentId, interventionId, title, interventionText, officialImageUri, drawnFrameUri,
+                drawnFrameStateUri, activeVisualVariant, cameraGuideUri, cameraGuideLabel, sceneObjects, List.of());
     }
 
     private static String normalize(String value) {

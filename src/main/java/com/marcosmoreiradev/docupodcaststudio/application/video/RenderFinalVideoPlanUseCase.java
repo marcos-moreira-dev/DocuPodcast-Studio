@@ -64,12 +64,16 @@ public final class RenderFinalVideoPlanUseCase {
                 cancellationToken(cancel),
                 (stage, ratio, message) -> safeProgress.accept(toProductProgress(
                         stage, ratio, message, productPlan.frameCount())),
-                ExecutionPolicy.defaults(),
+                ExecutionPolicy.unbounded(),
                 ResourceLease.NONE,
                 GenerationArtifactStaging.NONE);
         try {
             VideoRenderResult result = mediaCapabilities.render(null,
-                    new VideoRenderRequest(timeline, request.targetMp4(), Map.of()), context);
+                    new VideoRenderRequest(timeline, request.targetMp4(),
+                            request.settings().selectedDeviceId().isBlank()
+                                    ? Map.of()
+                                    : Map.of("computeDeviceId",
+                                    request.settings().selectedDeviceId())), context);
             safeProgress.accept(VideoRenderProgress.completed(productPlan.frameCount(), result.videoFile().toString()));
             long bytes = java.nio.file.Files.size(result.videoFile());
             List<String> diagnostics = result.diagnostics().entrySet().stream()
@@ -84,11 +88,22 @@ public final class RenderFinalVideoPlanUseCase {
         }
     }
 
+
     private static VideoTimelinePlan toNeutralPlan(FinalVideoRenderRequest request) {
         Path projectRoot = request.projectDirectory();
-        List<VideoTimelineItem> items = request.plan().frames().stream()
-                .map(frame -> toNeutralItem(projectRoot, frame))
-                .toList();
+        int framesPerSecond = request.settings().framesPerSecond();
+        ArrayList<VideoTimelineItem> items = new ArrayList<>();
+        double cumulativeSeconds = 0.0;
+        long previousBoundaryFrames = 0L;
+        for (SimpleVideoFrame frame : request.plan().frames()) {
+            cumulativeSeconds += frame.frameDurationSeconds();
+            long boundaryFrames = Math.max(previousBoundaryFrames + 1L,
+                    Math.round(cumulativeSeconds * framesPerSecond));
+            double alignedDuration = (boundaryFrames - previousBoundaryFrames)
+                    / (double) framesPerSecond;
+            items.add(toNeutralItem(projectRoot, frame, alignedDuration));
+            previousBoundaryFrames = boundaryFrames;
+        }
         List<TimelineAudioTrack> overlays = request.audioOverlayPlan().inputs().stream()
                 .map(RenderFinalVideoPlanUseCase::toNeutralOverlay)
                 .toList();
@@ -98,7 +113,8 @@ public final class RenderFinalVideoPlanUseCase {
                 encodingPreference(settings), Map.of("source", "simple-video-plan"));
     }
 
-    private static VideoTimelineItem toNeutralItem(Path projectRoot, SimpleVideoFrame frame) {
+    private static VideoTimelineItem toNeutralItem(Path projectRoot, SimpleVideoFrame frame,
+                                                   double frameAlignedDuration) {
         ArrayList<TimelineVisualSource> visuals = new ArrayList<>();
         for (SimpleVideoFrame.VisualPart part : frame.visualParts()) {
             visuals.add(new TimelineVisualSource(
@@ -109,9 +125,12 @@ public final class RenderFinalVideoPlanUseCase {
         }
         Path narration = frame.silentVisual() || frame.audioRelativePath().isBlank()
                 ? null : projectRoot.resolve(frame.audioRelativePath()).normalize();
-        return new VideoTimelineItem(frame.id(), visuals, narration, frame.frameDurationSeconds(), Map.of(
+        double sourceDuration = frame.frameDurationSeconds();
+        return new VideoTimelineItem(frame.id(), visuals, narration, frameAlignedDuration, Map.of(
                 "segmentId", frame.segmentId(),
                 "imageAssetId", frame.imageAssetId(),
+                "sourceDurationSeconds", Double.toString(sourceDuration),
+                "frameAlignedDurationSeconds", Double.toString(frameAlignedDuration),
                 "substitute", Boolean.toString(!frame.imageAssigned())));
     }
 
@@ -122,9 +141,13 @@ public final class RenderFinalVideoPlanUseCase {
     }
 
     private static VideoEncodingPreference encodingPreference(SimpleVideoExportSettings settings) {
-        if (settings.encoderPolicy().hardwareAccelerated()) return VideoEncodingPreference.HARDWARE_PREFERRED;
-        return settings.encoderPolicy().name().contains("CPU")
-                ? VideoEncodingPreference.CPU : VideoEncodingPreference.AUTO;
+        return switch (settings.encoderPolicy()) {
+            case NVIDIA_NVENC -> VideoEncodingPreference.NVIDIA_NVENC;
+            case INTEL_QSV -> VideoEncodingPreference.INTEL_QSV;
+            case AMD_AMF -> VideoEncodingPreference.AMD_AMF;
+            case CPU_X264 -> VideoEncodingPreference.CPU;
+            case AUTO -> VideoEncodingPreference.AUTO;
+        };
     }
 
     private static CancellationToken cancellationToken(BooleanSupplier cancellationRequested) {
@@ -134,6 +157,8 @@ public final class RenderFinalVideoPlanUseCase {
     private static VideoRenderProgress toProductProgress(String stage, double ratio, String message, int total) {
         int completed = Math.max(0, Math.min(total, (int) Math.floor(ratio * total)));
         if ("COMPLETED".equalsIgnoreCase(stage)) return VideoRenderProgress.verifying(total, message);
+        if ("VERIFYING".equalsIgnoreCase(stage)) return VideoRenderProgress.verifying(total, message);
+        if ("ASSEMBLING".equalsIgnoreCase(stage)) return VideoRenderProgress.assembling(completed, total, message);
         if ("MIXING".equalsIgnoreCase(stage)) return VideoRenderProgress.mixing(total, message);
         return VideoRenderProgress.rendering(completed, total, message);
     }

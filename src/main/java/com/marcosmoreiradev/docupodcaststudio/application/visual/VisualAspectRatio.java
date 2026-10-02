@@ -33,22 +33,34 @@ public enum VisualAspectRatio {
         return promptText;
     }
 
+    public int widthRatio() {
+        return widthRatio;
+    }
+
+    public int heightRatio() {
+        return heightRatio;
+    }
+
     public int widthFor(ImageEnhancementOutputProfile profile) {
-        ImageEnhancementOutputProfile current = profile == null
-                ? ImageEnhancementOutputProfile.FHD_1080
-                : profile;
-        return heightRatio >= widthRatio
-                ? multipleOfEight(current.height())
-                : multipleOfEight((int) Math.round(current.height() * (widthRatio / (double) heightRatio)));
+        return workingDimensions(profile).width();
     }
 
     public int heightFor(ImageEnhancementOutputProfile profile) {
+        return workingDimensions(profile).height();
+    }
+
+    public VisualResolutionProfile.Dimensions deliveryDimensions(ImageEnhancementOutputProfile profile) {
         ImageEnhancementOutputProfile current = profile == null
                 ? ImageEnhancementOutputProfile.FHD_1080
                 : profile;
-        return widthRatio >= heightRatio
-                ? multipleOfEight(current.height())
-                : multipleOfEight((int) Math.round(current.height() * (heightRatio / (double) widthRatio)));
+        return current.visualResolutionProfile().deliveryDimensions(widthRatio, heightRatio);
+    }
+
+    public VisualResolutionProfile.Dimensions workingDimensions(ImageEnhancementOutputProfile profile) {
+        ImageEnhancementOutputProfile current = profile == null
+                ? ImageEnhancementOutputProfile.FHD_1080
+                : profile;
+        return current.visualResolutionProfile().workingDimensions(widthRatio, heightRatio);
     }
 
     public String workflowId() {
@@ -65,7 +77,4 @@ public enum VisualAspectRatio {
         return WIDE_16_9;
     }
 
-    private static int multipleOfEight(int value) {
-        return Math.max(8, Math.round(value / 8.0f) * 8);
-    }
 }

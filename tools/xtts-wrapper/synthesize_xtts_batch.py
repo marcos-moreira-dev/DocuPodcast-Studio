@@ -9,10 +9,12 @@ from pathlib import Path
 from typing import Any
 
 from synthesize_xtts import (
+    INFERENCE_PROFILE,
     configure_local_audio_loader,
     configure_local_torch_deserialization,
     resolve_device,
     resolve_model_root,
+    inference_options,
 )
 
 
@@ -102,6 +104,7 @@ def main() -> int:
     device = resolve_device(args.device)
     log(f"device={device}")
     log("cargando_modelo")
+    log(f"inference_profile={INFERENCE_PROFILE}")
     tts = TTS(model_path=str(model_root), config_path=str(config_path), progress_bar=False)
     if device:
         log(f"asignando_device={device}")
@@ -127,6 +130,7 @@ def main() -> int:
             file_path=str(output_path),
             speaker_wav=str(speaker_path),
             language=language,
+            **inference_options(),
         )
         if not output_path.is_file() or output_path.stat().st_size <= 44:
             raise SystemExit(f"No se genero WAV valido para {segment_id}: {output_path}")

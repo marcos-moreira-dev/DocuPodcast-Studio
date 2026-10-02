@@ -31,10 +31,31 @@ public final class TableNarrationTextBuilder {
                 if (value.isBlank()) {
                     continue;
                 }
-                out.append(' ').append(headerFor(table.headers(), column)).append(": ").append(value).append('.');
+                out.append(' ').append(headerFor(table.headers(), column)).append(": ").append(value);
+                appendTerminatorIfMissing(out, value);
             }
         }
         return out.toString().strip();
+    }
+
+    private static void appendTerminatorIfMissing(StringBuilder output, String value) {
+        int cursor = value == null ? -1 : value.length() - 1;
+        while (cursor >= 0 && (Character.isWhitespace(value.charAt(cursor))
+                || isClosingPunctuation(value.charAt(cursor)))) {
+            cursor--;
+        }
+        if (cursor < 0 || !isSentenceTerminator(value.charAt(cursor))) {
+            output.append('.');
+        }
+    }
+
+    private static boolean isSentenceTerminator(char value) {
+        return value == '.' || value == '?' || value == '!' || value == '…';
+    }
+
+    private static boolean isClosingPunctuation(char value) {
+        return value == '"' || value == '\'' || value == ')' || value == ']'
+                || value == '»' || value == '”';
     }
 
     public String summaryText(DocumentBlock block) {
@@ -43,8 +64,10 @@ public final class TableNarrationTextBuilder {
         }
         String rows = firstPresent(block.metadata(), "table.rowCount", "rows");
         String columns = firstPresent(block.metadata(), "table.columnCount", "columns");
+        String kind = block.metadata().getOrDefault("table.kind", "").strip();
         if (!rows.isBlank() || !columns.isBlank()) {
-            return "Tabla del documento fuente de " + count(rows) + " filas y " + count(columns) + " columnas.";
+            return tableLabel(kind) + " del documento fuente de "
+                    + count(rows) + " filas y " + count(columns) + " columnas.";
         }
         String text = block.text() == null ? "" : block.text().strip();
         return text.startsWith("Tabla") ? text : "Tabla detectada: " + text;
@@ -146,6 +169,18 @@ public final class TableNarrationTextBuilder {
 
     private static String count(String value) {
         return value == null || value.isBlank() ? "?" : value.strip();
+    }
+
+    private static String tableLabel(String kind) {
+        return switch (kind == null ? "" : kind) {
+            case "PROSE" -> "Tabla de texto";
+            case "KEY_VALUE" -> "Tabla de conceptos y valores";
+            case "MIXED" -> "Tabla mixta";
+            case "NUMERIC" -> "Tabla numérica";
+            case "MATRIX" -> "Matriz matemática";
+            case "MATH" -> "Tabla con expresiones matemáticas";
+            default -> "Tabla";
+        };
     }
 
     private record TableData(List<String> headers, List<List<String>> rows) {

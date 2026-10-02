@@ -56,6 +56,11 @@ public final class WorkspaceViewRegistry {
         return catalog.descriptor(kind);
     }
 
+    public boolean isCached(WorkspaceKind kind) {
+        WorkspaceKind resolved = surfacePolicy.restoreStartupWorkspace(catalog.descriptor(kind).kind());
+        return cache.containsKey(resolved);
+    }
+
     public boolean hasRegisteredFactory(WorkspaceKind kind) {
         return factories.containsKey(kind);
     }

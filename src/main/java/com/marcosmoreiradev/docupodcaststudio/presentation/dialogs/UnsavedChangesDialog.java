@@ -1,6 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.dialogs;
 
-import com.marcosmoreiradev.docupodcaststudio.presentation.notification.DialogStyler;
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeDialogResponse;
+
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
@@ -17,14 +18,13 @@ public final class UnsavedChangesDialog {
     }
 
     public Decision show(Window owner) {
-        ButtonType save = new ButtonType("Guardar", ButtonBar.ButtonData.YES);
-        ButtonType discard = new ButtonType("Descartar", ButtonBar.ButtonData.NO);
-        ButtonType cancel = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION,
+        ButtonType save = NativeDialogResponse.button("Guardar", ButtonBar.ButtonData.YES);
+        ButtonType discard = NativeDialogResponse.button("Descartar", ButtonBar.ButtonData.NO);
+        ButtonType cancel = NativeDialogResponse.button("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
+        Alert alert = NativeDecisionDialog.create(owner, Alert.AlertType.CONFIRMATION,
                 "El proyecto activo tiene cambios sin guardar.", save, discard, cancel);
         alert.setTitle("Cambios sin guardar");
         alert.setHeaderText("¿Qué quieres hacer antes de continuar?");
-        DialogStyler.apply(alert, owner);
         Optional<ButtonType> result = alert.showAndWait();
         if (result.isEmpty() || result.get() == cancel) {
             return Decision.CANCEL;

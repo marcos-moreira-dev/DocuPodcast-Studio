@@ -13,8 +13,20 @@ public record VoiceReferenceSample(
         VoiceFileOwnership ownership,
         long durationMillis,
         Instant createdAt,
-        String notes
+        String notes,
+        String referenceTranscript
 ) {
+    /** Compatibility constructor for projects and callers created before transcript support. */
+    public VoiceReferenceSample(String id, String voiceProfileId,
+                                VoiceReferenceTone tone, String fileUri,
+                                VoiceSampleOrigin origin,
+                                VoiceFileOwnership ownership,
+                                long durationMillis, Instant createdAt,
+                                String notes) {
+        this(id, voiceProfileId, tone, fileUri, origin, ownership,
+                durationMillis, createdAt, notes, "");
+    }
+
     public VoiceReferenceSample {
         id = token(id, "id");
         voiceProfileId = token(voiceProfileId, "voiceProfileId");
@@ -25,6 +37,7 @@ public record VoiceReferenceSample(
         durationMillis = Math.max(0, durationMillis);
         createdAt = createdAt == null ? Instant.now() : createdAt;
         notes = normalize(notes);
+        referenceTranscript = normalize(referenceTranscript);
     }
 
     public boolean isNeutral() {

@@ -6,22 +6,16 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class VoiceEngineUsabilityPolicyTest {
     @Test
-    void prioritizesXttsAndKeepsPiperAsFallback() {
-        var primary = VoiceEngineUsabilityPolicy.defaultEngine();
-        assertEquals("tts-xtts", primary.id());
-        assertTrue(primary.primary());
-        assertTrue(primary.requiresModel());
-        assertTrue(primary.supports(VoiceEngineControl.SPEED));
-        assertTrue(primary.supports(VoiceEngineControl.REFERENCE_VOICE));
-        assertTrue(primary.supports(VoiceEngineControl.EMOTION_INTENT));
-        assertTrue(primary.supportsExpressiveReferenceVoice());
+    void preservesPiperAsHistoricalDefaultWithoutBindingAdvancedVoicesToXtts() {
+        var initial = VoiceEngineUsabilityPolicy.defaultEngine();
+        assertEquals("tts-piper", initial.id());
+        assertTrue(initial.requiresModel());
+        assertTrue(initial.supports(VoiceEngineControl.SPEED));
+        assertFalse(initial.supportsExpressiveReferenceVoice());
 
-        var fallback = VoiceEngineUsabilityPolicy.piperLightweight();
-        assertEquals("tts-piper", fallback.id());
-        assertFalse(fallback.primary());
-        assertTrue(fallback.requiresModel());
-        assertTrue(fallback.supports(VoiceEngineControl.SPEED));
-        assertFalse(fallback.supportsExpressiveReferenceVoice());
+        var advancedCompatibility = VoiceEngineUsabilityPolicy.xttsHighQuality();
+        assertTrue(advancedCompatibility.supports(VoiceEngineControl.REFERENCE_VOICE));
+        assertTrue(advancedCompatibility.supports(VoiceEngineControl.EMOTION_INTENT));
     }
 
     @Test

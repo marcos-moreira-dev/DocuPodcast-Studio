@@ -16,6 +16,7 @@ import java.util.List;
  * committed separately.
  */
 public final class InkRealtimeStrokeEngine {
+    private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger(InkRealtimeStrokeEngine.class);
     public static final boolean INK_PERF_DIAGNOSTICS =
             Boolean.getBoolean("docupodcast.ink.perfDiagnostics");
     public static final boolean FAST_INK_DEBUG =
@@ -211,9 +212,13 @@ public final class InkRealtimeStrokeEngine {
 
     private void previewSegment(double x, double y, double targetWidth) {
         width = targetWidth;
-        sink.previewLine(lastX, lastY, x, y, color, width, erase);
-        lastX = x;
-        lastY = y;
+        if (erase) {
+            sink.previewLine(lastX, lastY, x, y, color, width, true);
+            lastX = x;
+            lastY = y;
+        } else {
+            previewStep(x, y);
+        }
         lastWidth = targetWidth;
     }
 
@@ -237,6 +242,9 @@ public final class InkRealtimeStrokeEngine {
             return;
         }
         if (!activePoints.isEmpty()) {
+            if (hasMidpoint && !erase) {
+                sink.previewLine(lastMidX, lastMidY, lastX, lastY, color, lastWidth, false);
+            }
             sink.commitStroke(new CommittedStroke(erase, color, activeMaxWidth, pressure, List.copyOf(activePoints)));
         }
         active = false;
@@ -253,12 +261,9 @@ public final class InkRealtimeStrokeEngine {
             return;
         }
         diagnosticsLastLog = now;
-        System.out.println("[InkRealtime] pointsPerSecond=" + diagnosticsQueued
-                + " pending=" + pendingPoints.size()
-                + " peak=" + diagnosticsPeak
-                + " dropped=" + diagnosticsDropped
-                + " drained=" + drained
-                + " frameMs=" + String.format(java.util.Locale.ROOT, "%.2f", frameNanos / 1_000_000.0));
+        LOGGER.debug("Ink realtime pointsPerSecond={} pending={} peak={} dropped={} drained={} frameMs={}",
+                diagnosticsQueued, pendingPoints.size(), diagnosticsPeak, diagnosticsDropped, drained,
+                String.format(java.util.Locale.ROOT, "%.2f", frameNanos / 1_000_000.0));
         diagnosticsQueued = 0;
         diagnosticsDropped = 0;
         diagnosticsPeak = pendingPoints.size();

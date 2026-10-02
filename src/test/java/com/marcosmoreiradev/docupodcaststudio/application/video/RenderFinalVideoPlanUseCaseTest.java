@@ -60,8 +60,10 @@ final class RenderFinalVideoPlanUseCaseTest {
         assertEquals(720, plan.height());
         assertEquals(24, plan.framesPerSecond());
         assertEquals(VideoEncodingPreference.CPU, plan.encodingPreference());
+        assertFalse(engine.lastContext.policy().hasTimeout());
         assertEquals(projectDirectory.resolve("media/images/frame.png"), plan.items().getFirst().visuals().getFirst().file());
         assertEquals(projectDirectory.resolve("media/audio/narration.wav"), plan.items().getFirst().narrationAudio());
+        assertTrue(progress.stream().anyMatch(item -> item.stage() == VideoRenderStage.ASSEMBLING_FINAL));
         assertTrue(progress.stream().anyMatch(item -> item.stage() == VideoRenderStage.COMPLETED));
     }
 
@@ -98,6 +100,17 @@ final class RenderFinalVideoPlanUseCaseTest {
     }
 
     @Test
+    void preservesQsvAmfAndNvencExactlyToTheNeutralAdapterContract()
+            throws Exception {
+        assertEncoder(VideoEncoderPolicy.NVIDIA_NVENC,
+                VideoEncodingPreference.NVIDIA_NVENC, "nvenc.mp4");
+        assertEncoder(VideoEncoderPolicy.INTEL_QSV,
+                VideoEncodingPreference.INTEL_QSV, "qsv.mp4");
+        assertEncoder(VideoEncoderPolicy.AMD_AMF,
+                VideoEncodingPreference.AMD_AMF, "amf.mp4");
+    }
+
+    @Test
     void cancellationReleasesSharedResourcesAndReportsCancelled() {
         ArrayList<VideoRenderProgress> progress = new ArrayList<>();
         IOException failure = assertThrows(IOException.class, () -> renderer.render(
@@ -115,6 +128,23 @@ final class RenderFinalVideoPlanUseCaseTest {
                 projectDirectory, target, settings(), tempDir, null, overlays);
     }
 
+    private void assertEncoder(VideoEncoderPolicy policy,
+                               VideoEncodingPreference expected,
+                               String output) throws Exception {
+        FinalVideoRenderRequest base = request(tempDir.resolve(output),
+                VideoAudioOverlayPlan.emptyPlan());
+        SimpleVideoExportSettings settings = new SimpleVideoExportSettings(
+                SimpleVideoResolutionPreset.HD_720, 24, 0.0,
+                true, true, ComputeDevicePolicy.PREFER_GPU, policy);
+        renderer.render(new FinalVideoRenderRequest(base.plan(),
+                base.projectDirectory(), base.targetMp4(), settings,
+                base.applicationRoot(), base.configuredFfmpeg(),
+                base.audioOverlayPlan()));
+        assertEquals(expected,
+                engine.lastRequest.effectivePlan().encodingPreference());
+        assertEquals(policy.ffmpegEncoder(), expected.exactKind().ffmpegCodec());
+    }
+
     private static SimpleVideoExportSettings settings() {
         return new SimpleVideoExportSettings(SimpleVideoResolutionPreset.HD_720, 24, 0.0, true, true,
                 ComputeDevicePolicy.CPU_ONLY, VideoEncoderPolicy.CPU_X264);
@@ -123,6 +153,7 @@ final class RenderFinalVideoPlanUseCaseTest {
     private static final class CapturingRenderEngine implements VideoRenderEngine {
         private static final EngineId ID = new EngineId("fake-render");
         private VideoRenderRequest lastRequest;
+        private ExecutionContext lastContext;
 
         @Override public EngineDescriptor descriptor() {
             return new EngineDescriptor(ID, CapabilityId.VIDEO_RENDERING, "Fake render", "1", "test", Set.of(), true);
@@ -140,9 +171,11 @@ final class RenderFinalVideoPlanUseCaseTest {
                 throws IOException, InterruptedException {
             context.cancellation().throwIfCancellationRequested();
             lastRequest = request;
+            lastContext = context;
             Files.createDirectories(request.outputFile().toAbsolutePath().normalize().getParent());
             Files.write(request.outputFile(), new byte[]{1, 2, 3});
             context.progress().report("RENDERING", 0.5, "rendering");
+            context.progress().report("ASSEMBLING", 1.0, "assembling");
             context.progress().report("COMPLETED", 1.0, "done");
             return new VideoRenderResult(request.outputFile(), request.effectivePlan().durationSeconds(), Map.of());
         }

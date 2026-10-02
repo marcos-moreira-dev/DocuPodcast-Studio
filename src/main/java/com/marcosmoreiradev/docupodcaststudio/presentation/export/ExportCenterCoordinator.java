@@ -27,6 +27,8 @@ import java.util.Optional;
 
 /** Builds the central creative-export surface from application readiness. */
 public final class ExportCenterCoordinator {
+    private static final Map<ExportableArtifactKind, ExportExecutionRoute> EXECUTION_ROUTES =
+            executionRoutesByTarget();
     private final ProjectExportTargetCatalog targetCatalog;
 
     public ExportCenterCoordinator() {
@@ -156,6 +158,7 @@ public final class ExportCenterCoordinator {
                 base.readinessLabel(),
                 base.detail(),
                 base.executable(),
+                base.preparable(),
                 processSummary(related));
     }
 
@@ -177,6 +180,7 @@ public final class ExportCenterCoordinator {
 
     private static ExportTargetPresentation targetFor(ExportableArtifactKind kind, ExportReadinessItem item) {
         boolean executable = item.exportable() || audioOnlyRemediable(item);
+        boolean preparable = executable || preparationCanResolve(kind, item);
         return new ExportTargetPresentation(
                 commandFor(kind),
                 titleFor(kind),
@@ -184,19 +188,73 @@ public final class ExportCenterCoordinator {
                 targetHintFor(kind, item),
                 readinessLabel(item),
                 detailFor(item, executable),
-                executable);
+                executable,
+                preparable);
+    }
+
+    private static boolean preparationCanResolve(ExportableArtifactKind kind, ExportReadinessItem item) {
+        if (kind != ExportableArtifactKind.PODCAST_WAV
+                && kind != ExportableArtifactKind.DOCUMENT_TEXT_AUDIO_VIDEO) {
+            return false;
+        }
+        return item.missingRequirements().stream().noneMatch(ExportCenterCoordinator::hardPreparationBlocker);
+    }
+
+    private static boolean hardPreparationBlocker(String value) {
+        String text = value == null ? "" : value.toLowerCase(java.util.Locale.ROOT);
+        return text.contains("guarda el proyecto")
+                || text.contains("fuente documental")
+                || text.contains("archivo de proyecto");
     }
 
     private static AppCommandId commandFor(ExportableArtifactKind kind) {
-        return switch (kind) {
-            case PODCAST_WAV -> AppCommandId.EXPORT_PODCAST_WAV;
-            case DOCUMENT_TEXT_AUDIO_VIDEO -> AppCommandId.EXPORT_DOCUMENT_TEXT_AUDIO_VIDEO;
-            case FINAL_VIDEO_MP4 -> AppCommandId.EXPORT_SIMPLE_VIDEO_PACKAGE;
-            case THEATRE_WORK_VIDEO -> AppCommandId.EXPORT_THEATRE_WORK;
-            case THEATRE_SPATIAL_MAP_VIDEO -> AppCommandId.EXPORT_THEATRE_SPATIAL_VIEW;
-            case THEATRE_PORTION_VIDEO -> AppCommandId.EXPORT_THEATRE_PORTION;
-            default -> throw new IllegalArgumentException("Unsupported creative export target: " + kind);
-        };
+        ExportExecutionRoute route = EXECUTION_ROUTES.get(kind);
+        if (route == null) {
+            throw new IllegalArgumentException("Unsupported creative export target: " + kind);
+        }
+        return route.command();
+    }
+
+    public static List<ExportExecutionRoute> executionRoutes() {
+        return List.copyOf(EXECUTION_ROUTES.values());
+    }
+
+    public static Optional<ExportExecutionRoute> routeFor(AppCommandId command) {
+        if (command == null) return Optional.empty();
+        return EXECUTION_ROUTES.values().stream()
+                .filter(route -> route.command() == command)
+                .findFirst();
+    }
+
+    private static Map<ExportableArtifactKind, ExportExecutionRoute> executionRoutesByTarget() {
+        EnumMap<ExportableArtifactKind, ExportExecutionRoute> routes =
+                new EnumMap<>(ExportableArtifactKind.class);
+        addRoute(routes, ExportableArtifactKind.PODCAST_WAV, AppCommandId.EXPORT_PODCAST_WAV,
+                ExportControllerOperation.PODCAST_AUDIO, ".wav");
+        addRoute(routes, ExportableArtifactKind.DOCUMENT_TEXT_AUDIO_VIDEO,
+                AppCommandId.EXPORT_DOCUMENT_TEXT_AUDIO_VIDEO,
+                ExportControllerOperation.DOCUMENT_STUDY_VIDEO, ".mp4");
+        addRoute(routes, ExportableArtifactKind.FINAL_VIDEO_MP4,
+                AppCommandId.EXPORT_SIMPLE_VIDEO_PACKAGE,
+                ExportControllerOperation.NARRATIVE_VIDEO, ".mp4");
+        addRoute(routes, ExportableArtifactKind.THEATRE_WORK_VIDEO,
+                AppCommandId.EXPORT_THEATRE_WORK,
+                ExportControllerOperation.THEATRE_WORK, ".mp4");
+        addRoute(routes, ExportableArtifactKind.THEATRE_SPATIAL_MAP_VIDEO,
+                AppCommandId.EXPORT_THEATRE_SPATIAL_VIEW,
+                ExportControllerOperation.THEATRE_SPATIAL_MAP, ".mp4");
+        addRoute(routes, ExportableArtifactKind.THEATRE_PORTION_VIDEO,
+                AppCommandId.EXPORT_THEATRE_PORTION,
+                ExportControllerOperation.THEATRE_PORTION, ".mp4");
+        return Map.copyOf(routes);
+    }
+
+    private static void addRoute(Map<ExportableArtifactKind, ExportExecutionRoute> routes,
+                                 ExportableArtifactKind target,
+                                 AppCommandId command,
+                                 ExportControllerOperation operation,
+                                 String extension) {
+        routes.put(target, new ExportExecutionRoute(target, command, operation, extension));
     }
 
     private static String titleFor(ExportableArtifactKind kind) {

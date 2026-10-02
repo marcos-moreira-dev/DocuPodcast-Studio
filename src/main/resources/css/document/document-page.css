@@ -184,6 +184,11 @@
     -fx-underline: false;
 }
 
+.document-theatre-speaker-prefix {
+    -fx-font-weight: 800;
+    -fx-fill: #312e81;
+}
+
 .document-sentence:hover {
     -fx-fill: #0f4c81;
     -fx-underline: true;
@@ -299,6 +304,7 @@
 }
 
 .document-block-active-reading .document-sentence,
+.document-block-active-reading .document-theatre-speaker-prefix,
 .document-sentence-selected {
     -fx-underline: true;
     -fx-fill: -docu-text-strong;

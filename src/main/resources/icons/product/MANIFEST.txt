@@ -1,0 +1,29 @@
+DocuPodcast Studio — iconos aprobados
+Total: 25 PNG
+Todos los PNG incluidos conservan transparencia real (canal alfa).
+
+source-document.png
+project-new.png
+project-open.png
+project-save.png
+settings.png
+guide.png
+reading-prepare.png
+audio-generate.png
+audio-cancel.png
+home.png
+playbar-dock.png
+theatre-structure.png
+theatre-grammar-import.png
+theatre-grammar-template.png
+theatre-frame-studio.png
+example-project.png
+document-fragment.png
+document-index-preferences.png
+document-audio.png
+documentary-video-content.png
+theatre-media-layers.png
+theatre-characters.png
+theatre-text-map.png
+theatre-spatial-actions.png
+theatre-objects.png

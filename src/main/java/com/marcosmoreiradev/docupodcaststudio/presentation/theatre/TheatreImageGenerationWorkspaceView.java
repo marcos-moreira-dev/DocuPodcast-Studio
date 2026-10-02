@@ -1,17 +1,33 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.theatre;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeSourceChooser;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeDialogResponse;
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.StudioMessageDialog;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioNavigationControls;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFeedbackControls;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioCollectionControls;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
+
 import com.marcosmoreiradev.docupodcaststudio.application.image.ImageAspectStrategy;
 import com.marcosmoreiradev.docupodcaststudio.application.image.ImageEnhancementOutputProfile;
-import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.ImageEngineReadinessReport;
+import com.marcosmoreiradev.docupodcaststudio.application.compatibility.media.LegacyEnginePresetMapper;
+import com.marcosmoreiradev.docupodcaststudio.application.media.administration.RunImageEngineSmokeUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.media.administration.RunImageSuperResolutionUseCase;
+import com.marcosmoreiradev.docupodcaststudio.application.media.administration.RunImageRefinementUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.ImageModelPackageProfile;
-import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.ImageEngineSmokeRequest;
-import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.ImageEngineSmokeReport;
-import com.marcosmoreiradev.docupodcaststudio.application.modelsetup.ImageEngineSmokeImageStore;
-import com.marcosmoreiradev.docupodcaststudio.application.runtime.RuntimePathResolver;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.ImageGenerationMemoryProfile;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.ImageGenerationSettings;
+import com.marcosmoreiradev.docupodcaststudio.application.settings.ImageSuperResolutionSettings;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.OperationalSettings;
-import com.marcosmoreiradev.docupodcaststudio.application.theatre.ComfyUiConnectionSettings;
+import com.marcosmoreiradev.docupodcaststudio.application.settings.SelectedMediaEngines;
+import com.marcosmoreiradev.docupodcaststudio.application.theatre.ImageGenerationWorkspaceSettings;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.FrameGenerationMode;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreContextExportEstimate;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreContextExportScope;
@@ -30,12 +46,15 @@ import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreImageGe
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreIntermediateFrameBatchPlanner;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatrePrimaryVisualReference;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.DocuPodcastProject;
+import com.marcosmoreiradev.docupodcaststudio.domain.project.ProjectVisualProcessingSettings;
 import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreProjectLayer;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionButtonFactory;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.AppIcon;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ImageFullscreenViewer;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.SemanticActionIcons;
 import com.marcosmoreiradev.docupodcaststudio.presentation.settings.SettingsDialog;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.DocuPodcastShellViewModel;
+import com.marcosmoreiradev.docupodcaststudio.media.api.*;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
@@ -54,6 +73,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.ContextMenu;
@@ -125,23 +145,34 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
     private final TheatreImageGenerationJobManifestStore jobManifestStore = new TheatreImageGenerationJobManifestStore();
     private final StringProperty selectedIntervention = new SimpleStringProperty("");
     private final ObjectProperty<Path> frameOutputDirectory = new SimpleObjectProperty<>();
-    private final ComboBox<TheatreImageGenerationPreset> presetSelector = new ComboBox<>();
-    private final ComboBox<FrameGenerationMode> frameModeSelector = new ComboBox<>();
-    private final ComboBox<ImageEnhancementOutputProfile> outputProfileSelector = new ComboBox<>();
-    private final ComboBox<TheatreImageAspectRatio> aspectRatioSelector = new ComboBox<>();
-    private final ComboBox<ImageGenerationMemoryProfile> memoryProfileSelector = new ComboBox<>();
-    private final TextArea promptEditor = new TextArea();
-    private final TextArea smokePromptEditor = new TextArea();
-    private final Spinner<Integer> smokeStepsSpinner = new Spinner<>();
-    private final ListView<TheatreImageGenerationUnit> queueList = new ListView<>(units);
-    private final ListView<TheatreImageContextAsset> contextAssetList = new ListView<>(contextAssets);
-    private final ListView<TheatreGeneratedImageCandidate> imageCandidateList = new ListView<>(imageCandidates);
-    private final ListView<TheatreGeneratedFrameCandidate> frameCandidateList = new ListView<>(frameCandidates);
-    private final ListView<TheatreImageGenerationJob> jobList = new ListView<>(jobs);
+    private final ComboBox<TheatreImageGenerationPreset> presetSelector = StudioFormControls.comboBox();
+    private final ComboBox<FrameGenerationMode> frameModeSelector = StudioFormControls.comboBox();
+    private final ComboBox<ImageEnhancementOutputProfile> outputProfileSelector = StudioFormControls.comboBox();
+    private final ComboBox<TheatreImageAspectRatio> aspectRatioSelector = StudioFormControls.comboBox();
+    private final ComboBox<ImageGenerationMemoryProfile> memoryProfileSelector = StudioFormControls.comboBox();
+    private final TextArea promptEditor = StudioFormControls.textArea();
+    private final TextArea smokePromptEditor = StudioFormControls.textArea();
+    private final Spinner<Integer> smokeStepsSpinner = StudioFormControls.spinner();
+    private final CheckBox upscaleEnabled = StudioFormControls.checkBox("Reescalar");
+    private final ComboBox<ImageEnhancementOutputProfile> upscaleTargetSelector = StudioFormControls.comboBox();
+    private final Label upscaleModelStatus = new Label();
+    private final CheckBox refinementEnabled =
+            StudioFormControls.checkBox("Mejorar imagen a partir de composición previa");
+    private final ComboBox<String> refinementPreset = StudioFormControls.comboBox();
+    private final Label importedUpscaleSourceLabel = new Label("Sin imagen local seleccionada.");
+    private final Button upscaleImportedButton =
+            ActionButtonFactory.primary("Reescalar imagen seleccionada", this::upscaleImportedImage);
+    private Path importedUpscaleSource;
+    private boolean importedUpscaleMode;
+    private final ListView<TheatreImageGenerationUnit> queueList = StudioCollectionControls.listView(units);
+    private final ListView<TheatreImageContextAsset> contextAssetList = StudioCollectionControls.listView(contextAssets);
+    private final ListView<TheatreGeneratedImageCandidate> imageCandidateList = StudioCollectionControls.listView(imageCandidates);
+    private final ListView<TheatreGeneratedFrameCandidate> frameCandidateList = StudioCollectionControls.listView(frameCandidates);
+    private final ListView<TheatreImageGenerationJob> jobList = StudioCollectionControls.listView(jobs);
     private final ImageView generatedPreviewImage = new ImageView();
     private final Label generatedPreviewTitle = new Label("Selecciona un candidato o frame.");
     private final Label generatedPreviewElapsed = new Label();
-    private final TextField generatedPreviewPath = new TextField("El visor mostrara el PNG asociado al elemento seleccionado.");
+    private final TextField generatedPreviewPath = StudioFormControls.textField("El visor mostrara el PNG asociado al elemento seleccionado.");
     private final Label generatedPreviewPlaceholder = new Label("Sin frame seleccionado");
     private final StackPane generatedPreviewFrame = new StackPane(generatedPreviewPlaceholder, generatedPreviewImage);
     private final ImageView engineResultImage = new ImageView();
@@ -150,7 +181,7 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
     private final Label engineResultPlaceholder = new Label("El PNG de prueba aparecera aqui.");
     private final StackPane engineResultFrame = new StackPane(engineResultPlaceholder, engineResultImage);
     private final Label engineResultPath = new Label("Sin PNG generado.");
-    private final TextArea engineResultDiagnostic = new TextArea();
+    private final TextArea engineResultDiagnostic = StudioFormControls.textArea();
     private final Button engineResultFullscreen = ActionButtonFactory.iconOnly(
             AppIcon.FULLSCREEN,
             "Pantalla completa",
@@ -159,9 +190,9 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
             "ui-action-button-secondary");
     private final Button engineResultDownload = ActionButtonFactory.secondary("Descargar imagen", this::downloadEngineResultImage);
     private final Button engineResultSettings = ActionButtonFactory.secondary("Abrir Configuracion", this::openEngineSettings);
-    private final TextArea contextPreview = new TextArea();
+    private final TextArea contextPreview = StudioFormControls.textArea();
     private final HBox selectedFrameCarousel = new HBox(12);
-    private final ScrollPane selectedFrameCarouselScroll = new ScrollPane(selectedFrameCarousel);
+    private final ScrollPane selectedFrameCarouselScroll = StudioViewportControls.scrollPane(selectedFrameCarousel);
     private final Label status = new Label("Motor local pendiente de verificar.");
     private final Label frameEstimate = new Label("Elige alcance y carpeta para estimar frames.");
     private final Label outputFolderLabel = new Label("Sin carpeta seleccionada.");
@@ -169,7 +200,7 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
             "Generar frames intermedios",
             "Analiza la obra y genera los frames intermedios posibles con las imagenes principales asignadas.",
             this::toggleIntermediateFrameGeneration);
-    private final ProgressBar frameProgress = new ProgressBar(0);
+    private final ProgressBar frameProgress = StudioFeedbackControls.progressBar(0);
     private final Map<String, String> promptDrafts = new LinkedHashMap<>();
     private final TheatreAiWorkspaceShell shell;
     private final TheatreInterventionNavigator interventionNavigator;
@@ -268,6 +299,10 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
         frameModeSelector.setValue(FrameGenerationMode.SINGLE);
         outputProfileSelector.getItems().setAll(ImageEnhancementOutputProfile.values());
         outputProfileSelector.setValue(ImageEnhancementOutputProfile.FHD_1080);
+        outputProfileSelector.valueProperty().addListener((obs, oldValue, newValue) -> {
+            importedUpscaleMode = false;
+            refreshUpscaleTargets();
+        });
         outputProfileSelector.setCellFactory(list -> new ListCell<>() {
             @Override protected void updateItem(ImageEnhancementOutputProfile item, boolean empty) {
                 super.updateItem(item, empty);
@@ -282,6 +317,7 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
         });
         aspectRatioSelector.getItems().setAll(TheatreImageAspectRatio.values());
         aspectRatioSelector.setValue(TheatreImageAspectRatio.WIDE_16_9);
+        aspectRatioSelector.valueProperty().addListener((obs, oldValue, newValue) -> refreshUpscaleTargets());
         aspectRatioSelector.setCellFactory(list -> new ListCell<>() {
             @Override protected void updateItem(TheatreImageAspectRatio item, boolean empty) {
                 super.updateItem(item, empty);
@@ -297,6 +333,26 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
         smokeStepsSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(4, 80, currentPreset().steps(), 1));
         smokeStepsSpinner.setEditable(true);
         smokeStepsSpinner.setPrefWidth(120);
+        upscaleTargetSelector.setConverter(new javafx.util.StringConverter<>() {
+            @Override public String toString(ImageEnhancementOutputProfile profile) {
+                return profile == null ? "" : outputProfileLabel(profile);
+            }
+            @Override public ImageEnhancementOutputProfile fromString(String value) {
+                return upscaleTargetSelector.getValue();
+            }
+        });
+        upscaleEnabled.setAccessibleText("Reescalar el PNG generado con Real-ESRGAN");
+        upscaleEnabled.selectedProperty().addListener((obs, oldValue, selected) -> refreshUpscaleTargets());
+        refinementEnabled.setAccessibleText(
+                "Mejorar con ControlNet Tile la imagen producida por Real-ESRGAN");
+        refinementEnabled.selectedProperty().addListener((obs, oldValue, selected) ->
+                refinementPreset.setDisable(!selected || refinementEnabled.isDisabled()));
+        refinementPreset.getItems().setAll("Conservadora", "Equilibrada");
+        refinementPreset.setValue("Conservadora");
+        upscaleModelStatus.setWrapText(true);
+        importedUpscaleSourceLabel.setWrapText(true);
+        upscaleImportedButton.setDisable(true);
+        applyVisualProcessingDefaults();
         smokePromptEditor.setPromptText("Escribe aqui la descripcion de la imagen para probar el motor.");
         smokePromptEditor.setPrefRowCount(4);
         smokePromptEditor.setWrapText(true);
@@ -495,14 +551,16 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
                 row("Relacion de aspecto", aspectRatioSelector),
                 devicePerformanceLine(),
                 row("Memoria", memoryProfileSelector),
-                note("VRAM + RAM permite probar modelos grandes con offload; sera mas lento si la GPU no tiene suficiente VRAM."),
+                note("La GPU configurada sigue siendo el dispositivo principal. VRAM + RAM usa memoria de apoyo para modelos grandes."),
                 row("Pasadas", smokeStepsSpinner),
+                upscaleControlsBox(),
                 smokePromptBox(),
                 note("La prueba FLUX usa una base ligera de diagnostico y luego prepara la salida elegida. La generacion de produccion conserva su resolucion completa."));
         Button settings = ActionButtonFactory.primary("Abrir Configuracion", this::openEngineSettings);
         Button test = ActionButtonFactory.primary("Probar motor", this::testLocalEngine);
         Button rebuild = ActionButtonFactory.secondary("Actualizar intervenciones", this::rebuild);
         selection.getChildren().add(actionFlow(settings, test, rebuild));
+        selection.getChildren().add(importedImageUpscaleBox());
         VBox result = engineResultPanel();
         HBox layout = masterDetail(selection, result);
         constrainPreviewColumn(result);
@@ -553,7 +611,7 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
         VBox navigator = section("Intervenciones");
         detachNode(interventionNavigator);
         navigator.getChildren().addAll(
-                note("Clic derecho sobre una intervención para procesarla o exportar su paquete IA."),
+                note("Clic derecho sobre una intervención para generar un candidato o exportar su paquete IA."),
                 interventionNavigator,
                 selectedUnitLabel());
 
@@ -831,9 +889,10 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
         card.setMaxWidth(FRAME_CAROUSEL_CARD_WIDTH);
         if (reprocessAction != null) {
             MenuItem reprocess = new MenuItem("Reprocesar " + title.toLowerCase(Locale.ROOT));
+            SemanticActionIcons.decorate(reprocess);
             reprocess.setDisable(!reprocessEnabled);
             reprocess.setOnAction(event -> reprocessAction.run());
-            ContextMenu menu = new ContextMenu(reprocess);
+            ContextMenu menu = StudioNavigationControls.contextMenu(reprocess);
             card.setOnContextMenuRequested(event -> menu.show(card, event.getScreenX(), event.getScreenY()));
             Tooltip.install(card, new Tooltip(reprocessEnabled
                     ? "Clic derecho para reprocesar este frame."
@@ -910,39 +969,83 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
     }
 
     private void openEngineSettings() {
-        new SettingsDialog(viewModel.administrationWorkspace().mediaEngines()).showVoiceEngines(
+        new SettingsDialog(viewModel.administrationWorkspace().capabilities()).showSuperResolution(
                 getScene() == null ? null : getScene().getWindow(), viewModel.administrationWorkspace().settings());
     }
 
     private void openPerformanceSettings() {
-        new SettingsDialog(viewModel.administrationWorkspace().mediaEngines()).showPerformance(
+        new SettingsDialog(viewModel.administrationWorkspace().capabilities()).showPerformance(
                 getScene() == null ? null : getScene().getWindow(), viewModel.administrationWorkspace().settings());
     }
 
     private void testLocalEngine() {
+        importedUpscaleMode = false;
+        refreshUpscaleTargets();
         status.setText("Probando motor local...");
         updateEngineResultPanel(EngineTestResult.running("Verificando runtime..."));
         beginGenerationTiming();
 
         Task<EngineTestResult> task = new Task<>() {
-            @Override protected EngineTestResult call() {
-                Path appRoot = RuntimePathResolver.defaultResolver().resolve().applicationRoot();
-                OperationalSettings settings = operationalSettingsForEngineTest();
+            @Override protected EngineTestResult call() throws Exception {
                 updateMessage("Verificando runtime...");
-                ImageEngineReadinessReport readiness = viewModel.administrationWorkspace().settings()
-                        .inspectLocalTheatreImageEngine()
-                        .inspect(settings, appRoot);
-                updateMessage("Verificando modelo...");
-                if (!readiness.runtimePrepared() || !readiness.modelInstalled()) {
-                    return EngineTestResult.from(readiness);
+                ImageGenerationEngine engine = selectedImageEngine();
+                updateMessage("Generando PNG...");
+                EnginePresetId preset = LegacyEnginePresetMapper.image(
+                        (presetSelector.getValue() == null ? currentPreset() : presetSelector.getValue()).name());
+                TheatreImageAspectRatio ratio = selectedAspectRatio();
+                ImageEnhancementOutputProfile generationProfile = selectedOutputProfile();
+                var working = ratio.visualAspectRatio().workingDimensions(generationProfile);
+                var delivery = ratio.deliveryDimensions(generationProfile);
+                OperationalSettings smokeSettings = operationalSettingsForEngineTest();
+                ExecutionContext executionContext = new ExecutionContext(
+                        "theatre-image-smoke",
+                        this::isCancelled,
+                        (stage, progress, message) -> {
+                            if (message != null && !message.isBlank()) updateMessage(message);
+                        },
+                        new ExecutionPolicy(
+                                Duration.ofSeconds(smokeSettings.imageGeneration().timeoutSeconds()), 1),
+                        ResourceLease.NONE);
+                EngineActionResult generated = new RunImageEngineSmokeUseCase(
+                        viewModel.administrationWorkspace().capabilities()).run(
+                        engine.descriptor().id(), Map.of(
+                                "presetId", preset.value(),
+                                "seed", "424242",
+                                "prompt", smokePromptText(),
+                                "width", Integer.toString(working.width()),
+                                "height", Integer.toString(working.height()),
+                                "deliveryWidth", Integer.toString(delivery.width()),
+                                "deliveryHeight", Integer.toString(delivery.height()),
+                                "memoryProfile", selectedMemoryProfile().name(),
+                                "label", "image-smoke-" + generationProfile.workflowId()),
+                        executionContext);
+                EngineTestResult generatedResult = EngineTestResult.from(generated);
+                if (!generatedResult.success() || generatedResult.outputImage() == null
+                        || !upscaleEnabled.isSelected() || upscaleTargetSelector.getValue() == null) {
+                    return generatedResult;
                 }
-                updateMessage(readiness.engineResponding()
-                        ? "Generando PNG..."
-                        : "Iniciando motor y generando PNG...");
-                ImageEngineSmokeReport report = viewModel.administrationWorkspace().settings()
-                        .runLocalTheatreImageSmoke()
-                        .runDetailed(settings, appRoot, smokeRequest());
-                return EngineTestResult.from(report);
+                try {
+                    updateMessage("Aplicando superresolución IA...");
+                    ImageSuperResolutionResult upscaled = upscaleExistingImage(
+                            generatedResult.outputImage(), false, "image-smoke-upscaled", this);
+                    Files.deleteIfExists(generatedResult.outputImage());
+                    if (!refinementEnabled.isSelected()) {
+                        return EngineTestResult.from(upscaled,
+                                "Prueba generada y reescalada con Real-ESRGAN.");
+                    }
+                    try {
+                        updateMessage("Mejorando la composición por mosaicos...");
+                        ImageRefinementResult refined = refineExistingImage(
+                                upscaled.image(), smokePromptText(), "image-smoke-refined", this);
+                        Files.deleteIfExists(upscaled.image());
+                        return EngineTestResult.from(refined,
+                                "Prueba reescalada y mejorada con ControlNet Tile.");
+                    } catch (Exception refinementFailure) {
+                        return EngineTestResult.refinementFailed(upscaled, refinementFailure);
+                    }
+                } catch (Exception upscaleFailure) {
+                    return EngineTestResult.upscaleFailed(generatedResult, upscaleFailure);
+                }
             }
         };
         task.messageProperty().addListener((obs, oldValue, newValue) -> {
@@ -975,17 +1078,296 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
         showEngineResult(EngineTestResult.error(message));
     }
 
-    private ImageEngineSmokeRequest smokeRequest() {
-        Path output = ImageEngineSmokeImageStore.outputDirectory();
-        return new ImageEngineSmokeRequest(
-                presetSelector.getValue() == null
-                        ? com.marcosmoreiradev.docupodcaststudio.application.visual.VisualGenerationProfile.DIAGNOSTIC_SD15
-                        : presetSelector.getValue().visualProfile(),
-                selectedOutputProfile(),
-                selectedAspectRatio().visualAspectRatio(),
-                smokePromptText(),
-                smokeSteps(),
-                output);
+    private ImageGenerationEngine selectedImageEngine() {
+        EngineRegistry<ImageGenerationEngine> registry = viewModel.administrationWorkspace().mediaEngines().imageEngines();
+        EngineId selected = SelectedMediaEngines.from(operationalSettings()).image();
+        return registry.find(selected).orElseGet(() -> registry.engines().stream().findFirst()
+                .orElseThrow(() -> new IllegalStateException("No hay un motor de imagen registrado.")));
+    }
+
+    private VBox upscaleControlsBox() {
+        Label title = new Label("Superresolución IA");
+        title.getStyleClass().add("voice-library-body");
+        Button saveProject = ActionButtonFactory.secondary(
+                "Guardar para este proyecto", this::saveProjectVisualProcessing);
+        VBox box = new VBox(6,
+                title,
+                upscaleEnabled,
+                row("Destino", upscaleTargetSelector),
+                upscaleModelStatus,
+                saveProject,
+                refinementEnabled,
+                row("Intensidad", refinementPreset));
+        return box;
+    }
+
+    private void applyVisualProcessingDefaults() {
+        ImageSuperResolutionSettings global = operationalSettings().imageSuperResolution();
+        ProjectVisualProcessingSettings project = viewModel.currentProject()
+                .map(DocuPodcastProject::visualProcessing)
+                .orElseGet(ProjectVisualProcessingSettings::inherited);
+        String generation = project.generationProfile().isBlank()
+                ? global.generationProfile() : project.generationProfile();
+        String target = project.upscaleTargetProfile().isBlank()
+                ? global.targetProfile() : project.upscaleTargetProfile();
+        boolean enabled = project.upscaleEnabled() == null
+                ? global.enabled() : project.upscaleEnabled();
+        boolean refine = project.refineAfterUpscale() == null
+                ? global.refinementEnabled() : project.refineAfterUpscale();
+        String refinePreset = project.refinementPreset().isBlank()
+                ? global.refinementPreset() : project.refinementPreset();
+        outputProfileSelector.setValue(outputProfile(
+                com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile.from(
+                        generation,
+                        com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile.P1080)));
+        upscaleEnabled.setSelected(enabled);
+        refinementEnabled.setSelected(enabled && refine);
+        refinementPreset.setValue("balanced".equalsIgnoreCase(refinePreset)
+                ? "Equilibrada" : "Conservadora");
+        refreshUpscaleTargets();
+        ImageEnhancementOutputProfile preferred = outputProfile(
+                com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile.from(
+                        target,
+                        com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile.P1080));
+        if (upscaleTargetSelector.getItems().contains(preferred)) {
+            upscaleTargetSelector.setValue(preferred);
+        }
+    }
+
+    private void saveProjectVisualProcessing() {
+        ImageEnhancementOutputProfile target = upscaleTargetSelector.getValue();
+        viewModel.updateProjectVisualProcessing(new ProjectVisualProcessingSettings(
+                selectedOutputProfile().visualResolutionProfile().name(),
+                upscaleEnabled.isSelected(),
+                target == null ? "" : target.visualResolutionProfile().name(),
+                ImageSuperResolutionRequest.DEFAULT_MODEL,
+                upscaleEnabled.isSelected() && refinementEnabled.isSelected(),
+                refinementPresetId(),
+                ImageSuperResolutionSettings.DEFAULT_REFINEMENT_ENGINE));
+        status.setText("Configuración visual guardada en el proyecto.");
+    }
+
+    private static ImageEnhancementOutputProfile outputProfile(
+            com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile profile) {
+        return switch (profile) {
+            case P540 -> ImageEnhancementOutputProfile.LOW_540;
+            case P720 -> ImageEnhancementOutputProfile.HD_720;
+            case P1080 -> ImageEnhancementOutputProfile.FHD_1080;
+            case QHD_2K -> ImageEnhancementOutputProfile.QHD_2K;
+            case UHD_4K -> ImageEnhancementOutputProfile.UHD_4K;
+        };
+    }
+
+    private VBox importedImageUpscaleBox() {
+        Label title = new Label("Reescalar una imagen de mi computadora");
+        title.getStyleClass().add("voice-library-body");
+        Button choose = ActionButtonFactory.secondary("Seleccionar imagen…", this::chooseImportedImageForUpscale);
+        VBox box = new VBox(8,
+                title,
+                note("El archivo original nunca se modifica. El resultado temporal puede exportarse como PNG."),
+                importedUpscaleSourceLabel,
+                actionFlow(choose, upscaleImportedButton));
+        return box;
+    }
+
+    private void chooseImportedImageForUpscale() {
+        FileChooser chooser = NativeSourceChooser.fileChooser();
+        chooser.setTitle("Seleccionar imagen para superresolución");
+        chooser.getExtensionFilters().setAll(
+                new FileChooser.ExtensionFilter("Imágenes PNG/JPEG", "*.png", "*.jpg", "*.jpeg"),
+                new FileChooser.ExtensionFilter("Todos los archivos", "*.*"));
+        File selected = chooser.showOpenDialog(getScene() == null ? null : getScene().getWindow());
+        if (selected == null) return;
+        Path source = selected.toPath().toAbsolutePath().normalize();
+        try {
+            Image image = new Image(source.toUri().toString(), false);
+            if (image.isError() || image.getWidth() <= 0 || image.getHeight() <= 0) {
+                throw new IOException("El archivo no es una imagen PNG/JPEG compatible.");
+            }
+            importedUpscaleSource = source;
+            importedUpscaleMode = true;
+            importedUpscaleSourceLabel.setText(source.getFileName() + " · "
+                    + (int) image.getWidth() + "x" + (int) image.getHeight());
+            upscaleEnabled.setSelected(true);
+            refreshUpscaleTargets();
+            if (upscaleTargetSelector.getItems().isEmpty()) {
+                status.setText("No hay un preset superior en ambos ejes para esta imagen y relación de aspecto.");
+            } else {
+                status.setText("Imagen local lista para reescalar; el original permanecerá intacto.");
+            }
+        } catch (IOException failure) {
+            importedUpscaleSource = null;
+            importedUpscaleMode = false;
+            importedUpscaleSourceLabel.setText("No se pudo abrir la imagen seleccionada.");
+            status.setText(failure.getMessage());
+            refreshUpscaleTargets();
+        }
+    }
+
+    private void refreshUpscaleTargets() {
+        ImageEnhancementOutputProfile previous = upscaleTargetSelector.getValue();
+        ArrayList<ImageEnhancementOutputProfile> available = new ArrayList<>();
+        if (importedUpscaleMode && importedUpscaleSource != null && Files.isRegularFile(importedUpscaleSource)) {
+            try {
+                Image source = new Image(importedUpscaleSource.toUri().toString(), false);
+                if (!source.isError() && source.getWidth() > 0 && source.getHeight() > 0) {
+                    for (ImageEnhancementOutputProfile candidate : ImageEnhancementOutputProfile.values()) {
+                        if (candidate == ImageEnhancementOutputProfile.LOW_540) continue;
+                        var dimensions = selectedAspectRatio().deliveryDimensions(candidate);
+                        if (dimensions.isStrictlyLargerThan(
+                                (int) source.getWidth(), (int) source.getHeight())) {
+                            available.add(candidate);
+                        }
+                    }
+                }
+            } catch (RuntimeException ignored) {
+                // The action will report the concrete read error and preserve the source.
+            }
+        } else {
+            ImageEnhancementOutputProfile source = selectedOutputProfile();
+            for (ImageEnhancementOutputProfile candidate : ImageEnhancementOutputProfile.values()) {
+                if (candidate != ImageEnhancementOutputProfile.LOW_540
+                        && candidate.visualResolutionProfile().higherThan(source.visualResolutionProfile())) {
+                    available.add(candidate);
+                }
+            }
+        }
+        upscaleTargetSelector.getItems().setAll(available);
+        upscaleTargetSelector.setValue(previous != null && available.contains(previous)
+                ? previous : available.stream().findFirst().orElse(null));
+        boolean hasTarget = !available.isEmpty();
+        upscaleTargetSelector.setDisable(!upscaleEnabled.isSelected() || !hasTarget);
+        boolean refinementAvailable = refinementControlsEnabled(upscaleEnabled.isSelected(), hasTarget);
+        refinementEnabled.setDisable(!refinementAvailable);
+        if (!refinementAvailable) refinementEnabled.setSelected(false);
+        refinementPreset.setDisable(!refinementAvailable || !refinementEnabled.isSelected());
+        upscaleImportedButton.setDisable(importedUpscaleSource == null
+                || !upscaleEnabled.isSelected() || !hasTarget);
+        upscaleModelStatus.setText(hasTarget
+                ? "Modelo: RealESRGAN_x4plus · se comprobará antes de ejecutar."
+                : "No existe un destino superior válido con la selección actual.");
+    }
+
+    static boolean refinementControlsEnabled(boolean upscaleSelected, boolean hasHigherTarget) {
+        return upscaleSelected && hasHigherTarget;
+    }
+
+    private void upscaleImportedImage() {
+        Path source = importedUpscaleSource;
+        if (source == null || !Files.isRegularFile(source) || upscaleTargetSelector.getValue() == null) {
+            status.setText("Selecciona una imagen y una resolución de destino superior.");
+            return;
+        }
+        status.setText("Preparando superresolución IA...");
+        updateEngineResultPanel(EngineTestResult.running("Comprobando Real-ESRGAN..."));
+        beginGenerationTiming();
+        Task<EngineTestResult> task = new Task<>() {
+            @Override protected EngineTestResult call() throws Exception {
+                updateMessage("Aplicando superresolución IA...");
+                ImageSuperResolutionResult result = upscaleExistingImage(
+                        source, true, "imported-upscaled-" + System.currentTimeMillis(), this);
+                if (!refinementEnabled.isSelected()) {
+                    return EngineTestResult.from(result,
+                            "Imagen local reescalada con Real-ESRGAN; el original se conservó.");
+                }
+                try {
+                    updateMessage("Mejorando la composición por mosaicos...");
+                    ImageRefinementResult refined = refineExistingImage(
+                            result.image(), "", "imported-refined-" + System.currentTimeMillis(), this);
+                    Files.deleteIfExists(result.image());
+                    return EngineTestResult.from(refined,
+                            "Imagen local reescalada y mejorada; el original se conservó.");
+                } catch (Exception refinementFailure) {
+                    return EngineTestResult.refinementFailed(result, refinementFailure);
+                }
+            }
+        };
+        task.messageProperty().addListener((obs, oldValue, message) -> {
+            if (message != null && !message.isBlank()) {
+                updateEngineResultPanel(EngineTestResult.running(message));
+            }
+        });
+        task.setOnSucceeded(event -> {
+            finishGenerationTiming();
+            showEngineResult(task.getValue());
+        });
+        task.setOnFailed(event -> {
+            finishGenerationTiming();
+            showEngineResult(EngineTestResult.error("No se pudo reescalar; el original permanece intacto. "
+                    + rootMessage(task.getException())));
+        });
+        Thread.ofVirtual().name("docupodcast-imported-image-upscale").start(task);
+    }
+
+    private ImageSuperResolutionResult upscaleExistingImage(
+            Path source, boolean containWithoutCrop, String prefix, Task<?> task)
+            throws IOException, InterruptedException {
+        ImageEnhancementOutputProfile targetProfile = upscaleTargetSelector.getValue();
+        if (targetProfile == null) throw new IOException("No existe una resolución de destino superior.");
+        var dimensions = selectedAspectRatio().deliveryDimensions(targetProfile);
+        Path output = Path.of(System.getProperty("java.io.tmpdir"), "docupodcast-studio", "upscale-tests");
+        ExecutionContext context = new ExecutionContext(
+                "image-upscale-" + System.nanoTime(),
+                () -> task != null && task.isCancelled(),
+                (stage, amount, message) -> {
+                    if (task != null && message != null && !message.isBlank()) {
+                        Platform.runLater(() -> status.setText(message));
+                    }
+                },
+                ExecutionPolicy.defaults(), ResourceLease.NONE);
+        EngineId imageEngineId = selectedImageEngine().descriptor().id();
+        ImageSuperResolutionEngine superResolution = selectedSuperResolutionEngine();
+        return new RunImageSuperResolutionUseCase(
+                viewModel.administrationWorkspace().capabilities()).run(
+                imageEngineId, superResolution.descriptor().id(),
+                new ImageSuperResolutionRequest(
+                        source, output, prefix, dimensions.width(), dimensions.height(),
+                        ImageSuperResolutionRequest.DEFAULT_MODEL, containWithoutCrop, Map.of()),
+                context);
+    }
+
+    private ImageSuperResolutionEngine selectedSuperResolutionEngine() {
+        EngineRegistry<ImageSuperResolutionEngine> registry =
+                viewModel.administrationWorkspace().mediaEngines().imageSuperResolutionEngines();
+        return registry.engines().stream().findFirst()
+                .orElseThrow(() -> new IllegalStateException(
+                        "No hay un motor de superresolución registrado."));
+    }
+
+    private ImageRefinementResult refineExistingImage(
+            Path source, String prompt, String prefix, Task<?> task)
+            throws IOException, InterruptedException {
+        Path output = Path.of(System.getProperty("java.io.tmpdir"),
+                "docupodcast-studio", "refinement-tests");
+        ExecutionContext context = new ExecutionContext(
+                "image-refinement-" + System.nanoTime(),
+                () -> task != null && task.isCancelled(),
+                (stage, amount, message) -> {
+                    if (task != null && message != null && !message.isBlank()) {
+                        Platform.runLater(() -> status.setText(message));
+                    }
+                },
+                ExecutionPolicy.defaults(), ResourceLease.NONE);
+        EngineId engineId = new EngineId(ImageSuperResolutionSettings.DEFAULT_REFINEMENT_ENGINE);
+        return new RunImageRefinementUseCase(
+                viewModel.administrationWorkspace().capabilities()).run(
+                selectedImageEngine().descriptor().id(),
+                engineId,
+                new ImageRefinementRequest(source, output, prefix, prompt,
+                        new EnginePresetId(refinementPresetId()), 424242L, Map.of()),
+                context);
+    }
+
+    private String refinementPresetId() {
+        return "Equilibrada".equalsIgnoreCase(refinementPreset.getValue())
+                ? "balanced" : "conservative";
+    }
+
+    private static String rootMessage(Throwable failure) {
+        Throwable current = failure;
+        while (current != null && current.getCause() != null) current = current.getCause();
+        return current == null || current.getMessage() == null
+                ? "Error desconocido." : current.getMessage();
     }
 
     private VBox smokePromptBox() {
@@ -1079,7 +1461,7 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
             status.setText("El PNG temporal ya no esta disponible.");
             return;
         }
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle("Guardar imagen de prueba");
         chooser.setInitialFileName(defaultEngineResultFileName(lastEngineResult));
         chooser.getExtensionFilters().setAll(new FileChooser.ExtensionFilter("PNG (*.png)", "*.png"));
@@ -1121,8 +1503,16 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
             status.setText("Selecciona una intervencion.");
             return;
         }
+        if (!confirmSingleInterventionGeneration(unit)) {
+            status.setText("Generación de la intervención cancelada.");
+            return;
+        }
+        startCandidateGeneration(unit, true);
+    }
+
+    private void startCandidateGeneration(TheatreImageGenerationUnit unit, boolean preparationRetryAvailable) {
         TheatreImageGenerationUnit promptUnit = unitWithPrompt(unit, promptFor(unit));
-        status.setText("Generando candidato...");
+        status.setText("Validando contexto de la intervención...");
         TheatreImageGenerationJob job = singleUnitJob("CANDIDATO-" + unit.interventionId(), unit,
                 "En cola", true);
         jobs.add(0, job);
@@ -1149,7 +1539,84 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
             frameProgress.setProgress(0);
             frameEstimate.setText(message);
             status.setText(message);
+            offerConditioningPreparation(unit, message, preparationRetryAvailable);
         });
+    }
+
+    private void offerConditioningPreparation(TheatreImageGenerationUnit unit,
+                                              String failure,
+                                              boolean retryAvailable) {
+        String normalized = failure == null ? "" : failure.toLowerCase(Locale.ROOT);
+        boolean dependencyFailure = normalized.contains("ip-adapter")
+                || normalized.contains("clip vision")
+                || normalized.contains("scribble")
+                || normalized.contains("consistencia de personajes")
+                || normalized.contains("no enumera")
+                || normalized.contains("resource_missing");
+        if (!dependencyFailure) return;
+        ButtonType open = NativeDialogResponse.button(
+                retryAvailable ? "Preparar y reintentar" : "Abrir Motores y dependencias",
+                ButtonBar.ButtonData.OK_DONE);
+        Alert alert = StudioMessageDialog.create(
+                getScene() == null ? null : getScene().getWindow(),
+                Alert.AlertType.WARNING,
+                "Dependencias de generación",
+                "La generación contextual necesita recursos administrados",
+                "Puedes descargar o importar IP-Adapter Plus, CLIP Vision y ControlNet Scribble "
+                        + "desde Motores y dependencias. Las descargas son explícitas y se verifican antes de usarse.",
+                failure,
+                open,
+                ButtonType.CANCEL);
+        if (alert.showAndWait().filter(open::equals).isEmpty()) return;
+        new SettingsDialog(viewModel.administrationWorkspace().capabilities()).showVoiceEngines(
+                getScene() == null ? null : getScene().getWindow(),
+                viewModel.administrationWorkspace().settings());
+        if (retryAvailable) {
+            startCandidateGeneration(unit, false);
+        }
+    }
+
+    private boolean confirmSingleInterventionGeneration(TheatreImageGenerationUnit unit) {
+        List<TheatreImageContextAsset> assets = viewModel.theatreImageGenerationContextAssets(unit);
+        List<String> characters = assets.stream()
+                .filter(asset -> "personaje".equalsIgnoreCase(asset.role()))
+                .map(asset -> asset.metadata().getOrDefault("subjectName", asset.label()))
+                .map(value -> value.contains(" - ") ? value.substring(0, value.indexOf(" - ")) : value)
+                .filter(value -> !value.isBlank())
+                .distinct()
+                .toList();
+        TheatreImageContextAsset storyboard = assets.stream()
+                .filter(asset -> "storyboard".equalsIgnoreCase(asset.role()))
+                .findFirst().orElse(null);
+        var dimensions = selectedAspectRatio().deliveryDimensions(ImageEnhancementOutputProfile.LOW_540);
+        String humanMessage = "Se generará únicamente " + unit.interventionId()
+                + " como candidato revisable. No se reemplazará ningún frame aprobado.\n\n"
+                + "Personajes: " + (characters.isEmpty() ? "sin referencias válidas" : String.join(", ", characters))
+                + "\nReferencias visuales: " + assets.stream()
+                .filter(asset -> !asset.imageUri().isBlank()).count()
+                + "\nStoryboard activo: " + (storyboard == null
+                ? "sin guía principal"
+                : storyboard.metadata().getOrDefault("activeVariant", storyboard.label()))
+                + "\nMotor: SD 1.5 contextual · IP-Adapter regional"
+                + "\nResolución: " + dimensions.width() + "×" + dimensions.height()
+                + "\nDispositivo: GPU primero · " + selectedMemoryProfile().displayName()
+                + "\n\nLas referencias de personaje serán la autoridad para rostro, rasgos y vestuario.";
+        String technicalDetail = assets.stream()
+                .map(asset -> asset.role() + " · " + asset.label() + " · "
+                        + (asset.imageUri().isBlank() ? "NO DISPONIBLE" : asset.relativePath()))
+                .collect(java.util.stream.Collectors.joining("\n"));
+        ButtonType generate = NativeDialogResponse.button(
+                "Generar candidato", ButtonBar.ButtonData.OK_DONE);
+        Alert alert = StudioMessageDialog.create(
+                getScene() == null ? null : getScene().getWindow(),
+                Alert.AlertType.CONFIRMATION,
+                "Generación contextual",
+                "Generar imagen de esta intervención",
+                humanMessage,
+                technicalDetail,
+                generate,
+                ButtonType.CANCEL);
+        return alert.showAndWait().filter(generate::equals).isPresent();
     }
 
     private void regenerateTransition(TheatreImageGenerationUnit current, TheatreImageGenerationUnit next) {
@@ -1252,22 +1719,25 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
     }
 
     private Optional<IntermediateBatchSelection> confirmIntermediateBatch(TheatreIntermediateFrameBatchPlanner.Plan plan) {
-        Alert alert = new Alert(plan.hasAllGenerablePairs()
+        Alert alert = NativeDialogResponse.alert(plan.hasAllGenerablePairs()
                 ? Alert.AlertType.CONFIRMATION
                 : Alert.AlertType.INFORMATION);
-        alert.initOwner(getScene() == null ? null : getScene().getWindow());
-        alert.setTitle("Frames intermedios");
-        alert.setHeaderText("Analisis de frames intermedios de toda la obra");
-        alert.setContentText(intermediatePlanSummary(plan));
+        StudioMessageDialog.configure(
+                alert,
+                getScene() == null ? null : getScene().getWindow(),
+                "Frames intermedios",
+                "Análisis de frames intermedios de toda la obra",
+                intermediatePlanSummary(plan),
+                "");
         if (!plan.hasAllGenerablePairs()) {
             alert.getButtonTypes().setAll(ButtonType.OK);
             alert.showAndWait();
             status.setText("No hay frames intermedios generables con las imagenes actuales.");
             return Optional.empty();
         }
-        ButtonType missing = new ButtonType("Generar faltantes", ButtonBar.ButtonData.OK_DONE);
-        ButtonType overwrite = new ButtonType("Generar todos / sobrescribir", ButtonBar.ButtonData.APPLY);
-        ButtonType smoke = new ButtonType("Probar primer par", ButtonBar.ButtonData.OTHER);
+        ButtonType missing = NativeDialogResponse.button("Generar faltantes", ButtonBar.ButtonData.OK_DONE);
+        ButtonType overwrite = NativeDialogResponse.button("Generar todos / sobrescribir", ButtonBar.ButtonData.APPLY);
+        ButtonType smoke = NativeDialogResponse.button("Probar primer par", ButtonBar.ButtonData.OTHER);
         ArrayList<ButtonType> buttons = new ArrayList<>();
         if (plan.hasMissingGenerablePairs()) {
             buttons.add(missing);
@@ -1329,7 +1799,7 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
         intermediateFrameTask = new Task<>() {
             @Override protected IntermediateBatchResult call() throws Exception {
                 ArrayList<TheatreGeneratedFrameCandidate> approvedFrames = new ArrayList<>();
-                ComfyUiConnectionSettings generationSettings = intermediateFrameSettings(outputDirectory);
+                ImageGenerationWorkspaceSettings generationSettings = intermediateFrameSettings(outputDirectory);
                 Platform.runLater(() -> {
                     frameEstimate.setText("Verificando motor local de imagen IA...");
                     replaceJobById(job.id(), job.withStatus("Verificando motor local", true));
@@ -1348,7 +1818,7 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
                         frameEstimate.setText(actionLabel + " " + currentIndex + "/" + total + ": " + pairLabel + ".");
                         replaceJobById(job.id(), job.withStatus(actionLabel + " " + pairLabel, true));
                     });
-                    TheatreGeneratedFrameCandidate candidate = viewModel.generateTheatreRifeIntermediateFrameCandidate(
+                    TheatreGeneratedFrameCandidate candidate = viewModel.generateTheatreIntermediateFrameCandidate(
                             item,
                             generationSettings,
                             message -> Platform.runLater(() -> {
@@ -1430,10 +1900,10 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
                 running);
     }
 
-    private void ensureIntermediateFrameEngineAvailable(ComfyUiConnectionSettings settings) throws IOException {
-        var result = viewModel.testComfyUi(settings);
-        if (!result.available()) {
-            throw new IOException(result.message() + "\n" + result.diagnostic());
+    private void ensureIntermediateFrameEngineAvailable(ImageGenerationWorkspaceSettings settings) throws IOException {
+        var result = viewModel.imageEngineReadiness();
+        if (!result.ready()) {
+            throw new IOException(result.summary() + "\n" + result.diagnostics());
         }
     }
 
@@ -1482,10 +1952,10 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
                 .orElseGet(() -> settings().outputDirectory());
     }
 
-    private ComfyUiConnectionSettings intermediateFrameSettings(Path outputDirectory) {
-        ComfyUiConnectionSettings base = settings();
+    private ImageGenerationWorkspaceSettings intermediateFrameSettings(Path outputDirectory) {
+        ImageGenerationWorkspaceSettings base = settings();
         Path output = outputDirectory == null ? base.outputDirectory() : outputDirectory;
-        return new ComfyUiConnectionSettings(base.baseUrl(), base.timeout(), output);
+        return new ImageGenerationWorkspaceSettings(base.timeout(), output);
     }
 
     private void saveProjectIfPossible() {
@@ -1604,7 +2074,7 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
             status.setText("Selecciona una intervencion.");
             return;
         }
-        DirectoryChooser chooser = new DirectoryChooser();
+        DirectoryChooser chooser = NativeSourceChooser.directoryChooser();
         chooser.setTitle("Carpeta para paquete IA");
         File selected = chooser.showDialog(getScene() == null ? null : getScene().getWindow());
         if (selected == null) {
@@ -1619,17 +2089,22 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
     }
 
     private void exportBulkContextPackages() {
-        DirectoryChooser chooser = new DirectoryChooser();
+        DirectoryChooser chooser = NativeSourceChooser.directoryChooser();
         chooser.setTitle("Carpeta para paquetes IA teatrales");
         File selected = chooser.showDialog(getScene() == null ? null : getScene().getWindow());
         if (selected == null) {
             return;
         }
         TheatreContextExportEstimate estimate = viewModel.estimateTheatreContextPackages(TheatreContextExportScope.all());
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Exportar paquetes IA");
-        confirm.setHeaderText("Se crearan " + estimate.packages() + " paquetes.");
-        confirm.setContentText("Estimacion: " + humanBytes(estimate.estimatedBytes()) + ". La exportacion duplica recursos por intervencion.");
+        Alert confirm = NativeDialogResponse.alert(Alert.AlertType.CONFIRMATION);
+        StudioMessageDialog.configure(
+                confirm,
+                getScene() == null ? null : getScene().getWindow(),
+                "Exportar paquetes IA",
+                "Se crearán " + estimate.packages() + " paquetes.",
+                "Estimación: " + humanBytes(estimate.estimatedBytes())
+                        + ". La exportación duplica recursos por intervención.",
+                "Destino:\n" + selected.toPath());
         Optional<ButtonType> choice = confirm.showAndWait();
         if (choice.isEmpty() || choice.get() != ButtonType.OK) {
             return;
@@ -1643,7 +2118,7 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
     }
 
     private boolean chooseFrameOutputDirectory() {
-        DirectoryChooser chooser = new DirectoryChooser();
+        DirectoryChooser chooser = NativeSourceChooser.directoryChooser();
         chooser.setTitle("Carpeta de salida para frames");
         File selected = chooser.showDialog(getScene() == null ? null : getScene().getWindow());
         if (selected == null) {
@@ -1929,7 +2404,7 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
                 false);
     }
 
-    private ComfyUiConnectionSettings settings() {
+    private ImageGenerationWorkspaceSettings settings() {
         Path output = viewModel.currentProjectDirectory().map(path -> path.resolve("generated/teatro-ia")).orElse(null);
         ImageGenerationSettings imageSettings;
         try {
@@ -1937,8 +2412,7 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
         } catch (IOException ex) {
             imageSettings = ImageGenerationSettings.defaults();
         }
-        return new ComfyUiConnectionSettings(
-                imageSettings.baseUrl(),
+        return new ImageGenerationWorkspaceSettings(
                 Duration.ofSeconds(Math.max(
                         ImageGenerationSettings.DEFAULT_TIMEOUT_SECONDS,
                         imageSettings.timeoutSeconds())),
@@ -1986,9 +2460,7 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
 
     private String imageEngineSummary() {
         try {
-            return viewModel.administrationWorkspace().settings().inspectLocalTheatreImageEngine()
-                    .inspect(operationalSettingsForEngineTest(), RuntimePathResolver.defaultResolver().resolve().applicationRoot())
-                    .statusLabel();
+            return selectedImageEngine().inspectReadiness(null).summary();
         } catch (RuntimeException ex) {
             return "Motor local de imagen IA. Verifica antes de generar.";
         }
@@ -2418,50 +2890,75 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
                     true, 0, 0, "", "");
         }
 
-        static EngineTestResult from(ImageEngineReadinessReport report) {
-            if (report == null) {
-                return error("No se pudo inspeccionar Imagen IA teatral.");
-            }
-            boolean runtimeMissing = !report.runtimePrepared();
-            boolean modelMissing = report.runtimePrepared() && !report.modelInstalled();
-            String message;
-            if (runtimeMissing && report.modelInstalled()) {
-                message = "Modelo instalado; falta runtime local compatible. " + report.nextAction();
-            } else if (runtimeMissing) {
-                message = "Falta runtime local compatible. " + report.nextAction();
-            } else if (modelMissing) {
-                message = "Falta descargar o importar paquete. " + report.nextAction();
-            } else {
-                message = report.userMessage() + " " + report.nextAction();
-            }
-            return new EngineTestResult(report.ready(), clean(message), null, "", runtimeMissing, modelMissing,
+        static EngineTestResult from(EngineReadiness readiness) {
+            if (readiness == null) return error("No se pudo inspeccionar Imagen IA teatral.");
+            String details = String.join(" ", readiness.issues()) + " "
+                    + String.join(" ", readiness.recommendedActions());
+            String message = (readiness.summary() + " " + details).strip();
+            String lower = message.toLowerCase(Locale.ROOT);
+            return new EngineTestResult(readiness.ready(), clean(message), null, readiness.diagnostics(),
+                    lower.contains("runtime"), lower.contains("modelo") || lower.contains("recurso"),
                     false, 0, 0, "", "");
         }
 
-        static EngineTestResult from(ImageEngineSmokeReport report) {
-            if (report == null) {
-                return error("Prueba terminada sin detalle.");
-            }
-            String message = report.userMessage();
-            if (report.success() && report.outputImage() != null) {
-                message = report.width() > 0 && report.height() > 0
-                        ? "Prueba completada. PNG temporal generado (" + report.width() + "x" + report.height() + ")."
-                        : "Prueba completada. PNG temporal generado.";
-            }
-            boolean runtimeMissing = message.toLowerCase(Locale.ROOT).contains("runtime local compatible")
-                    || message.toLowerCase(Locale.ROOT).contains("lanzador local");
-            boolean modelMissing = message.toLowerCase(Locale.ROOT).contains("descargar o importar paquete")
-                    || message.toLowerCase(Locale.ROOT).contains("paquete de modelos");
-            String diagnostic = report.diagnostic();
-            if (report.width() > 0 && report.height() > 0) {
-                diagnostic = (diagnostic == null || diagnostic.isBlank() ? "" : diagnostic + "\n")
-                        + "dimensions=" + report.width() + "x" + report.height()
-                        + "\nprofile=" + report.outputProfile()
-                        + "\naspectRatio=" + report.aspectRatio();
-            }
-            return new EngineTestResult(report.success(), clean(message), report.outputImage(),
-                    diagnostic, runtimeMissing, modelMissing, false, report.width(), report.height(),
-                    report.outputProfile(), report.aspectRatio());
+        static EngineTestResult from(EngineActionResult result) {
+            if (result == null) return error("Prueba terminada sin detalle.");
+            Path output = result.artifacts().stream().filter(item -> "file".equals(item.location().getScheme()))
+                    .map(item -> Path.of(item.location())).findFirst().orElse(null);
+            String diagnostic = result.diagnostics().entrySet().stream()
+                    .map(entry -> entry.getKey() + "=" + entry.getValue())
+                    .collect(java.util.stream.Collectors.joining("\n"));
+            String lower = result.message().toLowerCase(Locale.ROOT);
+            return new EngineTestResult(result.success(), clean(result.message()), output, diagnostic,
+                    lower.contains("runtime"), lower.contains("modelo") || lower.contains("recurso"),
+                    false, 0, 0, "", "");
+        }
+
+        static EngineTestResult from(ImageSuperResolutionResult result, String message) {
+            if (result == null) return error("La superresolución terminó sin resultado.");
+            String diagnostic = result.diagnostics().entrySet().stream()
+                    .map(entry -> entry.getKey() + "=" + entry.getValue())
+                    .collect(java.util.stream.Collectors.joining("\n"));
+            return new EngineTestResult(true, clean(message), result.image(), diagnostic,
+                    false, false, false, result.width(), result.height(),
+                    result.modelName(), "");
+        }
+
+        static EngineTestResult from(ImageRefinementResult result, String message) {
+            if (result == null) return error("La mejora de composición terminó sin resultado.");
+            String diagnostic = result.diagnostics().entrySet().stream()
+                    .map(entry -> entry.getKey() + "=" + entry.getValue())
+                    .collect(java.util.stream.Collectors.joining("\n"));
+            return new EngineTestResult(result.refined(), clean(message), result.image(), diagnostic,
+                    false, false, false, result.width(), result.height(),
+                    result.presetId().value(), "");
+        }
+
+        static EngineTestResult refinementFailed(ImageSuperResolutionResult upscaled, Throwable failure) {
+            String detail = rootMessage(failure);
+            String diagnostic = upscaled.diagnostics().entrySet().stream()
+                    .map(entry -> entry.getKey() + "=" + entry.getValue())
+                    .collect(java.util.stream.Collectors.joining("\n"));
+            String lower = detail.toLowerCase(Locale.ROOT);
+            return new EngineTestResult(true,
+                    "No se pudo mejorar la composición; se conservó la imagen reescalada.",
+                    upscaled.image(), (diagnostic + "\nrefinementError=" + detail).strip(),
+                    lower.contains("runtime") || lower.contains("comfy"),
+                    lower.contains("modelo") || lower.contains("controlnet"),
+                    false, upscaled.width(), upscaled.height(), upscaled.modelName(), "");
+        }
+
+        static EngineTestResult upscaleFailed(EngineTestResult generated, Throwable failure) {
+            EngineTestResult source = generated == null ? error("No se obtuvo el PNG original.") : generated;
+            String detail = rootMessage(failure);
+            String lower = detail.toLowerCase(Locale.ROOT);
+            return new EngineTestResult(false,
+                    "Falló la superresolución; se conservó el PNG original.",
+                    source.outputImage(),
+                    (source.diagnostic() + "\nupscaleError=" + detail).strip(),
+                    lower.contains("runtime") || lower.contains("comfy"),
+                    lower.contains("modelo") || lower.contains("realesrgan"),
+                    false, source.width(), source.height(), source.outputProfile(), source.aspectRatio());
         }
 
         static EngineTestResult error(String message) {

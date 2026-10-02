@@ -1,11 +1,16 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.ribbon;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
+
 import com.marcosmoreiradev.docupodcaststudio.presentation.command.AppCommandDescriptor;
 import com.marcosmoreiradev.docupodcaststudio.presentation.command.AppCommandId;
 import com.marcosmoreiradev.docupodcaststudio.presentation.command.AppCommandRegistry;
 import com.marcosmoreiradev.docupodcaststudio.presentation.command.AppCommandSurface;
 import com.marcosmoreiradev.docupodcaststudio.presentation.command.CommandAvailabilityPolicy;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.AppStyles;
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionButtonFactory;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.RibbonButton;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.RibbonGroup;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.RibbonIconCatalog;
@@ -46,7 +51,7 @@ public final class RibbonView extends VBox {
     private final CommandAvailabilityPolicy commandAvailabilityPolicy = new CommandAvailabilityPolicy();
     private final ToggleGroup tabGroup = new ToggleGroup();
     private final HBox tabStrip = new HBox(2);
-    private final ScrollPane contentScroll = new ScrollPane();
+    private final ScrollPane contentScroll = StudioViewportControls.scrollPane();
     private List<RibbonTabDefinition> tabs = List.of();
     private final BooleanProperty collapsed;
     private String selectedTabId = "";
@@ -121,7 +126,7 @@ public final class RibbonView extends VBox {
 
     private void buildTabButtons() {
         for (RibbonTabDefinition tab : tabs) {
-            ToggleButton button = new ToggleButton(tab.title());
+            ToggleButton button = StudioFormControls.toggleButton(tab.title());
             button.getStyleClass().add(AppStyles.UI_RIBBON_TAB);
             button.setFocusTraversable(false);
             button.setToggleGroup(tabGroup);
@@ -141,7 +146,7 @@ public final class RibbonView extends VBox {
         }
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        Button collapseToggle = new Button();
+        Button collapseToggle = ActionButtonFactory.secondary("");
         collapseToggle.getStyleClass().add(AppStyles.UI_RIBBON_COLLAPSE_TOGGLE);
         collapseToggle.setFocusTraversable(false);
         collapseToggle.textProperty().bind(Bindings.when(collapsed).then("▼").otherwise("▲"));

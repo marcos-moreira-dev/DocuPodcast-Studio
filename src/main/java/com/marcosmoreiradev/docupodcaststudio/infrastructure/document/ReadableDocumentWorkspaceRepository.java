@@ -1,7 +1,12 @@
 package com.marcosmoreiradev.docupodcaststudio.infrastructure.document;
 
 import com.marcosmoreiradev.docupodcaststudio.application.document.ImportedDocumentWorkspaceRepository;
+import com.marcosmoreiradev.docupodcaststudio.application.document.BlockDocumentSource;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PreparedPdfSource;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PreparedPdfWorkspaceRef;
+import com.marcosmoreiradev.docupodcaststudio.application.document.ProjectDocumentSource;
 import com.marcosmoreiradev.docupodcaststudio.application.document.MaterializedImportedDocument;
+import com.marcosmoreiradev.docupodcaststudio.application.document.PreparedPdfDocumentRepository;
 import com.marcosmoreiradev.docupodcaststudio.domain.assets.ProjectAssetKind;
 import com.marcosmoreiradev.docupodcaststudio.domain.assets.ProjectAssetReference;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlock;
@@ -12,6 +17,8 @@ import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentImportRepo
 import com.marcosmoreiradev.docupodcaststudio.domain.document.ReadableDocument;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.SourceDocumentFormat;
 import com.marcosmoreiradev.docupodcaststudio.domain.reading.ReadingProfile;
+import com.marcosmoreiradev.docupodcaststudio.domain.document.pdf.PdfDocumentManifest;
+import com.marcosmoreiradev.docupodcaststudio.domain.document.pdf.PreparedPdfPage;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.json.SimpleJsonParser;
 
 import java.io.IOException;
@@ -19,6 +26,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.LinkedHashMap;
@@ -32,11 +42,24 @@ import java.util.zip.ZipFile;
 
 /** Writes the imported document snapshot and source copy into a project folder. */
 public final class ReadableDocumentWorkspaceRepository implements ImportedDocumentWorkspaceRepository {
+    private final PreparedPdfDocumentRepository preparedPdfRepository;
+
+    public ReadableDocumentWorkspaceRepository() {
+        this(new JsonPreparedPdfDocumentRepository());
+    }
+
+    public ReadableDocumentWorkspaceRepository(PreparedPdfDocumentRepository preparedPdfRepository) {
+        this.preparedPdfRepository = Objects.requireNonNull(preparedPdfRepository, "preparedPdfRepository");
+    }
+
     @Override
     public MaterializedImportedDocument materialize(ReadableDocument document, ReadingProfile activeReadingProfile, Path projectFile) throws IOException {
         Objects.requireNonNull(document, "document");
         Objects.requireNonNull(activeReadingProfile, "activeReadingProfile");
         Objects.requireNonNull(projectFile, "projectFile");
+        if (document.format() == SourceDocumentFormat.PDF) {
+            throw new IOException("PDF debe materializarse mediante PreparedPdfSource.");
+        }
         Path root = projectFile.toAbsolutePath().getParent();
         if (root == null) {
             root = Path.of(".").toAbsolutePath();
@@ -51,9 +74,9 @@ public final class ReadableDocumentWorkspaceRepository implements ImportedDocume
             Files.copy(originalSource, copiedSource, StandardCopyOption.REPLACE_EXISTING);
         }
         ReadableDocument projectSourceDocument = rebaseToProjectSource(document, copiedSource);
-
+        removePdfStorage(root);
         Path documentJson = root.resolve("document").resolve("document.json");
-        Files.writeString(documentJson, toJson(projectSourceDocument, activeReadingProfile), StandardCharsets.UTF_8);
+        new AtomicUtf8JsonFileWriter().write(documentJson, toJson(projectSourceDocument, activeReadingProfile));
 
         ProjectAssetReference sourceAsset = ProjectAssetReference.sourceDocument(
                 "SRC-001",
@@ -71,21 +94,171 @@ public final class ReadableDocumentWorkspaceRepository implements ImportedDocume
                 "",
                 "Generado por DocuPodcast Studio al guardar el proyecto"
         );
-        return new MaterializedImportedDocument(sourceAsset, importedAsset, projectSourceDocument);
+        return new MaterializedImportedDocument(sourceAsset, importedAsset,
+                new BlockDocumentSource(projectSourceDocument));
+    }
+
+    @Override
+    public MaterializedImportedDocument materialize(ProjectDocumentSource source,
+                                                    ReadingProfile activeReadingProfile,
+                                                    Path projectFile) throws IOException {
+        Objects.requireNonNull(source, "source");
+        if (source instanceof BlockDocumentSource block) {
+            return materialize(block.document(), activeReadingProfile, projectFile);
+        }
+        return materializePdf((PreparedPdfSource) source, projectFile);
+    }
+
+    private MaterializedImportedDocument materializePdf(PreparedPdfSource pdf,
+                                                        Path projectFile) throws IOException {
+        Path root = projectFile.toAbsolutePath().normalize().getParent();
+        if (root == null) root = Path.of(".").toAbsolutePath().normalize();
+        Files.createDirectories(root.resolve("source"));
+        Files.createDirectories(root.resolve("document"));
+
+        Path previousRoot = pdf.workspace().projectRoot();
+        PdfDocumentManifest previousManifest = preparedPdfRepository.loadManifest(previousRoot)
+                .orElseThrow(() -> new IOException("Falta el manifest PDF V2 en " + previousRoot));
+        List<PreparedPdfPage> carriedPages = previousRoot.equals(root)
+                ? List.of() : preparedPdfRepository.loadPages(previousRoot);
+        String sourceName = safeFileName(pdf.sourcePath().getFileName().toString());
+        Path copiedSource = root.resolve("source").resolve(sourceName).toAbsolutePath().normalize();
+        if (!pdf.sourcePath().toAbsolutePath().normalize().equals(copiedSource)) {
+            copyAtomically(pdf.sourcePath(), copiedSource);
+        }
+        String hash = sha256(copiedSource);
+        if (!hash.equalsIgnoreCase(pdf.workspace().sourceSha256())) {
+            throw new IOException("El hash del PDF fuente no coincide con el workspace preparado.");
+        }
+        Instant now = Instant.now();
+        preparedPdfRepository.initialize(root, new PdfDocumentManifest(
+                PdfDocumentManifest.CURRENT_SCHEMA_VERSION,
+                pdf.title(), sourceName, hash, previousManifest.pageCount(),
+                previousManifest.preparationSignature(),
+                previousManifest.analysisSummary(), previousManifest.createdAt(), now,
+                previousManifest.readingStrategy(), previousManifest.nativeTextProvider()));
+        for (PreparedPdfPage page : carriedPages) {
+            preparedPdfRepository.savePage(root, page);
+        }
+        if (!previousRoot.equals(root)) {
+            copyPageMapSidecars(previousRoot, root);
+            copyPdfOperationSidecars(previousRoot, root);
+        }
+        Files.deleteIfExists(root.resolve("document").resolve("document.json"));
+
+        ProjectAssetReference sourceAsset = ProjectAssetReference.sourceDocument(
+                "SRC-001", sourceName, "source/" + sourceName, "application/pdf");
+        ProjectAssetReference importedAsset = new ProjectAssetReference(
+                "DOC-001", ProjectAssetKind.IMPORTED_DOCUMENT, "Documento PDF preparado",
+                JsonPreparedPdfDocumentRepository.MANIFEST_RELATIVE_PATH,
+                "application/json", "Manifest canónico PDF V2", "",
+                "Generado por DocuPodcast Studio al guardar el proyecto");
+        return new MaterializedImportedDocument(sourceAsset, importedAsset,
+                new PreparedPdfSource(new PreparedPdfWorkspaceRef(root, copiedSource, hash), pdf.title()));
+    }
+
+    private static void copyAtomically(Path source, Path target) throws IOException {
+        Path temporary = target.resolveSibling(target.getFileName() + ".tmp");
+        Files.copy(source, temporary, StandardCopyOption.REPLACE_EXISTING);
+        try {
+            Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING,
+                    StandardCopyOption.ATOMIC_MOVE);
+        } catch (java.nio.file.AtomicMoveNotSupportedException ex) {
+            Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
+    private static void copyPageMapSidecars(Path sourceRoot, Path targetRoot) throws IOException {
+        Path sourceDirectory = sourceRoot.resolve("document/page-maps").normalize();
+        if (!Files.isDirectory(sourceDirectory)) return;
+        Path targetDirectory = targetRoot.resolve("document/page-maps").normalize();
+        Files.createDirectories(targetDirectory);
+        try (java.util.stream.Stream<Path> stream = Files.list(sourceDirectory)) {
+            for (Path source : stream.filter(Files::isRegularFile)
+                    .filter(candidate -> candidate.getFileName().toString()
+                            .matches("(?:manifest|page-\\d{6})\\.json"))
+                    .toList()) {
+                copyAtomically(source, targetDirectory.resolve(source.getFileName()));
+            }
+        }
+    }
+
+    private static void copyPdfOperationSidecars(
+            Path sourceRoot, Path targetRoot) throws IOException {
+        Path sourceDirectory = sourceRoot.resolve(
+                JsonPdfOperationAttemptRepository.RELATIVE_DIRECTORY).normalize();
+        if (!Files.isDirectory(sourceDirectory)) return;
+        Path targetDirectory = targetRoot.resolve(
+                JsonPdfOperationAttemptRepository.RELATIVE_DIRECTORY).normalize();
+        Files.createDirectories(targetDirectory);
+        try (java.util.stream.Stream<Path> stream = Files.list(sourceDirectory)) {
+            for (Path source : stream.filter(Files::isRegularFile)
+                    .filter(candidate -> candidate.getFileName().toString()
+                            .matches("PDF-ATTEMPT-[a-fA-F0-9]+\\.json"))
+                    .toList()) {
+                copyAtomically(source,
+                        targetDirectory.resolve(source.getFileName()));
+            }
+        }
     }
 
     private static ReadableDocument rebaseToProjectSource(ReadableDocument document, Path copiedSource) {
         return new ReadableDocument(document.title(), document.format(), copiedSource, document.blocks(), document.importReport());
     }
 
+    private static void removePdfStorage(Path root) throws IOException {
+        Path documentDirectory = root.toAbsolutePath().normalize().resolve("document");
+        Files.deleteIfExists(documentDirectory.resolve("manifest.json"));
+        Path pages = documentDirectory.resolve("pages");
+        if (Files.isDirectory(pages)) {
+            try (java.util.stream.Stream<Path> stream = Files.list(pages)) {
+                for (Path path : stream.filter(Files::isRegularFile)
+                        .filter(candidate -> candidate.getFileName().toString()
+                                .matches("page-\\d{6}\\.json(?:\\.tmp)?"))
+                        .toList()) {
+                    Files.deleteIfExists(path);
+                }
+            }
+        }
+        Path pageMaps = documentDirectory.resolve("page-maps");
+        if (Files.isDirectory(pageMaps)) {
+            try (java.util.stream.Stream<Path> stream = Files.list(pageMaps)) {
+                for (Path path : stream.filter(Files::isRegularFile)
+                        .filter(candidate -> candidate.getFileName().toString()
+                                .matches("(?:manifest|page-\\d{6})\\.json(?:\\.tmp)?"))
+                        .toList()) {
+                    Files.deleteIfExists(path);
+                }
+            }
+        }
+        Path operations = documentDirectory.resolve("pdf-operations");
+        if (Files.isDirectory(operations)) {
+            try (java.util.stream.Stream<Path> stream = Files.list(operations)) {
+                for (Path path : stream.filter(Files::isRegularFile)
+                        .filter(candidate -> candidate.getFileName().toString()
+                                .matches("PDF-ATTEMPT-[a-fA-F0-9]+\\.json(?:\\.tmp)?"))
+                        .toList()) {
+                    Files.deleteIfExists(path);
+                }
+            }
+        }
+    }
 
     @Override
     @SuppressWarnings("unchecked")
-    public Optional<ReadableDocument> load(Path projectFile) throws IOException {
+    public Optional<ProjectDocumentSource> load(Path projectFile) throws IOException {
         Objects.requireNonNull(projectFile, "projectFile");
         Path root = projectFile.toAbsolutePath().normalize().getParent();
         if (root == null) {
             root = Path.of(".").toAbsolutePath().normalize();
+        }
+        Optional<PdfDocumentManifest> pdfManifest = preparedPdfRepository.loadManifest(root);
+        if (pdfManifest.isPresent()) {
+            PdfDocumentManifest manifest = pdfManifest.get();
+            Path sourcePath = root.resolve("source").resolve(safeFileName(manifest.sourceFile())).normalize();
+            return Optional.of(new PreparedPdfSource(
+                    new PreparedPdfWorkspaceRef(root, sourcePath, manifest.sourceSha256()),
+                    manifest.title()));
         }
         Path documentJson = root.resolve("document").resolve("document.json").normalize();
         if (!Files.isRegularFile(documentJson)) {
@@ -95,11 +268,16 @@ public final class ReadableDocumentWorkspaceRepository implements ImportedDocume
         Map<String, Object> map = object(parsed, "document/document.json");
         String title = stringOrDefault(map.get("title"), "Documento importado");
         SourceDocumentFormat format = enumOrDefault(SourceDocumentFormat.class, stringOrDefault(map.get("format"), SourceDocumentFormat.UNKNOWN.name()), SourceDocumentFormat.UNKNOWN);
+        if (format == SourceDocumentFormat.PDF) {
+            throw new IOException("Este proyecto usa el almacenamiento PDF preliminar. "
+                    + "Vuelve a importar el PDF para crear su espacio documental V2.");
+        }
         String sourceFileName = stringOrDefault(map.get("sourcePath"), title + ".docx");
         Path sourcePath = root.resolve("source").resolve(safeFileName(sourceFileName)).normalize();
         List<DocumentBlock> blocks = enrichEmbeddedImagesFromSource(sourcePath, readBlocks(map.get("blocks")));
         DocumentImportReport report = readImportReport(optionalObject(map.get("importReport")));
-        return Optional.of(new ReadableDocument(title, format, sourcePath, blocks, report));
+        return Optional.of(new BlockDocumentSource(
+                new ReadableDocument(title, format, sourcePath, blocks, report)));
     }
 
 
@@ -421,6 +599,46 @@ public final class ReadableDocumentWorkspaceRepository implements ImportedDocume
         if (name.endsWith(".docx")) {
             return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
         }
+        if (name.endsWith(".pdf")) {
+            return "application/pdf";
+        }
         return "application/octet-stream";
+    }
+
+    private static int sourcePageCount(ReadableDocument document) throws IOException {
+        int pageCount = 0;
+        for (DocumentBlock block : document.blocks()) {
+            pageCount = Math.max(pageCount, positiveInt(block.metadata().get("sourcePageCount")));
+            pageCount = Math.max(pageCount, positiveInt(block.metadata().get("sourcePage")));
+        }
+        if (pageCount <= 0) {
+            throw new IOException("No se pudo determinar el número de páginas del PDF.");
+        }
+        return pageCount;
+    }
+
+    private static int positiveInt(String value) {
+        if (value == null || value.isBlank()) return 0;
+        try {
+            return Math.max(0, Integer.parseInt(value.strip()));
+        } catch (NumberFormatException ex) {
+            return 0;
+        }
+    }
+
+    private static String sha256(Path file) throws IOException {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            try (java.io.InputStream input = Files.newInputStream(file)) {
+                byte[] buffer = new byte[64 * 1024];
+                int read;
+                while ((read = input.read(buffer)) >= 0) {
+                    if (read > 0) digest.update(buffer, 0, read);
+                }
+            }
+            return java.util.HexFormat.of().formatHex(digest.digest());
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IOException("SHA-256 no está disponible.", ex);
+        }
     }
 }

@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.toolbar;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls;
+
 import com.marcosmoreiradev.docupodcaststudio.presentation.command.AppCommandId;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ToolbarActionButton;
 import com.marcosmoreiradev.docupodcaststudio.presentation.shell.DocuPodcastShellView;
@@ -96,7 +98,7 @@ public final class MainToolbarView extends VBox {
     }
 
     private ScrollPane scrollableToolbarRow(HBox row, String styleClass) {
-        ScrollPane scrollPane = new ScrollPane(row);
+        ScrollPane scrollPane = StudioViewportControls.scrollPane(row);
         scrollPane.getStyleClass().add(styleClass);
         scrollPane.setFitToHeight(true);
         scrollPane.setFitToWidth(false);

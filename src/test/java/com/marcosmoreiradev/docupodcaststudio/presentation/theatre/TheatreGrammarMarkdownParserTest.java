@@ -12,6 +12,27 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class TheatreGrammarMarkdownParserTest {
     @Test
+    void parsesStageDirectionsAsNarratedNeutralInterventions() {
+        ImportPlan plan = TheatreGrammarMarkdownParser.parse("""
+                # Obra
+                ## Acto: Primero
+                ### Escena: Plaza
+                ACOTACIÓN: Mientras Concha bailaba, Eloy seguía trabajando.
+                """);
+
+        var direction = plan.interventions().getFirst();
+        assertTrue(direction.stageDirection());
+        assertEquals("NEUTRAL", direction.tono());
+        assertEquals("Mientras Concha bailaba, Eloy seguía trabajando.", direction.spokenText());
+        var document = new com.marcosmoreiradev.docupodcaststudio.application.theatre.grammar.TheatreGrammarDocumentBuilder()
+                .build(plan, Path.of("obra.teatro.md"));
+        var segment = com.marcosmoreiradev.docupodcaststudio.application.theatre.grammar.TheatreGrammarDocumentBuilder
+                .segment(document.blocks().getFirst());
+        assertTrue(segment.narratable());
+        assertEquals("true", segment.metadata().get("theatreStageDirection"));
+    }
+
+    @Test
     void parsesSceneTextBoundsSpatialMapAndInterventionMetadata() {
         ImportPlan plan = TheatreGrammarMarkdownParser.parse("""
                 # Obra

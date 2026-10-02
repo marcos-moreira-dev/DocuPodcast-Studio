@@ -33,8 +33,10 @@ public final class DrawingFeatureCatalog {
         return new DrawingFeatureCatalog()
                 .register(new DrawingProfile(DOCUMENT_PROBLEM, "Problema documental", ViewportMode.GROWING,
                         980, 1800, InkInputPolicy.NATIVE_PREFERRED,
-                        List.of(DrawingToolId.PEN, DrawingToolId.ERASER, DrawingToolId.IMAGE,
-                                DrawingToolId.CROP, DrawingToolId.PAN),
+                        List.of(DrawingToolId.PEN, DrawingToolId.STRAIGHT_LINE,
+                                DrawingToolId.ANGLE_MEASURE, DrawingToolId.ERASER,
+                                DrawingToolId.IMAGE, DrawingToolId.CROP, DrawingToolId.PAN,
+                                DrawingToolId.REGION_SELECT),
                         100, true, new DrawingExportProfile(4, true, true)))
                 .register(new DrawingProfile(FREE_COMPOSITION, "Composición libre", ViewportMode.GROWING,
                         1280, 960, InkInputPolicy.MOUSE_AND_NATIVE,
@@ -48,6 +50,6 @@ public final class DrawingFeatureCatalog {
                 .register(new DrawingProfile(THEATRE_FRAME, "Frame teatral", ViewportMode.FIXED,
                         1280, 720, InkInputPolicy.NATIVE_PREFERRED,
                         List.of(DrawingToolId.PEN, DrawingToolId.ERASER, DrawingToolId.PAN),
-                        50, true, new DrawingExportProfile(2, false, true)));
+                        50, true, new DrawingExportProfile(3, false, true)));
     }
 }

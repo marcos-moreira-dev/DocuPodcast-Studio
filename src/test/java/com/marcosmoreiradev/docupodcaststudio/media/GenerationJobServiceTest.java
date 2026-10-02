@@ -10,6 +10,7 @@ import com.marcosmoreiradev.docupodcaststudio.media.api.GenerationJobService;
 import com.marcosmoreiradev.docupodcaststudio.media.api.GenerationJobSnapshot;
 import com.marcosmoreiradev.docupodcaststudio.media.api.GenerationJobStatus;
 import com.marcosmoreiradev.docupodcaststudio.media.api.InMemoryGenerationJobRepository;
+import com.marcosmoreiradev.docupodcaststudio.media.api.PriorityResourceScheduler;
 import com.marcosmoreiradev.docupodcaststudio.media.api.ResourceLease;
 import org.junit.jupiter.api.Test;
 
@@ -29,7 +30,7 @@ final class GenerationJobServiceTest {
         InMemoryGenerationJobRepository repository = new InMemoryGenerationJobRepository();
         AtomicInteger attempts = new AtomicInteger();
         GenerationJobRequest request = request();
-        try (GenerationJobService jobs = new GenerationJobService(repository, 1)) {
+        try (GenerationJobService jobs = jobs(repository)) {
             jobs.submit(request, context -> {
                 context.progress().report("synthesis", .5, "half");
                 if (attempts.incrementAndGet() == 1) throw new IllegalStateException("retry me");
@@ -47,7 +48,7 @@ final class GenerationJobServiceTest {
     void cancellationIsCoordinatedOutsideTheEngine() throws Exception {
         InMemoryGenerationJobRepository repository = new InMemoryGenerationJobRepository();
         GenerationJobRequest request = request();
-        try (GenerationJobService jobs = new GenerationJobService(repository, 1)) {
+        try (GenerationJobService jobs = jobs(repository)) {
             jobs.submit(request, context -> {
                 while (!context.cancellation().cancellationRequested()) Thread.sleep(5);
                 return List.of();
@@ -61,7 +62,7 @@ final class GenerationJobServiceTest {
     void timeoutIsPersistedEvenWhenTheWorkerIsInterrupted() throws Exception {
         InMemoryGenerationJobRepository repository = new InMemoryGenerationJobRepository();
         GenerationJobRequest request = request();
-        try (GenerationJobService jobs = new GenerationJobService(repository, 1)) {
+        try (GenerationJobService jobs = jobs(repository)) {
             jobs.submit(request, context -> {
                 Thread.sleep(5_000);
                 return List.of();
@@ -75,6 +76,11 @@ final class GenerationJobServiceTest {
     private static GenerationJobRequest request() {
         return new GenerationJobRequest(GenerationJobId.create(), CapabilityId.VOICE_SYNTHESIS,
                 new EngineId("fake"), Map.of("text", "hola"), Instant.now());
+    }
+
+    private static GenerationJobService jobs(InMemoryGenerationJobRepository repository) {
+        return new GenerationJobService(repository, 1,
+                PriorityResourceScheduler.safeDefaults());
     }
 
     private static GenerationJobSnapshot awaitTerminal(InMemoryGenerationJobRepository repository,

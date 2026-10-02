@@ -1,6 +1,11 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.narrative;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeSourceChooser;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls;
+
 import com.marcosmoreiradev.docupodcaststudio.application.narrative.NarrativeDocumentContext;
+import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoResolutionPreset;
 import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualClipGenerationProfile;
 import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualGenerationProfile;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlock;
@@ -117,9 +122,8 @@ public final class NarrativeVideoPanel extends BorderPane {
     }
 
     private Button modeButton(AppIcon icon, String text, InspectorMode mode) {
-        Button button = ActionButtonFactory.sideDockRail(icon, () -> showMode(mode, true));
-        button.setText(text);
-        button.setGraphicTextGap(4);
+        Button button = ActionButtonFactory.sideDockRail(icon, text, () -> showMode(mode, true));
+        button.setText("");
         button.setMaxWidth(Double.MAX_VALUE);
         button.getStyleClass().add("narrative-video-mode-button");
         return button;
@@ -243,7 +247,7 @@ public final class NarrativeVideoPanel extends BorderPane {
             return;
         }
         NarrativeParagraphTake take = layer.takeOrDefault(selectedBlockId);
-        CheckBox enabled = new CheckBox("Incluir este parrafo en narracion y video");
+        CheckBox enabled = StudioFormControls.checkBox("Incluir este parrafo en narracion y video");
         enabled.setSelected(take.enabled());
         enabled.setOnAction(event ->
                 viewModel.setNarrativeParagraphEnabled(selectedBlockId, enabled.isSelected()));
@@ -276,12 +280,12 @@ public final class NarrativeVideoPanel extends BorderPane {
     private void refreshContext(NarrativeProjectLayer layer) {
         contextBody.getChildren().clear();
         contextBody.setPadding(new Insets(14));
-        TextArea wordContext = StudioFormControls.textInput(new TextArea(layer.normalizedDocumentText()),
+        TextArea wordContext = StudioFormControls.textInput(StudioFormControls.textArea(layer.normalizedDocumentText()),
                 "Texto global de solo lectura procedente exclusivamente del Word importado.");
         wordContext.setEditable(false);
         wordContext.setWrapText(true);
         wordContext.setPrefRowCount(8);
-        ComboBox<NarrativeContextRole> role = StudioFormControls.combo(new ComboBox<>(),
+        ComboBox<NarrativeContextRole> role = StudioFormControls.combo(StudioFormControls.comboBox(),
                 "Define como debe usar la IA esta referencia global.");
         role.getItems().setAll(NarrativeContextRole.values());
         role.setValue(NarrativeContextRole.STYLE);
@@ -302,7 +306,7 @@ public final class NarrativeVideoPanel extends BorderPane {
     }
 
     private Node contextReferenceRow(NarrativeContextReference reference) {
-        CheckBox enabled = new CheckBox(reference.displayName() + " - " + reference.role().name());
+        CheckBox enabled = StudioFormControls.checkBox(reference.displayName() + " - " + reference.role().name());
         enabled.setSelected(reference.enabled());
         enabled.setMaxWidth(Double.MAX_VALUE);
         enabled.setOnAction(event -> viewModel.updateNarrativeContextReference(
@@ -321,29 +325,50 @@ public final class NarrativeVideoPanel extends BorderPane {
     private void refreshSettings(NarrativeVideoConfiguration config) {
         settingsBody.getChildren().clear();
         settingsBody.setPadding(new Insets(14));
-        ComboBox<VisualGenerationProfile> imageProfile = StudioFormControls.combo(new ComboBox<>(),
+        ComboBox<SimpleVideoResolutionPreset> resolution = StudioFormControls.combo(
+                StudioFormControls.comboBox(),
+                "Resolución de imágenes clave, clips y video final del proyecto narrativo.");
+        resolution.getItems().setAll(
+                SimpleVideoResolutionPreset.LOW_VERTICAL_540X960,
+                SimpleVideoResolutionPreset.HD_VERTICAL_720X1280,
+                SimpleVideoResolutionPreset.FULL_HD_VERTICAL_1080X1920,
+                SimpleVideoResolutionPreset.LOW_540,
+                SimpleVideoResolutionPreset.HD_720,
+                SimpleVideoResolutionPreset.FULL_HD_1080,
+                SimpleVideoResolutionPreset.QHD_2K,
+                SimpleVideoResolutionPreset.UHD_4K);
+        resolution.setValue(SimpleVideoResolutionPreset.fromDimensions(config.width(), config.height()));
+        resolution.setConverter(new javafx.util.StringConverter<>() {
+            @Override public String toString(SimpleVideoResolutionPreset value) {
+                return value == null ? "" : value.label() + " - " + value.width() + "x" + value.height();
+            }
+            @Override public SimpleVideoResolutionPreset fromString(String value) {
+                return resolution.getValue();
+            }
+        });
+        ComboBox<VisualGenerationProfile> imageProfile = StudioFormControls.combo(StudioFormControls.comboBox(),
                 "Perfil local usado para producir imagenes clave.");
         imageProfile.getItems().setAll(VisualGenerationProfile.values());
         imageProfile.setValue(VisualGenerationProfile.from(config.imageProfile()));
-        ComboBox<VisualClipGenerationProfile> videoProfile = StudioFormControls.combo(new ComboBox<>(),
+        ComboBox<VisualClipGenerationProfile> videoProfile = StudioFormControls.combo(StudioFormControls.comboBox(),
                 "Perfil local image-to-video para producir los clips.");
         videoProfile.getItems().setAll(VisualClipGenerationProfile.values());
         videoProfile.setValue(VisualClipGenerationProfile.from(config.videoProfile()));
-        ComboBox<String> memory = StudioFormControls.combo(new ComboBox<>(),
+        ComboBox<String> memory = StudioFormControls.combo(StudioFormControls.comboBox(),
                 "La memoria baja puede descargar capas a RAM sin cambiar el dispositivo seleccionado.");
         memory.getItems().setAll("SAFE", "BALANCED", "QUALITY");
         memory.setValue(config.memoryMode());
         Spinner<Integer> fps = StudioFormControls.spinner(
-                new Spinner<>(new SpinnerValueFactory.IntegerSpinnerValueFactory(12, 60, config.framesPerSecond())),
+                StudioFormControls.spinner(new SpinnerValueFactory.IntegerSpinnerValueFactory(12, 60, config.framesPerSecond())),
                 "Fotogramas por segundo del video final.");
         Spinner<Double> clipSeconds = StudioFormControls.spinner(
-                new Spinner<>(new SpinnerValueFactory.DoubleSpinnerValueFactory(
+                StudioFormControls.spinner(new SpinnerValueFactory.DoubleSpinnerValueFactory(
                         1.0, 10.0, config.maxClipDurationSeconds(), 0.5)),
                 "Duracion maxima de cada clip antes de encadenar el siguiente.");
         Button save = ActionButtonFactory.primary("Guardar ajustes", () ->
                 viewModel.updateNarrativeVideoConfiguration(new NarrativeVideoConfiguration(
-                        720,
-                        1280,
+                        resolution.getValue().width(),
+                        resolution.getValue().height(),
                         fps.getValue(),
                         clipSeconds.getValue(),
                         imageProfile.getValue().name(),
@@ -363,8 +388,8 @@ public final class NarrativeVideoPanel extends BorderPane {
         cancel.setDisable(!running);
         settingsBody.getChildren().addAll(
                 heading("Ajustes del video"),
-                hint("Formato vertical 9:16, salida minima 720x1280 y dispositivo exacto de Configuracion."),
-                labelled("Resolucion", new Label(config.width() + " x " + config.height())),
+                hint("El perfil elegido se aplica a imágenes clave, clips y exportación; 540p reduce el consumo."),
+                labelled("Resolución", resolution),
                 labelled("FPS", fps),
                 labelled("Duracion maxima de clip", clipSeconds),
                 labelled("Perfil de imagen", imageProfile),
@@ -419,7 +444,7 @@ public final class NarrativeVideoPanel extends BorderPane {
     }
 
     private static ScrollPane workspaceScroll(Node content, String styleClass) {
-        ScrollPane scroll = new ScrollPane(content);
+        ScrollPane scroll = StudioViewportControls.scrollPane(content);
         scroll.setFitToWidth(true);
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
@@ -466,7 +491,7 @@ public final class NarrativeVideoPanel extends BorderPane {
     }
 
     private static FileChooser imageChooser(String title) {
-        FileChooser chooser = new FileChooser();
+        FileChooser chooser = NativeSourceChooser.fileChooser();
         chooser.setTitle(title);
         chooser.getExtensionFilters().setAll(
                 new FileChooser.ExtensionFilter("Imagenes compatibles", "*.png", "*.jpg", "*.jpeg", "*.webp", "*.bmp"),

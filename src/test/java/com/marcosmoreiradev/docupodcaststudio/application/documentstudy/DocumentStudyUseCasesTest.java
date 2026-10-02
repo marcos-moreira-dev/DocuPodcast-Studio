@@ -36,7 +36,7 @@ final class DocumentStudyUseCasesTest {
     Path tempDir;
 
     @Test
-    void projectionKeepsSourceVisualsAsSecondarySupportAndCountsAudio() throws Exception {
+    void projectionKeepsVisualSupportAndTreatsWordMathAsOrdinaryNarration() throws Exception {
         ReadableDocument document = documentWithSupport();
         NarrationScriptDocument script = new BuildNarrationScriptUseCase()
                 .build(document, "es", false, TableNarrationPolicy.READ_STRUCTURED);
@@ -49,14 +49,14 @@ final class DocumentStudyUseCasesTest {
         DocumentStudyProjection projection = new BuildDocumentStudyProjectionUseCase()
                 .build(document, PreparedReadingProjection.from(document, script), fragments, List.of(job), tempDir);
 
-        assertEquals(1, projection.primaryFragmentCount());
-        assertEquals(1, projection.narratableFragmentCount());
+        assertEquals(2, projection.primaryFragmentCount());
+        assertEquals(2, projection.narratableFragmentCount());
         assertEquals(1, projection.secondaryUnitCount());
         assertEquals(3, projection.sourceVisualCount());
         assertEquals(3, projection.supportItems().size());
         assertEquals(1, projection.audioReadyCount());
-        assertEquals(0, projection.audioMissingCount());
-        assertTrue(projection.readiness().textAudioVideoExportable());
+        assertEquals(1, projection.audioMissingCount());
+        assertFalse(projection.readiness().textAudioVideoExportable());
     }
 
     @Test

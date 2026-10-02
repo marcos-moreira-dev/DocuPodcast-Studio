@@ -51,7 +51,7 @@
 }
 
 .pdf-visual-text-highlight {
-    -fx-fill: rgba(125, 211, 252, 0.18);
+    -fx-fill: rgba(125, 211, 252, 0.22);
     -fx-stroke: transparent;
     -fx-stroke-width: 0;
     -fx-arc-width: 3px;
@@ -64,9 +64,9 @@
 }
 
 .pdf-visual-text-hover {
-    -fx-fill: rgba(124, 58, 237, 0.12);
-    -fx-stroke: transparent;
-    -fx-stroke-width: 0;
+    -fx-fill: transparent;
+    -fx-stroke: rgba(124, 58, 237, 0.62);
+    -fx-stroke-width: 1px;
 }
 
 .pdf-visual-text-hover-underline {
@@ -75,14 +75,39 @@
 }
 
 .pdf-visual-text-selected {
-    -fx-fill: rgba(109, 40, 217, 0.18);
-    -fx-stroke: transparent;
-    -fx-stroke-width: 0;
+    -fx-fill: transparent;
+    -fx-stroke: #6d28d9;
+    -fx-stroke-width: 2px;
+    -fx-arc-width: 5px;
+    -fx-arc-height: 5px;
+}
+
+.pdf-visual-workspace:focused .pdf-visual-text-selected {
+    -fx-stroke: #4338ca;
+    -fx-stroke-width: 3px;
 }
 
 .pdf-visual-text-selected-underline {
     -fx-fill: rgba(109, 40, 217, 0.86);
     -fx-stroke: transparent;
+}
+
+.pdf-narration-focus-rectangle {
+    -fx-fill: rgba(250, 204, 21, 0.035);
+    -fx-stroke: #a16207;
+    -fx-stroke-width: 4px;
+    -fx-stroke-dash-array: 12 5 3 5;
+    -fx-arc-width: 8px;
+    -fx-arc-height: 8px;
+}
+
+.pdf-narration-focus-label {
+    -fx-background-color: #713f12;
+    -fx-text-fill: white;
+    -fx-font-size: 12px;
+    -fx-font-weight: 800;
+    -fx-padding: 3px 8px;
+    -fx-background-radius: 5px;
 }
 
 .pdf-visual-message,

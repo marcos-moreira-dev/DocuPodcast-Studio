@@ -44,13 +44,13 @@ import static com.marcosmoreiradev.docupodcaststudio.application.video.TheatreSp
 
 /** Builds PNG frames for the theatre spatial-map video from the theatre MD layer. */
 public final class BuildTheatreSpatialVideoPlanUseCase {
-    private static final Color BLACK = new Color(3, 7, 18);
+    private static final Color BLACK = Color.BLACK;
     private static final Color WHITE = Color.WHITE;
     private static final Color CREAM_TEXT = new Color(253, 236, 200);
     private static final Color TEXT_SHADOW = new Color(0, 0, 0, 190);
     private static final Color ARROW = new Color(15, 23, 42);
     private static final Color ARROW_ACTIVE_SHADOW = new Color(0, 0, 0, 120);
-    private static final double ROLE_ICON_SCALE_FACTOR = 0.70;
+    private static final double ROLE_ICON_SCALE_FACTOR = 0.35;
     private static final double ARROW_TRIM_FACTOR = 0.56;
     private static final double SELF_LOOP_SCALE_FACTOR = 0.34;
     private static final double SELF_LOOP_RIGHT_OFFSET_FACTOR = 0.44;
@@ -173,10 +173,10 @@ public final class BuildTheatreSpatialVideoPlanUseCase {
             if (!scopeIncludes(effectiveScope, scene)) {
                 continue;
             }
-            ProjectAssetReference mapAsset = requireImageAsset(assets, scene.spatialMapAssetId(),
+            ProjectAssetReference mapAsset = "scenery".equals(mode) ? null : requireImageAsset(assets, scene.spatialMapAssetId(),
                     "mapa_espacial de escena " + scene.displayName());
             List<NarrationSegment> blockSegments = segmentsByBlock.getOrDefault(intervention.blockId(), List.of()).stream()
-                    .filter(NarrationSegment::narratable)
+                    .filter(segment -> segment.narratable() || stageDirection(segment))
                     .toList();
             if (blockSegments.isEmpty()) {
                 throw new IOException("No se encontro el texto DOCX de " + intervention.id()
@@ -185,6 +185,28 @@ public final class BuildTheatreSpatialVideoPlanUseCase {
             NarrationSegment segment = blockSegments.get(0);
             String fullInterventionText = fullInterventionText(blockSegments);
             List<AudioSegmentSnapshot> audioUnits = audioForSegments(audioBySegment, blockSegments);
+            if (stageDirection(segment) && audioUnits.isEmpty()) {
+                List<String> pages = sceneryCaptionPages(fullInterventionText,
+                        effective.resolution().width(), effective.resolution().height());
+                double totalDuration = TheatreVideoTimingPolicy.silentStageDirectionSeconds(
+                        fullInterventionText, effective.silenceAfterFrameSeconds());
+                for (String page : pages) {
+                    if (cancel.getAsBoolean()) {
+                        throw new IOException("Exportacion de mapa teatral cancelada por el usuario.");
+                    }
+                    Path output = framesDir.resolve("theatre-map-" + String.format(Locale.ROOT, "%03d", index) + ".png");
+                    NarrationSegment pageSegment = segment.withNarrationText(page);
+                    render(new FrameSpec(effective.resolution().width(), effective.resolution().height(), mode,
+                            scene, placement, pageSegment, mapAsset, null, project, root, characterNames, page), output);
+                    frames.add(new SimpleVideoFrame(
+                            "THEATRE-MAP-" + String.format(Locale.ROOT, "%03d", index),
+                            segment.id(), intervention.id(), page, "", relativeToProject(root, output), "",
+                            0.0, totalDuration / Math.max(1, pages.size()), true, false, true,
+                            List.of(), List.of()));
+                    index++;
+                }
+                continue;
+            }
             if (audioUnits.isEmpty()) {
                 throw new IOException("No hay audio renderizado para " + intervention.id()
                         + " (" + segment.id() + "). Genera fragmentos de audio antes de exportar Video mapa.");
@@ -221,8 +243,21 @@ public final class BuildTheatreSpatialVideoPlanUseCase {
                         characterNames,
                         fullInterventionText);
                 render(spec, output);
-                double totalDurationSeconds = audio.durationSeconds() + effective.silenceAfterFrameSeconds();
+                double spokenTailSeconds = TheatreVideoTimingPolicy.spokenTailSeconds();
+                double totalDurationSeconds = audio.durationSeconds() + spokenTailSeconds;
                 List<SimpleVideoFrame.VisualPart> visualParts = List.of();
+                if ("scenery".equals(mode)) {
+                    List<String> pages = sceneryCaptionPages(fullInterventionText, spec.width(), spec.height());
+                    List<SimpleVideoFrame.VisualPart> parts = new ArrayList<>();
+                    for (int page=0; page<pages.size(); page++) {
+                        Path pageOutput = page == 0 ? output : framesDir.resolve("theatre-map-" + index + "-page-" + page + ".png");
+                        render(new FrameSpec(spec.width(),spec.height(),mode,scene,placement,frameSegment,null,
+                                visualAsset,project,root,characterNames,pages.get(page)),pageOutput);
+                        parts.add(new SimpleVideoFrame.VisualPart("",relativeToProject(root,pageOutput),
+                                totalDurationSeconds/pages.size(),"parlamento"));
+                    }
+                    visualParts = List.copyOf(parts);
+                }
                 if (inferredVisual != null && totalDurationSeconds > 0.0) {
                     Path inferredOutput = framesDir.resolve("theatre-map-"
                             + String.format(Locale.ROOT, "%03d", index) + "-inferido.png");
@@ -256,7 +291,7 @@ public final class BuildTheatreSpatialVideoPlanUseCase {
                         relativeToProject(root, output),
                         audio.audioRelativePath(),
                         audio.durationSeconds(),
-                        effective.silenceAfterFrameSeconds(),
+                        spokenTailSeconds,
                         true,
                         true,
                         false,
@@ -270,7 +305,7 @@ public final class BuildTheatreSpatialVideoPlanUseCase {
         }
         safeProgress.accept(VideoRenderProgress.composingMaps(frames.size(), frames.size(), "Mapas teatrales listos."));
         SimpleVideoPlan plan = new SimpleVideoPlan("Video mapa teatral - " + script.title(), frames,
-                effective.silenceAfterFrameSeconds(), Instant.now());
+                TheatreVideoTimingPolicy.spokenTailSeconds(), Instant.now());
         completed = true;
         return plan;
         } finally {
@@ -392,13 +427,22 @@ public final class BuildTheatreSpatialVideoPlanUseCase {
     }
 
     private static void drawExportSurface(Graphics2D g, FrameSpec spec) throws IOException {
-        int margin = Math.max(32, spec.width() / 30);
+        int margin = "scenery".equals(spec.mode())
+                ? Math.max(16, spec.width() / 64)
+                : Math.max(32, spec.width() / 30);
         int gap = Math.max(18, spec.width() / 80);
         int bottomHeight = captionBandHeight(spec);
         int top = margin;
         int contentHeight = spec.height() - (margin * 3) - bottomHeight;
         int usableWidth = spec.width() - (margin * 2);
-        if ("none".equals(spec.mode())) {
+        if ("scenery".equals(spec.mode())) {
+            var composer = new TheatreSceneryComposition();
+            var composition = composer.resolve(spec.project(), spec.placement(), spec.projectDirectory());
+            if (stageDirection(spec.segment())) {
+                composition = new TheatreSceneryComposition.Composition(composition.backdrop(), List.of());
+            }
+            g.drawImage(composer.render(composition, usableWidth, Math.max(1,contentHeight)), margin, top, null);
+        } else if (stageDirection(spec.segment()) || "none".equals(spec.mode())) {
             drawMapPanel(g, spec, margin, top, usableWidth, contentHeight);
         } else if ("fragments".equals(spec.mode())) {
             int panelWidth = (usableWidth - gap) / 2;
@@ -440,6 +484,9 @@ public final class BuildTheatreSpatialVideoPlanUseCase {
     }
 
     private static int captionBandHeight(FrameSpec spec) {
+        if ("scenery".equals(spec.mode())) {
+            return sceneryCaptionBandHeight(spec.height(), spec.narrationText());
+        }
         int base = Math.max(210, spec.height() / 4);
         String text = spec == null ? "" : spec.narrationText();
         int length = text == null ? 0 : text.length();
@@ -507,6 +554,18 @@ public final class BuildTheatreSpatialVideoPlanUseCase {
 
     private static void drawCaption(Graphics2D g, FrameSpec spec, int x, int y, int w, int h) {
         String speaker = PARTICIPANT_RESOLVER.speakerName(spec.placement(), spec.characterNames());
+        if ("scenery".equals(spec.mode())) {
+            g.setColor(BLACK); g.fillRect(x,y,w,h);
+            g.setColor(CREAM_TEXT);
+            String prefix = (speaker.isBlank() ? "ACOTACIÓN" : speaker) + ": ";
+            int fontSize = captionFontSize(g, prefix + spec.narrationText(), w - 56, h - 20, spec.width());
+            g.setFont(new Font("Georgia", Font.BOLD | Font.ITALIC, fontSize));
+            var lines=wrap(g,prefix + spec.narrationText(),w-56);
+            int lineHeight=g.getFontMetrics().getHeight()+3;
+            int baseline=y+Math.max(lineHeight,(h-lines.size()*lineHeight)/2+lineHeight);
+            for(String line:lines) { drawLeftShadowed(g,line,x+28,baseline); baseline+=lineHeight; }
+            return;
+        }
         String text = stripSpeaker(spec.narrationText());
         g.setColor(CREAM_TEXT);
         String prefix = (speaker.isBlank() ? "PERSONAJE" : speaker) + ": ";
@@ -518,6 +577,40 @@ public final class BuildTheatreSpatialVideoPlanUseCase {
         for (int i = 0; i < lines.size(); i++) {
             drawLeftShadowed(g, lines.get(i), x + 40, startY + (i * lineHeight));
         }
+    }
+
+    static List<String> sceneryCaptionPages(String text, int width, int height) {
+        var image = new BufferedImage(1,1,BufferedImage.TYPE_INT_RGB);
+        var g = image.createGraphics();
+        try {
+            int availableWidth = Math.max(100, width - 2 * Math.max(16, width / 64) - 56);
+            int band = sceneryCaptionBandHeight(height, text);
+            int availableHeight = Math.max(1, band - 20);
+            int fittedSize = captionFontSize(g, text, availableWidth, availableHeight, width);
+            g.setFont(new Font("Georgia", Font.BOLD | Font.ITALIC, fittedSize));
+            var lines = wrap(g, text, availableWidth);
+            int perPage = Math.max(1, availableHeight / (g.getFontMetrics().getHeight() + 3));
+            var pages=new ArrayList<String>();
+            for(int i=0;i<lines.size();i+=perPage) pages.add(String.join(" ",lines.subList(i,Math.min(lines.size(),i+perPage))));
+            return pages.isEmpty()?List.of(""):List.copyOf(pages);
+        } finally { g.dispose(); }
+    }
+
+    private static int sceneryCaptionBandHeight(int frameHeight, String text) {
+        int base = Math.max(150, frameHeight / 6);
+        int length = text == null ? 0 : text.length();
+        if (length > 520) {
+            return Math.max(base, (int) Math.round(frameHeight * 0.34));
+        }
+        if (length > 260) {
+            return Math.max(base, frameHeight / 4);
+        }
+        return base;
+    }
+
+    private static boolean stageDirection(NarrationSegment segment) {
+        return segment != null && Boolean.parseBoolean(
+                segment.metadata().getOrDefault("theatreStageDirection", "false"));
     }
 
     private static int captionFontSize(Graphics2D g, String text, int width, int height, int frameWidth) {
@@ -535,10 +628,13 @@ public final class BuildTheatreSpatialVideoPlanUseCase {
     }
 
     private static void drawPlacementOverlay(Graphics2D g, FrameSpec spec, int mapX, int mapY, int mapW, int mapH) {
+        if (stageDirection(spec.segment())) {
+            return;
+        }
         TheatreStageGeometry.StagePoint origin = TheatreStageGeometry.pointFor(spec.placement().origin());
         double ox = mapX + origin.scaledX(mapW);
         double oy = mapY + origin.scaledY(mapH);
-        int iconSize = Math.max(118, (int) Math.round((spec.width() / 12.0) * ROLE_ICON_SCALE_FACTOR));
+        int iconSize = Math.max(59, (int) Math.round((spec.width() / 12.0) * ROLE_ICON_SCALE_FACTOR));
         ArrayList<String> selfLoopLocations = new ArrayList<>();
         for (String destination : PARTICIPANT_RESOLVER.destinationLocations(spec.project(), spec.placement())) {
             TheatreStageGeometry.StagePoint dest = TheatreStageGeometry.pointFor(destination);

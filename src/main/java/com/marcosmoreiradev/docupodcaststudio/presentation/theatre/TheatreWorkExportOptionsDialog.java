@@ -1,5 +1,9 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.theatre;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioDialogShell;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
+
 import com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy;
 import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoResolutionPreset;
 import com.marcosmoreiradev.docupodcaststudio.presentation.notification.DialogStyler;
@@ -25,7 +29,7 @@ public final class TheatreWorkExportOptionsDialog {
     public Optional<TheatreWorkExportOptions> show(Window owner,
                                                    List<VideoEncoderPolicy> availableEncoderPolicies,
                                                    VideoEncoderPolicy defaultEncoderPolicy) {
-        Dialog<TheatreWorkExportOptions> dialog = new Dialog<>();
+        Dialog<TheatreWorkExportOptions> dialog = StudioDialogShell.dialog();
         dialog.setTitle("Exportar obra teatral");
         dialog.setHeaderText("Elige imagen, texto y mapa espacial para el video de la obra");
         DialogStyler.apply(dialog, owner);
@@ -37,16 +41,16 @@ public final class TheatreWorkExportOptionsDialog {
         CheckBox useFragmentImages = checked("Usar imagenes de fragmentos", true);
         CheckBox showText = checked("Mostrar texto", true);
         ComboBox<String> fontFamily = stringCombo(List.of("Inter", "Arial", "Calibri", "Verdana", "Georgia", "Times New Roman"), "Inter");
-        Spinner<Integer> fontSize = new Spinner<>(12, 96, 42);
+        Spinner<Integer> fontSize = StudioFormControls.spinner(12, 96, 42);
         fontSize.setEditable(true);
-        TextField textColor = new TextField("#111827");
+        TextField textColor = StudioFormControls.textField("#111827");
         ComboBox<TheatreTextPosition> textPosition = enumCombo(TheatreTextPosition.values(), TheatreTextPosition.CENTER);
         ComboBox<TheatreTextEffect> textEffect = enumCombo(TheatreTextEffect.values(), TheatreTextEffect.SHADOW);
         ComboBox<TheatreFrameLayout> frameLayout = enumCombo(TheatreFrameLayout.values(), TheatreFrameLayout.IMAGE_WITH_TEXT);
         CheckBox showSpatialMap = checked("Mapa espacial lateral", false);
         CheckBox showCharacters = checked("Mostrar personajes", true);
         CheckBox showDisplacements = checked("Mostrar desplazamientos", true);
-        TextField backgroundColor = new TextField("#FFFFFF");
+        TextField backgroundColor = StudioFormControls.textField("#FFFFFF");
 
         GridPane form = new GridPane();
         form.setHgap(12);
@@ -95,12 +99,13 @@ public final class TheatreWorkExportOptionsDialog {
     }
 
     private static ComboBox<SimpleVideoResolutionPreset> resolutionCombo() {
-        ComboBox<SimpleVideoResolutionPreset> combo = new ComboBox<>();
+        ComboBox<SimpleVideoResolutionPreset> combo = StudioFormControls.comboBox();
         combo.getItems().setAll(
                 SimpleVideoResolutionPreset.UHD_4K,
                 SimpleVideoResolutionPreset.QHD_2K,
                 SimpleVideoResolutionPreset.FULL_HD_1080,
-                SimpleVideoResolutionPreset.HD_720);
+                SimpleVideoResolutionPreset.HD_720,
+                SimpleVideoResolutionPreset.LOW_540);
         combo.setValue(SimpleVideoResolutionPreset.defaultPreset());
         combo.setMaxWidth(Double.MAX_VALUE);
         styleCombo(combo);
@@ -119,7 +124,7 @@ public final class TheatreWorkExportOptionsDialog {
     }
 
     private static ComboBox<Integer> framesPerSecondCombo() {
-        ComboBox<Integer> combo = new ComboBox<>();
+        ComboBox<Integer> combo = StudioFormControls.comboBox();
         combo.getItems().setAll(24, 30, 48, 60);
         combo.setValue(30);
         combo.setMaxWidth(Double.MAX_VALUE);
@@ -132,7 +137,7 @@ public final class TheatreWorkExportOptionsDialog {
         List<VideoEncoderPolicy> encoders = availableEncoderPolicies == null || availableEncoderPolicies.isEmpty()
                 ? List.of(VideoEncoderPolicy.CPU_X264, VideoEncoderPolicy.AUTO)
                 : availableEncoderPolicies;
-        ComboBox<VideoEncoderPolicy> combo = new ComboBox<>();
+        ComboBox<VideoEncoderPolicy> combo = StudioFormControls.comboBox();
         combo.getItems().setAll(encoders);
         combo.setValue(encoders.contains(defaultEncoderPolicy) ? defaultEncoderPolicy : encoders.get(0));
         combo.setMaxWidth(Double.MAX_VALUE);
@@ -152,13 +157,13 @@ public final class TheatreWorkExportOptionsDialog {
     }
 
     private static CheckBox checked(String label, boolean selected) {
-        CheckBox box = new CheckBox(label);
+        CheckBox box = StudioFormControls.checkBox(label);
         box.setSelected(selected);
         return box;
     }
 
     private static ComboBox<String> stringCombo(List<String> values, String selected) {
-        ComboBox<String> combo = new ComboBox<>();
+        ComboBox<String> combo = StudioFormControls.comboBox();
         combo.getItems().setAll(values);
         combo.setValue(selected);
         combo.setMaxWidth(Double.MAX_VALUE);
@@ -167,7 +172,7 @@ public final class TheatreWorkExportOptionsDialog {
     }
 
     private static <T extends Enum<T>> ComboBox<T> enumCombo(T[] values, T selected) {
-        ComboBox<T> combo = new ComboBox<>();
+        ComboBox<T> combo = StudioFormControls.comboBox();
         combo.getItems().setAll(values);
         combo.setValue(selected);
         combo.setMaxWidth(Double.MAX_VALUE);

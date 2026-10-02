@@ -14,4 +14,4 @@ La lectura asistida ayuda a estudiar porque combina seguimiento visual, audio y 
 
 ## Cierre
 
-Este archivo no declara contrato especial. Si se abre en DocuPodcast, entra por el flujo normal de Abrir documento.
+Este archivo no declara contrato especial. Al asociarlo a un proyecto DocuPodcast, entra por el flujo normal de fuente documental.

@@ -35,7 +35,7 @@ final class BuildNarrationRenderPlanChoralVoiceTest {
     }
 
     @Test
-    void staleGeneratedMixFallsBackToNormalSentenceTts() {
+    void staleGeneratedMixFallsBackToOneWholeInterventionTtsUnit() {
         NarrationSegment original = segment("Texto original. Segunda frase.");
         DocuPodcastProject base = projectWithTheatre();
         String fingerprint = TheatreChoralVoiceFingerprint.compute(base, original, List.of("CHR-A", "CHR-B"));
@@ -45,7 +45,8 @@ final class BuildNarrationRenderPlanChoralVoiceTest {
 
         var plan = new BuildNarrationRenderPlanUseCase().build(script, project);
 
-        assertEquals(2, plan.unitCount());
+        assertEquals(1, plan.unitCount());
+        assertEquals(changed.narrationText(), plan.units().getFirst().text());
         assertTrue(plan.units().stream().allMatch(unit -> unit.sourceKind() == NarrationRenderSourceKind.TEXT_TO_SPEECH));
     }
 

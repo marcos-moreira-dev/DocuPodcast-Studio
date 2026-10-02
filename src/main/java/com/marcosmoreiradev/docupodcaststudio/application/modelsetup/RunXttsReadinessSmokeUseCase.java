@@ -6,6 +6,7 @@ import com.marcosmoreiradev.docupodcaststudio.application.settings.OperationalSe
 import com.marcosmoreiradev.docupodcaststudio.application.voice.VoiceTestSynthesisGateway;
 import com.marcosmoreiradev.docupodcaststudio.application.voice.VoiceTestSynthesisRequest;
 import com.marcosmoreiradev.docupodcaststudio.application.voice.VoiceTestSynthesisResult;
+import com.marcosmoreiradev.docupodcaststudio.media.api.EngineFeature;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -71,7 +72,10 @@ public final class RunXttsReadinessSmokeUseCase {
                     text,
                     audio,
                     dir,
-                    AudioEngineDescriptor.process("Voz IA avanzada", true, "runtime-local", "Prueba local de preparacion")));
+                    AudioEngineDescriptor.process("Voz IA avanzada", true,
+                            "runtime-local", "Prueba local de preparacion",
+                            java.util.Set.of(EngineFeature.REFERENCE_VOICE,
+                                    EngineFeature.EXPRESSIVE_STYLE))));
             long bytes = Files.isRegularFile(audio) ? Files.size(audio) : result.outputBytes();
             if (!result.generated() || bytes <= 44L) {
                 String message = result.userMessage().isBlank()

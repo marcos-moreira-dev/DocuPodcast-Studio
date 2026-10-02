@@ -1,5 +1,9 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.theatre;
 
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls;
+
+import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
+
 import com.marcosmoreiradev.docupodcaststudio.application.recording.AudioInputDevice;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.ReadableDocument;
 import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationScriptDocument;
@@ -54,14 +58,14 @@ public final class TheatreTextualMapPanel extends BorderPane {
         setPadding(new Insets(10));
         setFocusTraversable(true);
 
-        folds = new TheatreSceneFoldList(viewModel, this::sceneContent);
+        folds = new TheatreSceneFoldList(viewModel, this.boundaryStore, this::sceneContent);
 
         VBox body = new VBox(10,
                 new SectionHeader("Mapa textual", "Ajusta inicio y final de escenas; clic derecho en una intervencion para procesarla, grabar narracion/efecto sonido, exportar paquete IA o ver contexto."),
                 folds);
         body.getStyleClass().add("theatre-map-body");
         VBox.setVgrow(folds, Priority.ALWAYS);
-        ScrollPane scroll = new ScrollPane(body);
+        ScrollPane scroll = StudioViewportControls.scrollPane(body);
         scroll.setFitToWidth(true);
         scroll.getStyleClass().addAll("document-context-scroll", "theatre-textual-map-scroll");
         setCenter(scroll);
@@ -114,7 +118,7 @@ public final class TheatreTextualMapPanel extends BorderPane {
                 null,
                 alias -> showManualRecordingDialog(scene, alias),
                 null);
-        ScrollPane canvasScroll = new ScrollPane(canvas);
+        ScrollPane canvasScroll = StudioViewportControls.scrollPane(canvas);
         canvasScroll.getStyleClass().add("theatre-action-canvas-scroll");
         canvasScroll.setFitToWidth(false);
         canvasScroll.setFitToHeight(false);
@@ -136,7 +140,7 @@ public final class TheatreTextualMapPanel extends BorderPane {
             return;
         }
         List<VoiceReferenceTone> tones = List.of(VoiceReferenceTone.values());
-        ComboBox<VoiceReferenceTone> toneCombo = new ComboBox<>();
+        ComboBox<VoiceReferenceTone> toneCombo = StudioFormControls.comboBox();
         toneCombo.getItems().setAll(tones);
         toneCombo.setValue(VoiceReferenceTone.NEUTRAL);
         toneCombo.setMaxWidth(Double.MAX_VALUE);
@@ -198,7 +202,7 @@ public final class TheatreTextualMapPanel extends BorderPane {
 
         Label title = new Label("Grabar audio narraci\u00f3n/efecto sonido de " + alias.displayName());
         title.getStyleClass().add("theatre-character-dialog-title");
-        TextArea text = new TextArea(alias.fullText().isBlank()
+        TextArea text = StudioFormControls.textArea(alias.fullText().isBlank()
                 ? "Texto completo no disponible para esta intervencion."
                 : alias.fullText());
         text.setEditable(false);

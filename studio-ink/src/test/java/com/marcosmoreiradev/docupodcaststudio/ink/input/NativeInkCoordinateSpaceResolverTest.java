@@ -84,6 +84,20 @@ final class NativeInkCoordinateSpaceResolverTest {
     }
 
     @Test
+    void subsequentStrokeRetainsCalibrationDespiteAnchorFromPreviousPosition() {
+        Rectangle target = targetAtSceneOffset(30, 10);
+        NativeInkCoordinateSpaceResolver resolver = new NativeInkCoordinateSpaceResolver();
+        resolver.recordJavaFxAnchor(target, 80, 40);
+        assertEquals(NativeInkCoordinateSpaceResolver.CoordinateSpace.WINDOW_CLIENT_LOGICAL,
+                resolver.translate(target, 80, 40, false).space());
+        // The pen packet can arrive before JavaFX updates the pointer anchor on re-entry.
+        var next = resolver.translate(target, 50, 30, false);
+        assertTrue(next.accepted());
+        assertEquals(20, next.point().getX(), 0.001);
+        assertEquals(20, next.point().getY(), 0.001);
+    }
+
+    @Test
     void clearLockedSpaceRetainsRecentJavaFxAnchorForNextStroke() {
         Rectangle target = targetAtSceneOffset(30, 10);
         NativeInkCoordinateSpaceResolver resolver = new NativeInkCoordinateSpaceResolver();

@@ -1,7 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 
-import com.marcosmoreiradev.docupodcaststudio.application.visual.ComfyUiVisualEngineClient;
-import com.marcosmoreiradev.docupodcaststudio.application.theatre.ComfyUiConnectionSettings;
+import com.marcosmoreiradev.docupodcaststudio.application.media.MediaCapabilityService;
+import com.marcosmoreiradev.docupodcaststudio.application.theatre.ImageGenerationWorkspaceSettings;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.FrameGenerationMode;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreFrameGenerationRequest;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreFrameGenerationScope;
@@ -16,7 +16,7 @@ import com.marcosmoreiradev.docupodcaststudio.media.api.LocalResourceScheduler;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
-import java.time.Duration;
+import com.marcosmoreiradev.docupodcaststudio.media.api.MediaEnginePlatform;
 import java.util.List;
 import java.util.Map;
 
@@ -26,8 +26,7 @@ final class TheatreFrameGenerationWorkflowTest {
     @Test
     void singleModePlansOneFramePerIntervention() {
         TheatreFrameGenerationWorkflow workflow = new TheatreFrameGenerationWorkflow(
-                WorkspaceTestServices.empty(), new ComfyUiVisualEngineClient(),
-                LocalResourceScheduler.safeDefaults());
+                WorkspaceTestServices.empty(), mediaCapabilities());
 
         TheatreFrameGenerationWorkflow.Estimate estimate = workflow.estimate(session(), script(),
                 request(FrameGenerationMode.SINGLE, TheatreFrameGenerationScope.all()));
@@ -40,8 +39,7 @@ final class TheatreFrameGenerationWorkflowTest {
     @Test
     void stopMotionPlansIntermediateFramesBetweenConsecutiveInterventions() {
         TheatreFrameGenerationWorkflow workflow = new TheatreFrameGenerationWorkflow(
-                WorkspaceTestServices.empty(), new ComfyUiVisualEngineClient(),
-                LocalResourceScheduler.safeDefaults());
+                WorkspaceTestServices.empty(), mediaCapabilities());
 
         TheatreFrameGenerationWorkflow.Estimate estimate = workflow.estimate(session(), script(),
                 request(FrameGenerationMode.DOUBLE_STOP_MOTION, TheatreFrameGenerationScope.all()));
@@ -54,8 +52,7 @@ final class TheatreFrameGenerationWorkflowTest {
     @Test
     void sceneScopeFiltersFrameUnits() {
         TheatreFrameGenerationWorkflow workflow = new TheatreFrameGenerationWorkflow(
-                WorkspaceTestServices.empty(), new ComfyUiVisualEngineClient(),
-                LocalResourceScheduler.safeDefaults());
+                WorkspaceTestServices.empty(), mediaCapabilities());
 
         TheatreFrameGenerationWorkflow.Estimate estimate = workflow.estimate(session(), script(),
                 request(FrameGenerationMode.SINGLE, TheatreFrameGenerationScope.scene("SC-2")));
@@ -66,7 +63,11 @@ final class TheatreFrameGenerationWorkflowTest {
 
     private static TheatreFrameGenerationRequest request(FrameGenerationMode mode, TheatreFrameGenerationScope scope) {
         return new TheatreFrameGenerationRequest(scope, mode, Path.of("."), TheatreImageGenerationPreset.TEST_4GB_SD15,
-                new ComfyUiConnectionSettings("http://127.0.0.1:8188", Duration.ofMillis(100), null), false);
+                ImageGenerationWorkspaceSettings.defaults(null), false);
+    }
+
+    private static MediaCapabilityService mediaCapabilities() {
+        return new MediaCapabilityService(MediaEnginePlatform.empty(), LocalResourceScheduler.safeDefaults());
     }
 
     private static ProjectSession session() {

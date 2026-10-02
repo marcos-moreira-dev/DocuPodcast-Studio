@@ -15,9 +15,15 @@ public record ApplicationRuntime(
         ApplicationWindowConfig windowConfig,
         List<String> stylesheetResources,
         EventHandler<WindowEvent> closeRequestHandler,
-        MediaEnginePlatform mediaEngines
-) {
+        MediaEnginePlatform mediaEngines,
+        ApplicationLifecycleCoordinator lifecycle
+) implements AutoCloseable {
     public ApplicationRuntime {
         mediaEngines = mediaEngines == null ? MediaEnginePlatform.empty() : mediaEngines;
+        lifecycle = lifecycle == null
+                ? new ApplicationLifecycleCoordinator(java.time.Duration.ZERO, List.of())
+                : lifecycle;
     }
+
+    @Override public void close() { lifecycle.close(); }
 }

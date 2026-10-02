@@ -19,6 +19,15 @@ public record SideDockLayoutPolicy(
                 null);
     }
 
+    public static SideDockLayoutPolicy standard(double expandedMin, double expandedPref) {
+        return new SideDockLayoutPolicy(
+                new WidthRange(WorkspaceSideDock.COLLAPSED_MIN_WIDTH,
+                        WorkspaceSideDock.COLLAPSED_WIDTH,
+                        WorkspaceSideDock.COLLAPSED_MAX_WIDTH),
+                WidthRange.flexible(expandedMin, expandedPref),
+                null);
+    }
+
     public static SideDockLayoutPolicy withCompact(double collapsedWidth,
                                                     double expandedMin,
                                                     double expandedPref,
@@ -26,6 +35,18 @@ public record SideDockLayoutPolicy(
                                                     double compactPref) {
         return new SideDockLayoutPolicy(
                 WidthRange.fixed(collapsedWidth),
+                WidthRange.flexible(expandedMin, expandedPref),
+                WidthRange.flexible(compactMin, compactPref));
+    }
+
+    public static SideDockLayoutPolicy standardWithCompact(double expandedMin,
+                                                            double expandedPref,
+                                                            double compactMin,
+                                                            double compactPref) {
+        return new SideDockLayoutPolicy(
+                new WidthRange(WorkspaceSideDock.COLLAPSED_MIN_WIDTH,
+                        WorkspaceSideDock.COLLAPSED_WIDTH,
+                        WorkspaceSideDock.COLLAPSED_MAX_WIDTH),
                 WidthRange.flexible(expandedMin, expandedPref),
                 WidthRange.flexible(compactMin, compactPref));
     }

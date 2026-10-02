@@ -21,10 +21,6 @@ public final class GenerationJobService implements AutoCloseable {
     private final ResourceScheduler scheduler;
     private final Map<GenerationJobId, Control> running = new ConcurrentHashMap<>();
 
-    public GenerationJobService(GenerationJobRepository repository, int concurrency) {
-        this(repository, concurrency, LocalResourceScheduler.safeDefaults());
-    }
-
     public GenerationJobService(GenerationJobRepository repository, int concurrency,
                                 ResourceScheduler scheduler) {
         this.repository = Objects.requireNonNull(repository, "repository");
