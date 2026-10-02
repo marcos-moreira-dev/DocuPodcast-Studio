@@ -86,7 +86,7 @@ public final class TheatrePackageRefreshCoordinator {
             @Override protected com.marcosmoreiradev.docupodcaststudio.application.theatrepackage.ImportOfficialTheatrePackageUseCase.Result call() throws Exception {
                 updateMessage("Validando gramática, manifiesto y grafo teatral…"); updateProgress(-1, 1);
                 Path root = projectFile.toAbsolutePath().normalize().getParent();
-                return new com.marcosmoreiradev.docupodcaststudio.application.theatrepackage.ImportOfficialTheatrePackageUseCase()
+                return viewModel.projectWorkspace().theatrePackage().importOfficial()
                         .execute(project, source, root, null);
             }
         };
@@ -217,7 +217,7 @@ public final class TheatrePackageRefreshCoordinator {
                 "Carpeta y ZIP theatre-v2 usan el mismo pipeline determinístico.", "", folder, zip, ButtonType.CANCEL).showAndWait();
         if (decision.isEmpty() || decision.get() == ButtonType.CANCEL) return null;
         if (decision.get() == zip) {
-            FileChooser chooser = new FileChooser(); chooser.setTitle("Importar paquete teatral ZIP");
+            FileChooser chooser = com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeSourceChooser.fileChooser(); chooser.setTitle("Importar paquete teatral ZIP");
             chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Paquete teatral ZIP", "*.zip"));
             var selected = chooser.showOpenDialog(owner.get());
             return selected == null ? null : selected.toPath().toAbsolutePath().normalize();

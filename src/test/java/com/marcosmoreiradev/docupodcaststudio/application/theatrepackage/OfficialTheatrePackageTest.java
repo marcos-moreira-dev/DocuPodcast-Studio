@@ -22,7 +22,7 @@ class OfficialTheatrePackageTest {
     @Test void folderAndZipProduceIdenticalSnapshotsAndOptionalAbsenceIsClean() throws Exception {
         Path folder = fixture(false);
         Path zip = temp.resolve("obra.zip"); zip(folder, zip);
-        var useCase = new ImportOfficialTheatrePackageUseCase();
+        var useCase = new ImportOfficialTheatrePackageUseCase(new com.marcosmoreiradev.docupodcaststudio.infrastructure.theatrepackage.JsonTheatrePackageScanner());
         var a = useCase.execute(DocuPodcastProject.createNew("A"), folder, Files.createDirectory(temp.resolve("project-a")), null);
         var b = useCase.execute(DocuPodcastProject.createNew("B"), zip, Files.createDirectory(temp.resolve("project-b")), null);
         assertEquals(a.snapshots(), b.snapshots());
@@ -35,24 +35,24 @@ class OfficialTheatrePackageTest {
 
     @Test void declaredMissingAssetFailsButUndeclaredOptionalAssetDoesNot() throws Exception {
         Path folder = fixture(true);
-        IOException error = assertThrows(IOException.class, () -> new ImportOfficialTheatrePackageUseCase()
+        IOException error = assertThrows(IOException.class, () -> new ImportOfficialTheatrePackageUseCase(new com.marcosmoreiradev.docupodcaststudio.infrastructure.theatrepackage.JsonTheatrePackageScanner())
                 .execute(DocuPodcastProject.createNew("A"), folder, Files.createDirectory(temp.resolve("broken-project")), null));
         assertTrue(error.getMessage().contains("inexistente"));
     }
 
     @Test void hashMismatchFails() throws Exception {
         Path folder = fixture(false); Files.writeString(folder.resolve("assets/fondos/plaza.txt"), "alterado");
-        IOException error = assertThrows(IOException.class, () -> new ImportOfficialTheatrePackageUseCase()
+        IOException error = assertThrows(IOException.class, () -> new ImportOfficialTheatrePackageUseCase(new com.marcosmoreiradev.docupodcaststudio.infrastructure.theatrepackage.JsonTheatrePackageScanner())
                 .execute(DocuPodcastProject.createNew("A"), folder, Files.createDirectory(temp.resolve("hash-project")), null));
         assertTrue(error.getMessage().contains("Hash"));
     }
 
     @Test void exportImportRoundTripPreservesCanonicalSnapshots() throws Exception {
         Path sourceProject = Files.createDirectory(temp.resolve("roundtrip-a"));
-        var importer = new ImportOfficialTheatrePackageUseCase();
+        var importer = new ImportOfficialTheatrePackageUseCase(new com.marcosmoreiradev.docupodcaststudio.infrastructure.theatrepackage.JsonTheatrePackageScanner());
         var first = importer.execute(DocuPodcastProject.createNew("Obra fixture"), fixture(false), sourceProject, null);
         Path exported = temp.resolve("roundtrip.zip");
-        new ExportOfficialTheatrePackageUseCase().execute(first.project(), sourceProject, exported, first.script());
+        new ExportOfficialTheatrePackageUseCase(new com.marcosmoreiradev.docupodcaststudio.infrastructure.script.NarrationScriptWorkspaceFileRepository()).execute(first.project(), sourceProject, exported, first.script());
         var second = importer.execute(DocuPodcastProject.createNew("Destino"), exported,
                 Files.createDirectory(temp.resolve("roundtrip-b")), null);
         assertEquals(first.snapshots(), second.snapshots());
@@ -60,7 +60,7 @@ class OfficialTheatrePackageTest {
 
     @Test void saveCloseOpenPreservesIdsAndSnapshots() throws Exception {
         Path projectRoot = Files.createDirectory(temp.resolve("persist-project"));
-        var imported = new ImportOfficialTheatrePackageUseCase().execute(
+        var imported = new ImportOfficialTheatrePackageUseCase(new com.marcosmoreiradev.docupodcaststudio.infrastructure.theatrepackage.JsonTheatrePackageScanner()).execute(
                 DocuPodcastProject.createNew("Persistencia"), fixture(false), projectRoot, null);
         Path file = projectRoot.resolve("obra.docupodcast.json");
         var repository = new DocuPodcastProjectFileRepository(); repository.save(imported.project(), file);
@@ -72,7 +72,7 @@ class OfficialTheatrePackageTest {
 
     @Test void complexFixtureCoversScenesCharactersPropsChorusAndOptionalAssets() throws Exception {
         Path fixture = Path.of("src/test/resources/theatre-v2/complex").toAbsolutePath();
-        var result = new ImportOfficialTheatrePackageUseCase().execute(DocuPodcastProject.createNew("Complejo"),
+        var result = new ImportOfficialTheatrePackageUseCase(new com.marcosmoreiradev.docupodcaststudio.infrastructure.theatrepackage.JsonTheatrePackageScanner()).execute(DocuPodcastProject.createNew("Complejo"),
                 fixture, Files.createDirectory(temp.resolve("complex-project")), null);
         assertEquals(3, result.project().theatre().scenes().size());
         assertEquals(5, result.project().theatre().characters().size());

@@ -24,7 +24,7 @@ final class ProductionVoiceCompositionTest {
 
             assertEquals(List.of("piper", "xtts", "qwen3-tts-local"),
                     voices.stream().map(descriptor -> descriptor.id().value()).toList());
-            assertEquals(List.of("Voz local simple", "Voz IA avanzada",
+            assertEquals(List.of("Piper · voz local simple", "Coqui XTTS · voz IA avanzada",
                             "Qwen3-TTS local · 1.7B Q8"),
                     voices.stream().map(EngineDescriptor::displayName).toList());
         }

@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.application.video;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.video.SimpleVideoResolutionPreset;
+
 import com.marcosmoreiradev.docupodcaststudio.domain.assets.ProjectAssetKind;
 import com.marcosmoreiradev.docupodcaststudio.domain.assets.ProjectAssetReference;
 import com.marcosmoreiradev.docupodcaststudio.domain.audio.AudioGenerationStage;

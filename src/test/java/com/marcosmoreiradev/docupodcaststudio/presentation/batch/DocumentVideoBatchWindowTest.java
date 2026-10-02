@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.batch;
 
-import com.marcosmoreiradev.docupodcaststudio.application.export.AudioExportFormat;
+import com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat;
 import com.marcosmoreiradev.docupodcaststudio.domain.batch.*;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -278,7 +278,9 @@ final class DocumentVideoBatchWindowTest {
         var window = new DocumentVideoBatchWindow(host, path -> {}, port, () -> {
             assertFalse(host.isShowing(), "Prepare Home before restoring the host");
             home.set(true);
-        });
+        }, com.marcosmoreiradev.docupodcaststudio.application.services.BatchApplicationServices.create(
+                new com.marcosmoreiradev.docupodcaststudio.infrastructure.json.JsonDocumentVideoBatchRepository(),
+                new com.marcosmoreiradev.docupodcaststudio.infrastructure.json.DocuPodcastProjectFileRepository()));
         invoke(window, "showWindow");
         return new Context(host, field(window, "stage", Stage.class), window, port, home);
     }

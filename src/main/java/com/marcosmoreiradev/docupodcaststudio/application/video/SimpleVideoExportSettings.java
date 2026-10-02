@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.application.video;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.video.SimpleVideoResolutionPreset;
+
 import com.marcosmoreiradev.docupodcaststudio.application.compute.ComputeDevicePolicy;
 import com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy;
 

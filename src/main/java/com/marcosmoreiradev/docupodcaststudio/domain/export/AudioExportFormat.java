@@ -1,4 +1,4 @@
-package com.marcosmoreiradev.docupodcaststudio.application.export;
+package com.marcosmoreiradev.docupodcaststudio.domain.export;
 
 import java.nio.file.Path;
 import java.util.Locale;

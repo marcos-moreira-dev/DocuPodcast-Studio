@@ -17,9 +17,9 @@ final class SideDockLayoutPolicyTest {
     @Test
     void standardRailUsesTheReferenceRangeInsteadOfAFixedLegacyWidth() {
         SideDockLayoutPolicy policy = SideDockLayoutPolicy.standard(292, 318);
-        assertEquals(74, policy.collapsed().min());
-        assertEquals(78, policy.collapsed().pref());
-        assertEquals(84, policy.collapsed().max());
+        assertEquals(84, policy.collapsed().min());
+        assertEquals(88, policy.collapsed().pref());
+        assertEquals(92, policy.collapsed().max());
     }
 
     @Test

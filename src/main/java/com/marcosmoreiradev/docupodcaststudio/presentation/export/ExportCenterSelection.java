@@ -1,7 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.export;
 
-import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentTextVideoOptions;
-import com.marcosmoreiradev.docupodcaststudio.application.export.AudioExportFormat;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoOptions;
+import com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat;
 import com.marcosmoreiradev.docupodcaststudio.presentation.command.AppCommandId;
 import com.marcosmoreiradev.docupodcaststudio.presentation.theatre.TheatreMapExportOptions;
 import com.marcosmoreiradev.docupodcaststudio.presentation.theatre.TheatrePortionExportOptions;

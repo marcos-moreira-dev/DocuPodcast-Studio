@@ -8,30 +8,35 @@ Se incluyen fuentes, pruebas, scripts, documentación, manifiestos, workflows, i
 
 Se excluyen pesos de IA, motores instalados, entornos Python, distribuciones, diagnósticos, estado local, exportaciones y reglas MathCAT extraídas del paquete Maven. No se eliminan esos archivos del equipo.
 
+## Correcciones de validación — 2026-10-02
+
+Se separaron los valores persistentes de video/exportación del nivel de aplicación; las ventanas de lotes y los casos de uso de paquetes teatrales reciben sus dependencias mediante puertos desde bootstrap. Se reutilizan las fábricas de controles y diálogos compartidos y se evita que la presentación construya adaptadores o codifique imágenes.
+
+También se corrigieron la detección de JSON teatral corrupto y un icono semántico ausente. Las expectativas desactualizadas de nombres, permisos de modelos, geometría de interfaz, OCR y transparencia se alinearon con sus contratos actuales. El auditor UTF-8 ahora distingue correctamente un lector con charset explícito y una llamada anidada, con una prueba de regresión.
+
 ## Validación
 
-La compilación del reactor se verificó durante la preparación. La suite completa `mvn test` detectó 19 fallos y 1 error en 1582 pruebas del módulo de escritorio (16 omitidas). Esta actualización debe publicarse como pull request **en borrador**, no como release estable.
+Verificación completa del reactor y de la interfaz terminada correctamente el 2026-10-02:
 
-Se corrigió la expectativa antigua del catálogo de operaciones de IA y la codificación de los mensajes de progreso de ComfyUI. Los demás resultados que requieren revisión son:
+```powershell
+$env:JAVA_TOOL_OPTIONS='-Djdk.net.unixdomain.tmpdir=D:/Proyectos/g/runtime/ipc'
+mvn -q verify -Pgui-e2e
+```
 
-- `com.marcosmoreiradev.docupodcaststudio.application.modelsetup.InspectLocalTheatreImageSetupReadinessUseCaseTest.fluxPresetUsesIntegratedWorkflowButStillRequiresEveryComponentAndLicense`
-- `com.marcosmoreiradev.docupodcaststudio.application.modelsetup.LocalTheatreImageEngineManagerSmokeTest.smokeRequestFailsClearlyWhenFluxLicenseOrComponentsAreMissing`
-- `ArchitectureBoundaryTest.domain_is_independent`
-- `ArchitectureBoundaryTest.application_uses_ports_not_adapters`
-- `ArchitectureBoundaryTest.presentation_does_not_construct_infrastructure`
-- `ArchitectureBoundaryTest.content_analysis_consumers_are_confined_to_document_study`
-- `com.marcosmoreiradev.docupodcaststudio.architecture.CompleteReadingProcessingBoundaryTest.reprocessConfirmationPrecedesOverlayAndCompleteProcessingDoesNotStartTts`
-- `com.marcosmoreiradev.docupodcaststudio.architecture.DocumentSourceAndAudioFlowArchitectureTest.documentaryVideoUsesTheSharedModalProgressCoordinator`
-- `com.marcosmoreiradev.docupodcaststudio.architecture.GuiComponentUsagePolicyTest.sourceAuditHasZeroProductDebtAndWritesTheUsageReport`
-- `com.marcosmoreiradev.docupodcaststudio.architecture.GuiComponentUsagePolicyTest.directJavaFxConstructorsExistOnlyInsideTheApprovedFactories`
-- `com.marcosmoreiradev.docupodcaststudio.architecture.ProductionSourceBoundaryTest.presentationRemainsProviderNeutral`
-- `com.marcosmoreiradev.docupodcaststudio.architecture.ProductionSourceBoundaryTest.presentationDoesNotOwnTransportProcessesOrProviderClients`
-- `com.marcosmoreiradev.docupodcaststudio.architecture.Utf8TextIntegrityTest.applicationTextIoDeclaresItsCharset`
-- `com.marcosmoreiradev.docupodcaststudio.infrastructure.document.PdfV2CorpusEndToEndTest.importsPreparesReopensQueriesNarratesDiagnosesAndRendersCorpus`
-- `com.marcosmoreiradev.docupodcaststudio.infrastructure.theatrepackage.JsonTheatreImportStateRepositoryTest.rejectsCorruptedGeneratedStateWithAnIOException`
-- `com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.StudioMessageDialogTest.presentationCodeCannotBypassTheCommonMessageContentPolicy`
-- `com.marcosmoreiradev.docupodcaststudio.presentation.ink.composition.SketchBackdropTest.closedInteriorAndStageSurviveExportWithColoredInkOnTop`
-- `com.marcosmoreiradev.docupodcaststudio.presentation.sidedock.SideDockLayoutPolicyTest.standardRailUsesTheReferenceRangeInsteadOfAFixedLegacyWidth`
-- `com.marcosmoreiradev.docupodcaststudio.presentation.status.StatusBarLayoutTest.everyPertinentStatusActionHasAMonochromeSemanticIcon`
+La propiedad usa una ruta IPC corta para las pruebas de red en Windows; debe adaptarse a la ubicación del checkout.
 
-Las pruebas con motores reales y el renderizado completo de un ensayo no se ejecutaron para esta publicación. El estado de los tests debe revisarse de nuevo antes de fusionar el pull request.
+| Suite | Pruebas | Fallos | Errores | Omitidas |
+| --- | ---: | ---: | ---: | ---: |
+| Media API | 11 | 0 | 0 | 0 |
+| Tinta | 55 | 0 | 0 | 0 |
+| Adaptadores locales | 135 | 0 | 0 | 13 |
+| Escritorio | 1583 | 0 | 0 | 16 |
+| Interfaz E2E (headless) | 13 | 0 | 0 | 0 |
+| Lanzador | 7 | 0 | 0 | 0 |
+| **Total** | **1804** | **0** | **0** | **29** |
+
+Los informes corresponden a esta ejecución, sin contar resultados antiguos. Los fallos de la preparación inicial quedaron resueltos. Las pruebas condicionales omitidas no se consideran aprobadas.
+
+No se ejecutaron generaciones completas con modelos reales ni el renderizado completo del ensayo para esta publicación. La validación automatizada no equivale a certificar cada combinación de hardware y motores.
+
+La actualización permanece en el PR #1 para revisión; no se ha fusionado a `main` ni publicado una release estable.

@@ -13,6 +13,15 @@ import javax.imageio.ImageIO;
 
 /** The same deterministic stage composition is used by preview and video. */
 public final class TheatreSceneryComposition {
+    public byte[] renderPng(Composition composition, int width, int height) throws java.io.IOException {
+        var bytes = new java.io.ByteArrayOutputStream();
+        ImageIO.write(render(composition, width, height), "png", bytes);
+        return bytes.toByteArray();
+    }
+    public void writePng(Composition composition, int width, int height, Path target) throws java.io.IOException {
+        Files.write(target, renderPng(composition, width, height));
+    }
+
     public static final String MODE = "scenery";
     public static final String VIEW_KEY = "theatre.presentationMode";
     private static final Color DIRECTION_ARROW_FILL = new Color(253, 236, 200);

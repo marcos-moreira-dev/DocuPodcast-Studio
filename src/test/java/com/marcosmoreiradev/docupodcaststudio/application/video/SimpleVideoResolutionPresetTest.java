@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.application.video;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.video.SimpleVideoResolutionPreset;
+
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

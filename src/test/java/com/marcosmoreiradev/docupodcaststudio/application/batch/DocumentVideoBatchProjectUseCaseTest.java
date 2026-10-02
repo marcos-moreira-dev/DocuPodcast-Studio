@@ -1,11 +1,13 @@
 package com.marcosmoreiradev.docupodcaststudio.application.batch;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat;
+
 import com.marcosmoreiradev.docupodcaststudio.domain.batch.BatchItemState;
 import com.marcosmoreiradev.docupodcaststudio.domain.batch.BatchItemStage;
 import com.marcosmoreiradev.docupodcaststudio.domain.batch.DocumentVideoBatchProfile;
 import com.marcosmoreiradev.docupodcaststudio.domain.batch.DocumentVideoBatchDraft;
-import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentBackgroundImageFit;
-import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentTextVideoOptions;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentBackgroundImageFit;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoOptions;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.json.DocuPodcastProjectFileRepository;
 import com.marcosmoreiradev.docupodcaststudio.infrastructure.json.JsonDocumentVideoBatchRepository;
 import org.junit.jupiter.api.Test;
@@ -122,7 +124,7 @@ class DocumentVideoBatchProjectUseCaseTest {
         var repository = new JsonDocumentVideoBatchRepository();
         var creator = new CreateDocumentVideoBatchProjectUseCase(new DiscoverDocumentVideoBatchSourcesUseCase(),
                 repository, new DocuPodcastProjectFileRepository());
-        for (var format : com.marcosmoreiradev.docupodcaststudio.application.export.AudioExportFormat.values()) {
+        for (var format : com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat.values()) {
             var profile = new DocumentVideoBatchProfile(null, 6, false, null,
                     com.marcosmoreiradev.docupodcaststudio.domain.batch.BatchOutputKind.AUDIO, format,
                     "piper", "qwen3-vl-local");
@@ -174,7 +176,7 @@ class DocumentVideoBatchProjectUseCaseTest {
                 defaults.textEffectColor(), defaults.textEffectThicknessPx());
         var profile = new DocumentVideoBatchProfile(video, 8.5, true, null,
                 com.marcosmoreiradev.docupodcaststudio.domain.batch.BatchOutputKind.VIDEO,
-                com.marcosmoreiradev.docupodcaststudio.application.export.AudioExportFormat.MP3,
+                com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat.MP3,
                 "xtts", "qwen3-vl-local");
         var draft = new DocumentVideoBatchDraft("Curso ERP", "C:/entrada", "D:/salida", profile);
 
@@ -194,13 +196,13 @@ class DocumentVideoBatchProjectUseCaseTest {
 
     @Test void audioReuseRequiresSuccessfulExportReceiptAndUnchangedBytes() throws Exception {
         var verifier = new VerifyBatchAudioOutputUseCase();
-        var format = com.marcosmoreiradev.docupodcaststudio.application.export.AudioExportFormat.MP3;
+        var format = com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat.MP3;
         Path audio = temporary.resolve("audio.mp3");
         Files.write(audio, new byte[128]);
         assertFalse(verifier.verify(audio, format));
         verifier.recordCompleted(audio, format);
         assertTrue(verifier.verify(audio, format));
-        assertFalse(verifier.verify(audio, com.marcosmoreiradev.docupodcaststudio.application.export.AudioExportFormat.AAC));
+        assertFalse(verifier.verify(audio, com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat.AAC));
         Files.write(audio, new byte[129]);
         assertFalse(verifier.verify(audio, format));
     }

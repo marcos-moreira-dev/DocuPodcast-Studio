@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.application.documentstudy;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentBackgroundImageFit;
+
 import org.junit.jupiter.api.Test;
 
 import java.awt.Color;

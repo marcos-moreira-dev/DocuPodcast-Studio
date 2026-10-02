@@ -24,8 +24,12 @@ import java.util.Map;
 import java.util.Set;
 
 /** Scanner for {@code docupodcast-theatre.json} plus convention-based additions under assets/. */
-public final class JsonTheatrePackageScanner implements TheatrePackageScanner {
+public final class JsonTheatrePackageScanner implements com.marcosmoreiradev.docupodcaststudio.application.theatrepackage.OfficialTheatrePackageAccess {
     public static final String MANIFEST_FILE = "docupodcast-theatre.json";
+    @Override public com.marcosmoreiradev.docupodcaststudio.application.theatrepackage.OfficialTheatrePackageAccess.Source open(Path source) throws IOException {
+        return TheatrePackageSource.open(source);
+    }
+
     public String presentationMode(Path root) throws IOException {
         Object parsed = SimpleJsonParser.parse(Files.readString(root.resolve(MANIFEST_FILE), StandardCharsets.UTF_8));
         if (!(parsed instanceof Map<?, ?> map)) throw new IOException("Manifiesto teatral inválido");

@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.application.export;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.export.ExportTargetPathPolicy;
+
 import com.marcosmoreiradev.docupodcaststudio.domain.audio.AudioJobSnapshot;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.DocuPodcastProject;
 import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationScriptDocument;

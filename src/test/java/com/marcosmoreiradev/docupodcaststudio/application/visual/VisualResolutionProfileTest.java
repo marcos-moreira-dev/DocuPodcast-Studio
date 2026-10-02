@@ -1,6 +1,8 @@
 package com.marcosmoreiradev.docupodcaststudio.application.visual;
 
-import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoResolutionPreset;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile;
+
+import com.marcosmoreiradev.docupodcaststudio.domain.video.SimpleVideoResolutionPreset;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

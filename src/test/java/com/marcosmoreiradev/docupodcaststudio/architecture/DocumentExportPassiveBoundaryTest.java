@@ -1,5 +1,8 @@
 package com.marcosmoreiradev.docupodcaststudio.architecture;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoOptions;
+import com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat;
+
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;

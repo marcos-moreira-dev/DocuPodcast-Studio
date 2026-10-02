@@ -485,7 +485,7 @@ public final class TheatreSpatialActionMapPanel extends BorderPane {
 
         VBox editableContent = new VBox(14, interactionGroup, positionsGroup);
         editableContent.getStyleClass().add("theatre-spatial-dialog-content");
-        ScrollPane editorScroll = new ScrollPane(editableContent);
+        ScrollPane editorScroll = com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls.scrollPane(editableContent);
         editorScroll.setFitToWidth(true);
         editorScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         editorScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);

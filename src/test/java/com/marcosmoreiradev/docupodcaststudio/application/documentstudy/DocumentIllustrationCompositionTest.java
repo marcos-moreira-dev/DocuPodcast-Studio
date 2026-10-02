@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.application.documentstudy;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoOptions;
+
 import com.marcosmoreiradev.docupodcaststudio.domain.document.*;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.DocuPodcastProject;
 import com.marcosmoreiradev.docupodcaststudio.domain.study.*;

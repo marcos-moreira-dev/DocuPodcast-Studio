@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.application.export;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat;
+
 import com.marcosmoreiradev.docupodcaststudio.application.errors.ExternalProcessFailedException;
 import com.marcosmoreiradev.docupodcaststudio.application.errors.ExternalProcessTimeoutException;
 import com.marcosmoreiradev.docupodcaststudio.application.process.ExternalProcessRequest;

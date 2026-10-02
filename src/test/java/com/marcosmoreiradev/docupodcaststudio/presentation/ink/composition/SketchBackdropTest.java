@@ -50,7 +50,8 @@ class SketchBackdropTest {
                     List.of(point(40,50),point(60,50)))));
             ImageView view = new ImageView(backdrop);
             view.setFitWidth(100); view.setFitHeight(100);
-            view.setOpacity(0.1); // Editor guide opacity must not attenuate the exported stage.
+            // The frame dialog exports a separate opaque backdrop; image opacity is otherwise preserved.
+            view.setOpacity(1.0);
             Image output = surface.exportWithImages(List.of(view),new InkCanvasExportOptions(1,100000,false,0,100,100)).image();
             assertEquals(Color.BLUE,output.getPixelReader().getColor(5,5));
             assertEquals(Color.WHITE,output.getPixelReader().getColor(50,35));

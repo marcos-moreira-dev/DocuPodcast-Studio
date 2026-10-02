@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.theatre;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile;
+
 import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeSourceChooser;
 
 import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeDialogResponse;
@@ -1117,18 +1119,18 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
         String refinePreset = project.refinementPreset().isBlank()
                 ? global.refinementPreset() : project.refinementPreset();
         outputProfileSelector.setValue(outputProfile(
-                com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile.from(
+                com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile.from(
                         generation,
-                        com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile.P1080)));
+                        com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile.P1080)));
         upscaleEnabled.setSelected(enabled);
         refinementEnabled.setSelected(enabled && refine);
         refinementPreset.setValue("balanced".equalsIgnoreCase(refinePreset)
                 ? "Equilibrada" : "Conservadora");
         refreshUpscaleTargets();
         ImageEnhancementOutputProfile preferred = outputProfile(
-                com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile.from(
+                com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile.from(
                         target,
-                        com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile.P1080));
+                        com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile.P1080));
         if (upscaleTargetSelector.getItems().contains(preferred)) {
             upscaleTargetSelector.setValue(preferred);
         }
@@ -1148,7 +1150,7 @@ public final class TheatreImageGenerationWorkspaceView extends BorderPane {
     }
 
     private static ImageEnhancementOutputProfile outputProfile(
-            com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile profile) {
+            com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile profile) {
         return switch (profile) {
             case P540 -> ImageEnhancementOutputProfile.LOW_540;
             case P720 -> ImageEnhancementOutputProfile.HD_720;

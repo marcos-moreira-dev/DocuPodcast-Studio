@@ -32,7 +32,7 @@ import com.marcosmoreiradev.docupodcaststudio.application.document.FilterDocumen
 import com.marcosmoreiradev.docupodcaststudio.application.document.DocumentInteractionProjection;
 import com.marcosmoreiradev.docupodcaststudio.application.document.WordDocumentInteractionProjectionAdapter;
 import com.marcosmoreiradev.docupodcaststudio.application.document.PdfDocumentInteractionProjectionAdapter;
-import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentTextVideoOptions;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoOptions;
 import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.ResolveDocumentStudyVideoNarrationUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.document.SourceDocumentRefreshDecisionFactory;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.OperationalSettings;
@@ -47,7 +47,7 @@ import com.marcosmoreiradev.docupodcaststudio.application.reading.NarrationTrans
 import com.marcosmoreiradev.docupodcaststudio.application.export.ProjectBundleExportRequest;
 import com.marcosmoreiradev.docupodcaststudio.application.export.ProjectBundleExportResult;
 import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoPackageExportResult;
-import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoResolutionPreset;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.SimpleVideoResolutionPreset;
 import com.marcosmoreiradev.docupodcaststudio.application.video.TheatreExportScope;
 import com.marcosmoreiradev.docupodcaststudio.application.video.TheatreStageGeometry;
 import com.marcosmoreiradev.docupodcaststudio.application.video.VideoRenderProgress;
@@ -4161,8 +4161,8 @@ public final class DocuPodcastShellViewModel {
         refreshFullDocumentReadingReadiness();
         statusMessage.set(result + " Cambio pendiente de procesar. Usa Generar o Reprocesar lectura completa."
                 + " Los audios guardados y las asignaciones de voz se conservan."
-                + ("piper".equalsIgnoreCase(audioEngineDescriptor().engineId())
-                ? " Piper usará automáticamente su voz predeterminada; las voces y tonos personalizados quedan inactivos." : ""));
+                + (administrationWorkspace().voice().voiceCapabilityPolicy().activeEngineProfile(audioEngineDescriptor()).simpleLocalMode()
+                ? " El motor usará automáticamente su voz predeterminada; las voces y tonos personalizados quedan inactivos." : ""));
         refreshProjectState();
     }
     private boolean invalidatePersistedAudioAfterVoiceSelection() {

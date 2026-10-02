@@ -138,7 +138,8 @@ class DocumentSourceAndAudioFlowArchitectureTest {
                 "private void exportTheatreWorkInBackground(");
 
         assertTrue(export.contains("videoExportProgressCoordinator.export"));
-        assertTrue(export.contains("progress.accept(state)"));
+        assertTrue(export.contains("viewModel::acceptDocumentExportProgress"));
+        assertTrue(export.contains("viewModel::endDocumentExportRender"));
         assertFalse(export.contains("new Task<>"));
     }
 

@@ -10,7 +10,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 /** Resolves a folder or ZIP to the same validated package root. */
-public final class TheatrePackageSource implements AutoCloseable {
+public final class TheatrePackageSource implements com.marcosmoreiradev.docupodcaststudio.application.theatrepackage.OfficialTheatrePackageAccess.Source {
     private final Path root;
     private final Path temporaryRoot;
 

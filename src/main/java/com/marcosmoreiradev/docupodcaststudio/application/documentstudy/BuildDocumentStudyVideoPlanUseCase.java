@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.application.documentstudy;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoOptions;
+
 import com.marcosmoreiradev.docupodcaststudio.domain.audio.AudioJobSnapshot;
 import com.marcosmoreiradev.docupodcaststudio.domain.audio.AudioSegmentSnapshot;
 import com.marcosmoreiradev.docupodcaststudio.application.audio.AudioGenerationUnit;

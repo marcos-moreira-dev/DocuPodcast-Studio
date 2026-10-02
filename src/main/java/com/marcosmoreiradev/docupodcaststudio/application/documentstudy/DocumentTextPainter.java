@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.application.documentstudy;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoOptions;
+
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics2D;

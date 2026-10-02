@@ -272,10 +272,10 @@ public final class DocumentAudioNarrationPanel extends VBox {
     private VBox voiceEngineOptions() {
         VoiceEngineCapabilityProfile profile = profileForCurrentSource();
         if (profile.simpleLocalMode()) {
-            TextField nativeVoice = StudioFormControls.textField("Narrador predeterminado — voz de Piper");
+            TextField nativeVoice = StudioFormControls.textField("Narrador predeterminado — voz del motor");
             nativeVoice.setDisable(true);
             return new VBox(8, label("Voz de la lectura"), nativeVoice,
-                    notice("Piper usa su voz predeterminada para todos los fragmentos. Las voces y tonos personalizados quedan inactivos, pero se conservan para volver a usarlos con otro motor."));
+                    notice("El motor seleccionado usa su voz predeterminada para todos los fragmentos. Las voces y tonos personalizados quedan inactivos, pero se conservan para volver a usarlos con otro motor."));
         }
         refreshVoiceChoices(profile);
         Label summary = new Label(generatedVoiceNotice(profile));

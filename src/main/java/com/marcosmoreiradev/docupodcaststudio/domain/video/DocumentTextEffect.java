@@ -1,4 +1,4 @@
-package com.marcosmoreiradev.docupodcaststudio.application.documentstudy;
+package com.marcosmoreiradev.docupodcaststudio.domain.video;
 
 /** Readability effect applied to documentary video text. */
 public enum DocumentTextEffect {

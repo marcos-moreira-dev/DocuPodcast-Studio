@@ -290,7 +290,10 @@ public final class WorkspaceCompositionFactory {
                         infrastructure.importedDocumentWorkspaceRepository(),
                         infrastructure.narrationScriptWorkspaceRepository(),
                         infrastructure.storyboardWorkspaceRepository(),
-                        infrastructure.audioJobRepository())
+                        infrastructure.audioJobRepository()),
+                com.marcosmoreiradev.docupodcaststudio.application.services.BatchApplicationServices.create(
+                        new com.marcosmoreiradev.docupodcaststudio.infrastructure.json.JsonDocumentVideoBatchRepository(),
+                        infrastructure.projectRepository())
         );
         AssetApplicationServices assets = new AssetApplicationServices(
                 new RegisterProjectAssetUseCase(),
@@ -695,7 +698,9 @@ public final class WorkspaceCompositionFactory {
                         infrastructure.projectRepository(),
                         project.inspectProjectIntegrity(),
                         new com.marcosmoreiradev.docupodcaststudio.infrastructure.json.AtomicJsonFileWriter()),
-                theatreImportState);
+                theatreImportState,
+                new com.marcosmoreiradev.docupodcaststudio.application.theatrepackage.ImportOfficialTheatrePackageUseCase(
+                        new com.marcosmoreiradev.docupodcaststudio.infrastructure.theatrepackage.JsonTheatrePackageScanner()));
         return new WorkspaceApplicationServices(
                 new WorkspaceApplicationServices.ProjectWorkspace(project, assets, document, readingProfile, script,
                         grammar, fragment, documentStudy, theatre, theatrePackages),

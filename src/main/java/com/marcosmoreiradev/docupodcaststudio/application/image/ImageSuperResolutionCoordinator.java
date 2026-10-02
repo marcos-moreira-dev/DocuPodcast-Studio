@@ -2,7 +2,7 @@ package com.marcosmoreiradev.docupodcaststudio.application.image;
 
 import com.marcosmoreiradev.docupodcaststudio.application.media.MediaCapabilityService;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.ImageSuperResolutionSettings;
-import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.DocuPodcastProject;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.ProjectVisualProcessingSettings;
 import com.marcosmoreiradev.docupodcaststudio.media.api.ExecutionContext;

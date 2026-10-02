@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.application.documentstudy;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentBackgroundImageFit;
+
 import java.awt.AlphaComposite;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;

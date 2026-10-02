@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.components;
 
-import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentBackgroundImageFit;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentBackgroundImageFit;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.util.StringConverter;

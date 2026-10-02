@@ -3,7 +3,7 @@ package com.marcosmoreiradev.docupodcaststudio.presentation.shell.workflow;
 import com.marcosmoreiradev.docupodcaststudio.application.compatibility.media.LegacyEnginePresetMapper;
 import com.marcosmoreiradev.docupodcaststudio.application.image.ImageEnhancementOutputProfile;
 import com.marcosmoreiradev.docupodcaststudio.application.image.ImageSuperResolutionCoordinator;
-import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile;
 import com.marcosmoreiradev.docupodcaststudio.application.media.MediaCapabilityService;
 import com.marcosmoreiradev.docupodcaststudio.application.services.StoryboardApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.ImageGenerationSettings;

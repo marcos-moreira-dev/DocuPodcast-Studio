@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.application.export;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat;
+
 import com.marcosmoreiradev.docupodcaststudio.domain.audio.AudioGenerationStage;
 import com.marcosmoreiradev.docupodcaststudio.domain.audio.AudioJobSnapshot;
 import com.marcosmoreiradev.docupodcaststudio.domain.audio.AudioJobState;

@@ -20,6 +20,7 @@ public record ProjectApplicationServices(
         ValidateProjectWorkspaceIntegrityUseCase validateProjectWorkspaceIntegrity,
         ReconcilePdfOperationAttemptsUseCase reconcilePdfOperationAttempts,
         InspectProjectIntegrityUseCase inspectProjectIntegrity,
-        ProjectRoundTripUseCase projectRoundTrip
+        ProjectRoundTripUseCase projectRoundTrip,
+        BatchApplicationServices batch
 ) {
 }

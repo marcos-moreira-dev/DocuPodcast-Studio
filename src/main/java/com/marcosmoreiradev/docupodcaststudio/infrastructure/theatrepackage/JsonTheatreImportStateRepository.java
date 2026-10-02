@@ -29,9 +29,10 @@ public final class JsonTheatreImportStateRepository implements TheatreImportStat
         Path file = file(projectRoot);
         if (!Files.isRegularFile(file)) return Optional.empty();
         Object parsed;
+        String json = Files.readString(file, StandardCharsets.UTF_8);
         try {
-            parsed = SimpleJsonParser.parse(Files.readString(file, StandardCharsets.UTF_8));
-        } catch (RuntimeException invalidJson) {
+            parsed = SimpleJsonParser.parse(json);
+        } catch (IOException | RuntimeException invalidJson) {
             throw new IOException("Estado de importación teatral ilegible: JSON inválido.", invalidJson);
         }
         if (!(parsed instanceof Map<?, ?> raw)) throw new IOException("Estado de importación teatral inválido.");

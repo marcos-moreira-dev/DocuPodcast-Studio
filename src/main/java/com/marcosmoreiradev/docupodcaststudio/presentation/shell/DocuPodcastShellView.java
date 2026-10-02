@@ -1,4 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.shell;
+
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoBackgroundMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -9,7 +11,7 @@ import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioNavi
 
 import com.marcosmoreiradev.docupodcaststudio.ink.DrawingFeatureCatalog;
 import com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy;
-import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentTextVideoOptions;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoOptions;
 import com.marcosmoreiradev.docupodcaststudio.application.batch.ManageDocumentVideoBatchQueueUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.batch.VerifyBatchVideoOutputUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.batch.WriteDocumentVideoBatchReportUseCase;
@@ -17,7 +19,7 @@ import com.marcosmoreiradev.docupodcaststudio.application.document.ProjectDocume
 import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentProcessingScope;
 import com.marcosmoreiradev.docupodcaststudio.application.examples.ExampleProjectDescriptor;
 import com.marcosmoreiradev.docupodcaststudio.application.audio.AudioJobStatusDto;
-import com.marcosmoreiradev.docupodcaststudio.application.export.AudioExportFormat;
+import com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat;
 import com.marcosmoreiradev.docupodcaststudio.application.grammar.ProjectGrammarKind;
 import com.marcosmoreiradev.docupodcaststudio.application.guide.GuideTopicId;
 import com.marcosmoreiradev.docupodcaststudio.application.project.ProjectContainerPathPolicy;
@@ -153,7 +155,7 @@ import com.marcosmoreiradev.docupodcaststudio.domain.batch.BatchItemStage;
 import com.marcosmoreiradev.docupodcaststudio.domain.batch.BatchItemState;
 import com.marcosmoreiradev.docupodcaststudio.domain.batch.DocumentVideoBatchItem;
 import com.marcosmoreiradev.docupodcaststudio.domain.batch.DocumentVideoBatchProject;
-import com.marcosmoreiradev.docupodcaststudio.infrastructure.json.JsonDocumentVideoBatchRepository;
+import com.marcosmoreiradev.docupodcaststudio.application.batch.DocumentVideoBatchWorkspaceRepository;
 
 /** Main desktop shell for the onboarding build. */
 public final class DocuPodcastShellView extends BorderPane {
@@ -202,9 +204,8 @@ public final class DocuPodcastShellView extends BorderPane {
     private final WordSemanticPreparationCoordinator wordSemanticPreparation;
     private static final String PREF_HIDE_SOURCE_COPY_NOTICE = "hideProjectSourceCopyNotice";
     private String lastAudioFailureKey = "";
-    private final JsonDocumentVideoBatchRepository batchRepository = new JsonDocumentVideoBatchRepository();
-    private final ManageDocumentVideoBatchQueueUseCase batchQueue =
-            new ManageDocumentVideoBatchQueueUseCase(batchRepository);
+    private final DocumentVideoBatchWorkspaceRepository batchRepository;
+    private final ManageDocumentVideoBatchQueueUseCase batchQueue;
     private final VerifyBatchVideoOutputUseCase batchVideoVerifier = new VerifyBatchVideoOutputUseCase();
     private final WriteDocumentVideoBatchReportUseCase batchReportWriter =
             new WriteDocumentVideoBatchReportUseCase();
@@ -222,6 +223,8 @@ public final class DocuPodcastShellView extends BorderPane {
     private volatile Task<?> activeFinalAudioExportTask;
 
     public DocuPodcastShellView(DocuPodcastShellViewModel viewModel) {
+        batchRepository = viewModel.projectWorkspace().project().batch().repository();
+        batchQueue = viewModel.projectWorkspace().project().batch().queue();
         this.viewModel = viewModel;
         this.settingsDialog = new SettingsDialog(viewModel.administrationWorkspace().capabilities());
         this.capabilityAdministration = viewModel.administrationWorkspace().capabilities();
@@ -438,7 +441,7 @@ public final class DocuPodcastShellView extends BorderPane {
                             expressOpenedChild = false;
                             com.marcosmoreiradev.docupodcaststudio.presentation.batch.DocumentVideoBatchWindow.show(
                                 owner(), this::handleOpenRecentProject, batchExecutionPort(),
-                                this::returnFromDocumentVideoBatch); })
+                                this::returnFromDocumentVideoBatch, viewModel.projectWorkspace().project().batch()); })
                 .register(AppCommandId.OPEN_PROJECT, this::handleOpenProject)
                 .register(AppCommandId.SAVE_PROJECT, this::handleSaveProject)
                 .register(AppCommandId.SAVE_PROJECT_AS, this::handleSaveProjectAs)
@@ -1056,7 +1059,7 @@ public final class DocuPodcastShellView extends BorderPane {
             return "Seleccionaste una GPU manual, pero el Python local de DocuPodcast no tiene CUDA disponible. Cambia a CPU/AUTO o prepara el Python local con backend GPU y vuelve a generar.";
         }
         if (detail.contains("no puede representar la voz/personaje")) {
-            return "La voz asignada no es compatible con el motor seleccionado. Para Piper, elige Narrador predeterminado y revisa las voces específicas de los fragmentos; después pulsa Generar. Para conservar una voz personalizada, vuelve a Qwen o Coqui XTTS.";
+            return "La voz asignada no es compatible con el motor seleccionado. Elige Narrador predeterminado y revisa las voces específicas de los fragmentos; después pulsa Generar. Para conservar una voz personalizada, selecciona un motor compatible con voces de referencia.";
         }
         return "El motor de voz termino sin WAV valido para el fragmento actual. Abre los detalles tecnicos del dialogo o Diagnostico avanzado antes de reintentar.";
     }
@@ -2205,7 +2208,7 @@ public final class DocuPodcastShellView extends BorderPane {
             return;
         }
 
-        ButtonType openFolderButton = new ButtonType(
+        ButtonType openFolderButton = com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeDialogResponse.button(
                 "Abrir carpeta", ButtonBar.ButtonData.LEFT);
         var outcome = viewModel.lastDocumentaryVideoOutcome();
         boolean incomplete = outcome != null && outcome.missingIllustrations() > 0;
@@ -2656,16 +2659,11 @@ public final class DocuPodcastShellView extends BorderPane {
     }
 
     private static String expressVoiceEngineName(String id, String fallback) {
-        return switch (id == null ? "" : id) {
-            case "piper" -> "Piper · voz local simple";
-            case "xtts" -> "Coqui XTTS · voz IA avanzada";
-            case "qwen3-tts-local" -> "Qwen3-TTS local · 1.7B Q8";
-            default -> fallback;
-        };
+        return fallback;
     }
 
     private static String expressAiEngineName(String id, String fallback) {
-        return "qwen3-vl-local".equals(id) ? "Qwen3-VL local · descripción de imágenes" : fallback;
+        return fallback;
     }
 
     private void startBatchProduction(DocumentVideoBatchProject project, Path descriptor,
@@ -2938,7 +2936,7 @@ public final class DocuPodcastShellView extends BorderPane {
             transitionBatch(BatchItemState.RUNNING, BatchItemStage.VISUAL_PLAN,
                     0.52, "Construyendo el plan visual del documento");
             var effectiveVideo = session.project.profile().effectiveVideo(item.sourceRelativePath());
-            if (effectiveVideo.backgroundMode() == com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentTextVideoBackgroundMode.IMAGE
+            if (effectiveVideo.backgroundMode() == com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoBackgroundMode.IMAGE
                     && !Files.isRegularFile(Path.of(effectiveVideo.backgroundImagePath()))) {
                 throw new java.io.IOException("Imagen de fondo no disponible para " + item.title() + ": " + effectiveVideo.backgroundImagePath());
             }

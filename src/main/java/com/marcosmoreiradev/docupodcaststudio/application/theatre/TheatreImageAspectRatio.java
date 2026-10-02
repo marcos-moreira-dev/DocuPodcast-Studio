@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.application.theatre;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile;
+
 import com.marcosmoreiradev.docupodcaststudio.application.image.ImageEnhancementOutputProfile;
 import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualAspectRatio;
 
@@ -50,7 +52,7 @@ public enum TheatreImageAspectRatio {
         return visualAspectRatio().heightFor(profile);
     }
 
-    public com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile.Dimensions
+    public com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile.Dimensions
     deliveryDimensions(ImageEnhancementOutputProfile profile) {
         return visualAspectRatio().deliveryDimensions(profile);
     }

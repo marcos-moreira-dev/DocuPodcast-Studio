@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.application.export;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat;
+
 import java.nio.file.Path;
 import java.util.List;
 

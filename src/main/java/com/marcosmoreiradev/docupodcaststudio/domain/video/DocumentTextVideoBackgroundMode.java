@@ -1,4 +1,4 @@
-package com.marcosmoreiradev.docupodcaststudio.application.documentstudy;
+package com.marcosmoreiradev.docupodcaststudio.domain.video;
 
 /** Background source for Estudio documental text+audio frames. */
 public enum DocumentTextVideoBackgroundMode {

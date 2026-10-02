@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.application.batch;
 
-import com.marcosmoreiradev.docupodcaststudio.application.export.AudioExportFormat;
+import com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;

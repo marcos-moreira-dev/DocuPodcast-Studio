@@ -1,6 +1,8 @@
 package com.marcosmoreiradev.docupodcaststudio.domain.batch;
 
-import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentTextVideoOptions;
+import com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat;
+
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoOptions;
 
 /** Shared configuration inherited by every documentary child project in the batch. */
 public record DocumentVideoBatchProfile(
@@ -9,7 +11,7 @@ public record DocumentVideoBatchProfile(
         boolean interpretImages,
         BatchBranding branding,
         BatchOutputKind outputKind,
-        com.marcosmoreiradev.docupodcaststudio.application.export.AudioExportFormat audioFormat,
+        com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat audioFormat,
         String voiceEngineId,
         String aiEngineId,
         java.util.Map<String, DocumentBackgroundOverride> documentBackgrounds
@@ -20,14 +22,14 @@ public record DocumentVideoBatchProfile(
         imageSlideSeconds = Math.max(1.0, Math.min(60.0, imageSlideSeconds));
         branding = branding == null ? BatchBranding.none() : branding;
         outputKind = outputKind == null ? BatchOutputKind.VIDEO : outputKind;
-        audioFormat = audioFormat == null ? com.marcosmoreiradev.docupodcaststudio.application.export.AudioExportFormat.MP3 : audioFormat;
+        audioFormat = audioFormat == null ? com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat.MP3 : audioFormat;
         voiceEngineId = cleanEngineId(voiceEngineId);
         aiEngineId = cleanEngineId(aiEngineId);
         if (outputKind == BatchOutputKind.AUDIO) branding = BatchBranding.none();
     }
 
     public DocumentVideoBatchProfile(DocumentTextVideoOptions video, double seconds, boolean interpret, BatchBranding branding,
-            BatchOutputKind output, com.marcosmoreiradev.docupodcaststudio.application.export.AudioExportFormat format,
+            BatchOutputKind output, com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat format,
             String voice, String ai) {
         this(video, seconds, interpret, branding, output, format, voice, ai, java.util.Map.of());
     }
@@ -40,7 +42,7 @@ public record DocumentVideoBatchProfile(
     public DocumentVideoBatchProfile(DocumentTextVideoOptions video, double imageSlideSeconds,
                                      boolean interpretImages, BatchBranding branding,
                                      BatchOutputKind outputKind,
-                                     com.marcosmoreiradev.docupodcaststudio.application.export.AudioExportFormat audioFormat) {
+                                     com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat audioFormat) {
         this(video, imageSlideSeconds, interpretImages, branding, outputKind, audioFormat, "", "");
     }
 

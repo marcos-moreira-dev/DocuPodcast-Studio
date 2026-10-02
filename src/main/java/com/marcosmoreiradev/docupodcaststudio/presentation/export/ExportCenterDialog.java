@@ -10,12 +10,12 @@ import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioView
 
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioCollectionControls;
 
-import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentTextVideoBackgroundMode;
-import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentBackgroundImageFit;
-import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentTextVideoOptions;
-import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentTextEffect;
-import com.marcosmoreiradev.docupodcaststudio.application.export.AudioExportFormat;
-import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoResolutionPreset;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoBackgroundMode;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentBackgroundImageFit;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoOptions;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextEffect;
+import com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.SimpleVideoResolutionPreset;
 import com.marcosmoreiradev.docupodcaststudio.presentation.command.AppCommandId;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionButtonFactory;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
@@ -469,9 +469,9 @@ public final class ExportCenterDialog {
                 StudioFormControls.slider(5, 100, 35), "Visibilidad de la imagen de fondo.");
         private final Label backgroundImageOpacityValue = valueLabel();
         private final ToggleGroup backgroundImageFitGroup = new ToggleGroup();
-        private final RadioButton containBackground = new RadioButton("Imagen completa con franjas");
-        private final RadioButton coverBackground = new RadioButton("Rellenar con recorte/zoom");
-        private final RadioButton blurredBackground = new RadioButton("Fondo difuminado + imagen completa");
+        private final RadioButton containBackground = com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls.radioButton("Imagen completa con franjas");
+        private final RadioButton coverBackground = com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls.radioButton("Rellenar con recorte/zoom");
+        private final RadioButton blurredBackground = com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls.radioButton("Fondo difuminado + imagen completa");
         private final ComboBox<DocumentTextEffect> textEffect =
                 StudioFormControls.comboBox(FXCollections.observableArrayList(DocumentTextEffect.values()));
         private final ColorPicker textEffectColor = StudioFormControls.colorPicker(Color.BLACK);

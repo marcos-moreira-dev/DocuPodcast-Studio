@@ -98,8 +98,8 @@ public final class SettingsDialog {
         OperationalSettings loaded;
         try { loaded = services == null ? OperationalSettings.defaults() : services.loadOperationalSettings().load(); }
         catch (IOException failure) {
-            var error = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.ERROR,
-                    "No se pudo cargar la configuración. No se sustituirán tus ajustes. " + failure.getMessage(), ButtonType.OK);
+            var error = com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.StudioMessageDialog.create(owner, javafx.scene.control.Alert.AlertType.ERROR, "Configuración", "No se pudo cargar la configuración",
+                    "No se pudo cargar la configuración. No se sustituirán tus ajustes. " + failure.getMessage(), com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.StudioMessageDialog.technicalDetail(failure), ButtonType.OK);
             DialogStyler.apply(error, owner);
             error.showAndWait();
             return;
@@ -133,9 +133,9 @@ public final class SettingsDialog {
                 return;
             }
             if (!form.dirty()) return;
-            var discard = new ButtonType("Descartar cambios");
-            var confirm = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.CONFIRMATION,
-                    "Hay cambios sin guardar. ¿Quieres descartarlos?", discard, ButtonType.CANCEL);
+            var discard = com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeDialogResponse.button("Descartar cambios");
+            var confirm = com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.StudioMessageDialog.create(dialog.getDialogPane().getScene().getWindow(), javafx.scene.control.Alert.AlertType.CONFIRMATION, "Configuración", "Cambios pendientes",
+                    "Hay cambios sin guardar. ¿Quieres descartarlos?", "", discard, ButtonType.CANCEL);
             DialogStyler.apply(confirm, dialog.getDialogPane().getScene().getWindow());
             if (confirm.showAndWait().orElse(ButtonType.CANCEL) != discard) event.consume();
         });

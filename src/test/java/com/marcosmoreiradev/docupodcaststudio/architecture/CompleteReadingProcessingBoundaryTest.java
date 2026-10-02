@@ -16,7 +16,7 @@ final class CompleteReadingProcessingBoundaryTest {
                 "DocuPodcastShellView.java"));
         int handler = view.indexOf("private void handleGenerateChunksFromStatusBar()");
         int confirmation = view.indexOf("reprocessCompleteReadingDialog.confirm(owner())", handler);
-        int overlay = view.indexOf("processOverlayExpanded.set(true)", handler);
+        int overlay = view.indexOf("processOverlayExpanded.set(true)", confirmation);
         int end = view.indexOf("private void cancelDocumentPreparationForRestart()", handler);
         String body = view.substring(handler, end);
 

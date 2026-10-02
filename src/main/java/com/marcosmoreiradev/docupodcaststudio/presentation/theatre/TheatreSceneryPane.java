@@ -10,10 +10,10 @@ import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.util.Duration;
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
+
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import javax.imageio.ImageIO;
+
 
 /** Preview of the same alpha composition used for exported frames. */
 final class TheatreSceneryPane extends StackPane {
@@ -62,9 +62,7 @@ final class TheatreSceneryPane extends StackPane {
             var renderedComposition = composition;
             Image rendered = null;
             try {
-                var bytes = new ByteArrayOutputStream();
-                ImageIO.write(composer.render(renderedComposition,1280,720),"png",bytes);
-                rendered = new Image(new ByteArrayInputStream(bytes.toByteArray()));
+                rendered = new Image(new ByteArrayInputStream(composer.renderPng(renderedComposition, 1280, 720)));
             } catch(java.io.IOException | RuntimeException ignored) { }
             Image completed = rendered;
             String accessibility = "Escenografía. " + renderedComposition.figures().stream()

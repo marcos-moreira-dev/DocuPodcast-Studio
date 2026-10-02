@@ -5,7 +5,7 @@ import com.marcosmoreiradev.docupodcaststudio.application.audio.ReusableAudioCov
 import com.marcosmoreiradev.docupodcaststudio.application.media.MediaCapabilityService;
 import com.marcosmoreiradev.docupodcaststudio.application.reading.AdaptNarrationLanguageUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.BuildDocumentStudyVideoPlanUseCase;
-import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentTextVideoOptions;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoOptions;
 import com.marcosmoreiradev.docupodcaststudio.domain.audio.AudioGenerationStage;
 import com.marcosmoreiradev.docupodcaststudio.domain.audio.AudioJobSnapshot;
 import com.marcosmoreiradev.docupodcaststudio.domain.audio.AudioJobState;

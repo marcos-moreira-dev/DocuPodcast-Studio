@@ -131,7 +131,7 @@ final class LocalTheatreImageEngineManagerSmokeTest {
             ImageEngineSmokeReport report = manager.smoke(settings, tempDir, request);
 
             assertTrue(!report.success(), report.userMessage());
-            assertTrue(report.userMessage().contains("licencia FLUX.1-Kontext-dev"));
+            assertTrue(report.userMessage().contains("confirma sus condiciones"));
             assertTrue(report.diagnostic().contains("licenseAccepted=false"));
             assertTrue(submittedPrompt.get().isBlank());
         } finally {

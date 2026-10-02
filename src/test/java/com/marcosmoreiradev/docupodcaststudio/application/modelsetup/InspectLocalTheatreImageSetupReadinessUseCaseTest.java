@@ -106,7 +106,7 @@ final class InspectLocalTheatreImageSetupReadinessUseCaseTest {
         assertTrue(report.missingRequirements().stream()
                 .anyMatch(item -> item.contains("vae/ae.safetensors")));
         assertTrue(report.missingRequirements().stream()
-                .anyMatch(item -> item.contains("licencia FLUX.1-Kontext-dev")));
+                .anyMatch(item -> item.contains("condiciones del modelo")));
     }
 
     private static void writeSparse(Path path, long size) throws Exception {

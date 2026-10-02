@@ -9,8 +9,8 @@ import com.marcosmoreiradev.docupodcaststudio.domain.script.NarrationScriptDocum
 import com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreInterventionSnapshot;
 import com.marcosmoreiradev.docupodcaststudio.domain.theatre.plan.ImportPlan;
 import com.marcosmoreiradev.docupodcaststudio.domain.theatrepackage.*;
-import com.marcosmoreiradev.docupodcaststudio.infrastructure.theatrepackage.JsonTheatrePackageScanner;
-import com.marcosmoreiradev.docupodcaststudio.infrastructure.theatrepackage.TheatrePackageSource;
+
+
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -19,14 +19,17 @@ import java.util.*;
 
 /** Atomic official theatre-v2 package importer. Folder and ZIP share this exact pipeline. */
 public final class ImportOfficialTheatrePackageUseCase {
-    private final JsonTheatrePackageScanner scanner = new JsonTheatrePackageScanner();
+    private final OfficialTheatrePackageAccess scanner;
+    public ImportOfficialTheatrePackageUseCase(OfficialTheatrePackageAccess scanner) {
+        this.scanner = java.util.Objects.requireNonNull(scanner);
+    }
     private final TheatreImportUseCase importer = new TheatreImportUseCase();
     private final ResolveTheatreInterventionSnapshotUseCase snapshots = new ResolveTheatreInterventionSnapshotUseCase();
 
     public Result execute(DocuPodcastProject original, Path source, Path projectRoot,
                           NarrationScriptDocument previousScript) throws IOException {
         Objects.requireNonNull(original, "original"); Objects.requireNonNull(projectRoot, "projectRoot");
-        try (TheatrePackageSource resolved = TheatrePackageSource.open(source)) {
+        try (OfficialTheatrePackageAccess.Source resolved = scanner.open(source)) {
             TheatrePackageInventory inventory = scanner.scan(resolved.root());
             if (inventory.schemaVersion() != 2) throw new IOException("La importación oficial requiere schemaVersion 2.");
             Path grammarFile = scanner.grammarFile(resolved.root());
@@ -97,7 +100,7 @@ public final class ImportOfficialTheatrePackageUseCase {
                     Files.createDirectories(staging.resolve(voiceRelative).getParent());
                     Files.copy(voiceConfiguration, staging.resolve(voiceRelative), StandardCopyOption.REPLACE_EXISTING);
                 }
-                Files.copy(resolved.root().resolve(JsonTheatrePackageScanner.MANIFEST_FILE), staging.resolve(JsonTheatrePackageScanner.MANIFEST_FILE), StandardCopyOption.REPLACE_EXISTING);
+                Files.copy(resolved.root().resolve(OfficialTheatrePackageAccess.MANIFEST_FILE), staging.resolve(OfficialTheatrePackageAccess.MANIFEST_FILE), StandardCopyOption.REPLACE_EXISTING);
                 Files.createDirectories(finalRoot.getParent());
                 if (Files.exists(finalRoot)) {
                     try (var files = Files.walk(staging)) {

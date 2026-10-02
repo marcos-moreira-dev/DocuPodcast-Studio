@@ -5,7 +5,7 @@ import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioDial
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
 
 import com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy;
-import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoResolutionPreset;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.SimpleVideoResolutionPreset;
 import com.marcosmoreiradev.docupodcaststudio.presentation.notification.DialogStyler;
 import com.marcosmoreiradev.docupodcaststudio.presentation.video.VideoExportOptions;
 import javafx.geometry.Insets;

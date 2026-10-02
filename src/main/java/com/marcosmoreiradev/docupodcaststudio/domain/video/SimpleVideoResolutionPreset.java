@@ -1,4 +1,4 @@
-package com.marcosmoreiradev.docupodcaststudio.application.video;
+package com.marcosmoreiradev.docupodcaststudio.domain.video;
 
 /** Resolution presets exposed to users for the simple video export. */
 public enum SimpleVideoResolutionPreset {
@@ -61,16 +61,16 @@ public enum SimpleVideoResolutionPreset {
         return LOW_540;
     }
 
-    public com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile visualResolutionProfile() {
+    public com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile visualResolutionProfile() {
         return switch (this) {
             case LOW_VERTICAL_540X960, LOW_540 ->
-                    com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile.P540;
+                    com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile.P540;
             case HD_VERTICAL_720X1280, HD_720 ->
-                    com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile.P720;
+                    com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile.P720;
             case FULL_HD_VERTICAL_1080X1920, FULL_HD_1080 ->
-                    com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile.P1080;
-            case QHD_2K -> com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile.QHD_2K;
-            case UHD_4K -> com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile.UHD_4K;
+                    com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile.P1080;
+            case QHD_2K -> com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile.QHD_2K;
+            case UHD_4K -> com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile.UHD_4K;
         };
     }
 }

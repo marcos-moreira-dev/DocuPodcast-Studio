@@ -1,4 +1,4 @@
-package com.marcosmoreiradev.docupodcaststudio.application.documentstudy;
+package com.marcosmoreiradev.docupodcaststudio.domain.video;
 
 /** How a documentary background image occupies the video frame. */
 public enum DocumentBackgroundImageFit {

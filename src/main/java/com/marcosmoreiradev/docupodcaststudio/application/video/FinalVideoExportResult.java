@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.application.video;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.video.SimpleVideoResolutionPreset;
+
 import java.nio.file.Path;
 import java.util.List;
 

@@ -563,8 +563,8 @@ public final class EngineAdministrationPane extends VBox {
         });
         CheckBox accepted = StudioFormControls.checkBox();
         accepted.setText("Ya tengo acceso y he aceptado las condiciones del proveedor para este modelo.");
-        ButtonType files = new ButtonType("Seleccionar archivos…");
-        ButtonType folder = new ButtonType("Seleccionar carpeta…");
+        ButtonType files = com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeDialogResponse.button("Seleccionar archivos…");
+        ButtonType folder = com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeDialogResponse.button("Seleccionar carpeta…");
         Dialog<ButtonType> dialog = com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioDialogShell.dialog();
         dialog.setTitle("Importar " + profile.displayName());
         dialog.getDialogPane().setContent(new VBox(12, instructions, website, accepted));

@@ -16,6 +16,10 @@ public final class NativeDialogResponse {
         return prepare(new Alert(type, content, buttons));
     }
 
+    public static ButtonType button(String text) {
+        return button(text, ButtonBar.ButtonData.OTHER);
+    }
+
     public static ButtonType button(String text, ButtonBar.ButtonData data) {
         return new ButtonType(text, data);
     }

@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.application.compute;
 
-import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoResolutionPreset;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.SimpleVideoResolutionPreset;
 
 import java.util.ArrayList;
 import java.util.List;

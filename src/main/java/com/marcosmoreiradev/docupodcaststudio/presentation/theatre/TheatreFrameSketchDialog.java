@@ -320,7 +320,7 @@ public final class TheatreFrameSketchDialog extends Dialog<TheatreFrameSketchDia
         preview.setFitHeight(64);
         preview.setPreserveRatio(true);
         preview.setSmooth(true);
-        TextField name = new TextField(item.name().isBlank() ? "Dibujo" : item.name());
+        TextField name = com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls.textField(item.name().isBlank() ? "Dibujo" : item.name());
         name.setPromptText("Nombre del dibujo");
         name.focusedProperty().addListener((obs, before, focused) -> {
             if (!focused) renameVaultItem(item.id(), name.getText());

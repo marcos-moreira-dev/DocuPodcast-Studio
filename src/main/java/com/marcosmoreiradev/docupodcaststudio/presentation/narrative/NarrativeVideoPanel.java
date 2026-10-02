@@ -5,7 +5,7 @@ import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeSourceC
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls;
 
 import com.marcosmoreiradev.docupodcaststudio.application.narrative.NarrativeDocumentContext;
-import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoResolutionPreset;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.SimpleVideoResolutionPreset;
 import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualClipGenerationProfile;
 import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualGenerationProfile;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlock;

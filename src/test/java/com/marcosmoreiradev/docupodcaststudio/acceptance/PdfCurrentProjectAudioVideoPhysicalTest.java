@@ -1,5 +1,8 @@
 package com.marcosmoreiradev.docupodcaststudio.acceptance;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoOptions;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.SimpleVideoResolutionPreset;
+
 import com.marcosmoreiradev.docupodcaststudio.application.audio.*;
 import com.marcosmoreiradev.docupodcaststudio.application.document.*;
 import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.*;

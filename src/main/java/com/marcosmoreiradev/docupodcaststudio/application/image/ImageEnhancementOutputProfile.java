@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.application.image;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile;
+
 import java.util.Locale;
 
 /** Target delivery profile for enhanced theatrical images. */
@@ -66,13 +68,13 @@ public enum ImageEnhancementOutputProfile {
         return name().toLowerCase(Locale.ROOT).replace('_', '-');
     }
 
-    public com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile visualResolutionProfile() {
+    public com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile visualResolutionProfile() {
         return switch (this) {
-            case LOW_540 -> com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile.P540;
-            case HD_720 -> com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile.P720;
-            case FHD_1080 -> com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile.P1080;
-            case QHD_2K -> com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile.QHD_2K;
-            case UHD_4K -> com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile.UHD_4K;
+            case LOW_540 -> com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile.P540;
+            case HD_720 -> com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile.P720;
+            case FHD_1080 -> com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile.P1080;
+            case QHD_2K -> com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile.QHD_2K;
+            case UHD_4K -> com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile.UHD_4K;
         };
     }
 }

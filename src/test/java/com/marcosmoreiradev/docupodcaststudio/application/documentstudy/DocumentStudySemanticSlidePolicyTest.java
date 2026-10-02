@@ -1,6 +1,8 @@
 package com.marcosmoreiradev.docupodcaststudio.application.documentstudy;
 
-import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoResolutionPreset;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoOptions;
+
+import com.marcosmoreiradev.docupodcaststudio.domain.video.SimpleVideoResolutionPreset;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlock;
 import com.marcosmoreiradev.docupodcaststudio.domain.document.DocumentBlockType;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.DocuPodcastProject;

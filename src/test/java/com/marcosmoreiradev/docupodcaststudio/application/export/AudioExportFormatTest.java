@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.application.export;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat;
+
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;

@@ -1,7 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.video;
 
 import com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy;
-import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoResolutionPreset;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.SimpleVideoResolutionPreset;
 import com.marcosmoreiradev.docupodcaststudio.domain.project.ProjectMode;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls;
 import javafx.collections.FXCollections;

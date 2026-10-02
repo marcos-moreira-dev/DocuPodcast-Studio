@@ -26,6 +26,10 @@ Product-category workflows are explicit. Documentary, Narrative and Theatre may 
 
 Project persistence is backward compatible. Refactors must preserve `.docupodcast.json`, relative project assets and existing example projects unless a separate migration is designed and tested.
 
+Persistent video options and resolution values live in `domain.video`; audio formats and output path rules live in `domain.export`. Moving these value types does not change serialized field names or enum values.
+
+Batch windows receive `BatchApplicationServices` from bootstrap. Official theatre package import uses `OfficialTheatrePackageAccess`, and package export receives `NarrationScriptWorkspaceRepository`. These ports keep adapter construction out of views and use cases.
+
 ## Long-running work
 
 Voice synthesis, image generation, generative video and deterministic rendering use neutral contracts, shared resource scheduling, progress, cancellation and diagnostics. Views and application use cases do not invoke operating-system processes directly.

@@ -17,8 +17,12 @@ import java.util.zip.*;
 
 /** Symmetric theatre-v2 exporter. A directory and a ZIP contain the same bytes and manifest. */
 public final class ExportOfficialTheatrePackageUseCase {
+    private final com.marcosmoreiradev.docupodcaststudio.application.script.NarrationScriptWorkspaceRepository scripts;
+    public ExportOfficialTheatrePackageUseCase(com.marcosmoreiradev.docupodcaststudio.application.script.NarrationScriptWorkspaceRepository scripts) {
+        this.scripts = Objects.requireNonNull(scripts);
+    }
     public Result execute(DocuPodcastProject project, Path projectRoot, Path destination) throws IOException {
-        var script = new com.marcosmoreiradev.docupodcaststudio.infrastructure.script.NarrationScriptWorkspaceFileRepository()
+        var script = scripts
                 .load(projectRoot.resolve("project.docupodcast.json")).orElseThrow(() -> new IOException("Guarda la lectura preparada antes de exportar la carpeta teatral."));
         return execute(project, projectRoot, destination, script);
     }

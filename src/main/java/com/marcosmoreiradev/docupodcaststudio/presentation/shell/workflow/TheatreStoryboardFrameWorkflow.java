@@ -18,7 +18,7 @@ import com.marcosmoreiradev.docupodcaststudio.presentation.shell.ProjectSession;
 import com.marcosmoreiradev.docupodcaststudio.presentation.theatre.TheatreFrameSketchContext;
 
 import java.io.IOException;
-import javax.imageio.ImageIO;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -166,7 +166,7 @@ public final class TheatreStoryboardFrameWorkflow {
         var composition = composer.resolve(session.project(), placement, root);
         Path temporary = Files.createTempFile("docupodcast-scenery-", ".png");
         try {
-            ImageIO.write(composer.render(composition, 1600, 900), "png", temporary.toFile());
+            composer.writePng(composition, 1600, 900, temporary);
             var result = services.generation().storyboard().upsertTheatreStoryboardFrameVariant()
                     .upsertSceneryFrame(session.project(), projectFile, storyboard, script,
                             segmentId, temporary, true);

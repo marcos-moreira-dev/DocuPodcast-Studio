@@ -85,7 +85,12 @@ final class PdfV2CorpusEndToEndTest {
                     staged.workspace().projectRoot()).isEmpty());
 
             PreparePdfPageResult prepared = prepare.execute(new PreparePdfPageRequest(
-                    staged.workspace(), temp.resolve("cache"), 1, false, null));
+                    staged.workspace(), temp.resolve("cache"), 1, false, null,
+                    null, null, null, true, "corpus",
+                    corpusCase.expectsOcr()
+                            ? com.marcosmoreiradev.docupodcaststudio.domain.document.pdf.PdfReadingStrategy.NATIVE_WITH_OCR
+                            : com.marcosmoreiradev.docupodcaststudio.domain.document.pdf.PdfReadingStrategy.NATIVE_TEXT,
+                    null));
             assertTrue(prepared.succeeded(), () -> corpusCase.id() + ": " + prepared.issues());
             assertFalse(prepared.preparedPage().regions().isEmpty(), corpusCase.id());
             assertEquals(originalHash, sha256(source), "El original externo no debe cambiar");

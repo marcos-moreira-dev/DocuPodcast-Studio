@@ -6,7 +6,7 @@ import com.marcosmoreiradev.docupodcaststudio.application.compute.ComputeDeviceD
 import com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.OperationalSettings;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.ImageSuperResolutionSettings;
-import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;

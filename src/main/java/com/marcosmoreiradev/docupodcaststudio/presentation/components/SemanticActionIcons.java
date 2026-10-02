@@ -69,7 +69,7 @@ public final class SemanticActionIcons {
         if (text.startsWith("reducir")) return "zoom-out";
         if (text.equals("ampliar")) return "zoom-in";
         if (text.startsWith("ajustar") || text.startsWith("reescalar")) return "maximize-2";
-        if (text.startsWith("continuar") || text.startsWith("play")) return "play";
+        if (text.startsWith("seguir generando") || text.startsWith("continuar") || text.startsWith("play")) return "play";
         if (text.startsWith("crear") || text.startsWith("nueva")) return "plus";
         if (text.startsWith("asociar")) return "image-up";
         if (text.equals("x") || has(text, "cancelar", "cerrar", "ocultar")) return "x";

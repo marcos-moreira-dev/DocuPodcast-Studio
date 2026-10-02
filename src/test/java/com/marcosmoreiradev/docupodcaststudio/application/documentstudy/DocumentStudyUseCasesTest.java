@@ -1,10 +1,12 @@
 package com.marcosmoreiradev.docupodcaststudio.application.documentstudy;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoOptions;
+
 import com.marcosmoreiradev.docupodcaststudio.application.fragment.BuildFragmentWorkspaceProjectionUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.reading.PreparedReadingProjection;
 import com.marcosmoreiradev.docupodcaststudio.application.script.BuildNarrationScriptUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoPlan;
-import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoResolutionPreset;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.SimpleVideoResolutionPreset;
 import com.marcosmoreiradev.docupodcaststudio.domain.audio.AudioGenerationStage;
 import com.marcosmoreiradev.docupodcaststudio.domain.audio.AudioJobSnapshot;
 import com.marcosmoreiradev.docupodcaststudio.domain.audio.AudioJobState;

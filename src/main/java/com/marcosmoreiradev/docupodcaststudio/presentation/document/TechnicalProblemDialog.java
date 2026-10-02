@@ -345,7 +345,7 @@ public final class TechnicalProblemDialog {
             if (event.getCode() == KeyCode.ENTER) event.consume();
         });
         dialog.setOnCloseRequest(event -> {
-            ButtonType close = new ButtonType("Cerrar", ButtonBar.ButtonData.OK_DONE);
+            ButtonType close = com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeDialogResponse.button("Cerrar", ButtonBar.ButtonData.OK_DONE);
             Alert confirmation = com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeDecisionDialog.create(
                     dialog.getDialogPane().getScene().getWindow(), Alert.AlertType.CONFIRMATION,
                     "¿Seguro que quieres cerrar el ejercicio?", close, ButtonType.CANCEL);
@@ -629,7 +629,7 @@ public final class TechnicalProblemDialog {
     }
 
     private javafx.scene.control.Tab canvasSettingsTab() {
-        javafx.scene.control.ComboBox<String> paper = new javafx.scene.control.ComboBox<>();
+        javafx.scene.control.ComboBox<String> paper = com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls.comboBox();
         paper.getItems().setAll("En blanco", "A líneas", "A cuadros", "Isométrico", "Polar");
         paper.setValue("En blanco");
         List<String> patterns = List.of("blank", "ruled", "grid", "isometric", "polar");
@@ -1197,7 +1197,7 @@ public final class TechnicalProblemDialog {
             button.setMinWidth(96);
         }
         StudioCanvasToolbar tools = new StudioCanvasToolbar("Herramientas del lienzo de problema técnico");
-        javafx.scene.control.ComboBox<TechnicalShape> shapes = new javafx.scene.control.ComboBox<>();
+        javafx.scene.control.ComboBox<TechnicalShape> shapes = com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFormControls.comboBox();
         shapes.getItems().setAll(TechnicalShape.values());
         shapes.setPromptText("Formas…");
         shapes.setAccessibleText("Insertar forma");

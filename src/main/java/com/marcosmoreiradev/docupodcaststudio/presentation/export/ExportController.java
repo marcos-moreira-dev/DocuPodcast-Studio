@@ -4,7 +4,7 @@ import com.marcosmoreiradev.docupodcaststudio.application.WorkspaceApplicationSe
 import com.marcosmoreiradev.docupodcaststudio.application.errors.ApplicationPreconditionException;
 import com.marcosmoreiradev.docupodcaststudio.application.export.ExportReadinessItem;
 import com.marcosmoreiradev.docupodcaststudio.application.export.ExportableArtifactKind;
-import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentTextVideoOptions;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoOptions;
 import com.marcosmoreiradev.docupodcaststudio.application.export.PodcastFinalAudioExportResult;
 import com.marcosmoreiradev.docupodcaststudio.application.export.PodcastFinalWavExportResult;
 import com.marcosmoreiradev.docupodcaststudio.application.export.ProjectBundleExportRequest;
@@ -16,7 +16,7 @@ import com.marcosmoreiradev.docupodcaststudio.application.video.FinalVideoExport
 import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoExportSettings;
 import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoFrame;
 import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoPlan;
-import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoResolutionPreset;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.SimpleVideoResolutionPreset;
 import com.marcosmoreiradev.docupodcaststudio.application.video.TheatreExportScope;
 import com.marcosmoreiradev.docupodcaststudio.application.video.VideoRenderProgress;
 import com.marcosmoreiradev.docupodcaststudio.application.settings.OperationalSettings;

@@ -1,15 +1,17 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.batch;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat;
+
 import com.marcosmoreiradev.docupodcaststudio.application.batch.BatchSourceInventory;
 import com.marcosmoreiradev.docupodcaststudio.application.batch.CreateDocumentVideoBatchProjectUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.batch.DiscoverDocumentVideoBatchSourcesUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.batch.DocumentVideoBatchPathPolicy;
 import com.marcosmoreiradev.docupodcaststudio.application.batch.ManageDocumentVideoBatchQueueUseCase;
-import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentTextVideoBackgroundMode;
-import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentBackgroundImageFit;
-import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentTextVideoOptions;
-import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentTextEffect;
-import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoResolutionPreset;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoBackgroundMode;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentBackgroundImageFit;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoOptions;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextEffect;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.SimpleVideoResolutionPreset;
 import com.marcosmoreiradev.docupodcaststudio.domain.batch.BatchBranding;
 import com.marcosmoreiradev.docupodcaststudio.domain.batch.BrandingPlacement;
 import com.marcosmoreiradev.docupodcaststudio.domain.batch.BrandingSize;
@@ -17,8 +19,9 @@ import com.marcosmoreiradev.docupodcaststudio.domain.batch.DocumentVideoBatchIte
 import com.marcosmoreiradev.docupodcaststudio.domain.batch.DocumentVideoBatchDraft;
 import com.marcosmoreiradev.docupodcaststudio.domain.batch.DocumentVideoBatchProfile;
 import com.marcosmoreiradev.docupodcaststudio.domain.batch.DocumentVideoBatchProject;
-import com.marcosmoreiradev.docupodcaststudio.infrastructure.json.DocuPodcastProjectFileRepository;
-import com.marcosmoreiradev.docupodcaststudio.infrastructure.json.JsonDocumentVideoBatchRepository;
+
+import com.marcosmoreiradev.docupodcaststudio.application.batch.DocumentVideoBatchWorkspaceRepository;
+import com.marcosmoreiradev.docupodcaststudio.application.services.BatchApplicationServices;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.ActionButtonFactory;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioAccordion;
 import com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFeedbackControls;
@@ -81,25 +84,24 @@ import java.util.function.Consumer;
 public final class DocumentVideoBatchWindow {
     private final javafx.scene.control.RadioButton videoOutput = StudioFormControls.radioButton("Video con audio");
     private final javafx.scene.control.RadioButton audioOutput = StudioFormControls.radioButton("Solo audio");
-    private final ComboBox<com.marcosmoreiradev.docupodcaststudio.application.export.AudioExportFormat> audioFormat = StudioFormControls.comboBox();
+    private final ComboBox<com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat> audioFormat = StudioFormControls.comboBox();
     private boolean exitAfterCancellation;
     private boolean openingChild;
     private DocumentVideoBatchExecutionPort.BatchRunResult lastResult;
     private static final int PRODUCTION_STAGE_COUNT = 6;
     private static final String DRAFT_DESCRIPTOR_SUFFIX = ".docupodcast-express.json";
     private final Stage stage = new Stage();
-    private final DiscoverDocumentVideoBatchSourcesUseCase discovery = new DiscoverDocumentVideoBatchSourcesUseCase();
-    private final JsonDocumentVideoBatchRepository repository = new JsonDocumentVideoBatchRepository();
-    private final ManageDocumentVideoBatchQueueUseCase queue = new ManageDocumentVideoBatchQueueUseCase(repository);
-    private final CreateDocumentVideoBatchProjectUseCase creator = new CreateDocumentVideoBatchProjectUseCase(
-            discovery, repository, new DocuPodcastProjectFileRepository());
+    private final DocumentVideoBatchWorkspaceRepository repository;
+    private final DiscoverDocumentVideoBatchSourcesUseCase discovery;
+    private final ManageDocumentVideoBatchQueueUseCase queue;
+    private final CreateDocumentVideoBatchProjectUseCase creator;
 
     private final TextField title = StudioFormControls.textField("Serie de documentos");
     private final TextField sourceFolder = StudioFormControls.textField();
     private final TextField destinationFolder = StudioFormControls.textField();
     private final Label inventorySummary = new Label("Selecciona una carpeta para revisar DOCX y PDF.");
     private final java.util.Map<String, com.marcosmoreiradev.docupodcaststudio.domain.batch.DocumentBackgroundOverride> documentBackgrounds = new java.util.LinkedHashMap<>();
-    private final ListView<String> sourceList = new ListView<>();
+    private final ListView<String> sourceList = com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioCollectionControls.listView();
     private final ProgressIndicator busy = StudioFeedbackControls.progressIndicator();
 
     private final ComboBox<SimpleVideoResolutionPreset> resolution = StudioFormControls.comboBox();
@@ -153,22 +155,13 @@ public final class DocumentVideoBatchWindow {
     private BatchSourceInventory inventory;
     private Path draftDescriptor;
 
-    public DocumentVideoBatchWindow(Window owner) {
-        this(owner, null, null, null);
-    }
-
-    public DocumentVideoBatchWindow(Window owner, Consumer<Path> openChildProject) {
-        this(owner, openChildProject, null, null);
-    }
-
-    public DocumentVideoBatchWindow(Window owner, Consumer<Path> openChildProject,
-                                    DocumentVideoBatchExecutionPort execution) {
-        this(owner, openChildProject, execution, null);
-    }
-
     public DocumentVideoBatchWindow(Window owner, Consumer<Path> openChildProject,
                                     DocumentVideoBatchExecutionPort execution,
-                                    Runnable returnToHome) {
+                                    Runnable returnToHome, BatchApplicationServices services) {
+        this.repository = services.repository();
+        this.discovery = services.discovery();
+        this.queue = services.queue();
+        this.creator = services.creator();
         this.openChildProject = openChildProject == null ? this::openPath : openChildProject;
         this.execution = execution;
         this.hostWindow = owner;
@@ -184,7 +177,7 @@ public final class DocumentVideoBatchWindow {
         root.setStyle("-fx-background-color: white;");
         root.setTop(header());
         VBox setup = setupContent();
-        ScrollPane scroll = new ScrollPane(setup);
+        ScrollPane scroll = com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls.scrollPane(setup);
         scroll.setFitToWidth(true);
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         root.setCenter(scroll);
@@ -204,27 +197,10 @@ public final class DocumentVideoBatchWindow {
         stage.setOnHidden(event -> restoreHostAndReturnHome());
     }
 
-    public static void show(Window owner) {
-        DocumentVideoBatchWindow window = new DocumentVideoBatchWindow(owner);
-        window.showWindow();
-    }
-
-    public static void show(Window owner, Consumer<Path> openChildProject) {
-        DocumentVideoBatchWindow window = new DocumentVideoBatchWindow(owner, openChildProject);
-        window.showWindow();
-    }
-
     public static void show(Window owner, Consumer<Path> openChildProject,
-                            DocumentVideoBatchExecutionPort execution) {
-        DocumentVideoBatchWindow window = new DocumentVideoBatchWindow(owner, openChildProject, execution);
-        window.showWindow();
-    }
-
-    public static void show(Window owner, Consumer<Path> openChildProject,
-                            DocumentVideoBatchExecutionPort execution, Runnable returnToHome) {
-        DocumentVideoBatchWindow window = new DocumentVideoBatchWindow(
-                owner, openChildProject, execution, returnToHome);
-        window.showWindow();
+                            DocumentVideoBatchExecutionPort execution, Runnable returnToHome,
+                            BatchApplicationServices services) {
+        new DocumentVideoBatchWindow(owner, openChildProject, execution, returnToHome, services).showWindow();
     }
 
     private void showWindow() {
@@ -286,8 +262,8 @@ public final class DocumentVideoBatchWindow {
         audioOutput.setToggleGroup(outputGroup);
         videoOutput.setSelected(true);
         audioFormat.setItems(FXCollections.observableArrayList(
-                com.marcosmoreiradev.docupodcaststudio.application.export.AudioExportFormat.values()));
-        audioFormat.setValue(com.marcosmoreiradev.docupodcaststudio.application.export.AudioExportFormat.MP3);
+                com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat.values()));
+        audioFormat.setValue(com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat.MP3);
         audioOutput.selectedProperty().addListener((obs, oldValue, selected) -> {
             createButton.setText(selected ? "Crear cola de audio" : "Crear cola de video");
         });
@@ -995,7 +971,7 @@ public final class DocumentVideoBatchWindow {
     }
 
     private void chooseBranding() {
-        FileChooser chooser = new FileChooser(); chooser.setTitle("Elegir logo o mascota");
+        FileChooser chooser = com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeSourceChooser.fileChooser(); chooser.setTitle("Elegir logo o mascota");
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Imágenes PNG, JPG o WebP", "*.png", "*.jpg", "*.jpeg", "*.webp"));
         File selected = chooser.showOpenDialog(stage); if (selected != null) brandingFile.setText(selected.getAbsolutePath());
     }
@@ -1134,7 +1110,7 @@ public final class DocumentVideoBatchWindow {
                     + (item.message().isBlank() ? "" : " · " + item.message()));
             state.setWrapText(true);
             HBox.setHgrow(state, Priority.ALWAYS);
-            ProgressBar itemProgress = new ProgressBar(stageProgress(item));
+            ProgressBar itemProgress = com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFeedbackControls.progressBar(stageProgress(item));
             itemProgress.setMaxWidth(Double.MAX_VALUE);
             itemProgress.setAccessibleText("Progreso de la etapa: "
                     + Math.round(stageProgress(item) * 100) + " por ciento");
@@ -1189,12 +1165,12 @@ public final class DocumentVideoBatchWindow {
         Label progressSummary = new Label(exitAfterCancellation ? "Deteniendo toda la producción… Esperando el cierre del trabajo activo." : queueProgressText(project));
         progressSummary.setWrapText(true);
         progressSummary.setStyle("-fx-font-weight: 700;");
-        ProgressBar queueProgress = new ProgressBar(queueProgress(project));
+        ProgressBar queueProgress = com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioFeedbackControls.progressBar(queueProgress(project));
         queueProgress.setMaxWidth(Double.MAX_VALUE);
         queueProgress.setAccessibleText(progressSummary.getText());
         Label policy = new Label("La cola conserva pausas, omisiones, reintentos y orden. Se procesa un documento por vez y se reutilizan los derivados válidos; Pausar se aplica en el siguiente punto seguro.");
         policy.setWrapText(true);
-        ScrollPane list = new ScrollPane(rows); list.setFitToWidth(true);
+        ScrollPane list = com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls.scrollPane(rows); list.setFitToWidth(true);
         list.setStyle("-fx-background: white; -fx-background-color: white;");
         Button accept = ActionButtonFactory.secondary(lastResult != null && !lastResult.paused()
                 ? "Aceptar y volver a Inicio" : "Guardar cola y volver a Inicio", this::closeToHome);
@@ -1218,9 +1194,9 @@ public final class DocumentVideoBatchWindow {
         VBox.setVgrow(list, Priority.ALWAYS);
         stage.getScene().setRoot(view);
         if (notify) {
-            Alert alert = new Alert(Alert.AlertType.INFORMATION); alert.initOwner(stage); alert.setTitle("Proyecto preparado");
-            alert.setHeaderText("La cola documental está lista");
-            alert.setContentText(project.items().size() + " documentos copiados y verificados.\n" + descriptor.getParent()); alert.show();
+            com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.StudioMessageDialog.create(stage,
+                    Alert.AlertType.INFORMATION, "Proyecto preparado", "La cola documental está lista",
+                    project.items().size() + " documentos copiados y verificados.\n" + descriptor.getParent(), "").show();
         }
     }
 
@@ -1247,10 +1223,10 @@ public final class DocumentVideoBatchWindow {
 
     private void cancelEntireQueue() {
         if (execution == null || !execution.running() || exitAfterCancellation) return;
-        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION,
+        Alert confirmation = com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.StudioMessageDialog.create(
+                stage, Alert.AlertType.CONFIRMATION, "Cancelar toda la producción", "¿Cancelar todos los documentos pendientes?",
                 "Se detendrá el documento actual y se cancelarán todos los pendientes. "
-                        + "Los archivos terminados se conservarán. Después volverás a Inicio.", ButtonType.YES, ButtonType.NO);
-        confirmation.initOwner(stage);
+                        + "Los archivos terminados se conservarán. Después volverás a Inicio.", "", ButtonType.YES, ButtonType.NO);
         confirmation.setTitle("Cancelar toda la producción");
         confirmation.setHeaderText("¿Cancelar todos los documentos pendientes?");
         if (confirmation.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) return;
@@ -1416,6 +1392,9 @@ public final class DocumentVideoBatchWindow {
         };
     }
     private void showError(String title, Throwable error) {
-        Platform.runLater(() -> { Alert alert = new Alert(Alert.AlertType.ERROR); alert.initOwner(stage); alert.setTitle("DocuPodcast Studio"); alert.setHeaderText(title); alert.setContentText(error == null ? "Error desconocido" : error.getMessage()); alert.showAndWait(); });
+        Platform.runLater(() -> com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.StudioMessageDialog.create(
+                stage, Alert.AlertType.ERROR, "DocuPodcast Studio", title,
+                error == null ? "Error desconocido" : error.getMessage(),
+                com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.StudioMessageDialog.technicalDetail(error)).showAndWait());
     }
 }

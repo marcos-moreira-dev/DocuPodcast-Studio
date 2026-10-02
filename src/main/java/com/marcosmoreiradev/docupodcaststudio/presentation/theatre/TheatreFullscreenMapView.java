@@ -93,7 +93,7 @@ public final class TheatreFullscreenMapView {
         bottomText.setWrapText(true);
         bottomText.setTextAlignment(TextAlignment.LEFT);
         bottomText.setMaxWidth(Double.MAX_VALUE);
-        javafx.scene.control.ScrollPane captionScroll = new javafx.scene.control.ScrollPane(bottomText);
+        javafx.scene.control.ScrollPane captionScroll = com.marcosmoreiradev.docupodcaststudio.presentation.components.StudioViewportControls.scrollPane(bottomText);
         captionScroll.setFitToWidth(true);
         captionScroll.setStyle("-fx-background: #000000; -fx-background-color: #000000;");
         captionScroll.prefHeightProperty().bind(root.heightProperty().multiply(0.24));

@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.application.visual;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile;
+
 import com.marcosmoreiradev.docupodcaststudio.application.image.ImageEnhancementOutputProfile;
 
 import java.util.Locale;

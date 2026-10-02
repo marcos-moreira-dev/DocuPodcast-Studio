@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.application.video;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.video.SimpleVideoResolutionPreset;
+
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatrePrimaryVisualReference;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatrePrimaryVisualResolver;
 import com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreVisualContinuityResolver;

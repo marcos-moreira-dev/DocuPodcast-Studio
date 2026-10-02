@@ -1,4 +1,4 @@
-package com.marcosmoreiradev.docupodcaststudio.application.visual;
+package com.marcosmoreiradev.docupodcaststudio.domain.video;
 
 import java.util.Arrays;
 import java.util.List;

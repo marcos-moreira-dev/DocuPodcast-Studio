@@ -2,8 +2,8 @@ package com.marcosmoreiradev.docupodcaststudio.application.batch;
 
 import com.marcosmoreiradev.docupodcaststudio.application.project.CreateProjectUseCase;
 import com.marcosmoreiradev.docupodcaststudio.application.project.ProjectRepository;
-import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentTextVideoBackgroundMode;
-import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentTextVideoOptions;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoBackgroundMode;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoOptions;
 import com.marcosmoreiradev.docupodcaststudio.domain.batch.BatchBranding;
 import com.marcosmoreiradev.docupodcaststudio.domain.batch.BatchItemStage;
 import com.marcosmoreiradev.docupodcaststudio.domain.batch.BatchItemState;

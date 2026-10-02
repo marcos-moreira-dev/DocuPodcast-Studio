@@ -1,5 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.document;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentBackgroundImageFit;
+
 import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeSourceChooser;
 
 import com.marcosmoreiradev.docupodcaststudio.presentation.dialogs.NativeDialogResponse;
@@ -147,7 +149,7 @@ public final class DocumentStudyVideoSettingsPanel extends BorderPane {
             var appearance = configuration.aiIllustrationAppearance();
             illustrationBackground.setSelected(appearance.background());
             imageBackground.opacity.setValue((int) Math.round(appearance.opacity() * 100));
-            imageBackground.setFit(com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentBackgroundImageFit.valueOf(appearance.fit()));
+            imageBackground.setFit(com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentBackgroundImageFit.valueOf(appearance.fit()));
             defaultSecondarySemanticDuration.getValueFactory().setValue(
                     configuration.defaultSecondarySemanticDurationSeconds());
         } finally {

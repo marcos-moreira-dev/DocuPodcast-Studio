@@ -1,5 +1,8 @@
 package com.marcosmoreiradev.docupodcaststudio.application.documentstudy;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoOptions;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextEffect;
+
 import org.junit.jupiter.api.Test;
 
 import java.awt.Color;

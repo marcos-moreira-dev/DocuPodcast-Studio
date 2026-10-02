@@ -1,7 +1,7 @@
 package com.marcosmoreiradev.docupodcaststudio.presentation.video;
 
 import com.marcosmoreiradev.docupodcaststudio.application.compute.VideoEncoderPolicy;
-import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoResolutionPreset;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.SimpleVideoResolutionPreset;
 
 /** User-selected properties for a final MP4 export. */
 public record VideoExportOptions(

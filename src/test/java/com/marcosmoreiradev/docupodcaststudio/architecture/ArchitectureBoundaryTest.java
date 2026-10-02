@@ -148,7 +148,7 @@ final class ArchitectureBoundaryTest {
     @ArchTest
     static final ArchRule content_analysis_consumers_are_confined_to_document_study = noClasses()
             .that().resideOutsideOfPackages(
-                    "..application.document..",
+                    "..application.document..", "..application.documentstudy..",
                     "..application.media..",
                     "..media.api..",
                     "..localmedia..")

@@ -1,5 +1,9 @@
 package com.marcosmoreiradev.docupodcaststudio.acceptance;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoOptions;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoBackgroundMode;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.SimpleVideoResolutionPreset;
+
 import com.marcosmoreiradev.docupodcaststudio.application.audio.AudioCoverageSnapshotAssembler;
 import com.marcosmoreiradev.docupodcaststudio.application.audio.AudioGenerationUnit;
 import com.marcosmoreiradev.docupodcaststudio.application.compute.ComputeDevicePolicy;

@@ -1,11 +1,13 @@
 package com.marcosmoreiradev.docupodcaststudio.infrastructure.json;
 
+import com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat;
+
 import com.marcosmoreiradev.docupodcaststudio.application.batch.DocumentVideoBatchRepository;
-import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentTextVideoBackgroundMode;
-import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentTextVideoOptions;
-import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentTextEffect;
-import com.marcosmoreiradev.docupodcaststudio.application.documentstudy.DocumentBackgroundImageFit;
-import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoResolutionPreset;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoBackgroundMode;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextVideoOptions;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentTextEffect;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.DocumentBackgroundImageFit;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.SimpleVideoResolutionPreset;
 import com.marcosmoreiradev.docupodcaststudio.domain.batch.BatchBranding;
 import com.marcosmoreiradev.docupodcaststudio.domain.batch.BatchItemStage;
 import com.marcosmoreiradev.docupodcaststudio.domain.batch.BatchItemState;
@@ -26,7 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 /** UTF-8 JSON repository with replace-on-save persistence for resumable batch state. */
-public final class JsonDocumentVideoBatchRepository implements DocumentVideoBatchRepository {
+public final class JsonDocumentVideoBatchRepository implements com.marcosmoreiradev.docupodcaststudio.application.batch.DocumentVideoBatchWorkspaceRepository {
     public void saveDraft(DocumentVideoBatchDraft draft, Path descriptor) throws IOException {
         Path absolute = descriptor.toAbsolutePath().normalize();
         if (absolute.getParent() != null) Files.createDirectories(absolute.getParent());
@@ -121,8 +123,8 @@ public final class JsonDocumentVideoBatchRepository implements DocumentVideoBatc
                 branding,
                 enumValue(com.marcosmoreiradev.docupodcaststudio.domain.batch.BatchOutputKind.class,
                         string(profileMap, "outputKind"), com.marcosmoreiradev.docupodcaststudio.domain.batch.BatchOutputKind.VIDEO),
-                enumValue(com.marcosmoreiradev.docupodcaststudio.application.export.AudioExportFormat.class,
-                        string(profileMap, "audioFormat"), com.marcosmoreiradev.docupodcaststudio.application.export.AudioExportFormat.MP3),
+                enumValue(com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat.class,
+                        string(profileMap, "audioFormat"), com.marcosmoreiradev.docupodcaststudio.domain.export.AudioExportFormat.MP3),
                 string(profileMap, "voiceEngineId"), string(profileMap, "aiEngineId"), backgrounds);
     }
 

@@ -1,6 +1,6 @@
 package com.marcosmoreiradev.docupodcaststudio.application.settings;
 
-import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile;
 import com.marcosmoreiradev.docupodcaststudio.media.api.ImageSuperResolutionRequest;
 
 /** Global defaults for optional existing-image AI super-resolution. */

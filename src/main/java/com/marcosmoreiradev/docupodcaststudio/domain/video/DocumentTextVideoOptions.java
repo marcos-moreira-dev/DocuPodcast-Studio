@@ -1,6 +1,6 @@
-package com.marcosmoreiradev.docupodcaststudio.application.documentstudy;
+package com.marcosmoreiradev.docupodcaststudio.domain.video;
 
-import com.marcosmoreiradev.docupodcaststudio.application.video.SimpleVideoResolutionPreset;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.SimpleVideoResolutionPreset;
 
 /** Visual defaults for Estudio documental text+audio video frames. */
 public record DocumentTextVideoOptions(

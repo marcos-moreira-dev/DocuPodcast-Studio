@@ -36,7 +36,15 @@ final class Utf8TextIntegrityTest {
             Pattern.compile("\\bFiles\\.writeString\\s*\\(\\s*[^,()]+,\\s*[^,()]+\\s*\\)");
     private static final Pattern IMPLICIT_READER_WRITER =
             Pattern.compile("\\bnew\\s+(?:FileReader|FileWriter|InputStreamReader|OutputStreamWriter)\\s*"
-                    + "\\([^,)]*\\)");
+                    + "\\((?:[^(),]|\\([^()]*\\))*\\)");
+
+    @Test
+    void readerCharsetAuditHandlesNestedStreamExpressions() {
+        assertTrue(IMPLICIT_READER_WRITER.matcher("new InputStreamReader(process.getInputStream())").find());
+        org.junit.jupiter.api.Assertions.assertFalse(IMPLICIT_READER_WRITER.matcher(
+                "new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8)").find());
+        assertTrue(IMPLICIT_READER_WRITER.matcher("new FileReader(path)").find());
+    }
 
     @Test
     void applicationTextIsStrictUtf8WithoutMojibake() throws IOException {

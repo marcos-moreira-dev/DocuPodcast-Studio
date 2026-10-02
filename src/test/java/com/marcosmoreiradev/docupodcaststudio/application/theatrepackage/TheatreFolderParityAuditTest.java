@@ -22,7 +22,7 @@ class TheatreFolderParityAuditTest {
         Files.move(folder.resolve("obra.teatro.md"), declared);
         Path manifest = folder.resolve("docupodcast-theatre.json");
         Files.writeString(manifest, Files.readString(manifest).replace("obra.teatro.md", "dialogos.md"));
-        var importer = new ImportOfficialTheatrePackageUseCase();
+        var importer = new ImportOfficialTheatrePackageUseCase(new com.marcosmoreiradev.docupodcaststudio.infrastructure.theatrepackage.JsonTheatrePackageScanner());
         Path projectRoot = temp.resolve("project");
         var first = importer.execute(DocuPodcastProject.createNew("Nuevo"), folder, projectRoot, null);
         var second = importer.execute(first.project(), folder, projectRoot, first.script());
@@ -38,7 +38,7 @@ class TheatreFolderParityAuditTest {
     @Test void sharedAudioPreservesSpeechAndTrackSettingsAcrossExportImport() throws Exception {
         Path folder = fixture(true);
         Path projectRoot = temp.resolve("first");
-        var importer = new ImportOfficialTheatrePackageUseCase();
+        var importer = new ImportOfficialTheatrePackageUseCase(new com.marcosmoreiradev.docupodcaststudio.infrastructure.theatrepackage.JsonTheatrePackageScanner());
         var first = importer.execute(DocuPodcastProject.createNew("Nuevo"), folder, projectRoot, null);
         String audioId = first.project().narrativeLayerAssignments().stream()
                 .filter(a -> a.kind() == com.marcosmoreiradev.docupodcaststudio.domain.assignment.NarrativeLayerKind.HUMAN_AUDIO)
@@ -48,7 +48,7 @@ class TheatreFolderParityAuditTest {
                 1, 3, com.marcosmoreiradev.docupodcaststudio.domain.theatre.TheatreProjectLayer.AudioTrackEndMode.FILE_END, 0.6, 4, true);
         var configured = first.project().withTheatre(first.project().theatre().withAudioTracks(java.util.List.of(track)));
         Path exported = temp.resolve("exported");
-        var written = new ExportOfficialTheatrePackageUseCase().execute(configured, projectRoot, exported, first.script());
+        var written = new ExportOfficialTheatrePackageUseCase(new com.marcosmoreiradev.docupodcaststudio.infrastructure.script.NarrationScriptWorkspaceFileRepository()).execute(configured, projectRoot, exported, first.script());
         assertEquals(1, written.assetCount());
         var second = importer.execute(DocuPodcastProject.createNew("Destino"), exported, temp.resolve("second"), null);
         assertEquals(java.util.List.of(track), second.project().theatre().audioTracks());
@@ -60,12 +60,12 @@ class TheatreFolderParityAuditTest {
         Path folder = fixture(true);
         Path manifest = folder.resolve("docupodcast-theatre.json");
         Files.writeString(manifest, Files.readString(manifest).replace("\"kind\":\"HUMAN_AUDIO\"", "\"kind\":\"VOICE_SAMPLE\",\"voiceProfileId\":\"VOC-NARRATOR\",\"tone\":\"NEUTRAL\""));
-        var importer = new ImportOfficialTheatrePackageUseCase();
+        var importer = new ImportOfficialTheatrePackageUseCase(new com.marcosmoreiradev.docupodcaststudio.infrastructure.theatrepackage.JsonTheatrePackageScanner());
         var first = importer.execute(DocuPodcastProject.createNew("Nuevo"), folder, temp.resolve("first"), null);
         var sample = first.project().voiceLibrary().referenceSampleSetByVoiceId("VOC-NARRATOR").orElseThrow().neutralSample().orElseThrow();
         assertTrue(Files.isRegularFile(temp.resolve("first").resolve(sample.fileUri())));
         Path exported = temp.resolve("exported");
-        new ExportOfficialTheatrePackageUseCase().execute(first.project(), temp.resolve("first"), exported, first.script());
+        new ExportOfficialTheatrePackageUseCase(new com.marcosmoreiradev.docupodcaststudio.infrastructure.script.NarrationScriptWorkspaceFileRepository()).execute(first.project(), temp.resolve("first"), exported, first.script());
         var second = importer.execute(DocuPodcastProject.createNew("Destino"), exported, temp.resolve("second"), null);
         var restored = second.project().voiceLibrary().referenceSampleSetByVoiceId("VOC-NARRATOR").orElseThrow().neutralSample().orElseThrow();
         assertEquals(sample.id(), restored.id());
@@ -85,9 +85,9 @@ class TheatreFolderParityAuditTest {
         Path root = Path.of(System.getProperty("theatre.audit.packageOutput", temp.toString())).toAbsolutePath();
         Files.createDirectories(root);
         Path exported = Files.createTempDirectory(root, "carpeta-").resolve("obra");
-        new ExportOfficialTheatrePackageUseCase().execute(project, projectFile.getParent(), exported, script);
+        new ExportOfficialTheatrePackageUseCase(new com.marcosmoreiradev.docupodcaststudio.infrastructure.script.NarrationScriptWorkspaceFileRepository()).execute(project, projectFile.getParent(), exported, script);
         Path destination = exported.getParent().resolve("proyecto");
-        var imported = new ImportOfficialTheatrePackageUseCase().execute(DocuPodcastProject.createNew("Vacío"), exported, destination, null);
+        var imported = new ImportOfficialTheatrePackageUseCase(new com.marcosmoreiradev.docupodcaststudio.infrastructure.theatrepackage.JsonTheatrePackageScanner()).execute(DocuPodcastProject.createNew("Vacío"), exported, destination, null);
         assertEquals(script.segments().stream().map(s -> s.narrationText()).toList(), imported.script().segments().stream().map(s -> s.narrationText()).toList());
         assertEquals(project.theatre().objects().size(), imported.project().theatre().objects().size());
         assertEquals(project.theatre().characters().size(), imported.project().theatre().characters().size());
@@ -152,7 +152,7 @@ class TheatreFolderParityAuditTest {
     }
 
     @Test void folderAloneMustProvideItsSpokenText() throws Exception {
-        var result = new ImportOfficialTheatrePackageUseCase().execute(DocuPodcastProject.createNew("Nuevo"),
+        var result = new ImportOfficialTheatrePackageUseCase(new com.marcosmoreiradev.docupodcaststudio.infrastructure.theatrepackage.JsonTheatrePackageScanner()).execute(DocuPodcastProject.createNew("Nuevo"),
                 fixture(false), temp.resolve("project"), null);
         assertEquals("Este es el parlamento del paquete.", result.snapshots().getFirst().text());
     }
@@ -161,7 +161,7 @@ class TheatreFolderParityAuditTest {
         Path folder=fixture(false);
         Path grammar=folder.resolve("obra.teatro.md");
         Files.writeString(grammar,Files.readString(grammar).replace("| origen=centro", "| emocion=enojado | origen=centro"));
-        var importer=new ImportOfficialTheatrePackageUseCase();
+        var importer=new ImportOfficialTheatrePackageUseCase(new com.marcosmoreiradev.docupodcaststudio.infrastructure.theatrepackage.JsonTheatrePackageScanner());
         var result=importer.execute(DocuPodcastProject.createNew("Nuevo"),folder,temp.resolve("valid"),null);
         var unit=new BuildNarrationRenderPlanUseCase().build(result.script(),result.project()).units().getFirst();
         assertEquals("TONE-ANGRY",unit.performanceStyleId());
@@ -179,7 +179,7 @@ class TheatreFolderParityAuditTest {
                 .replace("| origen=centro", "| interaccion=BEA | origen=centro"));
         Path manifest=folder.resolve("docupodcast-theatre.json");
         Files.writeString(manifest,Files.readString(manifest).replace("\"schemaVersion\":2", "\"schemaVersion\":2,\"presentationMode\":\"scenery\""));
-        var importer=new ImportOfficialTheatrePackageUseCase();
+        var importer=new ImportOfficialTheatrePackageUseCase(new com.marcosmoreiradev.docupodcaststudio.infrastructure.theatrepackage.JsonTheatrePackageScanner());
         var first=importer.execute(DocuPodcastProject.createNew("Nuevo"),folder,temp.resolve("first"),null);
         assertEquals("scenery",first.project().viewState().get("theatre.presentationMode"));
         var placement=first.project().theatre().textActionPlacements().getFirst();
@@ -187,7 +187,7 @@ class TheatreFolderParityAuditTest {
                 .resolve(first.project(),placement,temp.resolve("first"));
         assertEquals(java.util.List.of("CHR-ANA","CHR-BEA"),composition.figures().stream().map(f->f.id()).toList());
         Path exported=temp.resolve("exported");
-        new ExportOfficialTheatrePackageUseCase().execute(first.project(),temp.resolve("first"),exported,first.script());
+        new ExportOfficialTheatrePackageUseCase(new com.marcosmoreiradev.docupodcaststudio.infrastructure.script.NarrationScriptWorkspaceFileRepository()).execute(first.project(),temp.resolve("first"),exported,first.script());
         var second=importer.execute(DocuPodcastProject.createNew("Destino"),exported,temp.resolve("second"),null);
         assertEquals("scenery",second.project().viewState().get("theatre.presentationMode"));
     }
@@ -197,7 +197,7 @@ class TheatreFolderParityAuditTest {
         var plan = TheatreGrammarMarkdownParser.parse(folder.resolve("obra.teatro.md"));
         var script = new BuildNarrationScriptUseCase().build(new TheatreGrammarDocumentBuilder()
                 .build(plan, folder.resolve("obra.teatro.md")), "es");
-        var result = new ImportOfficialTheatrePackageUseCase().execute(DocuPodcastProject.createNew("Nuevo"),
+        var result = new ImportOfficialTheatrePackageUseCase(new com.marcosmoreiradev.docupodcaststudio.infrastructure.theatrepackage.JsonTheatrePackageScanner()).execute(DocuPodcastProject.createNew("Nuevo"),
                 folder, temp.resolve("project"), script);
         assertEquals(NarrationRenderSourceKind.AUDIO_CLIP,
                 new BuildNarrationRenderPlanUseCase().build(script, result.project()).units().getFirst().sourceKind());
@@ -208,10 +208,10 @@ class TheatreFolderParityAuditTest {
         var plan = TheatreGrammarMarkdownParser.parse(folder.resolve("obra.teatro.md"));
         var script = new BuildNarrationScriptUseCase().build(new TheatreGrammarDocumentBuilder()
                 .build(plan, folder.resolve("obra.teatro.md")), "es");
-        var result = new ImportOfficialTheatrePackageUseCase().execute(DocuPodcastProject.createNew("Nuevo"),
+        var result = new ImportOfficialTheatrePackageUseCase(new com.marcosmoreiradev.docupodcaststudio.infrastructure.theatrepackage.JsonTheatrePackageScanner()).execute(DocuPodcastProject.createNew("Nuevo"),
                 folder, temp.resolve("project"), script);
         Path output = temp.resolve("output");
-        new ExportOfficialTheatrePackageUseCase().execute(result.project(), temp.resolve("project"), output, script);
+        new ExportOfficialTheatrePackageUseCase(new com.marcosmoreiradev.docupodcaststudio.infrastructure.script.NarrationScriptWorkspaceFileRepository()).execute(result.project(), temp.resolve("project"), output, script);
         var exported = TheatreGrammarMarkdownParser.parse(output.resolve("obra.teatro.md"));
         assertFalse(exported.interventions().getFirst().applyCamera());
         assertFalse(new com.marcosmoreiradev.docupodcaststudio.application.theatre.TheatreCameraApplicationPolicy()

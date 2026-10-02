@@ -4,7 +4,7 @@ import com.marcosmoreiradev.docupodcaststudio.application.compatibility.media.Le
 import com.marcosmoreiradev.docupodcaststudio.application.artifacts.ProjectArtifactStore;
 import com.marcosmoreiradev.docupodcaststudio.application.media.MediaCapabilityService;
 import com.marcosmoreiradev.docupodcaststudio.application.image.ImageSuperResolutionCoordinator;
-import com.marcosmoreiradev.docupodcaststudio.application.visual.VisualResolutionProfile;
+import com.marcosmoreiradev.docupodcaststudio.domain.video.VisualResolutionProfile;
 import com.marcosmoreiradev.docupodcaststudio.application.narrative.NarrativeDocumentContext;
 import com.marcosmoreiradev.docupodcaststudio.application.narrative.NarrativeDocumentContextCompiler;
 import com.marcosmoreiradev.docupodcaststudio.application.narrative.NarrativeGeneratedVideoArtifact;
